@@ -64,7 +64,7 @@ export type Tag = InferSelectModel<typeof tags>;
 export type PostTag = InferSelectModel<typeof postTags>;
 
 export type DatabaseSchema = {
-  users: User;
+  users: Partial<User>;
   posts: Post;
   comments: Comment;
   tags: Tag;

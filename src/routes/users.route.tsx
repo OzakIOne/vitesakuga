@@ -1,34 +1,46 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { DEPLOY_URL } from "../utils/users";
+import { usersQueryOptions } from "../utils/users";
 import { DatabaseSchema } from "~/db/schema";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/users")({
-  loader: async () => {
-    try {
-      const res = await fetch(DEPLOY_URL + "/api/users");
-      if (!res.ok) {
-        throw new Error("Unexpected status code");
-      }
-      console.log("res", res);
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(usersQueryOptions()),
 
-      const data = (await res.json()) as Array<DatabaseSchema["users"]>;
-
-      return data;
-    } catch {
-      throw new Error("Failed to fetch users");
-    }
-  },
   component: UsersLayoutComponent,
 });
 
+async function createUser(data: DatabaseSchema["users"]) {
+  const response = await fetch("/api/users", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create user");
+  }
+
+  return response.json();
+}
+
 function UsersLayoutComponent() {
-  const users = Route.useLoaderData();
+  const usersQuery = useSuspenseQuery(usersQueryOptions());
+
+  const mutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: (data) => {
+      // navigate or show success
+    },
+  });
 
   return (
     <div className="p-2 flex gap-2">
       <ul className="list-disc pl-4">
         {[
-          ...users,
+          ...usersQuery.data,
           {
             id: "dont exist",
             uuid: "qwe",
@@ -54,6 +66,33 @@ function UsersLayoutComponent() {
         })}
       </ul>
       <hr />
+      <p>Create user</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          mutation.mutate({
+            username: formData.get("username") as string,
+            email: formData.get("email") as string,
+          });
+        }}
+      >
+        <input
+          className="input"
+          name="username"
+          required
+          placeholder="Username"
+        />
+        <input
+          className="input"
+          name="email"
+          required
+          placeholder="email@gmail.com"
+        />
+        <button className="btn" type="submit" disabled={mutation.isPending}>
+          Submit
+        </button>
+      </form>
       <Outlet />
     </div>
   );
