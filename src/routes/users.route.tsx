@@ -1,7 +1,15 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { usersQueryOptions } from "../utils/users";
 import { DatabaseSchema } from "~/db/schema";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQueryClient,
+  useMutation,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { useForm } from "@tanstack/react-form";
+import { z } from "zod";
+import { userCreateSchema } from "../utils/userSchemas";
+import React from "react";
 
 export const Route = createFileRoute("/users")({
   loader: async ({ context }) =>
@@ -28,11 +36,35 @@ async function createUser(data: DatabaseSchema["users"]) {
 
 function UsersLayoutComponent() {
   const usersQuery = useSuspenseQuery(usersQueryOptions());
+  const queryClient = useQueryClient();
+  const [status, setStatus] = React.useState<null | {
+    type: "success" | "error";
+    message: string;
+  }>(null);
 
   const mutation = useMutation({
     mutationFn: createUser,
-    onSuccess: (data) => {
-      // navigate or show success
+    onSuccess: () => {
+      setStatus({ type: "success", message: "User created successfully!" });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      form.reset();
+    },
+    onError: () => {
+      setStatus({ type: "error", message: "Failed to create user." });
+    },
+  });
+
+  const form = useForm({
+    defaultValues: {
+      username: "",
+      email: "",
+    },
+    onSubmit: async ({ value }) => {
+      setStatus(null);
+      mutation.mutate(value);
+    },
+    validators: {
+      onChange: userCreateSchema,
     },
   });
 
@@ -70,29 +102,80 @@ function UsersLayoutComponent() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          mutation.mutate({
-            username: formData.get("username") as string,
-            email: formData.get("email") as string,
-          });
+          form.handleSubmit();
         }}
+        className="flex flex-col gap-2"
       >
-        <input
-          className="input"
-          name="username"
-          required
-          placeholder="Username"
+        <form.Field name="username">
+          {(field) => (
+            <>
+              <input
+                className="input"
+                name={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                required
+                placeholder="Username"
+              />
+              {field.state.meta.errors.length > 0 && (
+                <em className="text-red-600">
+                  {field.state.meta.errors
+                    .map((e) =>
+                      typeof e === "string" ? e : e?.message || String(e)
+                    )
+                    .join(", ")}
+                </em>
+              )}
+            </>
+          )}
+        </form.Field>
+        <form.Field name="email">
+          {(field) => (
+            <>
+              <input
+                className="input"
+                name={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                required
+                placeholder="email@gmail.com"
+              />
+              {field.state.meta.errors.length > 0 && (
+                <em className="text-red-600">
+                  {field.state.meta.errors
+                    .map((e) =>
+                      typeof e === "string" ? e : e?.message || String(e)
+                    )
+                    .join(", ")}
+                </em>
+              )}
+            </>
+          )}
+        </form.Field>
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+          children={([canSubmit, isSubmitting]) => (
+            <button
+              className="btn"
+              type="submit"
+              disabled={!canSubmit || isSubmitting}
+            >
+              {isSubmitting ? "..." : "Submit"}
+            </button>
+          )}
         />
-        <input
-          className="input"
-          name="email"
-          required
-          placeholder="email@gmail.com"
-        />
-        <button className="btn" type="submit" disabled={mutation.isPending}>
-          Submit
-        </button>
       </form>
+      {status && (
+        <div
+          className={
+            status.type === "success" ? "text-green-600" : "text-red-600"
+          }
+        >
+          {status.message}
+        </div>
+      )}
       <Outlet />
     </div>
   );

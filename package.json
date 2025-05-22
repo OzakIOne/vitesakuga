@@ -27,7 +27,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^2.6.0",
-    "vinxi": "0.5.3"
+    "vinxi": "0.5.3",
+    "zod": "^3.25.23"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",
