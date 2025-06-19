@@ -13,34 +13,36 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@tanstack/react-form": "^1.11.3",
-    "@tanstack/react-query": "^5.76.2",
-    "@tanstack/react-router": "^1.120.5",
-    "@tanstack/react-router-devtools": "^1.120.6",
-    "@tanstack/react-router-with-query": "^1.120.5",
-    "@tanstack/react-start": "^1.120.5",
+    "@tailwindcss/postcss": "^4.1.10",
+    "@tanstack/react-form": "^1.12.3",
+    "@tanstack/react-query": "^5.80.10",
+    "@tanstack/react-router": "^1.121.27",
+    "@tanstack/react-router-devtools": "^1.121.27",
+    "@tanstack/react-router-with-query": "^1.121.27",
+    "@tanstack/react-start": "^1.121.28",
     "biome": "^0.3.3",
     "drizzle-kit": "^0.31.1",
-    "drizzle-orm": "^0.43.1",
+    "drizzle-orm": "^0.44.2",
     "kysely": "^0.28.2",
-    "pg": "^8.16.0",
+    "pg": "^8.16.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^2.6.0",
-    "vinxi": "0.5.3",
-    "zod": "^3.25.23"
+    "vinxi": "0.5.7",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@types/node": "^22.15.21",
-    "@types/pg": "^8.15.2",
-    "@types/react": "^19.1.5",
-    "@types/react-dom": "^19.1.5",
+    "@types/node": "^24.0.3",
+    "@types/pg": "^8.15.4",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@typescript/native-preview": "7.0.0-dev.20250619.1",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.0.37",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.17",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3",
     "vite-tsconfig-paths": "^5.1.4"
   },
-  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }

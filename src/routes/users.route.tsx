@@ -71,16 +71,7 @@ function UsersLayoutComponent() {
   return (
     <div className="p-2 flex gap-2">
       <ul className="list-disc pl-4">
-        {[
-          ...usersQuery.data,
-          {
-            id: "dont exist",
-            uuid: "qwe",
-            username: "qwe",
-            email: "string",
-            createdAt: "2025",
-          },
-        ].map((user) => {
+        {[...usersQuery.data].map((user) => {
           return (
             <li key={user.id} className="whitespace-nowrap">
               <Link
