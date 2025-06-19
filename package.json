@@ -38,7 +38,7 @@
     "@types/react-dom": "^19.1.6",
     "@typescript/native-preview": "7.0.0-dev.20250619.1",
     "autoprefixer": "^10.4.21",
-    "daisyui": "^5.0.37",
+    "daisyui": "^5.0.43",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3",

@@ -1,9 +1,9 @@
+import { createServerFileRoute } from "@tanstack/react-start/server"
 import { json } from "@tanstack/react-start";
-import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { db } from "../../db/db";
 import { DatabaseSchema } from "~/db/schema";
 
-export const APIRoute = createAPIFileRoute("/api/posts")({
+export const ServerRoute = createServerFileRoute("/api/posts").methods({
   GET: async ({ request }) => {
     console.info("Fetching posts... @", request.url);
     const data = await db.selectFrom("posts").selectAll().execute();
