@@ -12,6 +12,7 @@ import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -135,6 +136,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <hr />
         {children}
         <TanStackRouterDevtools position="bottom-right" />
+        <ReactQueryDevtools initialIsOpen={false} />
+
         <Scripts />
       </body>
     </html>

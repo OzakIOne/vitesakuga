@@ -8,6 +8,7 @@
     "build": "vite build",
     "start": "vite start",
     "biome": "biome check --write .",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate"
@@ -16,6 +17,7 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@tanstack/react-form": "^1.14.1",
     "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-query-devtools": "^5.83.0",
     "@tanstack/react-router": "^1.127.8",
     "@tanstack/react-router-devtools": "^1.127.8",
     "@tanstack/react-router-with-query": "^1.127.8",
@@ -33,6 +35,9 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "@tanstack/eslint-plugin-query": "^5.81.2",
+    "@tanstack/eslint-plugin-router": "^1.125.0",
     "@types/node": "^24.0.14",
     "@types/pg": "^8.15.4",
     "@types/react": "^19.1.8",
@@ -41,9 +46,11 @@
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.0.46",
+    "eslint": "^9.31.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.37.0",
     "vite-tsconfig-paths": "^5.1.4"
   },
   "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
