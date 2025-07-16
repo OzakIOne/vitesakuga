@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  useNavigate,
-  useSearch,
-} from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { postsQueryOptions } from "../utils/posts";
 import * as React from "react";
@@ -28,10 +24,6 @@ function Home() {
       setSearchTerm(value.search);
     },
   });
-
-  const handleSearchChange = (value: string) => {
-    form.setFieldValue("search", value);
-  };
 
   const filteredPosts = searchTerm
     ? posts.filter(

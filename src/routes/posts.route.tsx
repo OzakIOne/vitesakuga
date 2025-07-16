@@ -1,7 +1,5 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { fetchPosts } from "../utils/posts";
 import { postsQueryOptions } from "../utils/posts";
-import { useSuspenseQuery } from "@tanstack/react-query";
 export const Route = createFileRoute("/posts")({
   loader: async ({ context }) =>
     await context.queryClient.ensureQueryData(postsQueryOptions()),
@@ -9,12 +7,13 @@ export const Route = createFileRoute("/posts")({
 });
 
 function PostsLayoutComponent() {
-  const postsQuery = useSuspenseQuery(fetchPosts);
+  const postsQuery = Route.useLoaderData();
+  console.info("PostsLayoutComponent postsQuery", postsQuery);
 
   return (
     <div className="p-2 flex gap-2">
       <ul className="list-disc pl-4">
-        {[...postsQuery.data].map((post) => {
+        {[...postsQuery].map((post) => {
           return (
             <li key={post.id} className="whitespace-nowrap">
               <Link

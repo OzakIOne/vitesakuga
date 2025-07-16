@@ -35,7 +35,9 @@ async function createUser(data: DatabaseSchema["users"]) {
 }
 
 function UsersLayoutComponent() {
-  const usersQuery = useSuspenseQuery(usersQueryOptions());
+  // const usersQuery = useSuspenseQuery(usersQueryOptions());
+  const usersQuery = Route.useLoaderData();
+
   const queryClient = useQueryClient();
   const [status, setStatus] = React.useState<null | {
     type: "success" | "error";
@@ -71,7 +73,7 @@ function UsersLayoutComponent() {
   return (
     <div className="p-2 flex gap-2">
       <ul className="list-disc pl-4">
-        {[...usersQuery.data].map((user) => {
+        {[...usersQuery].map((user) => {
           return (
             <li key={user.id} className="whitespace-nowrap">
               <Link

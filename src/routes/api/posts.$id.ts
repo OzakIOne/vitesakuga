@@ -1,4 +1,4 @@
-import { createServerFileRoute } from "@tanstack/react-start/server"
+import { createServerFileRoute } from "@tanstack/react-start/server";
 import { json } from "@tanstack/react-start";
 import { db } from "~/db/db";
 
@@ -16,10 +16,10 @@ export const ServerRoute = createServerFileRoute("/api/posts/$id").methods({
         .where("id", "=", id)
         .execute();
 
-      return json(data);
+      return json(data[0]);
     } catch (e) {
       console.error(e);
-      return json({ error: "User not found" }, { status: 404 });
+      return json({ error: "Post not found" }, { status: 404 });
     }
   },
 });
