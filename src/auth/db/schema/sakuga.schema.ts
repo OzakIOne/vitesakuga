@@ -27,7 +27,7 @@ export const posts = pgTable("posts", {
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  userId: text("user_id").references(() => user.id),
+  userId: text("userId").references(() => user.id),
 });
 
 export const comments = pgTable("comments", {
@@ -70,7 +70,7 @@ export type Comment = InferSelectModel<typeof comments>;
 
 export type DatabaseSchema = {
   users: Partial<User>;
-  posts: Post;
+  posts: Omit<Post, "createdAt" | "id">;
   comments: Comment;
   // tags: Tag;
   // postTags: PostTag;

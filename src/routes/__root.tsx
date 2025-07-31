@@ -100,7 +100,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <Link
             to="/"
             activeProps={{
-              className: "font-bold",
+              className: "link",
             }}
             activeOptions={{ exact: true }}
           >
@@ -109,7 +109,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <Link
             to="/posts"
             activeProps={{
-              className: "font-bold",
+              className: "link",
             }}
           >
             Posts
@@ -117,10 +117,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <Link
             to="/users"
             activeProps={{
-              className: "font-bold",
+              className: "link",
             }}
           >
             Users
+          </Link>{" "}
+          <Link
+            to="/upload"
+            activeProps={{
+              className: "link",
+            }}
+          >
+            Upload
           </Link>{" "}
           {ctx.user ? (
             <button

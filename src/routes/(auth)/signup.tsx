@@ -4,6 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import authClient from "~/auth/client";
 import { z } from "zod";
+import { FieldInfo } from "~/components/FieldInfo";
 
 export const Route = createFileRoute("/(auth)/signup")({
   component: SignupForm,
@@ -20,19 +21,6 @@ const SignUpSchema = z
     message: "Passwords do not match",
     path: ["confirm_password"],
   });
-
-function FieldInfo({ field }: { field: AnyFieldApi }) {
-  return (
-    <>
-      {field.state.meta.isTouched && !field.state.meta.isValid ? (
-        <p className="text-red-700 text-sm">
-          {field.state.meta.errors.map((err) => err.message).join(",")}
-        </p>
-      ) : null}
-      {field.state.meta.isValidating ? "Validating..." : null}
-    </>
-  );
-}
 
 function SignupForm() {
   const { redirectUrl } = Route.useRouteContext();

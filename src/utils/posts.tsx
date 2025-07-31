@@ -26,6 +26,25 @@ export const postsQueryOptions = () =>
         }),
   });
 
+export const postsUploadOptions = (postData) =>
+  queryOptions({
+    queryKey: ["posts", "upload", postData],
+    queryFn: () =>
+      fetch(`${DEPLOY_URL}/api/posts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(postData),
+      }).then(async (r) => {
+        if (!r.ok) {
+          const errorData = await r.json();
+          throw new Error(errorData.error || "Failed to upload post");
+        }
+        return r.json() as Promise<PostType>;
+      }),
+  });
+
 export const postQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["posts", id],

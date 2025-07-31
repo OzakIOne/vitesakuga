@@ -11,6 +11,7 @@
 import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UploadRouteImport } from './routes/upload'
 import { Route as RedirectRouteImport } from './routes/redirect'
 import { Route as UsersRouteRouteImport } from './routes/users.route'
 import { Route as PostsRouteRouteImport } from './routes/posts.route'
@@ -30,6 +31,11 @@ import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/
 
 const rootServerRouteImport = createServerRootRoute()
 
+const UploadRoute = UploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RedirectRoute = RedirectRouteImport.update({
   id: '/redirect',
   path: '/redirect',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/posts': typeof PostsRouteRouteWithChildren
   '/users': typeof UsersRouteRouteWithChildren
   '/redirect': typeof RedirectRoute
+  '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof authRouteRouteWithChildren
   '/redirect': typeof RedirectRoute
+  '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/posts': typeof PostsRouteRouteWithChildren
   '/users': typeof UsersRouteRouteWithChildren
   '/redirect': typeof RedirectRoute
+  '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/users'
     | '/redirect'
+    | '/upload'
     | '/login'
     | '/signup'
     | '/posts/$postId'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/redirect'
+    | '/upload'
     | '/login'
     | '/signup'
     | '/posts/$postId'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/users'
     | '/redirect'
+    | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
     | '/posts/$postId'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   PostsRouteRoute: typeof PostsRouteRouteWithChildren
   UsersRouteRoute: typeof UsersRouteRouteWithChildren
   RedirectRoute: typeof RedirectRoute
+  UploadRoute: typeof UploadRoute
 }
 export interface FileServerRoutesByFullPath {
   '/api/posts': typeof ApiPostsServerRouteWithChildren
@@ -245,6 +258,13 @@ export interface RootServerRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/upload': {
+      id: '/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/redirect': {
       id: '/redirect'
       path: '/redirect'
@@ -436,6 +456,7 @@ const rootRouteChildren: RootRouteChildren = {
   PostsRouteRoute: PostsRouteRouteWithChildren,
   UsersRouteRoute: UsersRouteRouteWithChildren,
   RedirectRoute: RedirectRoute,
+  UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

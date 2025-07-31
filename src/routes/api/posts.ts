@@ -19,7 +19,7 @@ export const ServerRoute = createServerFileRoute("/api/posts").methods({
     console.log("api post posts data", data);
 
     // Validate input
-    if (!data.title || !data.body) {
+    if (!data.title || !data.content) {
       return json({ error: "Title and body are required" }, { status: 400 });
     }
 
@@ -28,10 +28,12 @@ export const ServerRoute = createServerFileRoute("/api/posts").methods({
       .values({
         title: data.title,
         content: data.content,
+        userId: data.userId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    console.log("newpost", { newPost });
     return json(newPost);
   },
 });
