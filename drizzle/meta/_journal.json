@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1753980216942,
+      "tag": "0000_wide_wolf_cub",
+      "breakpoints": true
+    }
+  ]
+}

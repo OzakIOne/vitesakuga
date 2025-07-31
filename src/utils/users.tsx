@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { DatabaseSchema } from "~/db/schema";
+import { DatabaseSchema } from "~/auth/db/schema/sakuga.schema";
 
 export const DEPLOY_URL = "http://localhost:3000";
 

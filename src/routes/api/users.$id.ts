@@ -1,6 +1,6 @@
-import { createServerFileRoute } from "@tanstack/react-start/server"
+import { createServerFileRoute } from "@tanstack/react-start/server";
 import { json } from "@tanstack/react-start";
-import { db } from "~/db/db";
+import { kysely } from "../../auth/db/kysely";
 
 export const ServerRoute = createServerFileRoute("/api/users/$id").methods({
   GET: async ({ request, params }) => {
@@ -10,7 +10,7 @@ export const ServerRoute = createServerFileRoute("/api/users/$id").methods({
       if (isNaN(id)) {
         return json({ error: "Invalid user id" }, { status: 400 });
       }
-      const results = await db
+      const results = await kysely
         .selectFrom("users")
         .selectAll()
         .where("id", "=", id)

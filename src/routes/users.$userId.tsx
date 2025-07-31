@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DEPLOY_URL } from "~/utils/users";
 import { NotFound } from "~/components/NotFound";
 import { UserErrorComponent } from "~/components/UserError";
-import { DatabaseSchema } from "~/db/schema";
+import { DatabaseSchema } from "~/auth/db/schema/sakuga.schema";
 
 export const Route = createFileRoute("/users/$userId")({
   loader: async ({ params: { userId } }) => {

@@ -2,14 +2,14 @@ import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  out: "./src/db/drizzle",
-  schema: "./src/db/schema.ts",
+  out: "./drizzle",
+  schema: "./src/auth/db/schema/index.ts",
+  breakpoints: true,
+  verbose: true,
+  strict: true,
+  casing: "snake_case",
   dialect: "postgresql",
   dbCredentials: {
-    host: process.env.POSTGRES_HOST,
-    database: process.env.POSTGRES_DB,
-    user: process.env.POSTGRES_USER,
-    password: process.env.POSTGRES_PASSWORD,
-    ssl: false,
+    url: process.env.DATABASE_URL || "",
   },
 });

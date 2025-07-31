@@ -8,13 +8,29 @@ export type PostType = {
   body: string;
 };
 
-export const DEPLOY_URL = "http://localhost:3000";
+export const DEPLOY_URL = import.meta.env.VITE_BASE_URL || "";
 
 export const postsQueryOptions = () =>
   queryOptions({
     queryKey: ["posts"],
     queryFn: () =>
-      fetch(DEPLOY_URL + "/api/posts")
+      fetch(`${DEPLOY_URL}/api/posts`)
+        .then((r) => {
+          if (!r.ok) {
+            throw new Error("Failed to fetch posts");
+          }
+          return r.json() as Promise<PostType[]>;
+        })
+        .catch(() => {
+          throw new Error("Failed to fetch posts");
+        }),
+  });
+
+export const postQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["posts", id],
+    queryFn: () =>
+      fetch(`${DEPLOY_URL}/api/posts/${id}`)
         .then((r) => {
           if (!r.ok) {
             throw new Error("Failed to fetch posts");

@@ -1,10 +1,11 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import {
   HeadContent,
   Link,
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
@@ -13,10 +14,20 @@ import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { getUser } from "~/auth/utils";
+import authClient from "~/auth/client";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
+  user: Awaited<ReturnType<typeof getUser>>;
 }>()({
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.fetchQuery({
+      queryKey: ["user"],
+      queryFn: ({ signal }) => getUser({ signal }),
+    }); // we're using react-query for caching, see router.tsx
+    return { user };
+  },
   head: () => ({
     meta: [
       {
@@ -75,6 +86,10 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const ctx = Route.useRouteContext();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
   return (
     <html>
       <head>
@@ -107,27 +122,32 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Users
           </Link>{" "}
-          <Link
-            to="/route-a"
-            activeProps={{
-              className: "font-bold",
-            }}
-          >
-            Pathless Layout
-          </Link>{" "}
-          <Link
-            to="/deferred"
-            activeProps={{
-              className: "font-bold",
-            }}
-          >
-            Deferred
-          </Link>{" "}
+          {ctx.user ? (
+            <button
+              className="btn btn-xs btn-soft btn-error"
+              onClick={async () => {
+                await authClient.signOut();
+                await queryClient.invalidateQueries({ queryKey: ["user"] });
+                await router.invalidate();
+              }}
+            >
+              Sign Out
+            </button>
+          ) : (
+            <>
+              <Link to="/login" className="link">
+                Login
+              </Link>{" "}
+              <Link to="/signup" className="link">
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
         <hr />
         {children}
         <TanStackRouterDevtools position="bottom-right" />
-        <ReactQueryDevtools initialIsOpen={false} />
+        <ReactQueryDevtools buttonPosition="bottom-left" />
 
         <Scripts />
       </body>

@@ -1,12 +1,16 @@
-import { createServerFileRoute } from "@tanstack/react-start/server"
+import { createServerFileRoute } from "@tanstack/react-start/server";
 import { json } from "@tanstack/react-start";
-import { db } from "../../db/db";
-import { DatabaseSchema } from "~/db/schema";
+import { kysely } from "../../auth/db/kysely";
+import { DatabaseSchema } from "../../auth/db/schema/sakuga.schema";
 
 export const ServerRoute = createServerFileRoute("/api/posts").methods({
   GET: async ({ request }) => {
     console.info("Fetching posts... @", request.url);
-    const data = await db.selectFrom("posts").selectAll().execute();
+    const data = await kysely.selectFrom("posts").selectAll().execute();
+    console.log({ data });
+    if (data.length === 0) {
+      return json({ error: "No posts found" });
+    }
     return json(data);
   },
   POST: async ({ request }) => {
@@ -19,7 +23,7 @@ export const ServerRoute = createServerFileRoute("/api/posts").methods({
       return json({ error: "Title and body are required" }, { status: 400 });
     }
 
-    const newPost = await db
+    const newPost = await kysely
       .insertInto("posts")
       .values({
         title: data.title,

@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { usersQueryOptions } from "../utils/users";
-import { DatabaseSchema } from "~/db/schema";
+import { DatabaseSchema } from "~/auth/db/schema/sakuga.schema";
 import {
   useQueryClient,
   useMutation,

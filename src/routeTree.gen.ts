@@ -12,29 +12,27 @@ import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RedirectRouteImport } from './routes/redirect'
-import { Route as DeferredRouteImport } from './routes/deferred'
 import { Route as UsersRouteRouteImport } from './routes/users.route'
 import { Route as PostsRouteRouteImport } from './routes/posts.route'
+import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
+import { Route as authSignupRouteImport } from './routes/(auth)/signup'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { ServerRoute as ApiUsersServerRouteImport } from './routes/api/users'
 import { ServerRoute as ApiPostsServerRouteImport } from './routes/api/posts'
 import { ServerRoute as ApiUsersIdServerRouteImport } from './routes/api/users.$id'
 import { ServerRoute as ApiPostsIdServerRouteImport } from './routes/api/posts.$id'
+import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
 const rootServerRouteImport = createServerRootRoute()
 
 const RedirectRoute = RedirectRouteImport.update({
   id: '/redirect',
   path: '/redirect',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeferredRoute = DeferredRouteImport.update({
-  id: '/deferred',
-  path: '/deferred',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsersRouteRoute = UsersRouteRouteImport.update({
@@ -45,6 +43,10 @@ const UsersRouteRoute = UsersRouteRouteImport.update({
 const PostsRouteRoute = PostsRouteRouteImport.update({
   id: '/posts',
   path: '/posts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authRouteRoute = authRouteRouteImport.update({
+  id: '/(auth)',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -72,6 +74,16 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
   path: '/$postId',
   getParentRoute: () => PostsRouteRoute,
 } as any)
+const authSignupRoute = authSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => authRouteRoute,
+} as any)
+const authLoginRoute = authLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => authRouteRoute,
+} as any)
 const ApiUsersServerRoute = ApiUsersServerRouteImport.update({
   id: '/api/users',
   path: '/api/users',
@@ -92,22 +104,29 @@ const ApiPostsIdServerRoute = ApiPostsIdServerRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiPostsServerRoute,
 } as any)
+const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootServerRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
   '/users': typeof UsersRouteRouteWithChildren
-  '/deferred': typeof DeferredRoute
   '/redirect': typeof RedirectRoute
+  '/login': typeof authLoginRoute
+  '/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/deferred': typeof DeferredRoute
+  '/': typeof authRouteRouteWithChildren
   '/redirect': typeof RedirectRoute
+  '/login': typeof authLoginRoute
+  '/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
   '/posts': typeof PostsIndexRoute
@@ -116,10 +135,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/(auth)': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
   '/users': typeof UsersRouteRouteWithChildren
-  '/deferred': typeof DeferredRoute
   '/redirect': typeof RedirectRoute
+  '/(auth)/login': typeof authLoginRoute
+  '/(auth)/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
   '/posts/': typeof PostsIndexRoute
@@ -131,8 +152,9 @@ export interface FileRouteTypes {
     | '/'
     | '/posts'
     | '/users'
-    | '/deferred'
     | '/redirect'
+    | '/login'
+    | '/signup'
     | '/posts/$postId'
     | '/users/$userId'
     | '/posts/'
@@ -140,8 +162,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/deferred'
     | '/redirect'
+    | '/login'
+    | '/signup'
     | '/posts/$postId'
     | '/users/$userId'
     | '/posts'
@@ -149,10 +172,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/(auth)'
     | '/posts'
     | '/users'
-    | '/deferred'
     | '/redirect'
+    | '/(auth)/login'
+    | '/(auth)/signup'
     | '/posts/$postId'
     | '/users/$userId'
     | '/posts/'
@@ -161,20 +186,22 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  authRouteRoute: typeof authRouteRouteWithChildren
   PostsRouteRoute: typeof PostsRouteRouteWithChildren
   UsersRouteRoute: typeof UsersRouteRouteWithChildren
-  DeferredRoute: typeof DeferredRoute
   RedirectRoute: typeof RedirectRoute
 }
 export interface FileServerRoutesByFullPath {
   '/api/posts': typeof ApiPostsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatServerRoute
   '/api/posts/$id': typeof ApiPostsIdServerRoute
   '/api/users/$id': typeof ApiUsersIdServerRoute
 }
 export interface FileServerRoutesByTo {
   '/api/posts': typeof ApiPostsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatServerRoute
   '/api/posts/$id': typeof ApiPostsIdServerRoute
   '/api/users/$id': typeof ApiUsersIdServerRoute
 }
@@ -182,18 +209,30 @@ export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
   '/api/posts': typeof ApiPostsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatServerRoute
   '/api/posts/$id': typeof ApiPostsIdServerRoute
   '/api/users/$id': typeof ApiUsersIdServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/api/posts' | '/api/users' | '/api/posts/$id' | '/api/users/$id'
+  fullPaths:
+    | '/api/posts'
+    | '/api/users'
+    | '/api/auth/$'
+    | '/api/posts/$id'
+    | '/api/users/$id'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/api/posts' | '/api/users' | '/api/posts/$id' | '/api/users/$id'
+  to:
+    | '/api/posts'
+    | '/api/users'
+    | '/api/auth/$'
+    | '/api/posts/$id'
+    | '/api/users/$id'
   id:
     | '__root__'
     | '/api/posts'
     | '/api/users'
+    | '/api/auth/$'
     | '/api/posts/$id'
     | '/api/users/$id'
   fileServerRoutesById: FileServerRoutesById
@@ -201,6 +240,7 @@ export interface FileServerRouteTypes {
 export interface RootServerRouteChildren {
   ApiPostsServerRoute: typeof ApiPostsServerRouteWithChildren
   ApiUsersServerRoute: typeof ApiUsersServerRouteWithChildren
+  ApiAuthSplatServerRoute: typeof ApiAuthSplatServerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -210,13 +250,6 @@ declare module '@tanstack/react-router' {
       path: '/redirect'
       fullPath: '/redirect'
       preLoaderRoute: typeof RedirectRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/deferred': {
-      id: '/deferred'
-      path: '/deferred'
-      fullPath: '/deferred'
-      preLoaderRoute: typeof DeferredRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/users': {
@@ -231,6 +264,13 @@ declare module '@tanstack/react-router' {
       path: '/posts'
       fullPath: '/posts'
       preLoaderRoute: typeof PostsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)': {
+      id: '/(auth)'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof authRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -268,6 +308,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsPostIdRouteImport
       parentRoute: typeof PostsRouteRoute
     }
+    '/(auth)/signup': {
+      id: '/(auth)/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof authSignupRouteImport
+      parentRoute: typeof authRouteRoute
+    }
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof authRouteRoute
+    }
   }
 }
 declare module '@tanstack/react-start/server' {
@@ -300,8 +354,29 @@ declare module '@tanstack/react-start/server' {
       preLoaderRoute: typeof ApiPostsIdServerRouteImport
       parentRoute: typeof ApiPostsServerRoute
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
   }
 }
+
+interface authRouteRouteChildren {
+  authLoginRoute: typeof authLoginRoute
+  authSignupRoute: typeof authSignupRoute
+}
+
+const authRouteRouteChildren: authRouteRouteChildren = {
+  authLoginRoute: authLoginRoute,
+  authSignupRoute: authSignupRoute,
+}
+
+const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
+  authRouteRouteChildren,
+)
 
 interface PostsRouteRouteChildren {
   PostsPostIdRoute: typeof PostsPostIdRoute
@@ -357,9 +432,9 @@ const ApiUsersServerRouteWithChildren = ApiUsersServerRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  authRouteRoute: authRouteRouteWithChildren,
   PostsRouteRoute: PostsRouteRouteWithChildren,
   UsersRouteRoute: UsersRouteRouteWithChildren,
-  DeferredRoute: DeferredRoute,
   RedirectRoute: RedirectRoute,
 }
 export const routeTree = rootRouteImport
@@ -368,6 +443,7 @@ export const routeTree = rootRouteImport
 const rootServerRouteChildren: RootServerRouteChildren = {
   ApiPostsServerRoute: ApiPostsServerRouteWithChildren,
   ApiUsersServerRoute: ApiUsersServerRouteWithChildren,
+  ApiAuthSplatServerRoute: ApiAuthSplatServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport
   ._addFileChildren(rootServerRouteChildren)

@@ -1,14 +1,17 @@
 import { createServerFileRoute } from "@tanstack/react-start/server";
 import { json } from "@tanstack/react-start";
-import { db } from "../../db/db";
-import { DatabaseSchema } from "~/db/schema";
+import { kysely } from "../../auth/db/kysely";
+import { DatabaseSchema } from "~/auth/db/schema/sakuga.schema";
 import { userCreateSchema } from "../../utils/userSchemas";
 
 export const ServerRoute = createServerFileRoute("/api/users").methods({
   GET: async ({ request }) => {
     console.info("Fetching users... @", request.url);
-    const data = await db.selectFrom("users").selectAll().execute();
+    const data = await kysely.selectFrom("users").selectAll().execute();
     console.log("api get users data", data);
+    if (data.length === 0) {
+      return json({ error: "No users found" }, { status: 404 });
+    }
     return json(data);
   },
   POST: async ({ request }) => {
@@ -26,8 +29,8 @@ export const ServerRoute = createServerFileRoute("/api/users").methods({
     }
 
     // Check for unique email
-    const existing = await db
-      .selectFrom("users")
+    const existing = await kysely
+      .selectFrom("user")
       .selectAll()
       .where("email", "=", data.email)
       .executeTakeFirst();
@@ -35,7 +38,7 @@ export const ServerRoute = createServerFileRoute("/api/users").methods({
       return json({ error: "Email address already in use" }, { status: 409 });
     }
 
-    const newUser = await db
+    const newUser = await kysely
       .insertInto("users")
       .values({
         username: data.username,
