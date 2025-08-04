@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { createServerFn, json } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { kysely } from "~/auth/db/kysely";
 import { PostsInsert, postsSelectSchema } from "~/auth/db/schema";
@@ -8,7 +8,6 @@ export const DEPLOY_URL = import.meta.env.VITE_BASE_URL || "";
 
 export const fetchPosts = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("posts").selectAll().execute();
-
   const parsed = z.array(postsSelectSchema).safeParse(data);
   if (!parsed.success)
     throw new Error(
@@ -46,7 +45,13 @@ export const fetchPost = createServerFn()
       .selectFrom("posts")
       .selectAll()
       .where("id", "=", ctx.data)
-      .execute();
+      .executeTakeFirstOrThrow();
 
-    return data[0];
+    const userPostInfo = await kysely
+      .selectFrom("user")
+      .select(["image", "name"])
+      .where("user.id", "=", data.userId)
+      .executeTakeFirstOrThrow();
+
+    return { post: data, user: userPostInfo };
   });

@@ -10,24 +10,18 @@ function PostsLayoutComponent() {
 
   return (
     <div className="p-2 flex gap-2">
-      <ul className="list-disc pl-4">
-        {postsQuery.map((post) => {
-          return (
-            <li key={post.id} className="whitespace-nowrap">
-              <Link
-                to="/posts/$postId"
-                params={{
-                  postId: post.id.toString(),
-                }}
-                className="block py-1 text-blue-800 hover:text-blue-600"
-                activeProps={{ className: "text-black font-bold" }}
-              >
-                <div>{post.title}</div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="flex">
+        {postsQuery.map((post) => (
+          <div key={post.id} className="p-4 flex flex-col">
+            <Link to="/posts/$postId" params={{ postId: String(post.id) }}>
+              <h3>{post.title}</h3>
+              <div>{post.content}</div>
+              <div>{new Date(post.createdAt).toDateString()}</div>
+            </Link>
+          </div>
+        ))}
+      </div>
+
       <hr />
       <Outlet />
     </div>

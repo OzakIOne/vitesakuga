@@ -20,12 +20,13 @@ export const Route = createFileRoute("/posts/$postId")({
 });
 
 function PostComponent() {
-  const post = Route.useLoaderData();
+  const { post, user } = Route.useLoaderData();
   console.log(post);
   return (
     <div className="space-y-2">
-      <h4 className="text-xl font-bold underline">{post.title}</h4>
-      <div className="text-sm">{post.content}</div>
+      <h4 className="text-xl font-bold underline">Post title: {post.title}</h4>
+      <div className="text-sm">Post content: {post.content}</div>
+      <div>Posted by: {user.name}</div>
     </div>
   );
 }
