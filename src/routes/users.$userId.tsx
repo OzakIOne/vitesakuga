@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { userIdQueryOptions } from "~/utils/users";
+import { fetchUser, userIdQueryOptions } from "~/utils/users";
 import { NotFound } from "~/components/NotFound";
 import { UserErrorComponent } from "~/components/UserError";
 
 export const Route = createFileRoute("/users/$userId")({
-  loader: async ({ context, params: { userId } }) => {
-    await context.queryClient.ensureQueryData(userIdQueryOptions(userId));
-  },
+  loader: async ({ params: { userId } }) =>
+    fetchUser({
+      data: userId,
+    }),
   errorComponent: UserErrorComponent,
   component: UserComponent,
   notFoundComponent: () => {

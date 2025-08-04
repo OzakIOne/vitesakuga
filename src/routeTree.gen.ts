@@ -12,7 +12,6 @@ import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
-import { Route as RedirectRouteImport } from './routes/redirect'
 import { Route as PostsRouteRouteImport } from './routes/posts.route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,10 +21,7 @@ import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
-import { ServerRoute as ApiUsersServerRouteImport } from './routes/api/users'
 import { ServerRoute as ApiPostsServerRouteImport } from './routes/api/posts'
-import { ServerRoute as ApiUsersIdServerRouteImport } from './routes/api/users.$id'
-import { ServerRoute as ApiPostsIdServerRouteImport } from './routes/api/posts.$id'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
 const rootServerRouteImport = createServerRootRoute()
@@ -33,11 +29,6 @@ const rootServerRouteImport = createServerRootRoute()
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RedirectRoute = RedirectRouteImport.update({
-  id: '/redirect',
-  path: '/redirect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PostsRouteRoute = PostsRouteRouteImport.update({
@@ -84,25 +75,10 @@ const authLoginRoute = authLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => authRouteRoute,
 } as any)
-const ApiUsersServerRoute = ApiUsersServerRouteImport.update({
-  id: '/api/users',
-  path: '/api/users',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
 const ApiPostsServerRoute = ApiPostsServerRouteImport.update({
   id: '/api/posts',
   path: '/api/posts',
   getParentRoute: () => rootServerRouteImport,
-} as any)
-const ApiUsersIdServerRoute = ApiUsersIdServerRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiUsersServerRoute,
-} as any)
-const ApiPostsIdServerRoute = ApiPostsIdServerRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiPostsServerRoute,
 } as any)
 const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
   id: '/api/auth/$',
@@ -113,7 +89,6 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
-  '/redirect': typeof RedirectRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
@@ -124,7 +99,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof authRouteRouteWithChildren
-  '/redirect': typeof RedirectRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
@@ -138,7 +112,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
-  '/redirect': typeof RedirectRoute
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
@@ -152,7 +125,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/posts'
-    | '/redirect'
     | '/upload'
     | '/login'
     | '/signup'
@@ -163,7 +135,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/redirect'
     | '/upload'
     | '/login'
     | '/signup'
@@ -176,7 +147,6 @@ export interface FileRouteTypes {
     | '/'
     | '/(auth)'
     | '/posts'
-    | '/redirect'
     | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
@@ -190,60 +160,33 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authRouteRoute: typeof authRouteRouteWithChildren
   PostsRouteRoute: typeof PostsRouteRouteWithChildren
-  RedirectRoute: typeof RedirectRoute
   UploadRoute: typeof UploadRoute
   UsersUserIdRoute: typeof UsersUserIdRoute
   UsersIndexRoute: typeof UsersIndexRoute
 }
 export interface FileServerRoutesByFullPath {
-  '/api/posts': typeof ApiPostsServerRouteWithChildren
-  '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/posts': typeof ApiPostsServerRoute
   '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/posts/$id': typeof ApiPostsIdServerRoute
-  '/api/users/$id': typeof ApiUsersIdServerRoute
 }
 export interface FileServerRoutesByTo {
-  '/api/posts': typeof ApiPostsServerRouteWithChildren
-  '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/posts': typeof ApiPostsServerRoute
   '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/posts/$id': typeof ApiPostsIdServerRoute
-  '/api/users/$id': typeof ApiUsersIdServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
-  '/api/posts': typeof ApiPostsServerRouteWithChildren
-  '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/posts': typeof ApiPostsServerRoute
   '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/posts/$id': typeof ApiPostsIdServerRoute
-  '/api/users/$id': typeof ApiUsersIdServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths:
-    | '/api/posts'
-    | '/api/users'
-    | '/api/auth/$'
-    | '/api/posts/$id'
-    | '/api/users/$id'
+  fullPaths: '/api/posts' | '/api/auth/$'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to:
-    | '/api/posts'
-    | '/api/users'
-    | '/api/auth/$'
-    | '/api/posts/$id'
-    | '/api/users/$id'
-  id:
-    | '__root__'
-    | '/api/posts'
-    | '/api/users'
-    | '/api/auth/$'
-    | '/api/posts/$id'
-    | '/api/users/$id'
+  to: '/api/posts' | '/api/auth/$'
+  id: '__root__' | '/api/posts' | '/api/auth/$'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
-  ApiPostsServerRoute: typeof ApiPostsServerRouteWithChildren
-  ApiUsersServerRoute: typeof ApiUsersServerRouteWithChildren
+  ApiPostsServerRoute: typeof ApiPostsServerRoute
   ApiAuthSplatServerRoute: typeof ApiAuthSplatServerRoute
 }
 
@@ -254,13 +197,6 @@ declare module '@tanstack/react-router' {
       path: '/upload'
       fullPath: '/upload'
       preLoaderRoute: typeof UploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/redirect': {
-      id: '/redirect'
-      path: '/redirect'
-      fullPath: '/redirect'
-      preLoaderRoute: typeof RedirectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts': {
@@ -330,33 +266,12 @@ declare module '@tanstack/react-router' {
 }
 declare module '@tanstack/react-start/server' {
   interface ServerFileRoutesByPath {
-    '/api/users': {
-      id: '/api/users'
-      path: '/api/users'
-      fullPath: '/api/users'
-      preLoaderRoute: typeof ApiUsersServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
     '/api/posts': {
       id: '/api/posts'
       path: '/api/posts'
       fullPath: '/api/posts'
       preLoaderRoute: typeof ApiPostsServerRouteImport
       parentRoute: typeof rootServerRouteImport
-    }
-    '/api/users/$id': {
-      id: '/api/users/$id'
-      path: '/$id'
-      fullPath: '/api/users/$id'
-      preLoaderRoute: typeof ApiUsersIdServerRouteImport
-      parentRoute: typeof ApiUsersServerRoute
-    }
-    '/api/posts/$id': {
-      id: '/api/posts/$id'
-      path: '/$id'
-      fullPath: '/api/posts/$id'
-      preLoaderRoute: typeof ApiPostsIdServerRouteImport
-      parentRoute: typeof ApiPostsServerRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -396,35 +311,10 @@ const PostsRouteRouteWithChildren = PostsRouteRoute._addFileChildren(
   PostsRouteRouteChildren,
 )
 
-interface ApiPostsServerRouteChildren {
-  ApiPostsIdServerRoute: typeof ApiPostsIdServerRoute
-}
-
-const ApiPostsServerRouteChildren: ApiPostsServerRouteChildren = {
-  ApiPostsIdServerRoute: ApiPostsIdServerRoute,
-}
-
-const ApiPostsServerRouteWithChildren = ApiPostsServerRoute._addFileChildren(
-  ApiPostsServerRouteChildren,
-)
-
-interface ApiUsersServerRouteChildren {
-  ApiUsersIdServerRoute: typeof ApiUsersIdServerRoute
-}
-
-const ApiUsersServerRouteChildren: ApiUsersServerRouteChildren = {
-  ApiUsersIdServerRoute: ApiUsersIdServerRoute,
-}
-
-const ApiUsersServerRouteWithChildren = ApiUsersServerRoute._addFileChildren(
-  ApiUsersServerRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
   PostsRouteRoute: PostsRouteRouteWithChildren,
-  RedirectRoute: RedirectRoute,
   UploadRoute: UploadRoute,
   UsersUserIdRoute: UsersUserIdRoute,
   UsersIndexRoute: UsersIndexRoute,
@@ -433,8 +323,7 @@ export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 const rootServerRouteChildren: RootServerRouteChildren = {
-  ApiPostsServerRoute: ApiPostsServerRouteWithChildren,
-  ApiUsersServerRoute: ApiUsersServerRouteWithChildren,
+  ApiPostsServerRoute: ApiPostsServerRoute,
   ApiAuthSplatServerRoute: ApiAuthSplatServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport

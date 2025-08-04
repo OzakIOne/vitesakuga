@@ -1,4 +1,4 @@
-import { Field, useForm } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
   redirect,
@@ -23,6 +23,7 @@ const UploadSchema = z.object({
 
 function RouteComponent() {
   const context = useRouteContext({ from: "/upload" });
+
   const form = useForm({
     defaultValues: {
       title: "",

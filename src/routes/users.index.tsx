@@ -1,10 +1,8 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { userQueryOptions } from "../utils/users";
+import { fetchUsers } from "../utils/users";
 
 export const Route = createFileRoute("/users/")({
-  loader: async ({ context }) => {
-    return await context.queryClient.ensureQueryData(userQueryOptions());
-  },
+  loader: async () => fetchUsers(),
   component: UsersLayoutComponent,
 });
 

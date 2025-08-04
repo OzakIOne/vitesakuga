@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { postQueryOptions } from "../utils/posts";
+import { fetchPost } from "../utils/posts";
 import { NotFound } from "~/components/NotFound";
 import { PostErrorComponent } from "~/components/PostError";
 import z from "zod";
 
 export const Route = createFileRoute("/posts/$postId")({
-  loader: async ({ params: { postId }, context }) =>
-    await context.queryClient.ensureQueryData(postQueryOptions(postId)),
-
+  loader: async ({ params: { postId } }) =>
+    fetchPost({
+      data: postId,
+    }),
   // params: {
   //   parse: (params) => z.parse(z.object(postId:z.string(params.postId))),
   // },

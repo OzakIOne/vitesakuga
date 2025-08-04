@@ -7,14 +7,6 @@ import {
 } from "../../auth/db/schema/sakuga.schema";
 
 export const ServerRoute = createServerFileRoute("/api/posts").methods({
-  GET: async ({ request }) => {
-    const data = await kysely.selectFrom("posts").selectAll().execute();
-    console.info("Fetching posts... @", { url: request.url, data });
-    if (data.length === 0) {
-      return json({ error: "No posts found" });
-    }
-    return json(data);
-  },
   POST: async ({ request }) => {
     const data = (await request.json()) as DbSchemaInsert["posts"];
     console.log("Creating post... @", { url: request.url, data });

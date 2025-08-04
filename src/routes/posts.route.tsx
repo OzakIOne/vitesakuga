@@ -1,14 +1,12 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { postsQueryOptions } from "../utils/posts";
+import { fetchPosts } from "../utils/posts";
 export const Route = createFileRoute("/posts")({
-  loader: async ({ context }) =>
-    await context.queryClient.ensureQueryData(postsQueryOptions()),
+  loader: async () => fetchPosts(),
   component: PostsLayoutComponent,
 });
 
 function PostsLayoutComponent() {
   const postsQuery = Route.useLoaderData();
-  console.info("PostsLayoutComponent postsQuery", postsQuery);
 
   return (
     <div className="p-2 flex gap-2">

@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { postsQueryOptions } from "../utils/posts";
+import { fetchPosts } from "../utils/posts";
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
 
 export const Route = createFileRoute("/")({
+  loader: async () => fetchPosts(),
   component: Home,
 });
 
 function Home() {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { data: posts } = useSuspenseQuery(postsQueryOptions());
+  const posts = Route.useLoaderData();
 
   const form = useForm({
     defaultValues: {
