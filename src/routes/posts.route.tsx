@@ -13,13 +13,13 @@ function PostsLayoutComponent() {
   return (
     <div className="p-2 flex gap-2">
       <ul className="list-disc pl-4">
-        {[...postsQuery].map((post) => {
+        {postsQuery.map((post) => {
           return (
             <li key={post.id} className="whitespace-nowrap">
               <Link
                 to="/posts/$postId"
                 params={{
-                  postId: post.id,
+                  postId: post.id.toString(),
                 }}
                 className="block py-1 text-blue-800 hover:text-blue-600"
                 activeProps={{ className: "text-black font-bold" }}

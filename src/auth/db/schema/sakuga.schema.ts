@@ -8,8 +8,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { user, UserInsert, UserSelect } from "./auth.schema";
 import z from "zod";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { createSchemaFactory } from "drizzle-zod";
 
+export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+  coerce: true,
+});
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -18,9 +21,7 @@ export const posts = pgTable("posts", {
   userId: text("user_id").references(() => user.id),
 });
 
-export const postsSelectSchema = createSelectSchema(posts).extend({
-  createdAt: z.coerce.date(),
-});
+export const postsSelectSchema = createSelectSchema(posts);
 export const postsInsertSchema = createInsertSchema(posts);
 
 export const comments = pgTable("comments", {

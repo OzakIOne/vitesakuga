@@ -1,6 +1,10 @@
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import z from "zod";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { createSchemaFactory } from "drizzle-zod";
+
+export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+  coerce: true,
+});
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),

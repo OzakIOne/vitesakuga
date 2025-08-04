@@ -10,7 +10,6 @@ export const postsQueryOptions = () =>
     queryFn: () =>
       fetch(`${DEPLOY_URL}/api/posts`).then(async (r) => {
         const data = await r.json();
-        console.log("prout data", data);
         const parsed = z.array(postsSelectSchema).safeParse(data);
         if (!parsed.success)
           throw new Error(
@@ -43,11 +42,14 @@ export const postQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["posts", id],
     queryFn: () =>
-      fetch(`${DEPLOY_URL}/api/posts/${id}`)
-        .then((r) => {
-          return r.json();
-        })
-        .catch(() => {
-          throw new Error("Failed to fetch post");
-        }),
+      fetch(`${DEPLOY_URL}/api/posts/${id}`).then(async (r) => {
+        const data = await r.json();
+        console.log("prout", data);
+        const parsed = postsSelectSchema.safeParse(data);
+        if (!parsed.success)
+          throw new Error(
+            `There was an error processing the search results ${parsed.error}`
+          );
+        return parsed.data;
+      }),
   });
