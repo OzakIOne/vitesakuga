@@ -8,6 +8,13 @@
       "when": 1754005371652,
       "tag": "0000_dry_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1754261443723,
+      "tag": "0001_clear_solo",
+      "breakpoints": true
     }
   ]
 }

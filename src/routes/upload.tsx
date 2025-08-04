@@ -18,12 +18,11 @@ export const Route = createFileRoute("/upload")({
 const UploadSchema = z.object({
   title: z.string().min(3, "You must have a length of at least 3"),
   content: z.string().min(3, "You must have a length of at least 3"),
-  userId: z.any(),
+  userId: z.string(),
 });
 
 function RouteComponent() {
   const context = useRouteContext({ from: "/upload" });
-  console.log(context.user);
   const form = useForm({
     defaultValues: {
       title: "",

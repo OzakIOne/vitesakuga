@@ -4,23 +4,21 @@ import { kysely } from "../../auth/db/kysely";
 
 export const ServerRoute = createServerFileRoute("/api/users/$id").methods({
   GET: async ({ request, params }) => {
-    console.info(`Fetching users by id=${params.id}... @`, request.url);
+    console.info(`Fetching users ...@`, { id: params.id, url: request.url });
     try {
-      const id = Number(params.id);
-      if (isNaN(id)) {
-        return json({ error: "Invalid user id" }, { status: 400 });
-      }
-      const results = await kysely
-        .selectFrom("users")
+      const userInfo = await kysely
+        .selectFrom("user")
         .selectAll()
-        .where("id", "=", id)
+        .where("id", "=", params.id)
         .execute();
 
-      if (results.length === 0) {
-        return json({ error: "User not found" }, { status: 404 });
-      }
+      const postsFromUser = await kysely
+        .selectFrom("posts")
+        .selectAll()
+        .where("userId", "=", params.id)
+        .execute();
 
-      return json(results[0]);
+      return json({ user: userInfo[0], posts: postsFromUser });
     } catch (e) {
       console.error(e);
       return json({ error: "User not found" }, { status: 404 });

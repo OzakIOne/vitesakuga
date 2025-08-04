@@ -3,5 +3,6 @@ onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - core-js
   - esbuild
+  - oxc-resolver
   - sharp
   - workerd

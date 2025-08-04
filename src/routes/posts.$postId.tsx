@@ -1,11 +1,12 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { postQueryOptions } from "../utils/posts";
 import { NotFound } from "~/components/NotFound";
 import { PostErrorComponent } from "~/components/PostError";
 
 export const Route = createFileRoute("/posts/$postId")({
-  loader: async ({ params: { postId }, context }) =>
-    await context.queryClient.ensureQueryData(postQueryOptions(postId)),
+  loader: async ({ params: { postId }, context }) => {
+    await context.queryClient.ensureQueryData(postQueryOptions(postId));
+  },
   errorComponent: PostErrorComponent,
   component: PostComponent,
   notFoundComponent: () => {

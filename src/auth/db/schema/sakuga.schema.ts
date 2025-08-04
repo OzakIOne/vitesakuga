@@ -1,77 +1,55 @@
 import {
   integer,
   pgTable,
-  primaryKey,
   serial,
   text,
   timestamp,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { sql, type InferSelectModel } from "drizzle-orm";
-import { user } from "./auth.schema";
-import { InferInsertModel } from "drizzle-orm";
-
-// export const users = pgTable("users", {
-//   id: serial("id").primaryKey(),
-//   uuid: uuid("uuid")
-//     .default(sql`gen_random_uuid()`)
-//     .notNull(),
-//   username: varchar("username", { length: 50 }).notNull(),
-//   email: varchar("email", { length: 100 }).notNull(),
-//   createdAt: timestamp("created_at").defaultNow().notNull(),
-// });
+import { user, UserInsert, UserSelect } from "./auth.schema";
+import z from "zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  userId: text("userId").references(() => user.id),
+  userId: text("user_id").references(() => user.id),
 });
+
+export const postsSelectSchema = createSelectSchema(posts).extend({
+  createdAt: z.coerce.date(),
+});
+export const postsInsertSchema = createInsertSchema(posts);
 
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   postId: integer("post_id")
     .references(() => posts.id)
     .notNull(),
-  // userId: integer("user_id")
-  //   .references(() => users.id)
-  //   .notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   userId: text("user_id").references(() => user.id),
 });
 
-// export const tags = pgTable("tags", {
-//   id: serial("id").primaryKey(),
-//   name: varchar("name", { length: 50 }).notNull(),
-// });
+export const commentsSelectSchema = createSelectSchema(comments);
+export const commentsInsertSchema = createInsertSchema(comments);
 
-// export const postTags = pgTable(
-//   "post_tags",
-//   {
-//     postId: integer("post_id")
-//       .references(() => posts.id)
-//       .notNull(),
-//     tagId: integer("tag_id")
-//       .references(() => tags.id)
-//       .notNull(),
-//   },
-//   (table) => [primaryKey({ columns: [table.postId, table.tagId] })]
-// );
+export type PostsSelect = z.infer<typeof postsSelectSchema>;
+export type CommentsSelect = z.infer<typeof commentsSelectSchema>;
 
-export type SelectUser = InferSelectModel<typeof user>;
-export type InsertUser = InferInsertModel<typeof user>;
-export type Post = InferSelectModel<typeof posts>;
-export type Comment = InferSelectModel<typeof comments>;
-// export type Tag = InferSelectModel<typeof tags>;
-// export type PostTag = InferSelectModel<typeof postTags>;
+export type DbSchemaSelect = {
+  user: UserSelect;
+  posts: PostsSelect;
+  comments: CommentsSelect;
+};
 
-export type DatabaseSchema = {
-  users: Partial<User>;
-  posts: Omit<Post, "createdAt" | "id">;
-  comments: Comment;
-  // tags: Tag;
-  // postTags: PostTag;
+export type PostsInsert = z.infer<typeof postsInsertSchema>;
+export type CommentsInsert = z.infer<typeof commentsInsertSchema>;
+
+export type DbSchemaInsert = {
+  user: UserInsert;
+  posts: PostsInsert;
+  comments: CommentsInsert;
 };

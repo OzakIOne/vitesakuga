@@ -1,9 +1,39 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
+import { userQueryOptions } from "../utils/users";
 
-export const Route = createFileRoute('/users/')({
-  component: UsersIndexComponent,
-})
+export const Route = createFileRoute("/users/")({
+  loader: async ({ context }) => {
+    return await context.queryClient.ensureQueryData(userQueryOptions());
+  },
+  component: UsersLayoutComponent,
+});
 
-function UsersIndexComponent() {
-  return <div>Select a user.</div>
+function UsersLayoutComponent() {
+  const usersQuery = Route.useLoaderData();
+  console.log("Component users", usersQuery);
+  return (
+    <div className="p-2 flex gap-2">
+      <ul className="list-disc pl-4">
+        {usersQuery.map((user) => {
+          return (
+            <li key={user.id} className="whitespace-nowrap">
+              <Link
+                to="/users/$userId"
+                params={{
+                  userId: user.id,
+                }}
+                className="block py-1 text-blue-800 hover:text-blue-600"
+                activeProps={{ className: "text-black font-bold" }}
+              >
+                <div>{user.name}</div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <hr />
+
+      <Outlet />
+    </div>
+  );
 }

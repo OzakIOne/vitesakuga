@@ -1,39 +1,38 @@
 import { createServerFileRoute } from "@tanstack/react-start/server";
 import { json } from "@tanstack/react-start";
 import { kysely } from "../../auth/db/kysely";
-import { DatabaseSchema } from "../../auth/db/schema/sakuga.schema";
+import {
+  DbSchemaInsert,
+  postsInsertSchema,
+} from "../../auth/db/schema/sakuga.schema";
 
 export const ServerRoute = createServerFileRoute("/api/posts").methods({
   GET: async ({ request }) => {
-    console.info("Fetching posts... @", request.url);
     const data = await kysely.selectFrom("posts").selectAll().execute();
-    console.log({ data });
+    console.info("Fetching posts... @", { url: request.url, data });
     if (data.length === 0) {
       return json({ error: "No posts found" });
     }
     return json(data);
   },
   POST: async ({ request }) => {
-    console.info("Creating post... @", request.url);
-    const data = (await request.json()) as DatabaseSchema["posts"];
-    console.log("api post posts data", data);
+    const data = (await request.json()) as DbSchemaInsert["posts"];
+    console.log("Creating post... @", { url: request.url, data });
 
-    // Validate input
-    if (!data.title || !data.content) {
-      return json({ error: "Title and body are required" }, { status: 400 });
-    }
+    const parsed = postsInsertSchema.safeParse(data);
+
+    if (!parsed.success)
+      throw new Error("There was an error processing the search results", {
+        cause: parsed.error,
+      });
 
     const newPost = await kysely
       .insertInto("posts")
-      .values({
-        title: data.title,
-        content: data.content,
-        userId: data.userId,
-      })
+      .values({ ...parsed.data })
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    console.log("newpost", { newPost });
+    console.log("Created post", { newPost });
     return json(newPost);
   },
 });

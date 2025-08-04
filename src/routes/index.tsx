@@ -8,15 +8,11 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-type SearchFormType = {
-  search: string;
-};
-
 function Home() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const { data: posts } = useSuspenseQuery(postsQueryOptions());
 
-  const form = useForm<SearchFormType>({
+  const form = useForm({
     defaultValues: {
       search: "",
     },
@@ -29,7 +25,7 @@ function Home() {
     ? posts.filter(
         (p) =>
           p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (p.content || p.body).toLowerCase().includes(searchTerm.toLowerCase())
+          p.content.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : posts;
 
@@ -66,11 +62,9 @@ function Home() {
             className="border rounded-lg p-4 shadow bg-white flex flex-col"
           >
             <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
-            <div className="text-gray-700 flex-1 mb-2">
-              {post.content || post.body}
-            </div>
+            <div className="text-gray-700 flex-1 mb-2">{post.content}</div>
             <div className="text-xs text-gray-500 mt-auto">
-              {post.createdAt ? new Date(post.createdAt).toLocaleString() : ""}
+              {new Date(post.createdAt).toDateString()}
             </div>
           </div>
         ))}

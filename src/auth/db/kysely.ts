@@ -1,9 +1,9 @@
-import { Kysely, PostgresDialect } from "kysely";
+import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
 import pkg from "pg";
 const { Pool } = pkg;
-import type { DatabaseSchema } from "./schema/sakuga.schema.js"; // Your defined schema types
+import type { DB } from "kysely-codegen"; // Your defined schema types
 
-export const kysely = new Kysely<DatabaseSchema>({
+export const kysely = new Kysely<DB>({
   dialect: new PostgresDialect({
     pool: new Pool({
       database: process.env.POSTGRES_DB,
@@ -13,4 +13,5 @@ export const kysely = new Kysely<DatabaseSchema>({
       port: 5432,
     }),
   }),
+  plugins: [new CamelCasePlugin()],
 });

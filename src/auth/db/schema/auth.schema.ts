@@ -1,5 +1,6 @@
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import z from "zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -16,6 +17,12 @@ export const user = pgTable("user", {
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+export const userSelectSchema = createSelectSchema(user);
+export const userInserttSchema = createInsertSchema(user);
+
+export type UserSelect = z.infer<typeof userSelectSchema>;
+export type UserInsert = z.infer<typeof userSelectSchema>;
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -60,6 +67,3 @@ export const verification = pgTable("verification", {
     () => /* @__PURE__ */ new Date()
   ),
 });
-
-export type SelectUser = InferSelectModel<typeof user>;
-export type InsertUser = InferInsertModel<typeof user>;
