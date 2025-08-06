@@ -20,20 +20,34 @@ export const fetchPosts = createServerFn().handler(async () => {
 export const postsUploadOptions = (postData: PostsInsert) =>
   queryOptions({
     queryKey: ["posts", "upload", postData],
-    queryFn: () =>
-      fetch(`${DEPLOY_URL}/api/posts`, {
+    queryFn: () => {
+      const formData = new FormData();
+      Object.entries(postData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          // If value is a File, append as is, else convert to string
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      return fetch(`${DEPLOY_URL}/api/posts`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(postData),
+        body: formData,
       }).then(async (r) => {
         if (!r.ok) {
-          const errorData = await r.json();
+          let errorData;
+          try {
+            errorData = await r.json();
+          } catch {
+            errorData = { error: await r.text() };
+          }
           throw new Error(errorData.error || "Failed to upload post");
         }
         return r.json();
-      }),
+      });
+    },
   });
 
 const postIdSchema = z.coerce.number();

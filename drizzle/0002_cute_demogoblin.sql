@@ -1,0 +1,1 @@
+ALTER TABLE "posts" ADD COLUMN "key" text NOT NULL;

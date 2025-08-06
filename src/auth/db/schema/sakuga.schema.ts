@@ -17,6 +17,7 @@ export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
+  key: text("key").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   userId: text("user_id").references(() => user.id),
 });

@@ -15,6 +15,13 @@
       "when": 1754261443723,
       "tag": "0001_clear_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754520539941,
+      "tag": "0002_cute_demogoblin",
+      "breakpoints": true
     }
   ]
 }

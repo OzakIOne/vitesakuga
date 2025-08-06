@@ -2,11 +2,30 @@ import { createFileRoute } from "@tanstack/react-router";
 import { fetchPosts } from "../utils/posts";
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
+import ReactPlayer from "react-player";
+import {
+  MediaController,
+  MediaControlBar,
+  MediaTimeRange,
+  MediaTimeDisplay,
+  MediaVolumeRange,
+  MediaPlaybackRateButton,
+  MediaPlayButton,
+  MediaSeekBackwardButton,
+  MediaSeekForwardButton,
+  MediaMuteButton,
+  MediaFullscreenButton,
+  MediaPipButton,
+} from "media-chrome/react";
 
 export const Route = createFileRoute("/")({
   loader: async () => fetchPosts(),
   component: Home,
 });
+
+const VideoURL = encodeURI(
+  "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/Shoto S2E10 2.mkv"
+);
 
 function Home() {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -68,6 +87,52 @@ function Home() {
             </div>
           </div>
         ))}
+
+        <MediaController
+          style={{
+            width: "100%",
+            aspectRatio: "16/9",
+          }}
+        >
+          <ReactPlayer
+            slot="media"
+            src={VideoURL}
+            controls={false}
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+          ></ReactPlayer>
+          <MediaControlBar>
+            <MediaPlayButton />
+            <MediaSeekBackwardButton seekOffset={0.04}>
+              <span
+                className="border-white border-1 px-1 mx-1 text-xs"
+                slot="icon"
+              >
+                &#60;1f
+              </span>
+            </MediaSeekBackwardButton>
+            <MediaSeekForwardButton seekOffset={0.04}>
+              <span
+                className="border-white border-1 px-1 mx-1 text-xs"
+                slot="icon"
+              >
+                1f&#62;
+              </span>
+            </MediaSeekForwardButton>
+            <MediaTimeRange />
+            <MediaTimeDisplay showDuration />
+            <MediaMuteButton />
+            <MediaVolumeRange />
+            <MediaPlaybackRateButton rates={[0.25, 0.5, 0.75, 1]} />
+            <MediaFullscreenButton />
+            <MediaPipButton />
+          </MediaControlBar>
+        </MediaController>
+        {/* <video controls>
+          <source src={VideoURL} type="video/mp4" />
+        </video> */}
       </div>
     </div>
   );

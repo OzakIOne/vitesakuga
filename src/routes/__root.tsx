@@ -130,6 +130,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Upload
           </Link>{" "}
+          <Link
+            to="/convert"
+            activeProps={{
+              className: "link",
+            }}
+          >
+            Convert video
+          </Link>{" "}
           {ctx.user ? (
             <button
               className="btn btn-xs btn-soft btn-error"

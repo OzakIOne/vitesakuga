@@ -12,6 +12,7 @@ import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as PostsRouteRouteImport } from './routes/posts.route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -28,6 +29,11 @@ const rootServerRouteImport = createServerRootRoute()
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConvertRoute = ConvertRouteImport.update({
+  id: '/convert',
+  path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PostsRouteRoute = PostsRouteRouteImport.update({
@@ -83,6 +89,7 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
+  '/convert': typeof ConvertRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
+  '/convert': typeof ConvertRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
   '/posts': typeof PostsRouteRouteWithChildren
+  '/convert': typeof ConvertRoute
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/posts'
+    | '/convert'
     | '/upload'
     | '/login'
     | '/signup'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/posts'
+    | '/convert'
     | '/upload'
     | '/login'
     | '/signup'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/(auth)'
     | '/posts'
+    | '/convert'
     | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
@@ -150,6 +162,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authRouteRoute: typeof authRouteRouteWithChildren
   PostsRouteRoute: typeof PostsRouteRouteWithChildren
+  ConvertRoute: typeof ConvertRoute
   UploadRoute: typeof UploadRoute
   UsersUserIdRoute: typeof UsersUserIdRoute
   UsersIndexRoute: typeof UsersIndexRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/upload'
       fullPath: '/upload'
       preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convert': {
+      id: '/convert'
+      path: '/convert'
+      fullPath: '/convert'
+      preLoaderRoute: typeof ConvertRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts': {
@@ -296,6 +316,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
   PostsRouteRoute: PostsRouteRouteWithChildren,
+  ConvertRoute: ConvertRoute,
   UploadRoute: UploadRoute,
   UsersUserIdRoute: UsersUserIdRoute,
   UsersIndexRoute: UsersIndexRoute,
