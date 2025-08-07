@@ -1,4 +1,7 @@
-import { createServerFileRoute } from "@tanstack/react-start/server";
+import {
+  createServerFileRoute,
+  readMultipartFormData,
+} from "@tanstack/react-start/server";
 import { json } from "@tanstack/react-start";
 import { kysely } from "../../auth/db/kysely";
 import {
@@ -10,7 +13,9 @@ import {
   ListBucketsCommand,
   ListObjectsV2Command,
   ListPartsCommand,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
+import { writeFile } from "node:fs/promises";
 
 const cfclient = new S3Client({
   region: "auto",
@@ -24,20 +29,22 @@ const cfclient = new S3Client({
 export const ServerRoute = createServerFileRoute("/api/posts").methods({
   POST: async ({ request }) => {
     const formData = await request.formData();
-    const entries: Record<string, any> = {};
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        entries[key] = {
-          name: value.name,
-          size: value.size,
-          type: value.type,
-          isFile: true,
-        };
-      } else {
-        entries[key] = value;
-      }
+    console.log("Creating post... @", { url: request.url, formData });
+    const file = formData.get("video")!;
+    if (!(file instanceof File)) {
+      throw new Error("Uploaded video is missing or invalid");
     }
-    console.log("Creating post... @", { url: request.url, entries });
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const userId = formData.get("userId");
+    await writeFile(`${userId}_` + file.name, buffer);
+
+    // const command = new PutObjectCommand({
+    //   Bucket: process.env.CLOUDFLARE_BUCKET,
+    //   Key: `${entries.userId}/${entries.video.name}`, // the name of the file in the bucket
+    //   Body: entries.video,
+    //   ContentType: "application/octet-stream", // or e.g. "image/png", "text/plain"
+    // });
 
     // const command = new ListObjectsV2Command({
     //   Bucket: "vitesakuga",
