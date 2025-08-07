@@ -37,34 +37,30 @@ export const ServerRoute = createServerFileRoute("/api/posts").methods({
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const userId = formData.get("userId");
-    await writeFile(`${userId}_` + file.name, buffer);
 
-    // const command = new PutObjectCommand({
-    //   Bucket: process.env.CLOUDFLARE_BUCKET,
-    //   Key: `${entries.userId}/${entries.video.name}`, // the name of the file in the bucket
-    //   Body: entries.video,
-    //   ContentType: "application/octet-stream", // or e.g. "image/png", "text/plain"
-    // });
+    const command = new PutObjectCommand({
+      Bucket: process.env.CLOUDFLARE_BUCKET,
+      Key: `${userId}_${file.name}`,
+      Body: buffer,
+      ContentType: "application/octet-stream", // or e.g. "image/png", "text/plain"
+    });
+    const cfcmd = await cfclient.send(command);
 
-    // const command = new ListObjectsV2Command({
-    //   Bucket: "vitesakuga",
-    // });
+    const newPost = await kysely
+      .insertInto("posts")
+      .values({
+        title: formData.get("title")?.toString()!,
+        content: formData.get("content")?.toString()!,
+        userId: formData.get("userId")?.toString()!,
+        key: formData.get("key")?.toString()!,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
 
-    // const cloudflare = (await cfclient.send(command)).Contents;
+    if (cfcmd.$metadata.httpStatusCode !== 200) {
+      throw new Error("There was an error uploading file");
+    }
 
-    // const parsed = postsInsertSchema.safeParse(data);
-
-    // if (!parsed.success)
-    //   throw new Error("There was an error processing the search results", {
-    //     cause: parsed.error,
-    //   });
-
-    // const newPost = await kysely
-    //   .insertInto("posts")
-    //   .values({ ...parsed.data })
-    //   .returningAll()
-    //   .executeTakeFirstOrThrow();
-
-    return { lol: "xd" };
+    return newPost;
   },
 });
