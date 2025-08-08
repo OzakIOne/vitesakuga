@@ -1,5 +1,6 @@
-import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { fetchPosts } from "../utils/posts";
+import { PostList } from "~/components/PostList";
 export const Route = createFileRoute("/posts")({
   loader: async () => fetchPosts(),
   component: PostsLayoutComponent,
@@ -12,18 +13,16 @@ function PostsLayoutComponent() {
     <div className="p-2 flex gap-2">
       <div className="flex">
         {postsQuery.map((post) => (
-          <div key={post.id} className="p-4 flex flex-col">
-            <Link to="/posts/$postId" params={{ postId: String(post.id) }}>
-              <h3>{post.title}</h3>
-              <div>{post.content}</div>
-              <div>{new Date(post.createdAt).toDateString()}</div>
-            </Link>
-          </div>
+          <PostList post={post} />
         ))}
       </div>
 
       <hr />
-      <Outlet />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="pointer-events-auto bg-base-100 rounded-lg p-6 min-w-[320px] min-h-[180px] max-w-full max-h-full">
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 }

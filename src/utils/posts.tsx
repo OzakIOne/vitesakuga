@@ -17,13 +17,13 @@ export const fetchPosts = createServerFn().handler(async () => {
   return parsed.data;
 });
 
-export const postsUploadOptions = (postData: PostsInsert) =>
+export const postsUploadOptions = (postData: Omit<PostsInsert, "key">) =>
   queryOptions({
     queryKey: ["posts", "upload", postData],
     queryFn: () => {
       const formData = new FormData();
       Object.entries(postData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value != null) {
           // If value is a File, append as is, else convert to string
           if (value instanceof File) {
             formData.append(key, value);

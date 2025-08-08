@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
   redirect,
+  useBlocker,
   useRouteContext,
 } from "@tanstack/react-router";
 import { useState } from "react";
@@ -21,21 +22,31 @@ const UploadSchema = z.object({
   title: z.string().min(3, "You must have a length of at least 3"),
   content: z.string().min(3, "You must have a length of at least 3"),
   userId: z.string(),
-  video: z
-    .any()
-    .refine((file) => file instanceof File, "Video file is required"),
+  video: z.file(),
 });
 
 function RouteComponent() {
   const context = useRouteContext({ from: "/upload" });
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const isDirty = useForm();
+  console.log(isDirty);
+
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!form.state.isDirty) return false;
+
+      const shouldLeave = confirm(
+        "You have unsubmitted changes do you want to leave?"
+      );
+      return !shouldLeave;
+    },
+  });
 
   const form = useForm({
     defaultValues: {
       title: "",
       content: "",
-      userId: context.user?.id,
-      video: "",
+      userId: context.user!.id,
     },
     validators: {
       onChange: UploadSchema,
@@ -47,7 +58,6 @@ function RouteComponent() {
 
   return (
     <div>
-      Hello "/upload"!
       <form
         onSubmit={(e) => {
           e.preventDefault();

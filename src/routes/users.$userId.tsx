@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { fetchUser, userIdQueryOptions } from "~/utils/users";
+import { createFileRoute } from "@tanstack/react-router";
+import { fetchUser } from "~/utils/users";
 import { NotFound } from "~/components/NotFound";
 import { UserErrorComponent } from "~/components/UserError";
+import { PostList } from "~/components/PostList";
 
 export const Route = createFileRoute("/users/$userId")({
   loader: async ({ params: { userId } }) =>
@@ -22,37 +23,13 @@ function UserComponent() {
     <>
       <div className="flex flex-col">
         <span>Name: {data.user.name}</span>
-        <span>email: {data.user.email}</span>
+        <span>
+          Member since: {new Date(data.user.createdAt).toDateString()}
+        </span>
       </div>
       <div className="flex">
         {data.posts.map((post) => (
-          <div className="card bg-base-100 w-48 shadow-sm m-2">
-            {/* TODO video */}
-            {/* <figure>
-              <img
-                src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
-                alt="Shoes"
-              />
-            </figure> */}
-            <div className="card-body">
-              <h2 className="card-title">{post.title}</h2>
-              <p>{post.content}</p>
-              {/* TODO post tags */}
-              {/* <div className="card-actions justify-end">
-                <div className="badge badge-outline">Fashion</div>
-                <div className="badge badge-outline">Products</div>
-              </div> */}
-              <div className="card-actions">
-                <Link
-                  to="/posts/$postId"
-                  params={{ postId: post.id }}
-                  className="btn btn-primary btn-xs"
-                >
-                  View post
-                </Link>
-              </div>
-            </div>
-          </div>
+          <PostList post={post} />
         ))}
       </div>
     </>

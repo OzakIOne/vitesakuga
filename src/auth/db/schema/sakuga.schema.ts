@@ -19,7 +19,9 @@ export const posts = pgTable("posts", {
   content: text("content").notNull(),
   key: text("key").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  userId: text("user_id").references(() => user.id),
+  userId: text("user_id")
+    .references(() => user.id)
+    .notNull(),
 });
 
 export const postsSelectSchema = createSelectSchema(posts);
@@ -32,7 +34,9 @@ export const comments = pgTable("comments", {
     .notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  userId: text("user_id").references(() => user.id),
+  userId: text("user_id")
+    .references(() => user.id)
+    .notNull(),
 });
 
 export const commentsSelectSchema = createSelectSchema(comments);

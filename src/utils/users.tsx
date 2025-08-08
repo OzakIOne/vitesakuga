@@ -30,7 +30,7 @@ export const fetchUser = createServerFn()
     const postsFromUser = await kysely
       .selectFrom("posts")
       .selectAll()
-      .where("userId", "=", ctx.data)
+      .where("user_id", "=", ctx.data)
       .execute();
 
     return { user: userInfo, posts: postsFromUser };

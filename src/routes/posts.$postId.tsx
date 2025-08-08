@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { fetchPost } from "../utils/posts";
 import { NotFound } from "~/components/NotFound";
 import { PostErrorComponent } from "~/components/PostError";
 import z from "zod";
+import { Post } from "~/components/Post";
 
 export const Route = createFileRoute("/posts/$postId")({
   loader: async ({ params: { postId } }) =>
@@ -21,12 +22,24 @@ export const Route = createFileRoute("/posts/$postId")({
 
 function PostComponent() {
   const { post, user } = Route.useLoaderData();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // Fallback to a specific route if no history
+      navigate({ to: "/posts" });
+    }
+  };
+
   console.log(post);
   return (
     <div className="space-y-2">
-      <h4 className="text-xl font-bold underline">Post title: {post.title}</h4>
-      <div className="text-sm">Post content: {post.content}</div>
-      <div>Posted by: {user.name}</div>
+      <Post post={post} user={user} />
+      <button className="btn" onClick={handleBack}>
+        Back
+      </button>
     </div>
   );
 }

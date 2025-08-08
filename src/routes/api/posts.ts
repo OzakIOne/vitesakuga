@@ -1,21 +1,8 @@
-import {
-  createServerFileRoute,
-  readMultipartFormData,
-} from "@tanstack/react-start/server";
-import { json } from "@tanstack/react-start";
+import { createServerFileRoute } from "@tanstack/react-start/server";
 import { kysely } from "../../auth/db/kysely";
-import {
-  DbSchemaInsert,
-  postsInsertSchema,
-} from "../../auth/db/schema/sakuga.schema";
-import {
-  S3Client,
-  ListBucketsCommand,
-  ListObjectsV2Command,
-  ListPartsCommand,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
-import { writeFile } from "node:fs/promises";
+import { postsInsertSchema } from "../../auth/db/schema/sakuga.schema";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import z from "zod";
 
 const cfclient = new S3Client({
   region: "auto",
@@ -26,40 +13,38 @@ const cfclient = new S3Client({
   },
 });
 
+export const uploadSchema = postsInsertSchema.extend({
+  video: z.file(),
+});
+
 export const ServerRoute = createServerFileRoute("/api/posts").methods({
   POST: async ({ request }) => {
-    const formData = await request.formData();
-    console.log("Creating post... @", { url: request.url, formData });
-    const file = formData.get("video")!;
-    if (!(file instanceof File)) {
-      throw new Error("Uploaded video is missing or invalid");
-    }
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const userId = formData.get("userId");
+    const data = Object.fromEntries((await request.formData()).entries());
+    const parsed = uploadSchema.safeParse(data);
+    console.log("Creating post... @", { url: request.url, data: parsed.data });
+    if (!parsed.success) throw new Error(`Error: ${parsed.error}`);
 
+    const key = `${parsed.data.userId}_${parsed.data.video.name}`;
     const command = new PutObjectCommand({
       Bucket: process.env.CLOUDFLARE_BUCKET,
-      Key: `${userId}_${file.name}`,
-      Body: buffer,
-      ContentType: "application/octet-stream", // or e.g. "image/png", "text/plain"
+      Key: key,
+      Body: Buffer.from(await parsed.data.video.arrayBuffer()),
+      ContentType: "application/octet-stream",
     });
     const cfcmd = await cfclient.send(command);
+    if (cfcmd.$metadata.httpStatusCode !== 200)
+      throw new Error("There was an error uploading file");
 
     const newPost = await kysely
       .insertInto("posts")
       .values({
-        title: formData.get("title")?.toString()!,
-        content: formData.get("content")?.toString()!,
-        userId: formData.get("userId")?.toString()!,
-        key: formData.get("key")?.toString()!,
+        content: parsed.data.content,
+        title: parsed.data.title,
+        user_id: parsed.data.userId,
+        key,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-
-    if (cfcmd.$metadata.httpStatusCode !== 200) {
-      throw new Error("There was an error uploading file");
-    }
 
     return newPost;
   },

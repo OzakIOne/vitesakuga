@@ -1,52 +1,43 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { fetchPosts } from "../utils/posts";
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
-import ReactPlayer from "react-player";
-import {
-  MediaController,
-  MediaControlBar,
-  MediaTimeRange,
-  MediaTimeDisplay,
-  MediaVolumeRange,
-  MediaPlaybackRateButton,
-  MediaPlayButton,
-  MediaSeekBackwardButton,
-  MediaSeekForwardButton,
-  MediaMuteButton,
-  MediaFullscreenButton,
-  MediaPipButton,
-} from "media-chrome/react";
+import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 
 export const Route = createFileRoute("/")({
-  loader: async () => fetchPosts(),
   component: Home,
 });
 
-const VideoURL = encodeURI(
-  "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/Shoto S2E10 2.mkv"
-);
-
 function Home() {
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const posts = Route.useLoaderData();
+  const navigate = useNavigate();
 
   const form = useForm({
     defaultValues: {
       search: "",
     },
     onSubmit: ({ value }) => {
-      setSearchTerm(value.search);
+      const val = value.search.trim();
+      if (!val) return;
+      navigate({
+        to: "/posts",
+        search: { q: val },
+      });
     },
   });
 
-  const filteredPosts = searchTerm
-    ? posts.filter(
-        (p) =>
-          p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.content.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : posts;
+  const setDebouncedQuery = useDebouncer(
+    (value: string) => {
+      if (!value.trim()) return;
+      navigate({
+        to: "/posts",
+        search: { q: value },
+      });
+    },
+    {
+      wait: 500,
+      enabled: () => form.state.values.search.length > 2,
+    }
+  );
 
   return (
     <div className="p-4">
@@ -54,7 +45,8 @@ function Home() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void form.handleSubmit();
+          setDebouncedQuery.flush();
+          form.handleSubmit();
         }}
         className="mb-4 flex gap-2"
       >
@@ -66,7 +58,11 @@ function Home() {
               type="text"
               placeholder="Search..."
               value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                field.handleChange(val);
+                setDebouncedQuery.maybeExecute(val);
+              }}
             />
           )}
         />
@@ -74,66 +70,6 @@ function Home() {
           Search
         </button>
       </form>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredPosts.map((post) => (
-          <div
-            key={post.id}
-            className="border rounded-lg p-4 shadow bg-white flex flex-col"
-          >
-            <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
-            <div className="text-gray-700 flex-1 mb-2">{post.content}</div>
-            <div className="text-xs text-gray-500 mt-auto">
-              {new Date(post.createdAt).toDateString()}
-            </div>
-          </div>
-        ))}
-
-        <MediaController
-          style={{
-            width: "100%",
-            aspectRatio: "16/9",
-          }}
-        >
-          <ReactPlayer
-            slot="media"
-            src={VideoURL}
-            controls={false}
-            style={{
-              width: "100%",
-              height: "100%",
-            }}
-          ></ReactPlayer>
-          <MediaControlBar>
-            <MediaPlayButton />
-            <MediaSeekBackwardButton seekOffset={0.04}>
-              <span
-                className="border-white border-1 px-1 mx-1 text-xs"
-                slot="icon"
-              >
-                &#60;1f
-              </span>
-            </MediaSeekBackwardButton>
-            <MediaSeekForwardButton seekOffset={0.04}>
-              <span
-                className="border-white border-1 px-1 mx-1 text-xs"
-                slot="icon"
-              >
-                1f&#62;
-              </span>
-            </MediaSeekForwardButton>
-            <MediaTimeRange />
-            <MediaTimeDisplay showDuration />
-            <MediaMuteButton />
-            <MediaVolumeRange />
-            <MediaPlaybackRateButton rates={[0.25, 0.5, 0.75, 1]} />
-            <MediaFullscreenButton />
-            <MediaPipButton />
-          </MediaControlBar>
-        </MediaController>
-        {/* <video controls>
-          <source src={VideoURL} type="video/mp4" />
-        </video> */}
-      </div>
     </div>
   );
 }
