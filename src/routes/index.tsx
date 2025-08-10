@@ -1,6 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchPosts } from "../utils/posts";
-import * as React from "react";
 import { useForm } from "@tanstack/react-form";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 
@@ -43,16 +41,15 @@ function Home() {
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">Posts</h2>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           setDebouncedQuery.flush();
-          form.handleSubmit();
+          await form.handleSubmit();
         }}
         className="mb-4 flex gap-2"
       >
-        <form.Field
-          name="search"
-          children={(field) => (
+        <form.Field name="search">
+          {(field) => (
             <input
               className="input flex-1"
               type="text"
@@ -65,7 +62,7 @@ function Home() {
               }}
             />
           )}
-        />
+        </form.Field>
         <button type="submit" className="btn btn-primary">
           Search
         </button>

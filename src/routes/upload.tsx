@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import z from "zod";
-import { PostsInsert } from "~/auth/db/schema";
 import { FieldInfo } from "~/components/FieldInfo";
 import { postsUploadOptions } from "~/utils/posts";
 
@@ -28,8 +27,6 @@ const UploadSchema = z.object({
 function RouteComponent() {
   const context = useRouteContext({ from: "/upload" });
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-  const isDirty = useForm();
-  console.log(isDirty);
 
   useBlocker({
     shouldBlockFn: () => {
@@ -64,9 +61,8 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
-        <form.Field
-          name="title"
-          children={(field) => {
+        <form.Field name="title">
+          {(field) => {
             return (
               <>
                 <label htmlFor={field.name} className="floating-label">
@@ -85,11 +81,10 @@ function RouteComponent() {
               </>
             );
           }}
-        />
+        </form.Field>
 
-        <form.Field
-          name="content"
-          children={(field) => {
+        <form.Field name="content">
+          {(field) => {
             return (
               <>
                 <label htmlFor={field.name} className="floating-label">
@@ -108,14 +103,13 @@ function RouteComponent() {
               </>
             );
           }}
-        />
+        </form.Field>
 
-        <form.Field
-          name="video"
-          children={(field) => {
+        <form.Field name="video">
+          {(field) => {
             return (
               <>
-                <label htmlFor={field.name}>
+                <label htmlFor={field.name} aria-label="video file upload">
                   <input
                     id={field.name}
                     name={field.name}
@@ -146,16 +140,17 @@ function RouteComponent() {
               </>
             );
           }}
-        />
+        </form.Field>
 
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
-          children={([canSubmit, isSubmitting]) => (
+        >
+          {([canSubmit, isSubmitting]) => (
             <button type="submit" className="btn" disabled={!canSubmit}>
               {isSubmitting ? "Uploading..." : "Upload"}
             </button>
           )}
-        />
+        </form.Subscribe>
       </form>
     </div>
   );

@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: postgres
     image: postgres:17
     ports:
       - "5432:5432"
@@ -7,3 +8,23 @@ services:
       - .env
     volumes:
       - ./docker/data/postgresql:/var/lib/postgresql/data
+    networks:
+      - my_network
+
+  drizzle-gate:
+    image: ghcr.io/drizzle-team/gateway:latest
+    container_name: drizzle-gate
+    restart: always
+    ports:
+      - "4983:4983"
+    environment:
+      - PORT=4983
+      - MASTERPASS=ozaki
+    volumes:
+      - ./docker/data/drizzle:/app
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge

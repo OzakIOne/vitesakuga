@@ -29,7 +29,7 @@ function UserComponent() {
       </div>
       <div className="flex">
         {data.posts.map((post) => (
-          <PostList post={post} />
+          <PostList key={post.id} post={post} />
         ))}
       </div>
     </>

@@ -22,6 +22,20 @@
       "when": 1754520539941,
       "tag": "0002_cute_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1754680802461,
+      "tag": "0003_magical_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754684017467,
+      "tag": "0004_fixed_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { PostsSelect } from "~/auth/db/schema";
+// import { PostsSelect } from "~/auth/db/schema";
 
 export function PostList({ post }: { post }) {
   return (

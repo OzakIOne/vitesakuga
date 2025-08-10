@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { fetchPost } from "../utils/posts";
 import { NotFound } from "~/components/NotFound";
 import { PostErrorComponent } from "~/components/PostError";
-import z from "zod";
 import { Post } from "~/components/Post";
 
 export const Route = createFileRoute("/posts/$postId")({

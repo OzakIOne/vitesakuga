@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { Video } from "./Video";
 
 export function Post({ post, user }: { post: any; user: any }) {

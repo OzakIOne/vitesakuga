@@ -1,6 +1,6 @@
-import { AnyFieldApi, useForm } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import authClient from "~/auth/client";
 import { z } from "zod";
@@ -65,16 +65,15 @@ function SignupForm() {
   return (
     <div className="flex flex-col items-center justify-center with-full h-fit p-4">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          form.handleSubmit();
+          await form.handleSubmit();
         }}
       >
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
-            <form.Field
-              name="name"
-              children={(field) => {
+            <form.Field name="name">
+              {(field) => {
                 // Avoid hasty abstractions. Render props are great!
                 return (
                   <>
@@ -87,18 +86,19 @@ function SignupForm() {
                         value={field.state.value}
                         placeholder="John Doe"
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                        }}
                       />
                     </label>
                     <FieldInfo field={field} />
                   </>
                 );
               }}
-            />
+            </form.Field>
 
-            <form.Field
-              name="email"
-              children={(field) => {
+            <form.Field name="email">
+              {(field) => {
                 // Avoid hasty abstractions. Render props are great!
                 return (
                   <>
@@ -112,18 +112,19 @@ function SignupForm() {
                         className="input"
                         value={field.state.value}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                        }}
                       />
                     </label>
                     <FieldInfo field={field} />
                   </>
                 );
               }}
-            />
+            </form.Field>
 
-            <form.Field
-              name="password"
-              children={(field) => {
+            <form.Field name="password">
+              {(field) => {
                 // Avoid hasty abstractions. Render props are great!
                 return (
                   <>
@@ -137,21 +138,24 @@ function SignupForm() {
                         className="input"
                         value={field.state.value}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                        }}
                       />
                     </label>
                     <FieldInfo field={field} />
                   </>
                 );
               }}
-            />
+            </form.Field>
 
             <form.Field
               name="confirm_password"
               validators={{
                 onChangeListenTo: ["password"], // Ensure this field listens to changes in the password field
               }}
-              children={(field) => {
+            >
+              {(field) => {
                 // Avoid hasty abstractions. Render props are great!
                 return (
                   <>
@@ -165,23 +169,26 @@ function SignupForm() {
                         className="input"
                         value={field.state.value}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                        }}
                       />
                     </label>
                     <FieldInfo field={field} />
                   </>
                 );
               }}
-            />
+            </form.Field>
 
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
+            >
+              {([canSubmit, isSubmitting]) => (
                 <button type="submit" className="btn" disabled={!canSubmit}>
                   {isSubmitting ? "Signing up..." : "Sign up"}
                 </button>
               )}
-            />
+            </form.Subscribe>
           </div>
           {errorMessage && (
             <div role="alert" className="alert alert-error">

@@ -1,11 +1,4 @@
-import {
-  integer,
-  pgTable,
-  serial,
-  text,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { bigint, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { user, UserInsert, UserSelect } from "./auth.schema";
 import z from "zod";
 import { createSchemaFactory } from "drizzle-zod";
@@ -13,13 +6,14 @@ import { createSchemaFactory } from "drizzle-zod";
 export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
   coerce: true,
 });
+
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(),
-  key: text("key").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  userId: text("user_id")
+  title: text().notNull(),
+  content: text().notNull(),
+  key: text().notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
+  userId: text()
     .references(() => user.id)
     .notNull(),
 });
@@ -29,12 +23,12 @@ export const postsInsertSchema = createInsertSchema(posts);
 
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id")
+  postId: bigint({ mode: "number" })
     .references(() => posts.id)
     .notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  userId: text("user_id")
+  content: text().notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
+  userId: text()
     .references(() => user.id)
     .notNull(),
 });
