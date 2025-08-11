@@ -7,16 +7,43 @@ import { PostsInsert, postsSelectSchema } from "~/auth/db/schema";
 
 export const DEPLOY_URL = import.meta.env.VITE_BASE_URL || "";
 
-export const fetchPosts = createServerFn().handler(async () => {
-  const data = await kysely.selectFrom("posts").selectAll().execute();
-  const parsed = z.array(postsSelectSchema).safeParse(data);
-  if (!parsed.success)
-    throw new Error(
-      `There was an error processing the search results ${parsed.error}`
-    );
-
-  return parsed.data;
+// Pagination input schema
+const fetchPostsInputSchema = z.object({
+  limit: z.number().min(1).max(100).default(20),
+  cursor: z.number().optional(), // cursor is the id of the last post from previous page
 });
+
+export const fetchPosts = createServerFn()
+  .validator((input: unknown) => fetchPostsInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { limit, cursor } = data;
+    let query = kysely
+      .selectFrom("posts")
+      .selectAll()
+      .orderBy("id", "desc")
+      .limit(limit + 1); // fetch one extra to check if there's a next page
+    if (cursor) {
+      query = query.where("id", "<", cursor);
+    }
+    const dataResult = await query.execute();
+    const parsed = z.array(postsSelectSchema).safeParse(dataResult);
+    if (!parsed.success)
+      throw new Error(
+        `There was an error processing the search results ${parsed.error}`
+      );
+
+    // Determine next cursor
+    let nextCursor: number | undefined = undefined;
+    let items = parsed.data;
+    if (items.length > limit) {
+      const last = items.pop();
+      nextCursor = last?.id;
+    }
+    return {
+      items,
+      nextCursor,
+    };
+  });
 
 export const searchPosts = createServerFn()
   .validator((person: string): string => {
@@ -117,17 +144,21 @@ const postIdSchema = z.coerce.number();
 export const fetchPost = createServerFn()
   .validator((id: unknown) => postIdSchema.parse(id))
   .handler(async (ctx) => {
-    const data = await kysely
+    const post = await kysely
       .selectFrom("posts")
       .selectAll()
       .where("id", "=", ctx.data)
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
 
-    const userPostInfo = await kysely
+    if (!post) {
+      throw new Error(`Post ${ctx.data} not found`);
+    }
+
+    const user = await kysely
       .selectFrom("user")
       .select(["image", "name"])
-      .where("user.id", "=", data.userId)
-      .executeTakeFirstOrThrow();
+      .where("user.id", "=", post.userId)
+      .executeTakeFirst();
 
-    return { post: data, user: userPostInfo };
+    return { post, user };
   });

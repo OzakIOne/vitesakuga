@@ -5,13 +5,18 @@ import { PostErrorComponent } from "~/components/PostError";
 import { Post } from "~/components/Post";
 
 export const Route = createFileRoute("/posts/$postId")({
-  loader: async ({ params: { postId } }) =>
-    fetchPost({
-      data: postId,
-    }),
-  // params: {
-  //   parse: (params) => z.parse(z.object(postId:z.string(params.postId))),
-  // },
+  loader: async ({ params: { postId } }) => {
+    try {
+      return await fetchPost({
+        data: parseInt(postId, 10),
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("not found")) {
+        throw new Error("not-found");
+      }
+      throw error;
+    }
+  },
   errorComponent: PostErrorComponent,
   component: PostComponent,
   notFoundComponent: () => {
@@ -32,13 +37,15 @@ function PostComponent() {
     }
   };
 
-  console.log(post);
+  console.log({ post, user });
   return (
-    <div className="space-y-2">
-      <Post post={post} user={user} />
-      <button className="btn" onClick={handleBack}>
-        Back
-      </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div className="pointer-events-auto  rounded-lg p-6 min-w-[320px] min-h-[180px] max-w-full max-h-full">
+        <Post post={post} user={user} />
+        <button className="btn" onClick={handleBack}>
+          Back
+        </button>
+      </div>
     </div>
   );
 }
