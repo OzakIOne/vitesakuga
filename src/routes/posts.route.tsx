@@ -17,6 +17,7 @@ export const Route = createFileRoute("/posts")({
     return await fetchPosts();
   },
   component: PostsLayoutComponent,
+  staleTime: 60 * 1000,
 });
 
 function PostsLayoutComponent() {

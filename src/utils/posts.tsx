@@ -23,8 +23,6 @@ export const searchPosts = createServerFn()
     return z.string().parse(person);
   })
   .handler(async ({ data }) => {
-    console.log("running server fn");
-
     // Strategy 1: Try exact/partial matches first
     let results = await kysely
       .selectFrom("posts")
