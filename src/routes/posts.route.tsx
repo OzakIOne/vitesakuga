@@ -10,28 +10,58 @@ import { PostsSelect } from "~/auth/db/schema";
 
 const searchSchema = z.object({
   q: z.string().trim().min(1).optional(),
+  "page[size]": z.coerce.number().min(1).max(100).default(20).optional(),
 });
 
-type FetchPostsResult = {
-  items: PostsSelect[];
-  nextCursor?: number;
+// Updated type to match JSON:API structure
+type PaginatedPostsResponse = {
+  data: PostsSelect[];
+  links: {
+    self: string;
+    first: string | null;
+    last: string | null;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    hasMore: boolean;
+    cursors: {
+      before: number | null;
+      after: number | null;
+    };
+  };
 };
 
 export const Route = createFileRoute("/posts")({
   validateSearch: searchSchema,
-  loaderDeps: ({ search: { q } }) => ({ q }),
-  loader: async ({ deps: { q } }) => {
+  loaderDeps: ({ search }) => ({
+    q: search.q,
+    size: search["page[size]"] || 20,
+  }),
+  loader: async ({ deps: { q, size } }) => {
     if (q) {
-      return await searchPosts({ data: q });
+      return await searchPosts({
+        data: {
+          q,
+          page: { size },
+        },
+      });
     }
-    return await fetchPosts({ data: { limit: 20 } }); // initial load with just limit
+    return await fetchPosts({
+      data: {
+        page: { size: 5 }, // Initial load with smaller size
+      },
+    });
   },
   component: PostsLayoutComponent,
   staleTime: 60 * 1000,
 });
 
 function PostsLayoutComponent() {
+  const { q, size } = Route.useLoaderDeps();
   const fetchPostsFn = useServerFn(fetchPosts);
+  const searchPostsFn = useServerFn(searchPosts);
+
   const {
     data,
     fetchNextPage,
@@ -39,49 +69,126 @@ function PostsLayoutComponent() {
     isFetchingNextPage,
     status,
     error,
-  } = useInfiniteQuery<FetchPostsResult, Error>({
-    queryKey: ["posts"],
+  } = useInfiniteQuery<PaginatedPostsResponse, Error>({
+    queryKey: ["posts", q],
     queryFn: async ({ pageParam }) => {
-      // pageParam is unknown, so cast to number | undefined
+      const cursor = pageParam as number | undefined;
+
+      if (q) {
+        return searchPostsFn({
+          data: {
+            q,
+            page: {
+              size: 20,
+              after: cursor,
+            },
+          },
+        });
+      }
+
       return fetchPostsFn({
-        data: { limit: 20, cursor: pageParam as number | undefined },
+        data: {
+          page: {
+            size: 20,
+            after: cursor,
+          },
+        },
       });
     },
-    getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    getNextPageParam: (lastPage) => {
+      // Use the cursor from meta for next page
+      return lastPage?.meta?.hasMore
+        ? lastPage?.meta?.cursors?.after
+        : undefined;
+    },
     initialPageParam: undefined,
   });
 
-  // Flatten posts
+  // Flatten posts from JSON:API structure
   const posts: PostsSelect[] = (
-    (data as InfiniteData<FetchPostsResult>)?.pages ?? []
-  ).flatMap((page) => page?.items ?? []);
+    (data as InfiniteData<PaginatedPostsResponse>)?.pages ?? []
+  ).flatMap((page) => page?.data ?? []);
 
-  // Virtualization setup
+  // Check if there are more pages using meta.hasMore from the last page
+  const lastPage = (data as InfiniteData<PaginatedPostsResponse>)?.pages?.slice(
+    -1
+  )[0];
+  const hasMore = lastPage?.meta?.hasMore ?? false;
+
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Calcul du nombre de colonnes basé sur la largeur de l'écran
+  const getColumnsPerRow = () => {
+    if (typeof window !== "undefined") {
+      const width = window.innerWidth;
+      if (width >= 1536) return 4; // 2xl
+      if (width >= 1280) return 3; // xl
+      if (width >= 1024) return 3; // lg
+      if (width >= 768) return 2; // md
+      return 1; // sm et xs
+    }
+    return 3; // par défaut côté serveur
+  };
+
+  const columnsPerRow = getColumnsPerRow();
+  const rowCount = Math.ceil(posts.length / columnsPerRow);
+  const totalRows = hasMore ? rowCount + 1 : rowCount;
+
   const rowVirtualizer = useVirtualizer({
-    count: hasNextPage ? posts.length + 1 : posts.length,
+    count: totalRows,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 120,
-    overscan: 5,
+    estimateSize: () => 280,
+    overscan: 2,
   });
 
   // Auto-fetch next page when virtual row is visible
   const virtualItems = rowVirtualizer.getVirtualItems();
   const lastItem = virtualItems[virtualItems.length - 1];
   if (
-    hasNextPage &&
+    hasMore &&
     lastItem &&
-    lastItem.index === posts.length &&
+    lastItem.index >= rowCount - 1 &&
     !isFetchingNextPage
   ) {
     fetchNextPage();
   }
 
+  if (status === "pending") {
+    return (
+      <div className="p-4 w-full">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-gray-600">Chargement des posts...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="p-4 w-full">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-red-600">
+            Erreur lors du chargement: {error?.message}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-2 flex gap-2">
+    <div className="p-4 w-full">
+      {/* Search info */}
+      {q && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-700">
+            Résultats de recherche pour: <strong>{q}</strong>
+          </p>
+        </div>
+      )}
+
       <div
         ref={parentRef}
-        className="flex flex-col overflow-auto h-[80vh] w-full max-w-2xl border rounded"
+        className="overflow-auto h-[85vh] w-full"
         style={{ position: "relative" }}
       >
         <div
@@ -92,37 +199,114 @@ function PostsLayoutComponent() {
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const isLoaderRow = virtualRow.index === posts.length;
+            const isLoaderRow = virtualRow.index >= rowCount;
+
+            if (isLoaderRow) {
+              return (
+                <div
+                  key={virtualRow.key}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute left-0 w-full flex items-center justify-center py-8"
+                  style={{
+                    top: 0,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    height: `${virtualRow.size}px`,
+                  }}
+                >
+                  {hasMore && isFetchingNextPage && (
+                    <div className="text-lg text-gray-600">
+                      Chargement de plus de posts...
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Calculer les posts pour cette ligne
+            const startIndex = virtualRow.index * columnsPerRow;
+            const endIndex = Math.min(startIndex + columnsPerRow, posts.length);
+            const rowPosts = posts.slice(startIndex, endIndex);
+
             return (
               <div
                 key={virtualRow.key}
                 ref={rowVirtualizer.measureElement}
-                className="absolute left-0 w-full"
+                className="absolute left-0 w-full px-4"
                 style={{
                   top: 0,
                   transform: `translateY(${virtualRow.start}px)`,
-                  height: `${virtualRow.size}px`,
+                  minHeight: `${virtualRow.size}px`,
                 }}
               >
-                {isLoaderRow ? (
-                  hasNextPage ? (
-                    <div className="flex items-center justify-center py-4">
-                      Loading more...
+                <div className="flex flex-wrap gap-4 w-full">
+                  {rowPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      className={`
+                        flex-1 min-w-0
+                        ${columnsPerRow === 1 ? "basis-full" : ""}
+                        ${columnsPerRow === 2 ? "basis-[calc(50%-0.5rem)]" : ""}
+                        ${
+                          columnsPerRow === 3
+                            ? "basis-[calc(33.333%-0.75rem)]"
+                            : ""
+                        }
+                        ${
+                          columnsPerRow === 4 ? "basis-[calc(25%-0.75rem)]" : ""
+                        }
+                      `}
+                    >
+                      <PostList post={post} q={q} pageSize={size} />
                     </div>
-                  ) : null
-                ) : (
-                  <PostList
-                    key={posts[virtualRow.index]?.id}
-                    post={posts[virtualRow.index]}
-                  />
-                )}
+                  ))}
+
+                  {/* Remplir les espaces vides dans la dernière ligne si nécessaire */}
+                  {rowPosts.length < columnsPerRow &&
+                    Array.from({ length: columnsPerRow - rowPosts.length }).map(
+                      (_, index) => (
+                        <div
+                          key={`empty-${index}`}
+                          className={`
+                          flex-1 min-w-0
+                          ${
+                            columnsPerRow === 2
+                              ? "basis-[calc(50%-0.5rem)]"
+                              : ""
+                          }
+                          ${
+                            columnsPerRow === 3
+                              ? "basis-[calc(33.333%-0.75rem)]"
+                              : ""
+                          }
+                          ${
+                            columnsPerRow === 4
+                              ? "basis-[calc(25%-0.75rem)]"
+                              : ""
+                          }
+                        `}
+                        />
+                      )
+                    )}
+                </div>
               </div>
             );
           })}
         </div>
       </div>
-      <hr />
-      <Outlet />
+
+      {/* Debug info (remove in production) */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+          <p>Posts chargés: {posts.length}</p>
+          <p>A plus de pages: {hasMore ? "Oui" : "Non"}</p>
+          <p>Cursor après: {lastPage?.meta?.cursors?.after || "N/A"}</p>
+        </div>
+      )}
+
+      {/* Outlet pour les routes imbriquées */}
+      <div className="mt-4">
+        <Outlet />
+      </div>
     </div>
   );
 }

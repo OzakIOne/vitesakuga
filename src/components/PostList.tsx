@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 // import { PostsSelect } from "~/auth/db/schema";
 
-export function PostList({ post }: { post }) {
+export function PostList({ post, q, pageSize }: { post; q; pageSize }) {
   return (
     <div className="card bg-base-100 w-48 shadow-sm m-2">
       {/* TODO image */}
@@ -23,6 +23,10 @@ export function PostList({ post }: { post }) {
           <Link
             to="/posts/$postId"
             params={{ postId: String(post.id) }}
+            search={{
+              q,
+              "page[size]": pageSize,
+            }}
             className="btn btn-primary btn-xs"
           >
             View post
