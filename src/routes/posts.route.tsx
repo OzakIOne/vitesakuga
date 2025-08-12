@@ -2,18 +2,18 @@ import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { fetchPosts, searchPosts } from "../utils/posts";
 import { PostList } from "~/components/PostList";
 import z from "zod";
-import { useInfiniteQuery, InfiniteData } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { PostsSelect } from "~/auth/db/schema";
+import React from "react";
 
 const searchSchema = z.object({
   q: z.string().trim().min(1).optional(),
   "page[size]": z.coerce.number().min(1).max(100).default(20).optional(),
 });
 
-// Updated type to match JSON:API structure
 type PaginatedPostsResponse = {
   data: PostsSelect[];
   links: {
@@ -102,17 +102,16 @@ function PostsLayoutComponent() {
         : undefined;
     },
     initialPageParam: undefined,
+    staleTime: 60 * 1000,
   });
 
   // Flatten posts from JSON:API structure
-  const posts: PostsSelect[] = (
-    (data as InfiniteData<PaginatedPostsResponse>)?.pages ?? []
-  ).flatMap((page) => page?.data ?? []);
+  const posts: PostsSelect[] = (data?.pages ?? []).flatMap(
+    (page) => page?.data ?? []
+  );
 
   // Check if there are more pages using meta.hasMore from the last page
-  const lastPage = (data as InfiniteData<PaginatedPostsResponse>)?.pages?.slice(
-    -1
-  )[0];
+  const lastPage = data?.pages?.slice(-1)[0];
   const hasMore = lastPage?.meta?.hasMore ?? false;
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -129,29 +128,38 @@ function PostsLayoutComponent() {
     }
     return 3; // par défaut côté serveur
   };
-
   const columnsPerRow = getColumnsPerRow();
-  const rowCount = Math.ceil(posts.length / columnsPerRow);
-  const totalRows = hasMore ? rowCount + 1 : rowCount;
+  const totalRows = Math.ceil(posts.length / columnsPerRow);
+  const totalCols = columnsPerRow;
 
   const rowVirtualizer = useVirtualizer({
-    count: totalRows,
+    count: hasMore ? totalRows + 1 : totalRows,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 280,
     overscan: 2,
   });
 
-  // Auto-fetch next page when virtual row is visible
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const lastItem = virtualItems[virtualItems.length - 1];
-  if (
-    hasMore &&
-    lastItem &&
-    lastItem.index >= rowCount - 1 &&
-    !isFetchingNextPage
-  ) {
-    fetchNextPage();
-  }
+  const columnVirtualizer = useVirtualizer({
+    horizontal: true,
+    count: totalCols,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 300,
+    overscan: 1,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const virtualCols = columnVirtualizer.getVirtualItems();
+
+  const lastRow = virtualRows[virtualRows.length - 1];
+  useEffect(() => {
+    if (
+      hasMore &&
+      lastRow &&
+      lastRow.index >= totalRows - 1 &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [hasMore, lastRow, totalRows, isFetchingNextPage, fetchNextPage]);
 
   if (status === "pending") {
     return (
@@ -177,6 +185,15 @@ function PostsLayoutComponent() {
 
   return (
     <div className="p-4 w-full">
+      {/* Debug info (remove in production) */}
+      {process.env.NODE_ENV === "development" && (
+        <div>
+          <p>Posts chargés: {posts.length}</p>
+          <p>A plus de pages: {hasMore ? "Oui" : "Non"}</p>
+          <p>Cursor après: {lastPage?.meta?.cursors?.after || "N/A"}</p>
+        </div>
+      )}
+
       {/* Search info */}
       {q && (
         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -194,116 +211,60 @@ function PostsLayoutComponent() {
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
-            width: "100%",
+            width: `${columnVirtualizer.getTotalSize()}px`,
             position: "relative",
           }}
         >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const isLoaderRow = virtualRow.index >= rowCount;
+          {virtualRows.map((virtualRow) => (
+            <React.Fragment key={virtualRow.key}>
+              {virtualCols.map((virtualCol) => {
+                const postIndex =
+                  virtualRow.index * totalCols + virtualCol.index;
 
-            if (isLoaderRow) {
-              return (
-                <div
-                  key={virtualRow.key}
-                  ref={rowVirtualizer.measureElement}
-                  className="absolute left-0 w-full flex items-center justify-center py-8"
-                  style={{
-                    top: 0,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    height: `${virtualRow.size}px`,
-                  }}
-                >
-                  {hasMore && isFetchingNextPage && (
-                    <div className="text-lg text-gray-600">
-                      Chargement de plus de posts...
-                    </div>
-                  )}
-                </div>
-              );
-            }
+                if (postIndex >= posts.length) {
+                  // Loader row
+                  if (virtualRow.index >= totalRows) {
+                    return (
+                      <div
+                        key={virtualCol.key}
+                        className="absolute flex items-center justify-center w-full text-gray-600"
+                        style={{
+                          top: 0,
+                          left: 0,
+                          width: `${virtualCol.size}px`,
+                          height: `${virtualRow.size}px`,
+                          transform: `translateX(${virtualCol.start}px) translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        {hasMore && isFetchingNextPage && "Chargement..."}
+                      </div>
+                    );
+                  }
+                  return null;
+                }
 
-            // Calculer les posts pour cette ligne
-            const startIndex = virtualRow.index * columnsPerRow;
-            const endIndex = Math.min(startIndex + columnsPerRow, posts.length);
-            const rowPosts = posts.slice(startIndex, endIndex);
-
-            return (
-              <div
-                key={virtualRow.key}
-                ref={rowVirtualizer.measureElement}
-                className="absolute left-0 w-full px-4"
-                style={{
-                  top: 0,
-                  transform: `translateY(${virtualRow.start}px)`,
-                  minHeight: `${virtualRow.size}px`,
-                }}
-              >
-                <div className="flex flex-wrap gap-4 w-full">
-                  {rowPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className={`
-                        flex-1 min-w-0
-                        ${columnsPerRow === 1 ? "basis-full" : ""}
-                        ${columnsPerRow === 2 ? "basis-[calc(50%-0.5rem)]" : ""}
-                        ${
-                          columnsPerRow === 3
-                            ? "basis-[calc(33.333%-0.75rem)]"
-                            : ""
-                        }
-                        ${
-                          columnsPerRow === 4 ? "basis-[calc(25%-0.75rem)]" : ""
-                        }
-                      `}
-                    >
-                      <PostList post={post} q={q} pageSize={size} />
-                    </div>
-                  ))}
-
-                  {/* Remplir les espaces vides dans la dernière ligne si nécessaire */}
-                  {rowPosts.length < columnsPerRow &&
-                    Array.from({ length: columnsPerRow - rowPosts.length }).map(
-                      (_, index) => (
-                        <div
-                          key={`empty-${index}`}
-                          className={`
-                          flex-1 min-w-0
-                          ${
-                            columnsPerRow === 2
-                              ? "basis-[calc(50%-0.5rem)]"
-                              : ""
-                          }
-                          ${
-                            columnsPerRow === 3
-                              ? "basis-[calc(33.333%-0.75rem)]"
-                              : ""
-                          }
-                          ${
-                            columnsPerRow === 4
-                              ? "basis-[calc(25%-0.75rem)]"
-                              : ""
-                          }
-                        `}
-                        />
-                      )
-                    )}
-                </div>
-              </div>
-            );
-          })}
+                const post = posts[postIndex];
+                return (
+                  <div
+                    key={`${virtualRow.key}-${virtualCol.key}`}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: `${virtualCol.size}px`,
+                      height: `${virtualRow.size}px`,
+                      transform: `translateX(${virtualCol.start}px) translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <PostList post={post} q={q} pageSize={size} />
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
-      {/* Debug info (remove in production) */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-          <p>Posts chargés: {posts.length}</p>
-          <p>A plus de pages: {hasMore ? "Oui" : "Non"}</p>
-          <p>Cursor après: {lastPage?.meta?.cursors?.after || "N/A"}</p>
-        </div>
-      )}
-
-      {/* Outlet pour les routes imbriquées */}
       <div className="mt-4">
         <Outlet />
       </div>

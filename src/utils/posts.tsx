@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "~/auth/db/kysely";
-import { postsSelectSchema } from "~/auth/db/schema";
+import { PostsInsert, postsSelectSchema } from "~/auth/db/schema";
+import { queryOptions } from "@tanstack/react-query";
+import { DEPLOY_URL } from "./users";
 
 // Schema for pagination parameters following JSON:API cursor pagination profile
 const fetchPostsInputSchema = z.object({
@@ -272,4 +274,37 @@ export const fetchPost = createServerFn()
       .executeTakeFirst();
 
     return { post, user };
+  });
+
+export const postsUploadOptions = (postData: Omit<PostsInsert, "key">) =>
+  queryOptions({
+    queryKey: ["posts", "upload", postData],
+    queryFn: () => {
+      const formData = new FormData();
+      Object.entries(postData).forEach(([key, value]) => {
+        if (value != null) {
+          // If value is a File, append as is, else convert to string
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      return fetch(`${DEPLOY_URL}/api/posts`, {
+        method: "POST",
+        body: formData,
+      }).then(async (r) => {
+        if (!r.ok) {
+          let errorData;
+          try {
+            errorData = await r.json();
+          } catch {
+            errorData = { error: await r.text() };
+          }
+          throw new Error(errorData.error || "Failed to upload post");
+        }
+        return r.json();
+      });
+    },
   });
