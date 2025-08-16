@@ -39,6 +39,15 @@ const getAuthConfig = serverOnly(() =>
     emailAndPassword: {
       enabled: true,
     },
+
+    user: {
+      deleteUser: {
+        enabled: true,
+      },
+      // changeEmail: {
+      //   enabled: true,
+      // },
+    },
   })
 );
 

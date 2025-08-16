@@ -1,3 +1,4 @@
+import { Box, Button, Field, FileUpload, Icon, Input } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
@@ -9,6 +10,7 @@ import { useState } from "react";
 import z from "zod";
 import { FieldInfo } from "~/components/FieldInfo";
 import { postsUploadOptions } from "~/utils/posts";
+import { LuUpload } from "react-icons/lu";
 
 export const Route = createFileRoute("/upload")({
   component: RouteComponent,
@@ -65,18 +67,19 @@ function RouteComponent() {
           {(field) => {
             return (
               <>
-                <label htmlFor={field.name} className="floating-label">
-                  <span>Post title</span>
-                  <input
+                <Field.Root required>
+                  <Field.Label>
+                    Title <Field.RequiredIndicator />
+                  </Field.Label>
+                  <Input
                     id={field.name}
                     name={field.name}
                     className="input"
                     value={field.state.value}
-                    placeholder="One piece"
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
-                </label>
+                </Field.Root>
                 <FieldInfo field={field} />
               </>
             );
@@ -87,18 +90,22 @@ function RouteComponent() {
           {(field) => {
             return (
               <>
-                <label htmlFor={field.name} className="floating-label">
-                  <span>Post content</span>
-                  <input
+                <Field.Root required>
+                  <Field.Label>
+                    Content <Field.RequiredIndicator />
+                  </Field.Label>
+                  <Input
                     id={field.name}
                     name={field.name}
                     className="input"
                     value={field.state.value}
-                    placeholder="Amazing animation"
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
-                </label>
+                  <Field.HelperText>
+                    A brief description of the animation
+                  </Field.HelperText>
+                </Field.Root>
                 <FieldInfo field={field} />
               </>
             );
@@ -109,31 +116,43 @@ function RouteComponent() {
           {(field) => {
             return (
               <>
-                <label htmlFor={field.name} aria-label="video file upload">
-                  <input
-                    id={field.name}
-                    name={field.name}
-                    type="file"
-                    className="file-input"
-                    accept="video/*,.mkv"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      field.handleChange(file);
-                      if (file) {
-                        const previewURL = URL.createObjectURL(file);
-                        setVideoPreviewUrl(previewURL);
-                      } else {
-                        setVideoPreviewUrl(null);
-                      }
-                    }}
-                  />
-                </label>
+                <FileUpload.Root
+                  maxW="xl"
+                  alignItems="stretch"
+                  accept={["video/*,.mkv"]}
+                  id={field.name}
+                  name={field.name}
+                  typeof=""
+                  className="file-input"
+                  onFileChange={(details) => {
+                    const file = details.acceptedFiles[0] || null;
+                    field.handleChange(file);
+                    if (file) {
+                      const previewURL = URL.createObjectURL(file);
+                      setVideoPreviewUrl(previewURL);
+                    } else {
+                      setVideoPreviewUrl(null);
+                    }
+                  }}
+                >
+                  <FileUpload.HiddenInput />
+                  <FileUpload.Dropzone>
+                    <Icon size="md" color="fg.muted">
+                      <LuUpload />
+                    </Icon>
+                    <FileUpload.DropzoneContent>
+                      <Box>Drag and drop files here</Box>
+                      <Box color="fg.muted">.mp4, .mov, .mkv</Box>
+                    </FileUpload.DropzoneContent>
+                  </FileUpload.Dropzone>
+                  <FileUpload.List showSize clearable />
+                </FileUpload.Root>
                 <FieldInfo field={field} />
                 {videoPreviewUrl && (
                   <video
                     src={videoPreviewUrl}
                     controls
-                    className="mt-4 w-full rounded"
+                    className="mt-4 w-50 rounded"
                     style={{ maxHeight: 300 }}
                   />
                 )}
@@ -146,9 +165,9 @@ function RouteComponent() {
           selector={(state) => [state.canSubmit, state.isSubmitting]}
         >
           {([canSubmit, isSubmitting]) => (
-            <button type="submit" className="btn" disabled={!canSubmit}>
+            <Button type="submit" className="btn" disabled={!canSubmit}>
               {isSubmitting ? "Uploading..." : "Upload"}
-            </button>
+            </Button>
           )}
         </form.Subscribe>
       </form>

@@ -16,6 +16,8 @@ import { seo } from "~/utils/seo";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { getUser } from "~/auth/utils";
 import authClient from "~/auth/client";
+import { Provider } from "~/components/ui/provider";
+import { Button } from "@chakra-ui/react";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -78,9 +80,11 @@ export const Route = createRootRouteWithContext<{
 
 function RootComponent() {
   return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
+    <Provider>
+      <RootDocument>
+        <Outlet />
+      </RootDocument>
+    </Provider>
   );
 }
 
@@ -92,6 +96,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
         <HeadContent />
       </head>
       <body>
@@ -138,16 +143,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Convert video
           </Link>{" "}
           {ctx.user ? (
-            <button
-              className="btn btn-xs btn-soft btn-error"
-              onClick={async () => {
-                await authClient.signOut();
-                await queryClient.invalidateQueries({ queryKey: ["user"] });
-                await router.invalidate();
-              }}
-            >
-              Sign Out
-            </button>
+            <>
+              <Link to="/account" className="link">
+                Account
+              </Link>{" "}
+              <Button
+                className="btn btn-xs btn-soft btn-error"
+                onClick={async () => {
+                  await authClient.signOut();
+                  await queryClient.invalidateQueries({ queryKey: ["user"] });
+                  await router.invalidate();
+                }}
+              >
+                Sign Out
+              </Button>
+            </>
           ) : (
             <>
               <Link to="/login" className="link">

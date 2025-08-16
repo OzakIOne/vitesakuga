@@ -3,6 +3,7 @@ import { fetchUser } from "~/utils/users";
 import { NotFound } from "~/components/NotFound";
 import { UserErrorComponent } from "~/components/UserError";
 import { PostList } from "~/components/PostList";
+import { User } from "~/components/User";
 
 export const Route = createFileRoute("/users/$userId")({
   loader: async ({ params: { userId } }) =>
@@ -20,18 +21,21 @@ function UserComponent() {
   const data = Route.useLoaderData();
   console.log("user", data);
   return (
-    <>
-      <div className="flex flex-col">
-        <span>Name: {data.user.name}</span>
-        <span>
-          Member since: {new Date(data.user.createdAt).toDateString()}
-        </span>
-      </div>
-      <div className="flex">
+    <div className="p-4 space-y-6">
+      {/* User Info */}
+      <User user={data.user} />
+
+      {/* Posts Grid */}
+      <div className="flex flex-wrap gap-4">
         {data.posts.map((post) => (
-          <PostList key={post.id} post={post} />
+          <div
+            key={post.id}
+            className="flex-1 min-w-[250px] max-w-sm border rounded-lg p-4 shadow hover:shadow-md transition"
+          >
+            <PostList post={post} />
+          </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

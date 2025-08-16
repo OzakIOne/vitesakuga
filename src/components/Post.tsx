@@ -1,14 +1,23 @@
+import { Heading, Text } from "@chakra-ui/react";
 import { Video } from "./Video";
+import { User } from "./User";
+import { DbSchemaSelect } from "~/auth/db/schema";
 
-export function Post({ post, user }: { post: any; user: any }) {
+export function Post({
+  post,
+  user,
+}: {
+  post: DbSchemaSelect["posts"];
+  user: DbSchemaSelect["user"];
+}) {
   return (
-    <div>
+    <>
       <div className="w-lg">
         <Video url={post.key} />
       </div>
-      <h4 className="text-xl font-bold underline">Post title: {post.title}</h4>
-      <div className="text-sm">Post content: {post.content}</div>
-      <div>Posted by: {user.name}</div>
-    </div>
+      <Heading as="h3">{post.title}</Heading>
+      <Text> {post.content}</Text>
+      <User user={user} />
+    </>
   );
 }

@@ -1,9 +1,9 @@
 import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
 import pkg from "pg";
+import { DbSchemaInsert, DbSchemaSelect } from "./schema";
 const { Pool } = pkg;
-import type { DB } from "kysely-codegen"; // Your defined schema types
 
-export const kysely = new Kysely<DB>({
+export const kysely = new Kysely<DbSchemaInsert>({
   dialect: new PostgresDialect({
     pool: new Pool({
       database: process.env.POSTGRES_DB,

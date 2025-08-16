@@ -8,6 +8,13 @@
         "postgresql://user:password@localhost/sakuga"
       ],
       "type": "stdio"
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://docs.mcp.cloudflare.com/sse"
+      ]
     }
   },
   "inputs": []

@@ -1,9 +1,9 @@
 import { bigint, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { user, UserInsert, UserSelect } from "./auth.schema";
+import { user, userInsertSchema, userSelectSchema } from "./auth.schema";
 import z from "zod";
 import { createSchemaFactory } from "drizzle-zod";
 
-export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+const { createInsertSchema, createSelectSchema } = createSchemaFactory({
   coerce: true,
 });
 
@@ -36,8 +36,9 @@ export const comments = pgTable("comments", {
 export const commentsSelectSchema = createSelectSchema(comments);
 export const commentsInsertSchema = createInsertSchema(comments);
 
-export type PostsSelect = z.infer<typeof postsSelectSchema>;
-export type CommentsSelect = z.infer<typeof commentsSelectSchema>;
+type UserSelect = z.infer<typeof userSelectSchema>;
+type PostsSelect = z.infer<typeof postsSelectSchema>;
+type CommentsSelect = z.infer<typeof commentsSelectSchema>;
 
 export type DbSchemaSelect = {
   user: UserSelect;
@@ -45,8 +46,9 @@ export type DbSchemaSelect = {
   comments: CommentsSelect;
 };
 
-export type PostsInsert = z.infer<typeof postsInsertSchema>;
-export type CommentsInsert = z.infer<typeof commentsInsertSchema>;
+type UserInsert = z.infer<typeof userInsertSchema>;
+type PostsInsert = z.infer<typeof postsInsertSchema>;
+type CommentsInsert = z.infer<typeof commentsInsertSchema>;
 
 export type DbSchemaInsert = {
   user: UserInsert;

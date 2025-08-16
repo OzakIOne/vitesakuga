@@ -1,5 +1,4 @@
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import z from "zod";
 import { createSchemaFactory } from "drizzle-zod";
 
 export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
@@ -23,10 +22,7 @@ export const user = pgTable("user", {
 });
 
 export const userSelectSchema = createSelectSchema(user);
-export const userInserttSchema = createInsertSchema(user);
-
-export type UserSelect = z.infer<typeof userSelectSchema>;
-export type UserInsert = z.infer<typeof userSelectSchema>;
+export const userInsertSchema = createInsertSchema(user);
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),

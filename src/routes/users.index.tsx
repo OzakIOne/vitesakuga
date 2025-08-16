@@ -1,5 +1,7 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { fetchUsers } from "../utils/users";
+import { Avatar, Card, HStack, Stack, Text } from "@chakra-ui/react";
+import { User } from "~/components/User";
 
 export const Route = createFileRoute("/users/")({
   loader: async () => fetchUsers(),
@@ -10,28 +12,10 @@ function UsersLayoutComponent() {
   const usersQuery = Route.useLoaderData();
   console.log("Component users", usersQuery);
   return (
-    <div className="p-2 flex gap-2">
-      <ul className="list-disc pl-4">
-        {usersQuery.map((user) => {
-          return (
-            <li key={user.id} className="whitespace-nowrap">
-              <Link
-                to="/users/$userId"
-                params={{
-                  userId: user.id,
-                }}
-                className="block py-1 text-blue-800 hover:text-blue-600"
-                activeProps={{ className: "text-black font-bold" }}
-              >
-                <div>{user.name}</div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      <hr />
-
-      <Outlet />
+    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {usersQuery.map((user) => (
+        <User user={user} />
+      ))}
     </div>
   );
 }

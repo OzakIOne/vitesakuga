@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
+import { Button, Heading, HStack, Input, Stack } from "@chakra-ui/react";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -38,35 +39,43 @@ function Home() {
   );
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Posts</h2>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setDebouncedQuery.flush();
-          await form.handleSubmit();
-        }}
-        className="mb-4 flex gap-2"
-      >
-        <form.Field name="search">
-          {(field) => (
-            <input
-              className="input flex-1"
-              type="text"
-              placeholder="Search..."
-              value={field.state.value}
-              onChange={(e) => {
-                const val = e.target.value;
-                field.handleChange(val);
-                setDebouncedQuery.maybeExecute(val);
-              }}
-            />
-          )}
-        </form.Field>
-        <button type="submit" className="btn btn-primary">
-          Search
-        </button>
-      </form>
-    </div>
+    <Stack
+      width={"full"}
+      align={"center"}
+      // TODO remove calc hack shit
+      minH="calc(100vh - 64px)"
+      justify={"center"}
+    >
+      <Heading className="text-2xl font-bold mb-4">ViteSakuga</Heading>
+      <HStack align={"center"}>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setDebouncedQuery.flush();
+            await form.handleSubmit();
+          }}
+          className="mb-4 flex gap-2"
+        >
+          <form.Field name="search">
+            {(field) => (
+              <Input
+                className="input flex-1"
+                type="text"
+                placeholder="Search..."
+                value={field.state.value}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  field.handleChange(val);
+                  setDebouncedQuery.maybeExecute(val);
+                }}
+              />
+            )}
+          </form.Field>
+          <Button type="submit" className="btn btn-primary">
+            Search
+          </Button>
+        </form>
+      </HStack>
+    </Stack>
   );
 }
