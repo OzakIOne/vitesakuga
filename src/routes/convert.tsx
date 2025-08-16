@@ -1,5 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React, { useRef, useState } from "react";
+import {
+  Box,
+  Button,
+  Heading,
+  Text,
+  Input,
+  Select,
+  Container,
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  Link,
+  Spinner,
+  Portal,
+  Icon,
+  VStack,
+  HStack,
+  FileUpload,
+} from "@chakra-ui/react";
+import { LuUpload } from "react-icons/lu";
+import { createListCollection } from "@chakra-ui/react";
 
 // // Lazy load to avoid SSR issues
 // const RemotionConvert = React.lazy(() =>
@@ -20,6 +41,13 @@ const SUPPORTED_OUTPUTS = [
     audioCodec: "opus",
   },
 ];
+
+const outputFormats = createListCollection({
+  items: SUPPORTED_OUTPUTS.map((format) => ({
+    label: format.label,
+    value: format.label,
+  })),
+});
 
 export const Route = createFileRoute("/convert")({
   component: RouteComponent,
@@ -83,98 +111,144 @@ function RouteComponent() {
   }, [downloadUrl]);
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-base-200 rounded-lg shadow mt-8">
-      <h1 className="text-2xl font-bold mb-4">Video/Audio Converter</h1>
-      <p className="mb-4 text-base-content/70">
-        Convert your video or audio file to another format directly in your
-        browser using WebCodecs. Powered by{" "}
-        <a
-          href="https://www.remotion.dev/docs/webcodecs/convert-a-video"
-          className="link"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Remotion WebCodecs
-        </a>
-        .
-      </p>
-      <div className="mb-4">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="video/*,audio/*,.mkv"
-          className="file-input"
-          onChange={handleFileChange}
-          disabled={isConverting}
-        />
-      </div>
-      <div className="mb-4">
-        <select
-          className="select"
-          onChange={(e) => {
-            const o = SUPPORTED_OUTPUTS.find(
-              (opt) => opt.label === e.target.value
-            );
-            if (o) setOutput(o);
-          }}
-          disabled={isConverting}
-        >
-          <option disabled selected>
-            Output format
-          </option>
-
-          {SUPPORTED_OUTPUTS.map((opt) => (
-            <option key={opt.label} value={opt.label}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button
-        className="btn btn-primary mb-4"
-        onClick={handleConvert}
-        disabled={!file || isConverting}
-      >
-        {isConverting ? (
-          <span className="loading loading-spinner loading-sm mr-2" />
-        ) : null}
-        Convert
-      </button>
-      {error && (
-        <div className="alert alert-error mb-4">
-          <span>{error}</span>
-        </div>
-      )}
-      {downloadUrl && (
-        <div className="alert alert-success flex-col items-start mb-4">
-          <span>Conversion complete!</span>
-          <a
-            href={downloadUrl}
-            download={convertedName}
-            className="btn btn-success btn-sm mt-2"
+    <Container maxW="xl" py={8}>
+      <Box bg="gray.50" p={6} borderRadius="lg" shadow="md">
+        <Heading size="lg" mb={4}>
+          Video/Audio Converter
+        </Heading>
+        <Text mb={4}>
+          Convert your video or audio file to another format directly in your
+          browser using WebCodecs. Powered by{" "}
+          <Link
+            href="https://www.remotion.dev/docs/webcodecs/convert-a-video"
+            color="blue.500"
           >
-            Download
-          </a>
-          <video
-            src={downloadUrl}
-            controls
-            className="mt-4 rounded-lg max-h-64 w-full"
-            style={{ display: output.container !== "wav" ? "block" : "none" }}
-          />
-          <audio
-            src={downloadUrl}
-            controls
-            className="mt-4 w-full"
-            style={{ display: output.container === "wav" ? "block" : "none" }}
-          />
-        </div>
-      )}
-      <div className="text-xs text-base-content/50 mt-6">
-        Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac, aac,
-        m3u8
-        <br />
-        Supported output: MP4 (H.264/AAC), WebM (VP9/Opus)
-      </div>
-    </div>
+            Remotion WebCodecs
+          </Link>
+          .
+        </Text>
+
+        <Box mb={4}>
+          <FileUpload.Root
+            maxW="xl"
+            alignItems="stretch"
+            accept={["video/*", "audio/*", ".mkv"]}
+            onFileChange={handleFileChange}
+          >
+            <FileUpload.HiddenInput />
+            <FileUpload.Dropzone>
+              <Icon as={LuUpload} boxSize={6} color="gray.500" mb={2} />
+              <FileUpload.DropzoneContent>
+                <Text>Drag and drop files here</Text>
+                <Text fontSize="sm" color="gray.500">
+                  .mp4, .mov, .mkv, .webm, .avi, .ts, .wav, .mp3, .flac
+                </Text>
+              </FileUpload.DropzoneContent>
+            </FileUpload.Dropzone>
+            <FileUpload.List showSize clearable />
+          </FileUpload.Root>
+        </Box>
+
+        <Box mb={4}>
+          <Select.Root
+            collection={outputFormats}
+            size="md"
+            width="full"
+            disabled={isConverting}
+            value={output?.label}
+            onChange={(value) => {
+              const o = SUPPORTED_OUTPUTS.find((opt) => opt.label === value);
+              if (o) setOutput(o);
+            }}
+          >
+            <Select.Label>Output Format</Select.Label>
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Select format" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Portal>
+              <Select.Positioner>
+                <Select.Content>
+                  {outputFormats.items.map((format) => (
+                    <Select.Item item={format} key={format.value}>
+                      {format.label}
+                      <Select.ItemIndicator />
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Portal>
+          </Select.Root>
+        </Box>
+
+        <Button
+          colorScheme="blue"
+          onClick={handleConvert}
+          disabled={!file || isConverting}
+          loading={isConverting}
+          loadingText="Converting"
+          mb={4}
+        >
+          Convert
+        </Button>
+
+        {error && (
+          <Alert.Root status="error" mb={4}>
+            <Alert.Content>
+              <Alert.Indicator />
+              <Alert.Title>Error</Alert.Title>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
+
+        {downloadUrl && (
+          <Alert.Root status="success" mb={4}>
+            <Alert.Content>
+              <Alert.Indicator />
+              <Alert.Title>Success</Alert.Title>
+              <Alert.Description>
+                <Text>Conversion complete!</Text>
+                <Button
+                  as={"link"}
+                  href={downloadUrl}
+                  download={convertedName}
+                  size="sm"
+                  colorScheme="green"
+                  mt={2}
+                >
+                  Download
+                </Button>
+                {output.container !== "wav" ? (
+                  <Box
+                    as="video"
+                    src={downloadUrl}
+                    controls
+                    mt={4}
+                    maxH="256px"
+                    w="full"
+                    borderRadius="lg"
+                  />
+                ) : (
+                  <Box as="audio" src={downloadUrl} controls mt={4} w="full" />
+                )}
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
+
+        <Text fontSize="sm" color="gray.600">
+          Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac,
+          aac, m3u8
+        </Text>
+        <Text fontSize="sm" color="gray.600">
+          Supported output: MP4 (H.264/AAC), WebM (VP9/Opus)
+        </Text>
+      </Box>
+    </Container>
   );
 }

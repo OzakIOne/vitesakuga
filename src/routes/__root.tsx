@@ -17,7 +17,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { getUser } from "~/auth/utils";
 import authClient from "~/auth/client";
 import { Provider } from "~/components/ui/provider";
-import { Button } from "@chakra-ui/react";
+import { Button, Center } from "@chakra-ui/react";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -100,7 +100,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div className="p-2 flex gap-2 text-lg">
+        <Center gap={2}>
           <Link
             to="/"
             activeProps={{
@@ -148,7 +148,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 Account
               </Link>{" "}
               <Button
-                className="btn btn-xs btn-soft btn-error"
+                size="xs"
                 onClick={async () => {
                   await authClient.signOut();
                   await queryClient.invalidateQueries({ queryKey: ["user"] });
@@ -168,7 +168,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               </Link>
             </>
           )}
-        </div>
+        </Center>
         <hr />
         {children}
         <TanStackRouterDevtools position="bottom-right" />

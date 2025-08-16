@@ -10,6 +10,8 @@ import {
   Input,
   InputGroup,
   Text,
+  Center,
+  Box,
 } from "@chakra-ui/react";
 import { LuImage, LuUser } from "react-icons/lu";
 import z from "zod";
@@ -85,12 +87,13 @@ function RouteComponent() {
   };
 
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-6">
+    <Box className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="flex items-center gap-4 border-b pb-4">
         <AvatarGroup>
           <Avatar.Root>
             <Avatar.Fallback />
-            <Avatar.Image src={user!.image} />
+            {/* fix monkey patch ts */}
+            <Avatar.Image src={user!.image!} />
           </Avatar.Root>
         </AvatarGroup>
         <div>
@@ -206,6 +209,6 @@ function RouteComponent() {
       <Button onClick={handleDeleteUser} colorPalette={"red"}>
         Delete Account
       </Button>
-    </div>
+    </Box>
   );
 }
