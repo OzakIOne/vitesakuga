@@ -16,6 +16,7 @@ import {
 import { LuImage, LuUser } from "react-icons/lu";
 import z from "zod";
 import { PasswordInput } from "~/components/ui/password-input";
+import { User } from "~/components/User";
 import { FieldInfo } from "~/components/FieldInfo";
 
 export const Route = createFileRoute("/account")({
@@ -87,128 +88,184 @@ function RouteComponent() {
   };
 
   return (
-    <Box className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="flex items-center gap-4 border-b pb-4">
-        <AvatarGroup>
-          <Avatar.Root>
-            <Avatar.Fallback />
-            {/* fix monkey patch ts */}
-            <Avatar.Image src={user!.image!} />
-          </Avatar.Root>
-        </AvatarGroup>
-        <div>
-          <Heading>{user!.name}</Heading>
-          <Text>{user!.email}</Text>
-          <Text>
-            Member since: {new Date(user!.createdAt).toLocaleDateString()}
-          </Text>
+    <Box className="min-h-screen  flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-lg  rounded-xl shadow-lg border p-10 space-y-10">
+        <div className="p-6 mb-8">
+          <div className="flex items-center gap-6">
+            <AvatarGroup>
+              <Avatar.Root size="2xl">
+                <Avatar.Fallback />
+                <Avatar.Image src={user!.image!} className="rounded-full" />
+              </Avatar.Root>
+            </AvatarGroup>
+            <div className="flex-1 min-w-0">
+              <Heading size="lg">{user!.name}</Heading>
+              <Text size="sm">{user!.email}</Text>
+              <Text size="sm">
+                Member since: {new Date(user!.createdAt).toLocaleDateString()}
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        {serverError && (
+          <div className="bg-red-50 border border-red-200 px-6 py-4 rounded-lg mb-8">
+            <Text fontWeight="medium" mb={1}>
+              Error
+            </Text>
+            <Text>{serverError}</Text>
+          </div>
+        )}
+
+        <div className="space-y-8">
+          <div>
+            <div className="mb-6">
+              <Heading size="lg" className="mb-2">
+                Profile Information
+              </Heading>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                profileForm.handleSubmit();
+              }}
+              className="space-y-4"
+            >
+              <profileForm.Field name="name">
+                {(field) => (
+                  <div className="mb-6">
+                    <Text fontWeight="medium" mb={3}>
+                      Display Name
+                    </Text>
+                    <InputGroup startElement={<LuUser />}>
+                      <Input
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Enter your display name"
+                        className="w-full h-12"
+                      />
+                    </InputGroup>
+                  </div>
+                )}
+              </profileForm.Field>
+
+              <profileForm.Field name="image">
+                {(field) => (
+                  <div className="mb-8">
+                    <Text fontWeight="medium" mb={3}>
+                      Profile Picture URL
+                    </Text>
+                    <InputGroup startElement={<LuImage />}>
+                      <Input
+                        type="url"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="w-full h-12"
+                      />
+                    </InputGroup>
+                    {!field.state.meta.errors &&
+                      field.state.value !== user?.image && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                          <Text fontWeight="medium" mb={3}>
+                            Preview:
+                          </Text>
+                          <AvatarGroup>
+                            <Avatar.Root size="2xl">
+                              <Avatar.Fallback />
+                              <Avatar.Image src={field.state.value} />
+                            </Avatar.Root>
+                          </AvatarGroup>
+                        </div>
+                      )}
+                    <FieldInfo field={field} />
+                  </div>
+                )}
+              </profileForm.Field>
+
+              <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
+                {([isSubmitting]) => (
+                  <Center>
+                    <Button
+                      type="submit"
+                      marginTop="4"
+                      disabled={isSubmitting}
+                      fontWeight="medium"
+                    >
+                      {isSubmitting ? "Saving..." : "Save Profile Changes"}
+                    </Button>
+                  </Center>
+                )}
+              </profileForm.Subscribe>
+            </form>
+          </div>
+
+          {/* Security Section */}
+          <div className="pt-10 border-t">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                passwordForm.handleSubmit();
+              }}
+              className="space-y-4"
+            >
+              <passwordForm.Field name="currentPassword">
+                {(field) => (
+                  <div className="mb-6">
+                    <Text fontWeight="medium" mb={3}>
+                      Current Password
+                    </Text>
+                    <PasswordInput
+                      type="password"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Enter current password"
+                      className="w-full h-12"
+                    />
+                  </div>
+                )}
+              </passwordForm.Field>
+
+              <passwordForm.Field name="newPassword">
+                {(field) => (
+                  <div className="mb-8">
+                    <Text fontWeight="medium" mb={3}>
+                      New Password
+                    </Text>
+                    <PasswordInput
+                      type="password"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full h-12"
+                    />
+                  </div>
+                )}
+              </passwordForm.Field>
+
+              <Center>
+                <Button
+                  type="submit"
+                  colorPalette="orange"
+                  fontWeight="medium"
+                  margin="4"
+                >
+                  Update Password
+                </Button>
+              </Center>
+            </form>
+          </div>
+          <Center>
+            <Button
+              onClick={handleDeleteUser}
+              colorPalette="red"
+              fontWeight="medium"
+            >
+              Delete Account
+            </Button>
+          </Center>
         </div>
       </div>
-
-      {/* Error Message */}
-      {serverError && (
-        <div className="alert alert-error">
-          <span>{serverError}</span>
-        </div>
-      )}
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          profileForm.handleSubmit();
-        }}
-        className="space-y-4"
-      >
-        <profileForm.Field name="name">
-          {(field) => (
-            <InputGroup startElement={<LuUser />}>
-              <Input
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Username"
-              />
-            </InputGroup>
-          )}
-        </profileForm.Field>
-
-        <profileForm.Field name="image">
-          {(field) => (
-            <>
-              <InputGroup startElement={<LuImage />}>
-                <Input
-                  type="url"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="https://example.com/avatar.jpg"
-                />
-              </InputGroup>
-              {!field.state.meta.errors &&
-                field.state.value !== user?.image && (
-                  <AvatarGroup>
-                    <Avatar.Root>
-                      <Avatar.Fallback />
-                      <Avatar.Image src={field.state.value} />
-                    </Avatar.Root>
-                  </AvatarGroup>
-                )}
-              <FieldInfo field={field} />
-            </>
-          )}
-        </profileForm.Field>
-
-        <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
-          {([isSubmitting]) => (
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          )}
-        </profileForm.Subscribe>
-      </form>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          passwordForm.handleSubmit();
-        }}
-        className="space-y-4"
-      >
-        <passwordForm.Field name="currentPassword">
-          {(field) => (
-            <>
-              <Text>Current password</Text>
-              <PasswordInput
-                type="password"
-                className="input input-bordered w-full"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </>
-          )}
-        </passwordForm.Field>
-
-        <passwordForm.Field name="newPassword">
-          {(field) => (
-            <>
-              <Text>New password</Text>
-              <PasswordInput
-                type="password"
-                className="input input-bordered w-full"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </>
-          )}
-        </passwordForm.Field>
-
-        <Button type="submit" colorPalette={"orange"}>
-          Change Password
-        </Button>
-      </form>
-
-      {/* Delete Account */}
-      <Button onClick={handleDeleteUser} colorPalette={"red"}>
-        Delete Account
-      </Button>
     </Box>
   );
 }
