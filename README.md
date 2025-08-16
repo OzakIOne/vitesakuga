@@ -4,8 +4,9 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
 - [ ] fix build and start errors
 - [ ] fix vite serve
+- [ ] fix build with rolldown
 - [x] check cursor db implementation
-- [ ] manage account page
+- [x] manage account page
 - [ ] add comments to posts
 - [ ] modify posts
 - [ ] add preview image to post

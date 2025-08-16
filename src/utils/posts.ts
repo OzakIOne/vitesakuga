@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "~/auth/db/kysely";
-import { postsSelectSchema } from "~/auth/db/schema";
+import { postsSelectSchema, DbSchemaSelect } from "~/auth/db/schema";
 import { queryOptions } from "@tanstack/react-query";
 import { DEPLOY_URL } from "./users";
 
@@ -171,9 +171,7 @@ export const fetchPost = createServerFn()
       .where("id", "=", ctx.data)
       .executeTakeFirst();
 
-    if (!post) {
-      throw new Error(`Post ${ctx.data} not found`);
-    }
+    if (!post) throw new Error(`Post ${ctx.data} not found`);
 
     const user = await kysely
       .selectFrom("user")
@@ -182,14 +180,12 @@ export const fetchPost = createServerFn()
       .executeTakeFirst();
 
     // ? useless? post must always be bind to a user so if a post is found then there is a user bind to it
-    if (!user) {
-      throw new Error(`User not found`);
-    }
+    if (!user) throw new Error(`User not found`);
 
     return { post, user };
   });
 
-export const postsUploadOptions = (postData: Omit<PostsInsert, "key">) =>
+export const postsUploadOptions = (postData: DbSchemaSelect["posts"]) =>
   queryOptions({
     queryKey: ["posts", "upload", postData],
     queryFn: () => {

@@ -32,7 +32,7 @@ function UserComponent() {
             key={post.id}
             className="flex-1 min-w-[250px] max-w-sm border rounded-lg p-4 shadow hover:shadow-md transition"
           >
-            <PostList post={post} />
+            <PostList post={post} q={undefined} pageSize={undefined} />
           </div>
         ))}
       </div>

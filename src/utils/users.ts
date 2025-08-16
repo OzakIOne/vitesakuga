@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { kysely } from "~/auth/db/kysely";
-import { userSelectSchema } from "~/auth/db/schema";
+import { userSelectSchema, DbSchemaInsert } from "~/auth/db/schema";
 
 export const DEPLOY_URL = "http://localhost:3000";
 
@@ -27,11 +27,15 @@ export const fetchUser = createServerFn()
       .where("id", "=", ctx.data)
       .executeTakeFirstOrThrow();
 
-    const postsFromUser = await kysely
+    if (!userInfo) throw new Error(`User ${ctx.data} not found`);
+
+    const postsFromUser: DbSchemaInsert["posts"][] = await kysely
       .selectFrom("posts")
       .selectAll()
       .where("userId", "=", ctx.data)
       .execute();
+
+    if (!postsFromUser) throw new Error(`Post ${ctx.data} not found`);
 
     return { user: userInfo, posts: postsFromUser };
   });

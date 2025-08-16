@@ -1,14 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import { Box, Heading, Text, Button, VStack, HStack } from "@chakra-ui/react";
-import { DbSchemaSelect } from "~/auth/db/schema";
+import { DbSchemaInsert } from "~/auth/db/schema";
 
 function PostListComponent({
   post,
   q,
   pageSize,
 }: {
-  post: DbSchemaSelect["posts"];
+  post: DbSchemaInsert["posts"];
   q: string | undefined;
   pageSize: number | undefined;
 }) {

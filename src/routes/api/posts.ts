@@ -40,7 +40,7 @@ export const ServerRoute = createServerFileRoute("/api/posts").methods({
       .values({
         content: parsed.data.content,
         title: parsed.data.title,
-        user_id: parsed.data.userId,
+        userId: parsed.data.userId,
         key,
       })
       .returningAll()

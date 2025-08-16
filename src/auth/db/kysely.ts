@@ -1,6 +1,6 @@
 import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
 import pkg from "pg";
-import { DbSchemaInsert, DbSchemaSelect } from "./schema";
+import { DbSchemaInsert } from "./schema";
 const { Pool } = pkg;
 
 export const kysely = new Kysely<DbSchemaInsert>({

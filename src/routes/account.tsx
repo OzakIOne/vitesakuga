@@ -86,7 +86,6 @@ function RouteComponent() {
 
   return (
     <div className="p-4 max-w-lg mx-auto space-y-6">
-      {/* User Info */}
       <div className="flex items-center gap-4 border-b pb-4">
         <AvatarGroup>
           <Avatar.Root>
@@ -110,7 +109,6 @@ function RouteComponent() {
         </div>
       )}
 
-      {/* Edit Profile Form */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -118,9 +116,8 @@ function RouteComponent() {
         }}
         className="space-y-4"
       >
-        <profileForm.Field
-          name="name"
-          children={(field) => (
+        <profileForm.Field name="name">
+          {(field) => (
             <InputGroup startElement={<LuUser />}>
               <Input
                 value={field.state.value}
@@ -129,11 +126,10 @@ function RouteComponent() {
               />
             </InputGroup>
           )}
-        />
+        </profileForm.Field>
 
-        <profileForm.Field
-          name="image"
-          children={(field) => (
+        <profileForm.Field name="image">
+          {(field) => (
             <>
               <InputGroup startElement={<LuImage />}>
                 <Input
@@ -155,16 +151,15 @@ function RouteComponent() {
               <FieldInfo field={field} />
             </>
           )}
-        />
+        </profileForm.Field>
 
-        <profileForm.Subscribe
-          selector={(state) => [state.isSubmitting]}
-          children={([isSubmitting]) => (
+        <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
+          {([isSubmitting]) => (
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           )}
-        />
+        </profileForm.Subscribe>
       </form>
 
       <form
@@ -174,9 +169,8 @@ function RouteComponent() {
         }}
         className="space-y-4"
       >
-        <passwordForm.Field
-          name="currentPassword"
-          children={(field) => (
+        <passwordForm.Field name="currentPassword">
+          {(field) => (
             <>
               <Text>Current password</Text>
               <PasswordInput
@@ -187,11 +181,10 @@ function RouteComponent() {
               />
             </>
           )}
-        />
+        </passwordForm.Field>
 
-        <passwordForm.Field
-          name="newPassword"
-          children={(field) => (
+        <passwordForm.Field name="newPassword">
+          {(field) => (
             <>
               <Text>New password</Text>
               <PasswordInput
@@ -202,7 +195,7 @@ function RouteComponent() {
               />
             </>
           )}
-        />
+        </passwordForm.Field>
 
         <Button type="submit" colorPalette={"orange"}>
           Change Password

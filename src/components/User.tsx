@@ -1,8 +1,8 @@
 import { Card, HStack, Avatar, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import { DbSchemaSelect } from "~/auth/db/schema";
+import { DbSchemaInsert } from "~/auth/db/schema";
 
-export function User({ user }: { user: DbSchemaSelect["user"] }) {
+export function User({ user }: { user: DbSchemaInsert["user"] }) {
   return (
     <Link key={user.id} to="/users/$userId" params={{ userId: user.id }}>
       <Card.Root size="sm">

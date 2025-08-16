@@ -1,6 +1,5 @@
-import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { fetchUsers } from "../utils/users";
-import { Avatar, Card, HStack, Stack, Text } from "@chakra-ui/react";
 import { User } from "~/components/User";
 
 export const Route = createFileRoute("/users/")({
@@ -14,7 +13,7 @@ function UsersLayoutComponent() {
   return (
     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {usersQuery.map((user) => (
-        <User user={user} />
+        <User key={user.id} user={user} />
       ))}
     </div>
   );
