@@ -19,7 +19,7 @@ export const fetchUsers = createServerFn().handler(async () => {
 const userIdSchema = z.coerce.string();
 
 export const fetchUser = createServerFn()
-  .validator((id: unknown) => userIdSchema.parse(id))
+  .inputValidator((id: unknown) => userIdSchema.parse(id))
   .handler(async (ctx) => {
     const userInfo = await kysely
       .selectFrom("user")

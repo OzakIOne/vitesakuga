@@ -1,11 +1,11 @@
-import { serverOnly } from "@tanstack/react-start";
+import { createServerOnlyFn } from "@tanstack/react-start";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { reactStartCookies } from "better-auth/react-start";
 // import { env } from "~/env/server";
 import { db } from "~/auth/db";
 
-const getAuthConfig = serverOnly(() =>
+const getAuthConfig = createServerOnlyFn(() =>
   betterAuth({
     baseURL: process.env.VITE_BASE_URL,
     database: drizzleAdapter(db, {

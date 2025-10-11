@@ -36,7 +36,7 @@ export type PaginatedPostsResponse = z.infer<
 >;
 
 export const fetchPosts = createServerFn()
-  .validator((input: unknown) => fetchPostsInputSchema.parse(input))
+  .inputValidator((input: unknown) => fetchPostsInputSchema.parse(input))
   .handler(async ({ data }): Promise<PaginatedPostsResponse> => {
     const { page } = data;
     const { size, after } = page;
@@ -87,7 +87,7 @@ export const fetchPosts = createServerFn()
   });
 
 export const searchPosts = createServerFn()
-  .validator((input: unknown) =>
+  .inputValidator((input: unknown) =>
     z
       .object({
         q: z.string().trim().min(1),
@@ -163,7 +163,7 @@ export const searchPosts = createServerFn()
 const postIdSchema = z.coerce.number();
 
 export const fetchPost = createServerFn()
-  .validator((id: unknown) => postIdSchema.parse(id))
+  .inputValidator((id: unknown) => postIdSchema.parse(id))
   .handler(async (ctx) => {
     const post = await kysely
       .selectFrom("posts")

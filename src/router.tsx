@@ -5,7 +5,7 @@ import { NotFound } from "./components/NotFound";
 import { QueryClient } from "@tanstack/react-query";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
-export function createRouter() {
+export function getRouter() {
   const queryClient = new QueryClient();
 
   const router = createTanStackRouter({
