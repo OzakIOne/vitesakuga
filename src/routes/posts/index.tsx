@@ -3,7 +3,7 @@ import {
   fetchPosts,
   PaginatedPostsResponse,
   searchPosts,
-} from "../utils/posts";
+} from "../../utils/posts";
 import { PostList } from "~/components/PostList";
 import z from "zod";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -17,7 +17,7 @@ const searchSchema = z.object({
   size: z.coerce.number().min(1).max(100).default(20).optional(),
 });
 
-export const Route = createFileRoute("/posts")({
+export const Route = createFileRoute("/posts/")({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({
     q: search.q,
@@ -234,10 +234,6 @@ function PostsLayoutComponent() {
             </React.Fragment>
           ))}
         </div>
-      </div>
-
-      <div className="mt-4">
-        <Outlet />
       </div>
     </div>
   );

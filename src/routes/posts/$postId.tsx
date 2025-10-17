@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchPost } from "../utils/posts";
+import { fetchPost } from "../../utils/posts";
 import { NotFound } from "~/components/NotFound";
 import { PostErrorComponent } from "~/components/PostError";
 import { Post } from "~/components/Post";
@@ -40,15 +40,11 @@ function PostComponent() {
 
   console.log({ post, user });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-      <div className="pointer-events-auto rounded-lg p-6 min-w-[320px] min-h-[180px] max-w-full max-h-full">
-        <Box bg={"gray.100"} shadow={"md"} borderRadius={"md"} padding={"4"}>
-          <Post post={post} user={user} />
-          <Button className="btn" onClick={handleBack}>
-            Back
-          </Button>
-        </Box>
-      </div>
-    </div>
+    <Box bg={"gray.100"} shadow={"md"} borderRadius={"md"} padding={"4"}>
+      <Post post={post} user={user} />
+      <Button className="btn" onClick={handleBack}>
+        Back
+      </Button>
+    </Box>
   );
 }

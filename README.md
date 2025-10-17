@@ -11,6 +11,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] modify posts
 - [ ] add preview image to post
 - [ ] better ui
+- [ ] scroll restoration from post to back to posts list
 
 ## Secondary
 
