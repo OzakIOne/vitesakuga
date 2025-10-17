@@ -7,17 +7,20 @@ import {
   createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { getUser } from "~/auth/utils";
 import authClient from "~/auth/client";
 import { Provider } from "~/components/ui/provider";
 import { Button, Center } from "@chakra-ui/react";
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { FormDevtools } from "@tanstack/react-form-devtools";
+import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -171,9 +174,26 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         </Center>
         <hr />
         {children}
-        <TanStackRouterDevtools position="bottom-right" />
-        <ReactQueryDevtools buttonPosition="bottom-left" />
-
+        <TanStackDevtools
+          plugins={[
+            {
+              name: "TanStack Query",
+              render: <ReactQueryDevtoolsPanel />,
+            },
+            {
+              name: "TanStack Router",
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+            {
+              name: "TanStack Form",
+              render: <FormDevtools />,
+            },
+            {
+              name: "TanStack Pacer",
+              render: <PacerDevtoolsPanel />,
+            },
+          ]}
+        />
         <Scripts />
       </body>
     </html>
