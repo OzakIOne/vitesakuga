@@ -19,3 +19,4 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] add tags to posts
 - [ ] add search filters
 - [ ] add posts liking / ranking
+- [ ] use kyselyfy from drizzle to cleanup database types
