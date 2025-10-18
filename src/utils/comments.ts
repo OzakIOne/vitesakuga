@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "../auth/db/kysely";
 
 // Schema for a comment
+// TODO use schema fron drizzle ?
 const commentSchema = z.object({
   id: z.number(),
   postId: z.coerce.number(),
@@ -16,6 +17,7 @@ const commentSchema = z.object({
 export type Comment = z.infer<typeof commentSchema>;
 
 // Schema for creating a comment
+// TODO use schema fron drizzle ?
 export const createCommentSchema = z.object({
   postId: z.coerce.number(),
   content: z.string().min(1),
