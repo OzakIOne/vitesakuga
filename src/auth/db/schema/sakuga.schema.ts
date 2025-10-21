@@ -33,9 +33,7 @@ export const postTags = pgTable(
       .references(() => tags.id)
       .notNull(),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.postId, t.tagId] }),
-  })
+  (t) => [primaryKey({ columns: [t.postId, t.tagId] })]
 );
 
 export const posts = pgTable("posts", {
@@ -44,6 +42,7 @@ export const posts = pgTable("posts", {
   content: text().notNull(),
   key: text().notNull(),
   source: text(),
+  // @ts-expect-error safe circular reference
   relatedPostId: bigint({ mode: "number" }).references(() => posts.id),
   createdAt: timestamp().defaultNow().notNull(),
   userId: text()
