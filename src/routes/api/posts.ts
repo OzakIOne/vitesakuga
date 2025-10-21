@@ -22,6 +22,7 @@ export const Route = createFileRoute("/api/posts")({
     handlers: {
       POST: async ({ request }) => {
         const data = Object.fromEntries((await request.formData()).entries());
+        console.log("Received upload request... @", { data });
         const parsed = uploadSchema.safeParse(data);
         console.log("Creating post... @", {
           url: request.url,

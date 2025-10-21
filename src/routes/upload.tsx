@@ -17,6 +17,7 @@ import {
   useRouteContext,
   Link,
 } from "@tanstack/react-router";
+import { Video } from "~/components/Video";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -41,38 +42,14 @@ const TagSchema = z.object({
   name: z.string().min(1),
 });
 
-interface FormFields {
-  title: string;
-  content: string;
-  source: string;
-  relatedPostId: string;
-  tags: Tag[];
-  video: File | null;
-}
-
-const defaultValues: FormFields = {
-  title: "",
-  content: "",
-  source: "",
-  relatedPostId: "",
-  tags: [],
-  video: null,
-};
-
-const validationSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().min(1, "Description is required"),
-  source: z.string().url("Must be a valid URL").nullish(),
-  relatedPostId: z.string().nullish(),
-  tags: z
-    .array(
-      z.object({
-        id: z.number().optional(),
-        name: z.string(),
-      })
-    )
-    .default([]),
-  video: z.custom<File>((v) => v instanceof File, "Video file is required"),
+const UploadSchema = z.object({
+  title: z.string().min(3, "You must have a length of at least 3"),
+  content: z.string().min(3, "You must have a length of at least 3"),
+  userId: z.string(),
+  video: z.file(),
+  source: z.url().optional(),
+  relatedPostId: z.number().optional(),
+  tags: z.array(TagSchema),
 });
 
 function RouteComponent() {
@@ -91,36 +68,20 @@ function RouteComponent() {
   });
 
   const form = useForm({
-    defaultValues,
+    defaultValues: {
+      title: "",
+      content: "",
+      source: "",
+      relatedPostId: "",
+      tags: [],
+      userId: context.user!.id,
+    },
+    validators: {
+      onChange: UploadSchema,
+    },
     onSubmit: async ({ value }) => {
-      const formData = new FormData();
-      formData.append("title", value.title);
-      formData.append("content", value.content);
-      if (value.source) {
-        formData.append("source", value.source);
-      }
-      if (value.relatedPostId) {
-        formData.append("relatedPostId", value.relatedPostId);
-      }
-      value.tags.forEach((tag) => {
-        formData.append("tags[]", JSON.stringify(tag));
-      });
-      if (value.video) {
-        formData.append("video", value.video);
-      }
-
-      const response = await fetch("/api/posts", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload post");
-      }
-
-      // Navigate to the post page
-      const post = await response.json();
-      window.location.href = `/posts/${post.id}`;
+      console.log("Uploading post...", value);
+      await context.queryClient.ensureQueryData(postsUploadOptions(value));
     },
   });
 
@@ -218,48 +179,46 @@ function RouteComponent() {
         <Box mb={6}>
           <form.Field name="relatedPostId">
             {(field) => (
-              <>
-                <Field.Root>
-                  <Field.Label>Related Post</Field.Label>
-                  <Input
-                    placeholder="Search for related posts..."
-                    value={relatedPostSearch}
-                    onChange={(e) => setRelatedPostSearch(e.target.value)}
-                  />
-                  {relatedPosts && relatedPosts.data.length > 0 && (
-                    <Box
-                      mt={2}
-                      p={2}
-                      border="1px"
-                      borderColor="gray.200"
-                      borderRadius="md"
-                    >
-                      {relatedPosts.data.map((post) => (
-                        <Box
-                          key={post.id}
-                          p={2}
-                          cursor="pointer"
-                          _hover={{ bg: "gray.100" }}
-                          onClick={() => {
-                            field.handleChange(post.id);
-                            setRelatedPostSearch("");
-                          }}
-                        >
-                          {post.title}
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                  {field.state.value && (
-                    <Box mt={2}>
-                      <Text>Selected Post ID: {field.state.value}</Text>
-                      <Button size="sm" onClick={() => field.handleChange("")}>
-                        Clear
-                      </Button>
-                    </Box>
-                  )}
-                </Field.Root>
-              </>
+              <Field.Root>
+                <Field.Label>Related Post</Field.Label>
+                <Input
+                  placeholder="Search for related posts..."
+                  value={relatedPostSearch}
+                  onChange={(e) => setRelatedPostSearch(e.target.value)}
+                />
+                {relatedPosts && relatedPosts.data.length > 0 && (
+                  <Box
+                    mt={2}
+                    p={2}
+                    border="1px"
+                    borderColor="gray.200"
+                    borderRadius="md"
+                  >
+                    {relatedPosts.data.map((post) => (
+                      <Box
+                        key={post.id}
+                        p={2}
+                        cursor="pointer"
+                        _hover={{ bg: "gray.100" }}
+                        onClick={() => {
+                          field.handleChange(post.id);
+                          setRelatedPostSearch("");
+                        }}
+                      >
+                        {post.title}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                {field.state.value && (
+                  <Box mt={2}>
+                    <Text>Selected Post ID: {field.state.value}</Text>
+                    <Button size="sm" onClick={() => field.handleChange("")}>
+                      Clear
+                    </Button>
+                  </Box>
+                )}
+              </Field.Root>
             )}
           </form.Field>
         </Box>
@@ -267,45 +226,43 @@ function RouteComponent() {
         <Box mb={6}>
           <form.Field name="tags">
             {(field) => (
-              <>
-                <Field.Root>
-                  <Field.Label>Tags</Field.Label>
-                  <TagInput
-                    value={field.state.value || []}
-                    onChange={(newTags) => field.handleChange(newTags)}
-                  />
-                  <Field.HelperText>
-                    Add tags to help others find this video. Press Enter to add
-                    a new tag.
-                  </Field.HelperText>
-                  <Box mt={2} display="flex" flexDirection="column" gap={2}>
-                    {field.state.value.map((tag, index) => (
-                      <Box
-                        key={index}
-                        display="inline-flex"
-                        alignItems="center"
-                        px={2}
-                        py={1}
-                        bg="gray.100"
-                        borderRadius="md"
+              <Field.Root>
+                <Field.Label>Tags</Field.Label>
+                <TagInput
+                  value={field.state.value || []}
+                  onChange={(newTags) => field.handleChange(newTags)}
+                />
+                <Field.HelperText>
+                  Add tags to help others find this video. Press Enter to add a
+                  new tag.
+                </Field.HelperText>
+                <Box mt={2} display="flex" flexDirection="column" gap={2}>
+                  {field.state.value.map((tag, index) => (
+                    <Box
+                      key={index}
+                      display="inline-flex"
+                      alignItems="center"
+                      px={2}
+                      py={1}
+                      bg="gray.100"
+                      borderRadius="md"
+                    >
+                      <Text fontSize="sm">{tag.name}</Text>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTags = [...field.state.value];
+                          newTags.splice(index, 1);
+                          field.handleChange(newTags);
+                        }}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
                       >
-                        <Text fontSize="sm">{tag.name}</Text>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newTags = [...field.state.value];
-                            newTags.splice(index, 1);
-                            field.handleChange(newTags);
-                          }}
-                          className="ml-2 text-gray-500 hover:text-gray-700"
-                        >
-                          ×
-                        </button>
-                      </Box>
-                    ))}
-                  </Box>
-                </Field.Root>
-              </>
+                        ×
+                      </button>
+                    </Box>
+                  ))}
+                </Box>
+              </Field.Root>
             )}
           </form.Field>
         </Box>

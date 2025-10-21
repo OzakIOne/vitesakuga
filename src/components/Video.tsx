@@ -18,7 +18,7 @@ const BaseURL = encodeURI(
   "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/"
 );
 
-export function Video({ url }: { url: string }) {
+export function Video({ url, bypass }: { url: string; bypass: boolean }) {
   return (
     <MediaController
       style={{
@@ -28,7 +28,7 @@ export function Video({ url }: { url: string }) {
     >
       <ReactPlayer
         slot="media"
-        src={BaseURL + url}
+        src={bypass ? url : BaseURL + url}
         controls={false}
         style={{
           width: "100%",

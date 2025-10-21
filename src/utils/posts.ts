@@ -185,35 +185,80 @@ export const fetchPost = createServerFn()
     return { post, user };
   });
 
-export const postsUploadOptions = (postData: DbSchemaSelect["posts"]) =>
+export const postsUploadOptions = (
+  postData: DbSchemaSelect["posts"] & {
+    tags?: Array<{ id?: string; name: string }>;
+    source?: string;
+    relatedPostId?: string;
+    video?: File | undefined;
+  }
+) =>
   queryOptions({
     queryKey: ["posts", "upload", postData],
-    queryFn: () => {
+    queryFn: async () => {
       const formData = new FormData();
+
       Object.entries(postData).forEach(([key, value]) => {
-        if (value != null) {
-          // If value is a File, append as is, else convert to string
-          if (value instanceof File) {
-            formData.append(key, value);
-          } else {
-            formData.append(key, String(value));
-          }
+        if (value != null && key !== "tags") {
+          formData.append(key, value);
         }
       });
-      return fetch(`${DEPLOY_URL}/api/posts`, {
+
+      // Tags: for any tag that already has an id, send it as tagIds[].
+      // For tags without an id, try to find an existing similar tag via the tags search endpoint.
+      // If found, use the existing id; if not found, include the name in newTags[] so the server can create it.
+      const tagIds: string[] = [];
+      const newTagNames: string[] = [];
+
+      const tags = postData.tags ?? [];
+      for (const tag of tags) {
+        if (tag.id) {
+          tagIds.push(tag.id);
+        } else if (tag.name && tag.name.trim() !== "") {
+          // try to find an existing tag by name (or similar). If the tags search endpoint
+          // returns matches, use the first match's id; otherwise mark the name for creation.
+          try {
+            const q = encodeURIComponent(tag.name.trim());
+            const res = await fetch(`${DEPLOY_URL}/api/tags/search?name=${q}`);
+            if (res.ok) {
+              const matches = await res.json();
+              if (
+                Array.isArray(matches) &&
+                matches.length > 0 &&
+                matches[0].id
+              ) {
+                tagIds.push(String(matches[0].id));
+                continue;
+              }
+            }
+            // fallback -> create new
+            newTagNames.push(tag.name.trim());
+          } catch {
+            // on error, treat as new tag
+            newTagNames.push(tag.name.trim());
+          }
+        }
+      }
+
+      tagIds.forEach((id) => formData.append("tagIds[]", id));
+      newTagNames.forEach((name) => formData.append("newTags[]", name));
+
+      // submit
+      const res = await fetch(`${DEPLOY_URL}/api/posts`, {
         method: "POST",
         body: formData,
-      }).then(async (r) => {
-        if (!r.ok) {
-          let errorData;
-          try {
-            errorData = await r.json();
-          } catch {
-            errorData = { error: await r.text() };
-          }
-          throw new Error(errorData.error || "Failed to upload post");
-        }
-        return r.json();
       });
+
+      if (!res.ok) {
+        let errorData;
+        try {
+          errorData = await res.json();
+        } catch {
+          errorData = { error: await res.text() };
+        }
+        throw new Error(errorData.error || "Failed to upload post");
+      }
+
+      return res.json();
     },
   });
