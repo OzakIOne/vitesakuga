@@ -95,8 +95,15 @@ function PostComponent() {
         padding={"4"}
         mb={4}
       >
-        <Post post={post} user={user} />
-        <Button onClick={handleBack}>Back</Button>
+        <Post
+          post={post}
+          user={user}
+          tags={Route.useLoaderData().tags}
+          relatedPost={Route.useLoaderData().relatedPost}
+        />
+        <Button onClick={handleBack} mt={4}>
+          Back
+        </Button>
       </Box>
 
       {/* Comments Section */}

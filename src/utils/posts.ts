@@ -182,7 +182,25 @@ export const fetchPost = createServerFn()
     // ? useless? post must always be bind to a user so if a post is found then there is a user bind to it
     if (!user) throw new Error(`User not found`);
 
-    return { post, user };
+    // Fetch tags for the post
+    const tags = await kysely
+      .selectFrom("post_tags")
+      .innerJoin("tags", "tags.id", "post_tags.tag_id")
+      .select(["tags.id", "tags.name"])
+      .where("post_tags.post_id", "=", post.id)
+      .execute();
+
+    // Fetch related post if exists
+    let relatedPost = null;
+    if (post.relatedPostId) {
+      relatedPost = await kysely
+        .selectFrom("posts")
+        .selectAll()
+        .where("id", "=", post.relatedPostId)
+        .executeTakeFirst();
+    }
+
+    return { post, user, tags, relatedPost };
   });
 
 export const postsUploadOptions = (
