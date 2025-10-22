@@ -88,13 +88,7 @@ function PostComponent() {
 
   return (
     <Box>
-      <Box
-        bg={"gray.100"}
-        shadow={"md"}
-        borderRadius={"md"}
-        padding={"4"}
-        mb={4}
-      >
+      <Box shadow={"md"} borderRadius={"md"} padding={"4"} mb={4}>
         <Post
           post={post}
           user={user}
@@ -107,7 +101,7 @@ function PostComponent() {
       </Box>
 
       {/* Comments Section */}
-      <Box bg={"gray.100"} shadow={"md"} borderRadius={"md"} padding={"4"}>
+      <Box shadow={"md"} borderRadius={"md"} padding={"4"}>
         <Text fontSize="xl" fontWeight="bold" mb={4}>
           Comments
         </Text>
@@ -140,14 +134,7 @@ function PostComponent() {
         {/* Comments List */}
         <Box>
           {comments?.map((comment) => (
-            <Box
-              key={comment.id}
-              p={3}
-              bg="white"
-              borderRadius="md"
-              shadow="sm"
-              mb={3}
-            >
+            <Box key={comment.id} p={3} borderRadius="md" shadow="sm" mb={3}>
               <Text fontSize="sm" color="gray.600" mb={1}>
                 {comment.userName || "Anonymous"} •{" "}
                 {comment.createdAt

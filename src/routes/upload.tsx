@@ -100,7 +100,6 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
-        {/* Title field - unchanged */}
         <Box mb={6}>
           <form.Field name="title">
             {(field) => (
@@ -123,7 +122,6 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
-        {/* Content field - unchanged */}
         <Box mb={6}>
           <form.Field name="content">
             {(field) => (
@@ -150,7 +148,6 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
-        {/* Source field - unchanged */}
         <Box mb={6}>
           <form.Field name="source">
             {(field) => (
@@ -174,7 +171,6 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
-        {/* Related Post field - FIXED */}
         <Box mb={6}>
           <form.Field name="relatedPostId">
             {(field) => (
@@ -237,7 +233,6 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
-        {/* Tags field - IMPROVED */}
         <Box mb={6}>
           <form.Field name="tags">
             {(field) => (
@@ -247,17 +242,11 @@ function RouteComponent() {
                   value={field.state.value}
                   onChange={(newTags) => field.handleChange(newTags)}
                 />
-                <Field.HelperText>
-                  Add tags to help others find this video. Press Enter to add a
-                  new tag.
-                </Field.HelperText>
-                {/* Remove the duplicate tag display that was here */}
               </Field.Root>
             )}
           </form.Field>
         </Box>
 
-        {/* Video field - unchanged */}
         <Box mb={6}>
           <form.Field name="video">
             {(field) => (

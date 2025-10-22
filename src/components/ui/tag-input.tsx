@@ -60,7 +60,6 @@ export function TagInput({ value, onChange }: TagInputProps) {
           {value.map((tag) => (
             <Box
               key={tag.name}
-              bg="blue.100"
               px={2}
               py={1}
               borderRadius="md"
@@ -100,7 +99,6 @@ export function TagInput({ value, onChange }: TagInputProps) {
               top="100%"
               left={0}
               right={0}
-              bg="white"
               shadow="md"
               borderRadius="md"
               maxH="200px"
@@ -113,19 +111,13 @@ export function TagInput({ value, onChange }: TagInputProps) {
                     key={suggestion.id}
                     p={2}
                     cursor="pointer"
-                    _hover={{ bg: "gray.100" }}
                     onClick={() => handleSelect(suggestion)}
                   >
                     {suggestion.name}
                   </Box>
                 ))
               ) : (
-                <Box
-                  p={2}
-                  cursor="pointer"
-                  _hover={{ bg: "gray.100" }}
-                  onClick={handleCreateTag}
-                >
+                <Box p={2} cursor="pointer" onClick={handleCreateTag}>
                   Create tag: {inputValue}
                 </Box>
               )}

@@ -82,7 +82,7 @@ function LoginForm() {
           )}
           <div className="grid grid-cols-2 gap-4">
             <Button
-              className="btn bg-black text-white border-black"
+              className="btn "
               type="button"
               disabled={isLoading}
               onClick={() =>
@@ -108,7 +108,6 @@ function LoginForm() {
               Login with GitHub
             </Button>
             <Button
-              className="btn bg-white text-black border-[#e5e5e5]"
               type="button"
               disabled={isLoading}
               onClick={() =>
