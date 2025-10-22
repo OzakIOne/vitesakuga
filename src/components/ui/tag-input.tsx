@@ -1,8 +1,16 @@
-import { useCombobox } from "@chakra-ui/react";
-import { Box, Input, VStack, Text } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import {
+  Badge,
+  Combobox,
+  Portal,
+  Wrap,
+  createListCollection,
+  Box,
+  Icon,
+} from "@chakra-ui/react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { searchTags } from "../../utils/tags";
+import { getAllTags } from "../../utils/tags";
+import { LuX } from "react-icons/lu";
 
 type Tag = {
   id?: number;
@@ -15,116 +23,133 @@ interface TagInputProps {
 }
 
 export function TagInput({ value, onChange }: TagInputProps) {
-  const [inputValue, setInputValue] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
-  const { data: suggestions = [] } = useQuery({
-    queryKey: ["tags", inputValue],
-    queryFn: () => searchTags({ data: { query: inputValue } }),
-    enabled: inputValue.length > 0,
+  // Fetch all tags from the database
+  const { data: allTags = [] } = useQuery({
+    queryKey: ["tags", "all"],
+    queryFn: () => getAllTags(),
   });
 
-  const handleSelect = useCallback(
-    (selectedTag: Tag) => {
-      if (!value.some((tag) => tag.name === selectedTag.name)) {
+  // Filter tags based on search and exclude already selected tags
+  const filteredTags = useMemo(() => {
+    const selectedNames = value.map((tag) => tag.name);
+    return allTags
+      .filter((tag) => !selectedNames.includes(tag.name))
+      .filter((tag) =>
+        tag.name.toLowerCase().includes(searchValue.toLowerCase())
+      );
+  }, [allTags, searchValue, value]);
+
+  // Check if we should show "Create new tag" option
+  const showCreateOption = useMemo(() => {
+    if (!searchValue.trim()) return false;
+    const exactMatch = allTags.some(
+      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase()
+    );
+    return !exactMatch;
+  }, [searchValue, allTags]);
+
+  // Combine filtered tags with create option
+  const items = useMemo(() => {
+    const tagNames = filteredTags.map((tag) => tag.name);
+    if (showCreateOption) {
+      return [...tagNames, `Create: ${searchValue}`];
+    }
+    return tagNames;
+  }, [filteredTags, showCreateOption, searchValue]);
+
+  const collection = useMemo(() => createListCollection({ items }), [items]);
+
+  const handleValueChange = (details: Combobox.ValueChangeDetails) => {
+    const newValues = details.value;
+    const addedValue = newValues[newValues.length - 1];
+
+    if (!addedValue) return;
+
+    // Check if it's a create action
+    if (addedValue.startsWith("Create: ")) {
+      const newTagName = addedValue.replace("Create: ", "").trim();
+      onChange([...value, { name: newTagName }]);
+    } else {
+      // Find the tag from allTags
+      const selectedTag = allTags.find((tag) => tag.name === addedValue);
+      if (selectedTag && !value.some((tag) => tag.name === selectedTag.name)) {
         onChange([...value, selectedTag]);
       }
-      setInputValue("");
-      setIsOpen(false);
-    },
-    [value, onChange]
-  );
-
-  const handleRemoveTag = useCallback(
-    (tagToRemove: Tag) => {
-      onChange(value.filter((tag) => tag.name !== tagToRemove.name));
-    },
-    [value, onChange]
-  );
-
-  const handleCreateTag = useCallback(() => {
-    if (
-      inputValue.trim() &&
-      !value.some((tag) => tag.name === inputValue.trim())
-    ) {
-      onChange([...value, { name: inputValue.trim() }]);
-      setInputValue("");
-      setIsOpen(false);
     }
-  }, [inputValue, value, onChange]);
+
+    setSearchValue("");
+  };
+
+  const handleRemoveTag = (tagToRemove: Tag) => {
+    onChange(value.filter((tag) => tag.name !== tagToRemove.name));
+  };
 
   return (
-    <Box position="relative" width="full">
-      <Box display="flex" flexDirection="column" gap={2}>
-        <Box display="flex" flexWrap="wrap" gap={2} mb={2}>
-          {value.map((tag) => (
-            <Box
-              key={tag.name}
-              px={2}
-              py={1}
-              borderRadius="md"
-              display="flex"
-              alignItems="center"
-            >
-              <Text>{tag.name}</Text>
-              <Box
-                ml={2}
-                cursor="pointer"
-                onClick={() => handleRemoveTag(tag)}
-                _hover={{ color: "red.500" }}
+    <Box>
+      <Combobox.Root
+        multiple
+        closeOnSelect
+        width="full"
+        value={value.map((tag) => tag.name)}
+        collection={collection}
+        onValueChange={handleValueChange}
+        onInputValueChange={(details) => setSearchValue(details.inputValue)}
+      >
+        {value.length > 0 && (
+          <Wrap gap="2" mb={2}>
+            {value.map((tag) => (
+              <Badge
+                key={tag.name}
+                px={2}
+                py={1}
+                display="flex"
+                alignItems="center"
+                gap={1}
               >
-                ×
-              </Box>
-            </Box>
-          ))}
-        </Box>
-        <Box position="relative" width="full">
-          <Input
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              setIsOpen(true);
-            }}
-            placeholder="Add tags..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleCreateTag();
-              }
-            }}
-          />
-          {isOpen && inputValue && (
-            <Box
-              position="absolute"
-              top="100%"
-              left={0}
-              right={0}
-              shadow="md"
-              borderRadius="md"
-              maxH="200px"
-              overflowY="auto"
-              zIndex={1}
-            >
-              {suggestions.length > 0 ? (
-                suggestions.map((suggestion) => (
-                  <Box
-                    key={suggestion.id}
-                    p={2}
-                    cursor="pointer"
-                    onClick={() => handleSelect(suggestion)}
-                  >
-                    {suggestion.name}
-                  </Box>
-                ))
-              ) : (
-                <Box p={2} cursor="pointer" onClick={handleCreateTag}>
-                  Create tag: {inputValue}
-                </Box>
-              )}
-            </Box>
-          )}
-        </Box>
-      </Box>
+                {tag.name}
+                <Icon
+                  cursor="pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveTag(tag);
+                  }}
+                  _hover={{ color: "red.500" }}
+                >
+                  <LuX />
+                </Icon>
+              </Badge>
+            ))}
+          </Wrap>
+        )}
+
+        <Combobox.Control>
+          <Combobox.Input placeholder="Add tags..." />
+          <Combobox.IndicatorGroup>
+            <Combobox.Trigger />
+          </Combobox.IndicatorGroup>
+        </Combobox.Control>
+
+        <Portal>
+          <Combobox.Positioner>
+            <Combobox.Content>
+              <Combobox.ItemGroup>
+                {items.length > 0 ? (
+                  items.map((item) => (
+                    <Combobox.Item key={item} item={item}>
+                      {item}
+                      <Combobox.ItemIndicator />
+                    </Combobox.Item>
+                  ))
+                ) : (
+                  <Combobox.Empty>No tags found</Combobox.Empty>
+                )}
+              </Combobox.ItemGroup>
+            </Combobox.Content>
+          </Combobox.Positioner>
+        </Portal>
+      </Combobox.Root>
     </Box>
   );
 }

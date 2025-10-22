@@ -22,6 +22,10 @@ export const searchTags = createServerFn()
     return tags;
   });
 
+export const getAllTags = createServerFn().handler(async () => {
+  return await kysely.selectFrom("tags").select(["id", "name"]).execute();
+});
+
 export const createTagsForPost = createServerFn()
   .inputValidator((input: unknown) =>
     z
