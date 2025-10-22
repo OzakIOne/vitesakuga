@@ -6,6 +6,7 @@ import {
   Icon,
   Input,
   Text,
+  Textarea,
   VStack,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
@@ -25,21 +26,13 @@ import { FieldInfo } from "~/components/FieldInfo";
 import { postsUploadOptions, searchPosts } from "~/utils/posts";
 import { TagInput } from "~/components/ui/tag-input";
 import { LuUpload } from "react-icons/lu";
-type Tag = {
-  id?: number;
-  name: string;
-};
+import { TagSchema } from "./api/posts";
 
 export const Route = createFileRoute("/upload")({
   component: RouteComponent,
   beforeLoad: async ({ context }) => {
     if (!context.user) throw redirect({ to: "/login" });
   },
-});
-
-const TagSchema = z.object({
-  id: z.number().optional(),
-  name: z.string().min(1),
 });
 
 const UploadSchema = z.object({
@@ -49,7 +42,7 @@ const UploadSchema = z.object({
   video: z.file(),
   source: z.url().optional(),
   relatedPostId: z.number().optional(),
-  tags: z.array(TagSchema),
+  tags: z.array(TagSchema).default([]),
 });
 
 function RouteComponent() {
@@ -61,7 +54,7 @@ function RouteComponent() {
       if (!form.state.isDirty) return false;
 
       const shouldLeave = confirm(
-        "You have unsubmitted changes do you want to leave?"
+        "You have unsubmitted changes. Do you want to leave?"
       );
       return !shouldLeave;
     },
@@ -72,9 +65,10 @@ function RouteComponent() {
       title: "",
       content: "",
       source: "",
-      relatedPostId: "",
-      tags: [],
+      relatedPostId: undefined as number | undefined, // Changed from string
+      tags: [] as Array<{ id?: number; name: string }>,
       userId: context.user!.id,
+      video: undefined as File | undefined,
     },
     validators: {
       onChange: UploadSchema,
@@ -106,6 +100,7 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
+        {/* Title field - unchanged */}
         <Box mb={6}>
           <form.Field name="title">
             {(field) => (
@@ -128,6 +123,7 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
+        {/* Content field - unchanged */}
         <Box mb={6}>
           <form.Field name="content">
             {(field) => (
@@ -136,12 +132,13 @@ function RouteComponent() {
                   <Field.Label>
                     Description <Field.RequiredIndicator />
                   </Field.Label>
-                  <Input
+                  <Textarea
                     id={field.name}
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    rows={4}
                   />
                   <Field.HelperText>
                     A brief description of the animation
@@ -153,6 +150,7 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
+        {/* Source field - unchanged */}
         <Box mb={6}>
           <form.Field name="source">
             {(field) => (
@@ -176,6 +174,7 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
+        {/* Related Post field - FIXED */}
         <Box mb={6}>
           <form.Field name="relatedPostId">
             {(field) => (
@@ -193,27 +192,42 @@ function RouteComponent() {
                     border="1px"
                     borderColor="gray.200"
                     borderRadius="md"
+                    maxH="200px"
+                    overflowY="auto"
                   >
                     {relatedPosts.data.map((post) => (
                       <Box
                         key={post.id}
                         p={2}
                         cursor="pointer"
+                        borderRadius="sm"
                         _hover={{ bg: "gray.100" }}
                         onClick={() => {
-                          field.handleChange(post.id);
-                          setRelatedPostSearch("");
+                          field.handleChange(Number(post.id)); // Convert to number
+                          setRelatedPostSearch(post.title);
                         }}
                       >
-                        {post.title}
+                        <Text fontWeight="medium">{post.title}</Text>
+                        <Text fontSize="sm" color="gray.600">
+                          {post.content.substring(0, 60)}...
+                        </Text>
                       </Box>
                     ))}
                   </Box>
                 )}
                 {field.state.value && (
-                  <Box mt={2}>
-                    <Text>Selected Post ID: {field.state.value}</Text>
-                    <Button size="sm" onClick={() => field.handleChange("")}>
+                  <Box mt={2} p={2} bg="blue.50" borderRadius="md">
+                    <Text fontSize="sm">
+                      Selected Post ID: {field.state.value}
+                    </Text>
+                    <Button
+                      size="sm"
+                      mt={1}
+                      onClick={() => {
+                        field.handleChange(undefined);
+                        setRelatedPostSearch("");
+                      }}
+                    >
                       Clear
                     </Button>
                   </Box>
@@ -223,50 +237,27 @@ function RouteComponent() {
           </form.Field>
         </Box>
 
+        {/* Tags field - IMPROVED */}
         <Box mb={6}>
           <form.Field name="tags">
             {(field) => (
               <Field.Root>
                 <Field.Label>Tags</Field.Label>
                 <TagInput
-                  value={field.state.value || []}
+                  value={field.state.value}
                   onChange={(newTags) => field.handleChange(newTags)}
                 />
                 <Field.HelperText>
                   Add tags to help others find this video. Press Enter to add a
                   new tag.
                 </Field.HelperText>
-                <Box mt={2} display="flex" flexDirection="column" gap={2}>
-                  {field.state.value.map((tag, index) => (
-                    <Box
-                      key={index}
-                      display="inline-flex"
-                      alignItems="center"
-                      px={2}
-                      py={1}
-                      bg="gray.100"
-                      borderRadius="md"
-                    >
-                      <Text fontSize="sm">{tag.name}</Text>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newTags = [...field.state.value];
-                          newTags.splice(index, 1);
-                          field.handleChange(newTags);
-                        }}
-                        className="ml-2 text-gray-500 hover:text-gray-700"
-                      >
-                        ×
-                      </button>
-                    </Box>
-                  ))}
-                </Box>
+                {/* Remove the duplicate tag display that was here */}
               </Field.Root>
             )}
           </form.Field>
         </Box>
 
+        {/* Video field - unchanged */}
         <Box mb={6}>
           <form.Field name="video">
             {(field) => (
@@ -279,9 +270,6 @@ function RouteComponent() {
                     maxW="xl"
                     alignItems="stretch"
                     accept={["video/*,.mkv"]}
-                    id={field.name}
-                    name={field.name}
-                    typeof=""
                     onFileChange={(details) => {
                       const file = details.acceptedFiles[0] || null;
                       field.handleChange(file);
