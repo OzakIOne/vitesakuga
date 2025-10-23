@@ -30,13 +30,11 @@ function PostListComponent({
         m="2"
         p="4"
       >
-        {/* ... existing code ... */}
         <VStack align="start">
           <Heading as="h2" size="md">
             {post.title}
           </Heading>
           <Text>{post.content}</Text>
-          {/* ... existing code ... */}
           <HStack>
             <Button size="sm" colorScheme="blue">
               View post

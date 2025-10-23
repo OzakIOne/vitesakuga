@@ -114,6 +114,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Home
           </Link>{" "}
           <Link
+            className=""
             to="/posts"
             activeProps={{
               className: "link",
