@@ -16,12 +16,14 @@ import {
 import { LuUpload } from "react-icons/lu";
 import { createListCollection } from "@chakra-ui/react";
 
-// // Lazy load to avoid SSR issues
-// const RemotionConvert = React.lazy(() =>
-//   import("@remotion/webcodecs").then((mod) => ({ default: mod.convertMedia }))
-// );
+type OutputFormat = {
+  label: string;
+  container: "mp4" | "webm";
+  videoCodec: "h264" | "vp9";
+  audioCodec: "aac" | "opus";
+};
 
-const SUPPORTED_OUTPUTS = [
+const SUPPORTED_OUTPUTS: OutputFormat[] = [
   {
     label: "MP4 (H.264/AAC)",
     container: "mp4",
@@ -49,7 +51,9 @@ export const Route = createFileRoute("/convert")({
 
 function RouteComponent() {
   const [file, setFile] = useState<File | null>(null);
-  const [output, setOutput] = useState();
+  const [output, setOutput] = useState<
+    (typeof SUPPORTED_OUTPUTS)[0] | undefined
+  >();
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -58,13 +62,15 @@ function RouteComponent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     setDownloadUrl(null);
-    const f = e.target.files?.[0] || null;
-    setFile(f);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setFile(files[0]);
+    }
   };
 
   const handleConvert = async () => {
-    if (!file) {
-      setError("Please select a video or audio file.");
+    if (!file || !output) {
+      setError("Please select a file and output format.");
       return;
     }
     setIsConverting(true);
@@ -83,7 +89,6 @@ function RouteComponent() {
       const blob = await result.save();
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
-      // Suggest a filename
       const ext = output.container;
       const base = file.name.replace(/\.[^.]+$/, "");
       setConvertedName(`${base}-converted.${ext}`);
@@ -126,7 +131,7 @@ function RouteComponent() {
             maxW="xl"
             alignItems="stretch"
             accept={["video/*", "audio/*", ".mkv"]}
-            onFileChange={handleFileChange}
+            onChange={handleFileChange}
           >
             <FileUpload.HiddenInput />
             <FileUpload.Dropzone>
@@ -143,39 +148,46 @@ function RouteComponent() {
         </Box>
 
         <Box mb={4}>
-          <Select.Root
-            collection={outputFormats}
-            size="md"
-            width="full"
-            disabled={isConverting}
-            value={output?.label}
-            onChange={(value) => {
-              const o = SUPPORTED_OUTPUTS.find((opt) => opt.label === value);
-              if (o) setOutput(o);
-            }}
-          >
-            <Select.Label>Output Format</Select.Label>
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Select format" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Portal>
-              <Select.Positioner>
-                <Select.Content>
-                  {outputFormats.items.map((format) => (
-                    <Select.Item item={format} key={format.value}>
-                      {format.label}
-                      <Select.ItemIndicator />
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Portal>
-          </Select.Root>
+          <Box>
+            <Text mb={2}>Output Format</Text>
+            <Select.Root
+              collection={outputFormats}
+              size="md"
+              width="full"
+              disabled={isConverting}
+              value={output ? [output.label] : []}
+              onSelect={(details) => {
+                const o = SUPPORTED_OUTPUTS.find(
+                  (opt) => opt.label === details.value
+                );
+                if (o) setOutput(o);
+              }}
+            >
+              <Select.Label>Output Format</Select.Label>
+              <Select.Control>
+                <Select.Trigger>
+                  <Select.ValueText placeholder="Select format" />
+                </Select.Trigger>
+                <Select.IndicatorGroup>
+                  <Select.Indicator />
+                </Select.IndicatorGroup>
+              </Select.Control>
+              <Portal>
+                <Select.Positioner>
+                  <Select.Content>
+                    {SUPPORTED_OUTPUTS.map((format) => (
+                      <Select.Item
+                        item={{ label: format.label, value: format.label }}
+                        key={format.label}
+                      >
+                        {format.label}
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
+              </Portal>
+            </Select.Root>
+          </Box>
         </Box>
 
         <Button
@@ -211,19 +223,28 @@ function RouteComponent() {
                     Download
                   </a>
                 </Button>
-                {output.container !== "wav" ? (
-                  <Box
-                    as="video"
-                    src={downloadUrl}
-                    controls
-                    mt={4}
-                    maxH="256px"
-                    w="full"
-                    borderRadius="lg"
-                  />
-                ) : (
-                  <Box as="audio" src={downloadUrl} controls mt={4} w="full" />
-                )}
+                {downloadUrl &&
+                  (output?.container === "mp4" ? (
+                    <video
+                      src={downloadUrl}
+                      controls
+                      style={{
+                        marginTop: "1rem",
+                        maxHeight: "256px",
+                        width: "100%",
+                        borderRadius: "0.5rem",
+                      }}
+                    />
+                  ) : (
+                    <audio
+                      src={downloadUrl}
+                      controls
+                      style={{
+                        marginTop: "1rem",
+                        width: "100%",
+                      }}
+                    />
+                  ))}
               </Alert.Description>
             </Alert.Content>
           </Alert.Root>
