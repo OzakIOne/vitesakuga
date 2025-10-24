@@ -119,7 +119,7 @@ export const Route = createFileRoute("/api/posts")({
         // Link post to tags
         if (allTagIds.length > 0) {
           await kysely
-            .insertInto("post_tags")
+            .insertInto("postTags")
             .values(
               allTagIds.map((tagId) => ({
                 postId,

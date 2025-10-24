@@ -175,7 +175,7 @@ export const fetchPost = createServerFn()
 
     const user = await kysely
       .selectFrom("user")
-      .select(["image", "name"])
+      .select(["image", "name", "id"])
       .where("user.id", "=", post.userId)
       .executeTakeFirst();
 
@@ -184,10 +184,10 @@ export const fetchPost = createServerFn()
 
     // Fetch tags for the post
     const tags = await kysely
-      .selectFrom("post_tags")
-      .innerJoin("tags", "tags.id", "post_tags.tag_id")
+      .selectFrom("postTags")
+      .innerJoin("tags", "tags.id", "postTags.tagId")
       .select(["tags.id", "tags.name"])
-      .where("post_tags.post_id", "=", post.id)
+      .where("postTags.postId", "=", post.id)
       .execute();
 
     // Fetch related post if exists

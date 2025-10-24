@@ -2,6 +2,6 @@
 export default {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   plugins: [
-    require("daisyui"), // Add this line
+    // require("daisyui"), // Add this line
   ],
 };

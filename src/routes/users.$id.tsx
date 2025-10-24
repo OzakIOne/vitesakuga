@@ -5,10 +5,10 @@ import { UserErrorComponent } from "~/components/UserError";
 import { PostList } from "~/components/PostList";
 import { User } from "~/components/User";
 
-export const Route = createFileRoute("/users/$userId")({
-  loader: async ({ params: { userId } }) =>
+export const Route = createFileRoute("/users/$id")({
+  loader: async ({ params: { id } }) =>
     fetchUser({
-      data: userId,
+      data: id,
     }),
   errorComponent: UserErrorComponent,
   component: UserComponent,
@@ -22,10 +22,8 @@ function UserComponent() {
   console.log("user", data);
   return (
     <div className="p-4 space-y-6">
-      {/* User Info */}
-      <User user={data.user} />
+      <User name={data.user.name} image={data.user.image} id={data.user.id} />
 
-      {/* Posts Grid */}
       <div className="flex flex-wrap gap-4">
         {data.posts.map((post) => (
           <div

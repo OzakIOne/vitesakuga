@@ -16,7 +16,7 @@ import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as PostsIndexRouteImport } from './routes/posts/index'
-import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
+import { Route as UsersIdRouteImport } from './routes/users.$id'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
 import { Route as ApiPostsRouteImport } from './routes/api/posts'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
@@ -57,9 +57,9 @@ const PostsIndexRoute = PostsIndexRouteImport.update({
   path: '/posts/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersUserIdRoute = UsersUserIdRouteImport.update({
-  id: '/users/$userId',
-  path: '/users/$userId',
+const UsersIdRoute = UsersIdRouteImport.update({
+  id: '/users/$id',
+  path: '/users/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PostsPostIdRoute = PostsPostIdRouteImport.update({
@@ -97,7 +97,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof authSignupRoute
   '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
-  '/users/$userId': typeof UsersUserIdRoute
+  '/users/$id': typeof UsersIdRoute
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -111,7 +111,7 @@ export interface FileRoutesByTo {
   '/signup': typeof authSignupRoute
   '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
-  '/users/$userId': typeof UsersUserIdRoute
+  '/users/$id': typeof UsersIdRoute
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -127,7 +127,7 @@ export interface FileRoutesById {
   '/(auth)/signup': typeof authSignupRoute
   '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
-  '/users/$userId': typeof UsersUserIdRoute
+  '/users/$id': typeof UsersIdRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -143,7 +143,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/posts'
     | '/posts/$postId'
-    | '/users/$userId'
+    | '/users/$id'
     | '/posts'
     | '/users'
     | '/api/auth/$'
@@ -157,7 +157,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/posts'
     | '/posts/$postId'
-    | '/users/$userId'
+    | '/users/$id'
     | '/posts'
     | '/users'
     | '/api/auth/$'
@@ -172,7 +172,7 @@ export interface FileRouteTypes {
     | '/(auth)/signup'
     | '/api/posts'
     | '/posts/$postId'
-    | '/users/$userId'
+    | '/users/$id'
     | '/posts/'
     | '/users/'
     | '/api/auth/$'
@@ -186,7 +186,7 @@ export interface RootRouteChildren {
   UploadRoute: typeof UploadRoute
   ApiPostsRoute: typeof ApiPostsRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
-  UsersUserIdRoute: typeof UsersUserIdRoute
+  UsersIdRoute: typeof UsersIdRoute
   PostsIndexRoute: typeof PostsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -243,11 +243,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/$userId': {
-      id: '/users/$userId'
-      path: '/users/$userId'
-      fullPath: '/users/$userId'
-      preLoaderRoute: typeof UsersUserIdRouteImport
+    '/users/$id': {
+      id: '/users/$id'
+      path: '/users/$id'
+      fullPath: '/users/$id'
+      preLoaderRoute: typeof UsersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts/$postId': {
@@ -310,7 +310,7 @@ const rootRouteChildren: RootRouteChildren = {
   UploadRoute: UploadRoute,
   ApiPostsRoute: ApiPostsRoute,
   PostsPostIdRoute: PostsPostIdRoute,
-  UsersUserIdRoute: UsersUserIdRoute,
+  UsersIdRoute: UsersIdRoute,
   PostsIndexRoute: PostsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -3,6 +3,7 @@ import { Video } from "./Video";
 import { User } from "./User";
 import { DbSchemaSelect } from "~/auth/db/schema";
 import { Link } from "@tanstack/react-router";
+import { fetchPost } from "src/utils/posts";
 
 export function Post({
   post,
@@ -10,8 +11,8 @@ export function Post({
   tags,
   relatedPost,
 }: {
-  post: Partial<DbSchemaSelect["posts"]>;
-  user: Partial<DbSchemaSelect["user"]>;
+  post: Awaited<ReturnType<typeof fetchPost>>["post"];
+  user: Awaited<ReturnType<typeof fetchPost>>["user"];
   tags?: Array<{ id: number; name: string }>;
   relatedPost?: Partial<DbSchemaSelect["posts"]> | null;
 }) {
@@ -25,7 +26,6 @@ export function Post({
       {post.title && <Heading as="h3">{post.title}</Heading>}
       {post.content && <Text mb={4}>{post.content}</Text>}
 
-      {/* Tags */}
       {tags && tags.length > 0 && (
         <Box mb={4}>
           <Text fontWeight="bold" mb={2}>
@@ -47,7 +47,6 @@ export function Post({
         </Box>
       )}
 
-      {/* Related Post */}
       {relatedPost && (
         <Box mb={4}>
           <Text fontWeight="bold" mb={2}>
@@ -63,15 +62,7 @@ export function Post({
         </Box>
       )}
 
-      {user?.id && user.name && (
-        <User
-          user={{
-            id: user.id,
-            name: user.name,
-            image: user.image,
-          }}
-        />
-      )}
+      {user.name && <User name={user.name} image={user.image} id={user.id} />}
     </>
   );
 }

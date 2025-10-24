@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { kysely } from "~/auth/db/kysely";
-import { userSelectSchema, DbSchemaInsert } from "~/auth/db/schema";
+import { userSelectSchema } from "~/auth/db/schema";
 
 export const DEPLOY_URL = "http://localhost:3000";
 
@@ -23,14 +23,13 @@ export const fetchUser = createServerFn()
   .handler(async (ctx) => {
     const userInfo = await kysely
       .selectFrom("user")
-      .selectAll()
+      .select(["name", "image", "id"])
       .where("id", "=", ctx.data)
       .executeTakeFirstOrThrow();
 
     if (!userInfo) throw new Error(`User ${ctx.data} not found`);
 
-    // TODO ???? why type here
-    const postsFromUser: DbSchemaInsert["posts"][] = await kysely
+    const postsFromUser = await kysely
       .selectFrom("posts")
       .selectAll()
       .where("userId", "=", ctx.data)
