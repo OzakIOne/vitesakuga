@@ -5,7 +5,7 @@ import { useState } from "react";
 import authClient from "~/auth/client";
 import { z } from "zod";
 import { FieldInfo } from "~/components/FieldInfo";
-import { Box, Button, Field, FileUpload, Icon, Input } from "@chakra-ui/react";
+import { Button, Field, Input } from "@chakra-ui/react";
 import { PasswordInput } from "~/components/ui/password-input";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";

@@ -3,10 +3,9 @@ import { fetchPost } from "../../utils/posts";
 import { NotFound } from "~/components/NotFound";
 import { PostErrorComponent } from "~/components/PostError";
 import { Post } from "~/components/Post";
-import { Box, Button, VStack, HStack, Text, Textarea } from "@chakra-ui/react";
+import { Box, Button, Text, Textarea } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchComments, addComment } from "~/utils/comments";
-import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useRouteContext } from "@tanstack/react-router";
 
@@ -44,7 +43,7 @@ function PostComponent() {
 
   const currentUserId = context.user?.id;
 
-  const { data: comments, refetch: refetchComments } = useQuery({
+  const { data: comments } = useQuery({
     queryKey: ["comments", post.id],
     queryFn: () => fetchComments({ data: { postId: post.id || 0 } }),
     enabled: !!post.id,

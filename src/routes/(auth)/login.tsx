@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import authClient from "~/auth/client";
-import { Box, Button, Field, FileUpload, Icon, Input } from "@chakra-ui/react";
+import { Button, Field, Input } from "@chakra-ui/react";
 import { PasswordInput } from "~/components/ui/password-input";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";

@@ -1,22 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Button,
   Heading,
   Text,
-  Input,
   Select,
   Container,
   Alert,
-  AlertTitle,
-  AlertDescription,
   Link,
-  Spinner,
   Portal,
   Icon,
-  VStack,
-  HStack,
   FileUpload,
 } from "@chakra-ui/react";
 import { LuUpload } from "react-icons/lu";
@@ -60,7 +54,6 @@ function RouteComponent() {
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [convertedName, setConvertedName] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);

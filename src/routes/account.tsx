@@ -16,7 +16,6 @@ import {
 import { LuImage, LuUser } from "react-icons/lu";
 import z from "zod";
 import { PasswordInput } from "~/components/ui/password-input";
-import { User } from "~/components/User";
 import { FieldInfo } from "~/components/FieldInfo";
 
 export const Route = createFileRoute("/account")({
@@ -100,8 +99,8 @@ function RouteComponent() {
             </AvatarGroup>
             <div className="flex-1 min-w-0">
               <Heading size="lg">{user!.name}</Heading>
-              <Text size="sm">{user!.email}</Text>
-              <Text size="sm">
+              <Text>{user!.email}</Text>
+              <Text>
                 Member since: {new Date(user!.createdAt).toLocaleDateString()}
               </Text>
             </div>

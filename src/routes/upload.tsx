@@ -7,7 +7,6 @@ import {
   Input,
   Text,
   Textarea,
-  VStack,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 
@@ -16,7 +15,6 @@ import {
   redirect,
   useBlocker,
   useRouteContext,
-  Link,
 } from "@tanstack/react-router";
 import { Video } from "~/components/Video";
 import { useState } from "react";

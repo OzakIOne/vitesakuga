@@ -28,6 +28,7 @@ export const getAllTags = createServerFn().handler(async () => {
 
 export const createTagsForPost = createServerFn()
   .inputValidator((input: unknown) =>
+    // TODO define schema somewhere else (maybe define schema from drizzle)
     z
       .object({
         postId: z.number(),
