@@ -12,6 +12,7 @@ import {
   Text,
   Center,
   Box,
+  Field,
 } from "@chakra-ui/react";
 import { LuImage, LuUser } from "react-icons/lu";
 import z from "zod";
@@ -87,7 +88,7 @@ function RouteComponent() {
   };
 
   return (
-    <Box className="min-h-screen  flex flex-col items-center justify-center p-6">
+    <Box className="h-screen  flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-lg  rounded-xl shadow-lg border p-10 space-y-10">
         <div className="p-6 mb-8">
           <div className="flex items-center gap-6">
@@ -118,11 +119,9 @@ function RouteComponent() {
 
         <div className="space-y-8">
           <div>
-            <div className="mb-6">
-              <Heading size="lg" className="mb-2">
-                Profile Information
-              </Heading>
-            </div>
+            <Heading size="lg" className="mb-2">
+              Profile Information
+            </Heading>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -133,17 +132,17 @@ function RouteComponent() {
               <profileForm.Field name="name">
                 {(field) => (
                   <div className="mb-6">
-                    <Text fontWeight="medium" mb={3}>
-                      Display Name
-                    </Text>
-                    <InputGroup startElement={<LuUser />}>
-                      <Input
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="Enter your display name"
-                        className="w-full h-12"
-                      />
-                    </InputGroup>
+                    <Field.Root>
+                      <Field.Label>Display Name</Field.Label>
+                      <InputGroup startElement={<LuUser />}>
+                        <Input
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="Enter your display name"
+                          className="w-full h-12"
+                        />
+                      </InputGroup>
+                    </Field.Root>
                   </div>
                 )}
               </profileForm.Field>
@@ -151,18 +150,18 @@ function RouteComponent() {
               <profileForm.Field name="image">
                 {(field) => (
                   <div className="mb-8">
-                    <Text fontWeight="medium" mb={3}>
-                      Profile Picture URL
-                    </Text>
-                    <InputGroup startElement={<LuImage />}>
-                      <Input
-                        type="url"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="https://example.com/avatar.jpg"
-                        className="w-full h-12"
-                      />
-                    </InputGroup>
+                    <Field.Root>
+                      <Field.Label>Profile Picture URL</Field.Label>
+                      <InputGroup startElement={<LuImage />}>
+                        <Input
+                          type="url"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="https://example.com/avatar.jpg"
+                          className="w-full h-12"
+                        />
+                      </InputGroup>
+                    </Field.Root>
                     {!field.state.meta.errors &&
                       field.state.value !== user?.image && (
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
@@ -199,7 +198,6 @@ function RouteComponent() {
             </form>
           </div>
 
-          {/* Security Section */}
           <div className="pt-10 border-t">
             <form
               onSubmit={(e) => {
@@ -210,10 +208,8 @@ function RouteComponent() {
             >
               <passwordForm.Field name="currentPassword">
                 {(field) => (
-                  <div className="mb-6">
-                    <Text fontWeight="medium" mb={3}>
-                      Current Password
-                    </Text>
+                  <Field.Root>
+                    <Field.Label>Current Password</Field.Label>
                     <PasswordInput
                       type="password"
                       value={field.state.value}
@@ -221,16 +217,14 @@ function RouteComponent() {
                       placeholder="Enter current password"
                       className="w-full h-12"
                     />
-                  </div>
+                  </Field.Root>
                 )}
               </passwordForm.Field>
 
               <passwordForm.Field name="newPassword">
                 {(field) => (
-                  <div className="mb-8">
-                    <Text fontWeight="medium" mb={3}>
-                      New Password
-                    </Text>
+                  <Field.Root>
+                    <Field.Label>New Password</Field.Label>
                     <PasswordInput
                       type="password"
                       value={field.state.value}
@@ -238,7 +232,7 @@ function RouteComponent() {
                       placeholder="Enter new password"
                       className="w-full h-12"
                     />
-                  </div>
+                  </Field.Root>
                 )}
               </passwordForm.Field>
 

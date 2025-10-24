@@ -105,7 +105,7 @@ function RouteComponent() {
 
   return (
     <Container maxW="xl" py={8}>
-      <Box bg="gray.50" p={6} borderRadius="lg" shadow="md">
+      <Box p={6} borderRadius="lg" shadow="md">
         <Heading size="lg" mb={4}>
           Video/Audio Converter
         </Heading>
@@ -206,15 +206,10 @@ function RouteComponent() {
               <Alert.Title>Success</Alert.Title>
               <Alert.Description>
                 <Text>Conversion complete!</Text>
-                <Button
-                  as={"link"}
-                  href={downloadUrl}
-                  download={convertedName}
-                  size="sm"
-                  colorScheme="green"
-                  mt={2}
-                >
-                  Download
+                <Button asChild size="sm" colorScheme="green" mt={2}>
+                  <a href={downloadUrl} download={convertedName}>
+                    Download
+                  </a>
                 </Button>
                 {output.container !== "wav" ? (
                   <Box

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "../auth/db/kysely";
-import { tags, postTags } from "../auth/db/schema/sakuga.schema";
 
 export const searchTagsSchema = z.object({
   query: z.string().min(1),
@@ -81,7 +80,7 @@ export const createTagsForPost = createServerFn()
     await Promise.all(
       tagIds.map((tagId) =>
         kysely
-          .insertInto("post_tags")
+          .insertInto("postTags")
           .values({
             postId,
             tagId,
@@ -94,8 +93,8 @@ export const createTagsForPost = createServerFn()
     // Return all tags for the post
     const postTags = await kysely
       .selectFrom("tags")
-      .innerJoin("post_tags", "post_tags.tagId", "tags.id")
-      .where("post_tags.postId", "=", postId)
+      .innerJoin("postTags", "postTags.tagId", "tags.id")
+      .where("postTags.postId", "=", postId)
       .select(["tags.id", "tags.name"])
       .execute();
 
@@ -115,8 +114,8 @@ export const getPostTags = createServerFn()
 
     const tags = await kysely
       .selectFrom("tags")
-      .innerJoin("post_tags", "post_tags.tagId", "tags.id")
-      .where("post_tags.postId", "=", postId)
+      .innerJoin("postTags", "postTags.tagId", "tags.id")
+      .where("postTags.postId", "=", postId)
       .select(["tags.id", "tags.name"])
       .execute();
 

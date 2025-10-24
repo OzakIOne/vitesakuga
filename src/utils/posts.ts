@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "~/auth/db/kysely";
-import { postsSelectSchema, DbSchemaSelect } from "~/auth/db/schema";
+import { postsSelectSchema } from "~/auth/db/schema";
 import { queryOptions } from "@tanstack/react-query";
 import { DEPLOY_URL } from "./users";
+import { UploadFormValues } from "src/routes/upload";
 
 // Schema for pagination parameters following JSON:API cursor pagination profile
 const fetchPostsInputSchema = z.object({
@@ -203,14 +204,7 @@ export const fetchPost = createServerFn()
     return { post, user, tags, relatedPost };
   });
 
-export const postsUploadOptions = (
-  postData: DbSchemaSelect["posts"] & {
-    tags?: Array<{ id?: string; name: string }>;
-    source?: string;
-    relatedPostId?: string;
-    video?: File | undefined;
-  }
-) =>
+export const postsUploadOptions = (postData: UploadFormValues) =>
   queryOptions({
     queryKey: ["posts", "upload", postData],
     queryFn: async () => {
@@ -225,8 +219,8 @@ export const postsUploadOptions = (
       // Tags: for any tag that already has an id, send it as tagIds[].
       // For tags without an id, try to find an existing similar tag via the tags search endpoint.
       // If found, use the existing id; if not found, include the name in newTags[] so the server can create it.
-      const tagIds: string[] = [];
-      const newTagNames: string[] = [];
+      const tagIds = [];
+      const newTagNames = [];
 
       const tags = postData.tags ?? [];
       for (const tag of tags) {

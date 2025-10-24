@@ -38,14 +38,24 @@ const UploadSchema = z.object({
   content: z.string().min(3, "You must have a length of at least 3"),
   userId: z.string(),
   video: z.file(),
-  source: z.url().optional(),
-  relatedPostId: z.number().optional(),
-  tags: z.array(TagSchema).default([]),
+  source: z.url().or(z.literal("")).or(z.undefined()),
+  relatedPostId: z.number().or(z.undefined()),
+  tags: z.array(TagSchema),
 });
+
+export type UploadFormValues = {
+  title: string;
+  content: string;
+  source: string | undefined;
+  relatedPostId: number | undefined;
+  tags: z.infer<typeof TagSchema>[];
+  userId: string;
+  video: File | undefined;
+};
 
 function RouteComponent() {
   const context = useRouteContext({ from: "/upload" });
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
 
   useBlocker({
     shouldBlockFn: () => {
@@ -62,17 +72,16 @@ function RouteComponent() {
     defaultValues: {
       title: "",
       content: "",
-      source: "",
-      relatedPostId: undefined as number | undefined, // Changed from string
-      tags: [] as Array<{ id?: number; name: string }>,
+      source: undefined,
+      relatedPostId: undefined,
+      tags: [],
       userId: context.user!.id,
-      video: undefined as File | undefined,
-    },
+      video: undefined,
+    } as UploadFormValues,
     validators: {
-      onChange: UploadSchema,
+      onSubmit: UploadSchema,
     },
     onSubmit: async ({ value }) => {
-      console.log("Uploading post...", value);
       await context.queryClient.ensureQueryData(postsUploadOptions(value));
     },
   });
@@ -155,9 +164,11 @@ function RouteComponent() {
                   <Input
                     id={field.name}
                     name={field.name}
-                    value={field.state.value}
+                    value={field.state.value || ""}
                     onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value || undefined)
+                    }
                   />
                   <Field.HelperText>
                     Link to the original source (Twitter, YouTube, etc.)
@@ -280,14 +291,7 @@ function RouteComponent() {
                     </FileUpload.Dropzone>
                     <FileUpload.List showSize clearable />
                   </FileUpload.Root>
-                  {videoPreviewUrl && (
-                    <video
-                      src={videoPreviewUrl}
-                      controls
-                      className="mt-4 w-50 rounded"
-                      style={{ maxHeight: 300 }}
-                    />
-                  )}
+                  {videoFilePreview && <Video url={videoFilePreview} bypass />}
                 </Field.Root>
                 <FieldInfo field={field} />
               </>

@@ -102,7 +102,7 @@ export const Route = createFileRoute("/api/posts")({
               .returning("id")
               .executeTakeFirstOrThrow();
             allTagIds.push(tag.id);
-          } catch (error) {
+          } catch {
             // If conflict resolution fails, try to fetch existing tag
             const existingTag = await kysely
               .selectFrom("tags")
