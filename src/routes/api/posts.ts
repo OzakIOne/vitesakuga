@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { kysely } from "../../auth/db/kysely";
-import { postsInsertSchema } from "../../auth/db/schema/sakuga.schema";
+import { postsInsertSchema } from "../../auth/db/schema/sakuga.utils";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import z from "zod";
 

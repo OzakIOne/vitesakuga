@@ -19,7 +19,6 @@ import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
 import { Route as ApiPostsRouteImport } from './routes/api/posts'
-import { Route as ApiCommentsRouteImport } from './routes/api/comments'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -73,11 +72,6 @@ const ApiPostsRoute = ApiPostsRouteImport.update({
   path: '/api/posts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCommentsRoute = ApiCommentsRouteImport.update({
-  id: '/api/comments',
-  path: '/api/comments',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const authSignupRoute = authSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
-  '/api/comments': typeof ApiCommentsRoute
   '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
@@ -116,7 +109,6 @@ export interface FileRoutesByTo {
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
-  '/api/comments': typeof ApiCommentsRoute
   '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
@@ -133,7 +125,6 @@ export interface FileRoutesById {
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
-  '/api/comments': typeof ApiCommentsRoute
   '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/upload'
     | '/login'
     | '/signup'
-    | '/api/comments'
     | '/api/posts'
     | '/posts/$postId'
     | '/users/$userId'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/upload'
     | '/login'
     | '/signup'
-    | '/api/comments'
     | '/api/posts'
     | '/posts/$postId'
     | '/users/$userId'
@@ -181,7 +170,6 @@ export interface FileRouteTypes {
     | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
-    | '/api/comments'
     | '/api/posts'
     | '/posts/$postId'
     | '/users/$userId'
@@ -196,7 +184,6 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   ConvertRoute: typeof ConvertRoute
   UploadRoute: typeof UploadRoute
-  ApiCommentsRoute: typeof ApiCommentsRoute
   ApiPostsRoute: typeof ApiPostsRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   UsersUserIdRoute: typeof UsersUserIdRoute
@@ -277,13 +264,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPostsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/comments': {
-      id: '/api/comments'
-      path: '/api/comments'
-      fullPath: '/api/comments'
-      preLoaderRoute: typeof ApiCommentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(auth)/signup': {
       id: '/(auth)/signup'
       path: '/signup'
@@ -328,7 +308,6 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   ConvertRoute: ConvertRoute,
   UploadRoute: UploadRoute,
-  ApiCommentsRoute: ApiCommentsRoute,
   ApiPostsRoute: ApiPostsRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   UsersUserIdRoute: UsersUserIdRoute,

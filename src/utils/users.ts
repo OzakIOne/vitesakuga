@@ -29,6 +29,7 @@ export const fetchUser = createServerFn()
 
     if (!userInfo) throw new Error(`User ${ctx.data} not found`);
 
+    // TODO ???? why type here
     const postsFromUser: DbSchemaInsert["posts"][] = await kysely
       .selectFrom("posts")
       .selectAll()
