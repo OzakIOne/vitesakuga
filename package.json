@@ -10,7 +10,9 @@
     "start": "node .output/server/index.mjs",
     "lint": "oxlint .",
     "tslint": "pnpx oxlint-tsgolint",
-    "db": "drizzle-kit"
+    "db": "drizzle-kit",
+    "dup": "docker compose up -d",
+    "ddn": "docker compose down"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.916.0",

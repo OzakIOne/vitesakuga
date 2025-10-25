@@ -82,6 +82,7 @@ function RouteComponent() {
       onSubmit: UploadSchema,
     },
     onSubmit: async ({ value }) => {
+      console.log("Submitting upload form with values:", value);
       await context.queryClient.ensureQueryData(postsUploadOptions(value));
     },
   });

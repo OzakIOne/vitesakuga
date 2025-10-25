@@ -185,21 +185,20 @@ export const fetchPost = createServerFn()
 
     // Fetch tags for the post
     const tags = await kysely
-      .selectFrom("postTags")
-      .innerJoin("tags", "tags.id", "postTags.tagId")
+      .selectFrom("post_tags")
+      .innerJoin("tags", "tags.id", "post_tags.tagId")
       .select(["tags.id", "tags.name"])
-      .where("postTags.postId", "=", post.id)
+      .where("post_tags.postId", "=", post.id)
       .execute();
 
     // Fetch related post if exists
-    let relatedPost = null;
-    if (post.relatedPostId) {
-      relatedPost = await kysely
-        .selectFrom("posts")
-        .selectAll()
-        .where("id", "=", post.relatedPostId)
-        .executeTakeFirst();
-    }
+    const relatedPost = post.relatedPostId
+      ? await kysely
+          .selectFrom("posts")
+          .selectAll()
+          .where("id", "=", post.relatedPostId)
+          .executeTakeFirst()
+      : null;
 
     return { post, user, tags, relatedPost };
   });
