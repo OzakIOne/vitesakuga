@@ -16,13 +16,13 @@ import {
   useBlocker,
   useRouteContext,
 } from "@tanstack/react-router";
-import { Video } from "~/components/Video";
+import { Video } from "src/components/Video";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { FieldInfo } from "~/components/FieldInfo";
-import { postsUploadOptions, searchPosts } from "~/utils/posts";
-import { TagInput } from "~/components/ui/tag-input";
+import { FieldInfo } from "src/components/FieldInfo";
+import { postsUploadOptions, searchPosts } from "src/lib/posts/posts.fn";
+import { TagInput } from "src/components/ui/tag-input";
 import { LuUpload } from "react-icons/lu";
 import { TagSchema } from "./api/posts";
 

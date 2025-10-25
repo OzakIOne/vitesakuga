@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { reactStartCookies } from "better-auth/react-start";
 // import { env } from "~/env/server";
 // import { db } from "~/auth/db";
-import { getPoolSingleton } from "./db/pool";
+import { getPoolSingleton } from "../db/pool";
 
 export const auth = betterAuth({
   baseURL: process.env.VITE_BASE_URL,

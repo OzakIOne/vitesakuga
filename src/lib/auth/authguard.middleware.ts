@@ -3,7 +3,7 @@ import {
   getRequestHeaders,
   setResponseStatus,
 } from "@tanstack/react-start/server";
-import { auth } from "~/auth";
+import { auth } from "src/auth";
 
 // https://tanstack.com/start/latest/docs/framework/react/middleware
 // This is a sample middleware that you can use in your server functions.

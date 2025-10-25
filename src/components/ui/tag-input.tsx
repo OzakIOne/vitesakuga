@@ -1,15 +1,15 @@
 import {
   Badge,
+  Box,
   Combobox,
+  Icon,
   Portal,
   Wrap,
   createListCollection,
-  Box,
-  Icon,
 } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getAllTags } from "../../utils/tags";
+import { getAllTags } from "src/lib/tags/tags.fn";
 import { LuX } from "react-icons/lu";
 
 type Tag = {

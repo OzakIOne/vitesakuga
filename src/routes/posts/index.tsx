@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  fetchPosts,
   PaginatedPostsResponse,
+  fetchPosts,
   searchPosts,
-} from "../../utils/posts";
-import { PostList } from "~/components/PostList";
+} from "src/lib/posts/posts.fn";
+import { PostList } from "src/components/PostList";
 import z from "zod";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";

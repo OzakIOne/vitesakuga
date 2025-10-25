@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
-import { kysely } from "~/auth/db/kysely";
-import { userSelectSchema } from "~/auth/db/schema";
+import { kysely } from "src/lib/db/kysely";
+import { userSelectSchema } from "src/lib/db/schema";
+import { userIdSchema } from "./users.schema";
 
 export const DEPLOY_URL = "http://localhost:3000";
 
@@ -15,8 +16,6 @@ export const fetchUsers = createServerFn().handler(async () => {
 
   return parsed.data;
 });
-
-const userIdSchema = z.coerce.string();
 
 export const fetchUser = createServerFn()
   .inputValidator((id: unknown) => userIdSchema.parse(id))

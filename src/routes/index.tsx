@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { Button, Heading, HStack, Input, Stack } from "@chakra-ui/react";
+import { Button, HStack, Heading, Input, Stack } from "@chakra-ui/react";
 
 export const Route = createFileRoute("/")({
   component: Home,

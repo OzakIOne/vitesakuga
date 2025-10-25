@@ -2,11 +2,11 @@ import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import authClient from "~/auth/client";
+import authClient from "src/lib/auth/client";
 import { z } from "zod";
-import { FieldInfo } from "~/components/FieldInfo";
+import { FieldInfo } from "src/components/FieldInfo";
 import { Button, Field, Input } from "@chakra-ui/react";
-import { PasswordInput } from "~/components/ui/password-input";
+import { PasswordInput } from "src/components/ui/password-input";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 

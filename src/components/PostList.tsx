@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
-import { Box, Heading, Text, Button, VStack, HStack } from "@chakra-ui/react";
-import { DbSchemaInsert } from "~/auth/db/schema";
+import { Box, Button, HStack, Heading, Text, VStack } from "@chakra-ui/react";
+import { DbSchemaInsert } from "src/auth/db/schema";
 
 function PostListComponent({
   post,

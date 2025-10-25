@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
-import { kysely } from "../auth/db/kysely";
-
-export const searchTagsSchema = z.object({
-  query: z.string().min(1),
-});
+import { kysely } from "src/lib/db/kysely";
+import { searchTagsSchema } from "./tags.schema";
 
 export const searchTags = createServerFn()
   .inputValidator((input: unknown) => searchTagsSchema.parse(input))
@@ -80,7 +77,7 @@ export const createTagsForPost = createServerFn()
     await Promise.all(
       tagIds.map((tagId) =>
         kysely
-          .insertInto("postTags")
+          .insertInto("post_tags")
           .values({
             postId,
             tagId,
@@ -93,8 +90,8 @@ export const createTagsForPost = createServerFn()
     // Return all tags for the post
     const postTags = await kysely
       .selectFrom("tags")
-      .innerJoin("postTags", "postTags.tagId", "tags.id")
-      .where("postTags.postId", "=", postId)
+      .innerJoin("post_tags", "post_tags.tagId", "tags.id")
+      .where("post_tags.postId", "=", postId)
       .select(["tags.id", "tags.name"])
       .execute();
 
@@ -114,8 +111,8 @@ export const getPostTags = createServerFn()
 
     const tags = await kysely
       .selectFrom("tags")
-      .innerJoin("postTags", "postTags.tagId", "tags.id")
-      .where("postTags.postId", "=", postId)
+      .innerJoin("post_tags", "post_tags.tagId", "tags.id")
+      .where("post_tags.postId", "=", postId)
       .select(["tags.id", "tags.name"])
       .execute();
 

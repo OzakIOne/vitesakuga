@@ -1,16 +1,16 @@
 import {
-  MediaController,
   MediaControlBar,
+  MediaController,
+  MediaFullscreenButton,
+  MediaMuteButton,
+  MediaPipButton,
   MediaPlayButton,
+  MediaPlaybackRateButton,
   MediaSeekBackwardButton,
   MediaSeekForwardButton,
-  MediaTimeRange,
   MediaTimeDisplay,
-  MediaMuteButton,
+  MediaTimeRange,
   MediaVolumeRange,
-  MediaPlaybackRateButton,
-  MediaFullscreenButton,
-  MediaPipButton,
 } from "media-chrome/react";
 import ReactPlayer from "react-player";
 

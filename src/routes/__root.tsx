@@ -8,13 +8,13 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import * as React from "react";
-import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
-import { NotFound } from "~/components/NotFound";
-import appCss from "~/styles/app.css?url";
-import { seo } from "~/utils/seo";
-import { getUser } from "~/auth/utils";
-import authClient from "~/auth/client";
-import { Provider } from "~/components/ui/provider";
+import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
+import { NotFound } from "src/components/NotFound";
+import appCss from "src/styles/app.css?url";
+import { seo } from "src/utils/seo";
+import { getUser } from "src/lib/auth/utils";
+import authClient from "src/lib/auth/client";
+import { Provider } from "src/components/ui/provider";
 import { Button, Center } from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";

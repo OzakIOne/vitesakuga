@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchPost } from "../../utils/posts";
-import { NotFound } from "~/components/NotFound";
-import { PostErrorComponent } from "~/components/PostError";
-import { Post } from "~/components/Post";
+import { fetchPost } from "src/lib/posts/posts.fn";
+import { NotFound } from "src/components/NotFound";
+import { PostErrorComponent } from "src/components/PostError";
+import { Post } from "src/components/Post";
 import { Box, Button, Text, Textarea } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchComments, addComment } from "~/utils/comments";
+import { addComment, fetchComments } from "src/lib/comments/comments.fn";
 import { useState } from "react";
 import { useRouteContext } from "@tanstack/react-router";
 
@@ -99,13 +99,11 @@ function PostComponent() {
         </Button>
       </Box>
 
-      {/* Comments Section */}
       <Box shadow={"md"} borderRadius={"md"} padding={"4"}>
         <Text fontSize="xl" fontWeight="bold" mb={4}>
           Comments
         </Text>
 
-        {/* New Comment Form */}
         <Box mb={4}>
           {currentUserId ? (
             <>
@@ -130,7 +128,6 @@ function PostComponent() {
           )}
         </Box>
 
-        {/* Comments List */}
         <Box>
           {comments?.map((comment) => (
             <Box key={comment.id} p={3} borderRadius="md" shadow="sm" mb={3}>

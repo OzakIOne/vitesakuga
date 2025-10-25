@@ -1,40 +1,11 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
-import { kysely } from "~/auth/db/kysely";
-import { postsSelectSchema } from "~/auth/db/schema";
+import { kysely } from "src/lib/db/kysely";
+import { postsSelectSchema } from "src/lib/db/schema";
 import { queryOptions } from "@tanstack/react-query";
-import { DEPLOY_URL } from "./users";
+import { DEPLOY_URL } from "src/lib/users/users.fn";
 import { UploadFormValues } from "src/routes/upload";
-
-// Schema for pagination parameters following JSON:API cursor pagination profile
-const fetchPostsInputSchema = z.object({
-  page: z
-    .object({
-      size: z.number().min(1).max(100).default(20), // page[size]
-      after: z.number().optional(), // page[after] - cursor for next page
-      before: z.number().optional(), // page[before] - cursor for previous page
-    })
-    .optional()
-    .default({ size: 20 }),
-});
-
-const paginatedPostsResponseSchema = z.object({
-  data: z.array(postsSelectSchema), // Primary data
-  links: z.object({
-    self: z.string(),
-    next: z.string().nullable(),
-  }),
-  meta: z.object({
-    hasMore: z.boolean(),
-    cursors: z.object({
-      after: z.number().nullable(),
-    }),
-  }),
-});
-
-export type PaginatedPostsResponse = z.infer<
-  typeof paginatedPostsResponseSchema
->;
+import { PaginatedPostsResponse, fetchPostsInputSchema } from "./posts.schema";
 
 export const fetchPosts = createServerFn()
   .inputValidator((input: unknown) => fetchPostsInputSchema.parse(input))

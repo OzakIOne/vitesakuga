@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { fetchUsers } from "../utils/users";
-import { User } from "~/components/User";
+import { fetchUsers } from "src/lib/users/users.fn";
+import { User } from "src/components/User";
 
 export const Route = createFileRoute("/users/")({
   loader: async () => fetchUsers(),

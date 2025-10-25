@@ -1,4 +1,4 @@
-import { Card, HStack, Avatar, Stack, Text } from "@chakra-ui/react";
+import { Avatar, Card, HStack, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 
 export function User({

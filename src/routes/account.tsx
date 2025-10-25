@@ -1,23 +1,23 @@
 import * as React from "react";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import authClient from "~/auth/client";
+import authClient from "src/lib/auth/client";
 import {
   Avatar,
   AvatarGroup,
+  Box,
   Button,
+  Center,
+  Field,
   Heading,
   Input,
   InputGroup,
   Text,
-  Center,
-  Box,
-  Field,
 } from "@chakra-ui/react";
 import { LuImage, LuUser } from "react-icons/lu";
 import z from "zod";
-import { PasswordInput } from "~/components/ui/password-input";
-import { FieldInfo } from "~/components/FieldInfo";
+import { PasswordInput } from "src/components/ui/password-input";
+import { FieldInfo } from "src/components/FieldInfo";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: async ({ context }) => {

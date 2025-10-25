@@ -1,28 +1,7 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
-import { kysely } from "../auth/db/kysely";
-
-// Schema for a comment
-// TODO use schema fron drizzle ?
-const commentSchema = z.object({
-  id: z.number(),
-  postId: z.coerce.number(),
-  content: z.string(),
-  userId: z.string(),
-  createdAt: z.date(),
-  userName: z.string(),
-  userImage: z.string().nullable(),
-});
-
-export type Comment = z.infer<typeof commentSchema>;
-
-// Schema for creating a comment
-// TODO use schema fron drizzle ?
-export const createCommentSchema = z.object({
-  postId: z.coerce.number(),
-  content: z.string().min(1),
-  userId: z.string(),
-});
+import { kysely } from "src/lib/db/kysely";
+import { commentSchema, createCommentSchema } from "./comments.schema";
 
 // Fetch comments for a post
 export const fetchComments = createServerFn()

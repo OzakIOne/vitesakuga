@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { kysely } from "../../auth/db/kysely";
-import { postsInsertSchema } from "../../auth/db/schema/sakuga.utils";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { kysely } from "src/lib/db/kysely";
+import { postsInsertSchema } from "src/lib/db/schema/sakuga.utils";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import z from "zod";
 
 const cfclient = new S3Client({

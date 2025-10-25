@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { fetchUser } from "~/utils/users";
-import { NotFound } from "~/components/NotFound";
-import { UserErrorComponent } from "~/components/UserError";
-import { PostList } from "~/components/PostList";
-import { User } from "~/components/User";
+import { fetchUser } from "src/lib/users/users.fn";
+import { NotFound } from "src/components/NotFound";
+import { UserErrorComponent } from "src/components/UserError";
+import { PostList } from "src/components/PostList";
+import { User } from "src/components/User";
 
 export const Route = createFileRoute("/users/$id")({
   loader: async ({ params: { id } }) =>
