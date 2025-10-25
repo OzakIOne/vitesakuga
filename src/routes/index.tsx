@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Button, Heading, HStack, Input, Stack } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { Button, HStack, Heading, Input, Stack } from "@chakra-ui/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -35,7 +35,7 @@ function Home() {
     {
       wait: 500,
       enabled: () => form.state.values.search.length > 2,
-    }
+    },
   );
 
   return (

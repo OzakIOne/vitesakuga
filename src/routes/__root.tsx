@@ -1,26 +1,26 @@
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { Button, Center } from "@chakra-ui/react";
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { FormDevtools } from "@tanstack/react-form-devtools";
+import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
+  createRootRouteWithContext,
   HeadContent,
   Link,
   Outlet,
   Scripts,
-  createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
-import * as React from "react";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import type * as React from "react";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { NotFound } from "src/components/NotFound";
+import { Provider } from "src/components/ui/provider";
+import authClient from "src/lib/auth/client";
+import { getUser } from "src/lib/auth/utils";
 import appCss from "src/styles/app.css?url";
 import { seo } from "src/utils/seo";
-import { getUser } from "src/lib/auth/utils";
-import authClient from "src/lib/auth/client";
-import { Provider } from "src/components/ui/provider";
-import { Button, Center } from "@chakra-ui/react";
-import { TanStackDevtools } from "@tanstack/react-devtools";
-import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { FormDevtools } from "@tanstack/react-form-devtools";
-import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;

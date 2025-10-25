@@ -1,16 +1,15 @@
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import React, { useEffect, useMemo, useRef } from "react";
+import { PostList } from "src/components/PostList";
 import {
-  PaginatedPostsResponse,
   fetchPosts,
+  type PaginatedPostsResponse,
   searchPosts,
 } from "src/lib/posts/posts.fn";
-import { PostList } from "src/components/PostList";
 import z from "zod";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import React from "react";
 
 const searchSchema = z.object({
   q: z.string().trim().min(1).optional(),

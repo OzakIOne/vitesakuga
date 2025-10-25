@@ -1,11 +1,11 @@
+import { Button, Field, Input } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import authClient from "src/lib/auth/client";
-import { Button, Field, Input } from "@chakra-ui/react";
-import { PasswordInput } from "src/components/ui/password-input";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
+import { PasswordInput } from "src/components/ui/password-input";
+import authClient from "src/lib/auth/client";
 
 export const Route = createFileRoute("/(auth)/login")({
   component: LoginForm,
@@ -45,7 +45,7 @@ function LoginForm() {
           await queryClient.invalidateQueries({ queryKey: ["user"] });
           navigate({ to: redirectUrl });
         },
-      }
+      },
     );
   };
 
@@ -100,7 +100,7 @@ function LoginForm() {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
-                  }
+                  },
                 )
               }
             >
@@ -125,7 +125,7 @@ function LoginForm() {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
-                  }
+                  },
                 )
               }
             >

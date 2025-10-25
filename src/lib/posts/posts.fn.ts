@@ -1,11 +1,14 @@
-import { z } from "zod";
+import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
-import { queryOptions } from "@tanstack/react-query";
 import { DEPLOY_URL } from "src/lib/users/users.fn";
-import { UploadFormValues } from "src/routes/upload";
-import { PaginatedPostsResponse, fetchPostsInputSchema } from "./posts.schema";
+import type { UploadFormValues } from "src/routes/upload";
+import { z } from "zod";
+import {
+  fetchPostsInputSchema,
+  type PaginatedPostsResponse,
+} from "./posts.schema";
 
 export const fetchPosts = createServerFn()
   .inputValidator((input: unknown) => fetchPostsInputSchema.parse(input))
@@ -71,7 +74,7 @@ export const searchPosts = createServerFn()
           .optional()
           .default({ size: 20 }),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data }): Promise<PaginatedPostsResponse> => {
     const { q, page } = data;
@@ -81,7 +84,7 @@ export const searchPosts = createServerFn()
       .selectFrom("posts")
       .selectAll()
       .where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`)
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
       )
       .orderBy("id", "desc");
 
@@ -95,7 +98,7 @@ export const searchPosts = createServerFn()
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
       throw new Error(
-        `Error processing search results: ${parsed.error.message}`
+        `Error processing search results: ${parsed.error.message}`,
       );
     }
 
@@ -113,13 +116,13 @@ export const searchPosts = createServerFn()
       links: {
         self: after
           ? `/api/posts/search?q=${encodeURIComponent(
-              q
+              q,
             )}&page[after]=${after}&page[size]=${size}`
           : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts/search?q=${encodeURIComponent(
-                q
+                q,
               )}&page[after]=${afterCursor}&page[size]=${size}`
             : null,
       },

@@ -1,9 +1,9 @@
 import { Badge, Box, Heading, Stack, Text } from "@chakra-ui/react";
-import { Video } from "./Video";
-import { User } from "./User";
-import { DbSchemaSelect } from "src/auth/db/schema";
 import { Link } from "@tanstack/react-router";
-import { fetchPost } from "src/lib/posts/posts.fn";
+import type { DbSchemaSelect } from "src/auth/db/schema";
+import type { fetchPost } from "src/lib/posts/posts.fn";
+import { User } from "./User";
+import { Video } from "./Video";
 
 export function Post({
   post,

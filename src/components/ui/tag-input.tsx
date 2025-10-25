@@ -2,15 +2,15 @@ import {
   Badge,
   Box,
   Combobox,
+  createListCollection,
   Icon,
   Portal,
   Wrap,
-  createListCollection,
 } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getAllTags } from "src/lib/tags/tags.fn";
+import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
+import { getAllTags } from "src/lib/tags/tags.fn";
 
 type Tag = {
   id?: number;
@@ -37,7 +37,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
     return allTags
       .filter((tag) => !selectedNames.includes(tag.name))
       .filter((tag) =>
-        tag.name.toLowerCase().includes(searchValue.toLowerCase())
+        tag.name.toLowerCase().includes(searchValue.toLowerCase()),
       );
   }, [allTags, searchValue, value]);
 
@@ -45,7 +45,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
   const showCreateOption = useMemo(() => {
     if (!searchValue.trim()) return false;
     const exactMatch = allTags.some(
-      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase()
+      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase(),
     );
     return !exactMatch;
   }, [searchValue, allTags]);

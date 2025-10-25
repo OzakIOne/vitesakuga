@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import z from "zod";
 import { kysely } from "src/lib/db/kysely";
 import { userSelectSchema } from "src/lib/db/schema";
+import z from "zod";
 import { userIdSchema } from "./users.schema";
 
 export const DEPLOY_URL = "http://localhost:3000";
@@ -11,7 +11,7 @@ export const fetchUsers = createServerFn().handler(async () => {
   const parsed = z.array(userSelectSchema).safeParse(data);
   if (!parsed.success)
     throw new Error(
-      `There was an error processing the search results ${parsed.error}`
+      `There was an error processing the search results ${parsed.error}`,
     );
 
   return parsed.data;

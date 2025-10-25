@@ -1,7 +1,3 @@
-import * as React from "react";
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useForm } from "@tanstack/react-form";
-import authClient from "src/lib/auth/client";
 import {
   Avatar,
   AvatarGroup,
@@ -14,10 +10,14 @@ import {
   InputGroup,
   Text,
 } from "@chakra-ui/react";
+import { useForm } from "@tanstack/react-form";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import * as React from "react";
 import { LuImage, LuUser } from "react-icons/lu";
-import z from "zod";
-import { PasswordInput } from "src/components/ui/password-input";
 import { FieldInfo } from "src/components/FieldInfo";
+import { PasswordInput } from "src/components/ui/password-input";
+import authClient from "src/lib/auth/client";
+import z from "zod";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: async ({ context }) => {

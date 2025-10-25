@@ -1,10 +1,8 @@
+import type { Kyselify } from "drizzle-orm/kysely";
 import { Kysely, PostgresDialect } from "kysely";
 import { getPoolSingleton } from "./pool";
-
-import * as sakugaschema from "./schema/sakuga.schema";
-import * as authschema from "./schema/auth.schema";
-
-import type { Kyselify } from "drizzle-orm/kysely";
+import type * as authschema from "./schema/auth.schema";
+import type * as sakugaschema from "./schema/sakuga.schema";
 
 type DrizzleSchema = typeof sakugaschema & typeof authschema;
 

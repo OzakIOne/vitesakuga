@@ -28,5 +28,5 @@ export const authMiddleware = createMiddleware({ type: "function" }).server(
     }
 
     return next({ context: { user: session.user } });
-  }
+  },
 );

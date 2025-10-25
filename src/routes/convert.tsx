@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import React, { useState } from "react";
 import {
   Alert,
   Box,
   Button,
   Container,
+  createListCollection,
   FileUpload,
   Heading,
   Icon,
@@ -13,8 +12,9 @@ import {
   Select,
   Text,
 } from "@chakra-ui/react";
+import { createFileRoute } from "@tanstack/react-router";
+import React, { useState } from "react";
 import { LuUpload } from "react-icons/lu";
-import { createListCollection } from "@chakra-ui/react";
 
 type OutputFormat = {
   label: string;
@@ -94,7 +94,7 @@ function RouteComponent() {
       setConvertedName(`${base}-converted.${ext}`);
     } catch (e: any) {
       setError(e?.message || "Conversion failed. See console for details.");
-      // eslint-disable-next-line no-console
+
       console.error(e);
     } finally {
       setIsConverting(false);
@@ -158,7 +158,7 @@ function RouteComponent() {
               value={output ? [output.label] : []}
               onSelect={(details) => {
                 const o = SUPPORTED_OUTPUTS.find(
-                  (opt) => opt.label === details.value
+                  (opt) => opt.label === details.value,
                 );
                 if (o) setOutput(o);
               }}

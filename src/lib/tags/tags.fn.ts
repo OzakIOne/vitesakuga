@@ -1,6 +1,6 @@
-import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
+import { z } from "zod";
 import { searchTagsSchema } from "./tags.schema";
 
 export const searchTags = createServerFn()
@@ -32,10 +32,10 @@ export const createTagsForPost = createServerFn()
           z.object({
             name: z.string().min(1),
             id: z.number().optional(),
-          })
+          }),
         ),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { postId, tags } = data;
@@ -70,7 +70,7 @@ export const createTagsForPost = createServerFn()
           .executeTakeFirstOrThrow();
 
         return newTag.id;
-      })
+      }),
     );
 
     // Link tags to post
@@ -83,8 +83,8 @@ export const createTagsForPost = createServerFn()
             tagId,
           })
           .onConflict((oc) => oc.doNothing())
-          .execute()
-      )
+          .execute(),
+      ),
     );
 
     // Return all tags for the post
@@ -104,7 +104,7 @@ export const getPostTags = createServerFn()
       .object({
         postId: z.number(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { postId } = data;

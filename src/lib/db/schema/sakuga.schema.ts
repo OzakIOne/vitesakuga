@@ -7,8 +7,8 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth.schema";
 import { relations } from "node_modules/drizzle-orm";
+import { user } from "./auth.schema";
 
 export const tags = pgTable("tags", {
   id: serial("id").primaryKey(),
@@ -31,7 +31,7 @@ export const postTags = pgTable(
       .references(() => tags.id, { onDelete: "cascade" })
       .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.postId, t.tagId] })]
+  (t) => [primaryKey({ columns: [t.postId, t.tagId] })],
 );
 
 export const posts = pgTable("posts", {

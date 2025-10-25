@@ -1,19 +1,22 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchPost } from "src/lib/posts/posts.fn";
-import { NotFound } from "src/components/NotFound";
-import { PostErrorComponent } from "src/components/PostError";
-import { Post } from "src/components/Post";
 import { Box, Button, Text, Textarea } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addComment, fetchComments } from "src/lib/comments/comments.fn";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouteContext,
+} from "@tanstack/react-router";
 import { useState } from "react";
-import { useRouteContext } from "@tanstack/react-router";
+import { NotFound } from "src/components/NotFound";
+import { Post } from "src/components/Post";
+import { PostErrorComponent } from "src/components/PostError";
+import { addComment, fetchComments } from "src/lib/comments/comments.fn";
+import { fetchPost } from "src/lib/posts/posts.fn";
 
 export const Route = createFileRoute("/posts/$postId")({
   loader: async ({ params: { postId } }) => {
     try {
       const id = parseInt(postId, 10);
-      if (isNaN(id)) {
+      if (Number.isNaN(id)) {
         throw new Error("Invalid post ID");
       }
       return await fetchPost({

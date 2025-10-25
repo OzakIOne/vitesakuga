@@ -1,6 +1,6 @@
-import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
+import { z } from "zod";
 import { commentSchema, createCommentSchema } from "./comments.schema";
 
 // Fetch comments for a post
@@ -10,7 +10,7 @@ export const fetchComments = createServerFn()
       .object({
         postId: z.number(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async (ctx) => {
     const { postId } = ctx.data;

@@ -9,21 +9,20 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-
+import { useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   redirect,
   useBlocker,
   useRouteContext,
 } from "@tanstack/react-router";
-import { Video } from "src/components/Video";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { z } from "zod";
-import { FieldInfo } from "src/components/FieldInfo";
-import { postsUploadOptions, searchPosts } from "src/lib/posts/posts.fn";
-import { TagInput } from "src/components/ui/tag-input";
 import { LuUpload } from "react-icons/lu";
+import { FieldInfo } from "src/components/FieldInfo";
+import { TagInput } from "src/components/ui/tag-input";
+import { Video } from "src/components/Video";
+import { postsUploadOptions, searchPosts } from "src/lib/posts/posts.fn";
+import { z } from "zod";
 import { TagSchema } from "./api/posts";
 
 export const Route = createFileRoute("/upload")({
@@ -62,7 +61,7 @@ function RouteComponent() {
       if (!form.state.isDirty) return false;
 
       const shouldLeave = confirm(
-        "You have unsubmitted changes. Do you want to leave?"
+        "You have unsubmitted changes. Do you want to leave?",
       );
       return !shouldLeave;
     },
