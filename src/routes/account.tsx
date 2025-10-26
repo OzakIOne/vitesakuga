@@ -11,17 +11,21 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import * as React from "react";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
+import {
+  type AuthenticatedContext,
+  authMiddleware,
+} from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import z from "zod";
 
 export const Route = createFileRoute("/account")({
-  beforeLoad: async ({ context }) => {
-    if (!context.user) throw redirect({ to: "/login" });
+  server: {
+    middleware: [authMiddleware],
   },
   component: RouteComponent,
 });
@@ -32,14 +36,14 @@ const profileSchema = z.object({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext();
+  const { user } = Route.useRouteContext() as AuthenticatedContext;
   const [serverError, setServerError] = React.useState<string | null>(null);
   const router = useRouter();
 
   const profileForm = useForm({
     defaultValues: {
-      name: user?.name || "",
-      image: user?.image || "",
+      name: user.name,
+      image: user.image,
     },
     validators: {
       onChange: profileSchema,
@@ -51,8 +55,12 @@ function RouteComponent() {
         // await queryClient.invalidateQueries({ queryKey: ["user"] }); // useless ??
         await router.invalidate();
         console.log({ test });
-      } catch (err: any) {
-        setServerError(err?.message || "Failed to update profile");
+      } catch (err) {
+        if (err instanceof Error) {
+          setServerError(err.message);
+        } else {
+          setServerError("Failed to update profile");
+        }
       }
     },
   });
@@ -71,8 +79,12 @@ function RouteComponent() {
           revokeOtherSessions: true,
         });
         formApi.reset();
-      } catch (err: any) {
-        setServerError(err?.message || "Failed to change password");
+      } catch (err) {
+        if (err instanceof Error) {
+          setServerError(err.message);
+        } else {
+          setServerError("Failed to change password");
+        }
       }
     },
   });
@@ -82,8 +94,12 @@ function RouteComponent() {
     setServerError(null);
     try {
       await authClient.deleteUser();
-    } catch (err: any) {
-      setServerError(err?.message || "Failed to delete account");
+    } catch (err) {
+      if (err instanceof Error) {
+        setServerError(err.message);
+      } else {
+        setServerError("Failed to delete account");
+      }
     }
   };
 
@@ -95,14 +111,14 @@ function RouteComponent() {
             <AvatarGroup>
               <Avatar.Root size="2xl">
                 <Avatar.Fallback />
-                <Avatar.Image src={user!.image!} className="rounded-full" />
+                <Avatar.Image src={user.image || ""} className="rounded-full" />
               </Avatar.Root>
             </AvatarGroup>
             <div className="flex-1 min-w-0">
-              <Heading size="lg">{user!.name}</Heading>
-              <Text>{user!.email}</Text>
+              <Heading size="lg">{user.name}</Heading>
+              <Text>{user.email}</Text>
               <Text>
-                Member since: {new Date(user!.createdAt).toLocaleDateString()}
+                Member since: {new Date(user.createdAt).toLocaleDateString()}
               </Text>
             </div>
           </div>

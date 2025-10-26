@@ -17,19 +17,19 @@ import type * as React from "react";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { NotFound } from "src/components/NotFound";
 import { Provider } from "src/components/ui/provider";
+import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
-import { getUser } from "src/lib/auth/utils";
 import appCss from "src/styles/app.css?url";
 import { seo } from "src/utils/seo";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
-  user: Awaited<ReturnType<typeof getUser>>;
+  user: Awaited<ReturnType<typeof getUserSession>>;
 }>()({
   beforeLoad: async ({ context }) => {
     const user = await context.queryClient.fetchQuery({
       queryKey: ["user"],
-      queryFn: ({ signal }) => getUser({ signal }),
+      queryFn: ({ signal }) => getUserSession({ signal }),
     }); // we're using react-query for caching, see router.tsx
     return { user };
   },

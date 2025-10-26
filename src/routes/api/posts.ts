@@ -124,7 +124,7 @@ export const Route = createFileRoute("/api/posts")({
               allTagIds.map((tagId) => ({
                 postId,
                 tagId,
-              }))
+              })),
             )
             .execute();
         }

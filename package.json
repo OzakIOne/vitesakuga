@@ -10,7 +10,7 @@
     "start": "node .output/server/index.mjs",
     "lint": "oxlint .",
     "tslint": "pnpx oxlint-tsgolint",
-    "biome": "biome check",
+    "biome": "biome check --write",
     "db": "drizzle-kit",
     "dup": "docker compose up -d",
     "ddn": "docker compose down"

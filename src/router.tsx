@@ -3,6 +3,7 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { DefaultCatchBoundary } from "./components/DefaultCatchBoundary";
 import { NotFound } from "./components/NotFound";
+import type { AuthUser } from "./lib/auth/auth.middleware";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -10,7 +11,10 @@ export function getRouter() {
 
   const router = createTanStackRouter({
     routeTree,
-    context: { queryClient, user: null },
+    context: {
+      queryClient,
+      user: null as AuthUser | null,
+    },
     defaultPreload: "intent",
     defaultErrorComponent: DefaultCatchBoundary,
     defaultNotFoundComponent: () => <NotFound />,
