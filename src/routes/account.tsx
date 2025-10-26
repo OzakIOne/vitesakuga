@@ -16,6 +16,7 @@ import * as React from "react";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
+import { toaster } from "src/components/ui/toaster";
 import {
   authMiddleware,
   type MiddlewareUser,
@@ -52,16 +53,23 @@ function RouteComponent() {
     onSubmit: async ({ value }) => {
       setServerError(null);
       try {
-        const test = await authClient.updateUser(value);
-        // await queryClient.invalidateQueries({ queryKey: ["user"] }); // useless ??
+        await authClient.updateUser(value);
         await router.invalidate();
-        console.log({ test });
+        toaster.create({
+          type: "success",
+          title: "Profile updated",
+          description: "Your profile has been successfully updated.",
+          duration: 3000,
+          closable: true,
+        });
       } catch (err) {
-        if (err instanceof Error) {
-          setServerError(err.message);
-        } else {
-          setServerError("Failed to update profile");
-        }
+        toaster.create({
+          type: "error",
+          title: "Error updating profile",
+          description: err,
+          duration: 5000,
+          closable: true,
+        });
       }
     },
   });
@@ -80,27 +88,44 @@ function RouteComponent() {
           revokeOtherSessions: true,
         });
         formApi.reset();
+        toaster.create({
+          type: "success",
+          title: "Password updated",
+          description: "Your password has been successfully changed.",
+          duration: 3000,
+          closable: true,
+        });
       } catch (err) {
-        if (err instanceof Error) {
-          setServerError(err.message);
-        } else {
-          setServerError("Failed to change password");
-        }
+        toaster.create({
+          type: "error",
+          title: "Error changing password",
+          description: err,
+          duration: 5000,
+          closable: true,
+        });
       }
     },
   });
 
   // TODO add confirmation
   const handleDeleteUser = async () => {
-    setServerError(null);
     try {
       await authClient.deleteUser();
+      toaster.create({
+        type: "success",
+        title: "Account deleted",
+        description: "Your account has been successfully deleted.",
+        duration: 3000,
+        closable: true,
+      });
     } catch (err) {
-      if (err instanceof Error) {
-        setServerError(err.message);
-      } else {
-        setServerError("Failed to delete account");
-      }
+      toaster.create({
+        type: "error",
+        title: "Error deleting account",
+        description: err,
+        duration: 5000,
+        closable: true,
+      });
     }
   };
 

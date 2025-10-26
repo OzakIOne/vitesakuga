@@ -17,6 +17,7 @@ import type * as React from "react";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { NotFound } from "src/components/NotFound";
 import { Provider } from "src/components/ui/provider";
+import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import appCss from "src/styles/app.css?url";
@@ -30,6 +31,7 @@ export const Route = createRootRouteWithContext<{
     const user = await context.queryClient.fetchQuery({
       queryKey: ["user"],
       queryFn: ({ signal }) => getUserSession({ signal }),
+      staleTime: 60 * 60 * 1000,
     }); // we're using react-query for caching, see router.tsx
     return { user };
   },
@@ -175,6 +177,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         </Center>
         <hr />
         {children}
+        <Toaster />
         <TanStackDevtools
           plugins={[
             {
