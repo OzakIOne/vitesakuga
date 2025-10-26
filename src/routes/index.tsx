@@ -35,7 +35,7 @@ function Home() {
     {
       wait: 500,
       enabled: () => form.state.values.search.length > 2,
-    },
+    }
   );
 
   return (
@@ -61,7 +61,7 @@ function Home() {
               <Input
                 className="input flex-1"
                 type="text"
-                placeholder="Search..."
+                placeholder="One piece..."
                 value={field.state.value}
                 onChange={(e) => {
                   const val = e.target.value;
