@@ -3,22 +3,6 @@ import { createMiddleware, createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { auth } from "src/lib/auth";
 
-// Define the user type based on the session structure
-export type AuthUser = {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  email: string;
-  emailVerified: boolean;
-  name: string;
-  image?: string | null;
-};
-
-// Export a type for authenticated context
-export type AuthenticatedContext = {
-  user: AuthUser; // No null here!
-};
-
 // Internal helper - only called on server
 const getUserInternal = async () => {
   const session = await auth.api.getSession({
@@ -29,9 +13,13 @@ const getUserInternal = async () => {
   });
 
   if (session?.user) {
-    return session.user as AuthUser;
+    return session.user;
   }
   return null;
+};
+
+export type MiddlewareUser = {
+  user: NonNullable<Awaited<ReturnType<typeof getUserInternal>>>;
 };
 
 export const getUserSession = createServerFn().handler(async () => {

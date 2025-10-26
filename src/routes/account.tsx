@@ -17,8 +17,8 @@ import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import {
-  type AuthenticatedContext,
   authMiddleware,
+  type MiddlewareUser,
 } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import z from "zod";
@@ -32,14 +32,12 @@ export const Route = createFileRoute("/account")({
 
 const profileSchema = z.object({
   name: z.string(),
-  image: z.url(),
+  image: z.url().or(z.literal("")),
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext() as AuthenticatedContext;
-  const context = Route.useRouteContext();
+  const { user } = Route.useRouteContext() as MiddlewareUser;
 
-  console.log({ context });
   const [serverError, setServerError] = React.useState<string | null>(null);
   const router = useRouter();
 
