@@ -37,6 +37,9 @@ const profileSchema = z.object({
 
 function RouteComponent() {
   const { user } = Route.useRouteContext() as AuthenticatedContext;
+  const context = Route.useRouteContext();
+
+  console.log({ context });
   const [serverError, setServerError] = React.useState<string | null>(null);
   const router = useRouter();
 

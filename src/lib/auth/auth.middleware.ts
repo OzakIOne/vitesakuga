@@ -20,7 +20,7 @@ export type AuthenticatedContext = {
 };
 
 // Internal helper - only called on server
-const getUserSessionInternal = async () => {
+const getUserInternal = async () => {
   const session = await auth.api.getSession({
     headers: getRequestHeaders(),
     query: {
@@ -29,25 +29,25 @@ const getUserSessionInternal = async () => {
   });
 
   if (session?.user) {
-    return { user: session.user as AuthUser };
+    return session.user as AuthUser;
   }
   return null;
 };
 
 export const getUserSession = createServerFn().handler(async () => {
-  return await getUserSessionInternal();
+  return await getUserInternal();
 });
 
 export const authMiddleware = createMiddleware().server(async ({ next }) => {
-  const session = await getUserSessionInternal();
+  const user = await getUserInternal();
 
-  if (!session) {
+  if (!user) {
     throw redirect({ to: "/login" });
   }
 
   return next({
     context: {
-      user: session.user,
+      user,
     },
   });
 });
