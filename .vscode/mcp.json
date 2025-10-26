@@ -15,6 +15,13 @@
         "mcp-remote",
         "https://docs.mcp.cloudflare.com/sse"
       ]
+    },
+    "chakra-ui": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@chakra-ui/react-mcp"
+      ]
     }
   },
   "inputs": []

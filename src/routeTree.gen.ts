@@ -21,6 +21,7 @@ import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
 import { Route as ApiPostsRouteImport } from './routes/api/posts'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as PostsTagsTagRouteImport } from './routes/posts/tags/$tag'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const UploadRoute = UploadRouteImport.update({
@@ -82,6 +83,11 @@ const authLoginRoute = authLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => authRouteRoute,
 } as any)
+const PostsTagsTagRoute = PostsTagsTagRouteImport.update({
+  id: '/posts/tags/$tag',
+  path: '/posts/tags/$tag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/posts/tags/$tag': typeof PostsTagsTagRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/posts/tags/$tag': typeof PostsTagsTagRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/posts/tags/$tag': typeof PostsTagsTagRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/users'
     | '/api/auth/$'
+    | '/posts/tags/$tag'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/users'
     | '/api/auth/$'
+    | '/posts/tags/$tag'
   id:
     | '__root__'
     | '/'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/posts/'
     | '/users/'
     | '/api/auth/$'
+    | '/posts/tags/$tag'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   PostsIndexRoute: typeof PostsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  PostsTagsTagRoute: typeof PostsTagsTagRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authLoginRouteImport
       parentRoute: typeof authRouteRoute
     }
+    '/posts/tags/$tag': {
+      id: '/posts/tags/$tag'
+      path: '/posts/tags/$tag'
+      fullPath: '/posts/tags/$tag'
+      preLoaderRoute: typeof PostsTagsTagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -314,6 +334,7 @@ const rootRouteChildren: RootRouteChildren = {
   PostsIndexRoute: PostsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  PostsTagsTagRoute: PostsTagsTagRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
