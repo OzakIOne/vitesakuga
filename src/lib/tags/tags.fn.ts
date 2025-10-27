@@ -1,57 +1,47 @@
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
-import { z } from "zod";
-import { fetchPostsByTagSchema, searchTagsSchema } from "./tags.schema";
+import {
+  createTagsForPostSchema,
+  fetchPostsByTagSchema,
+  getPostTagsSchema,
+  searchTagsSchema,
+} from "./tags.schema";
 
 export const searchTags = createServerFn()
   .inputValidator((input: unknown) => searchTagsSchema.parse(input))
   .handler(async ({ data }) => {
     const { query } = data;
 
-    const tags = await kysely
+    return await kysely
       .selectFrom("tags")
       .where("name", "ilike", `%${query}%`)
       .select(["id", "name"])
       .limit(10)
       .execute();
-
-    return tags;
   });
 
 export const getAllTags = createServerFn().handler(async () => {
   return await kysely.selectFrom("tags").select(["id", "name"]).execute();
 });
 
-export const fetchPostsByTag = createServerFn()
+export const getPostsByTag = createServerFn()
   .inputValidator((input: unknown) => fetchPostsByTagSchema.parse(input))
   .handler(async ({ data }) => {
     const { tagName } = data;
 
-    const posts = await kysely
-      .selectFrom("posts")
-      .leftJoin("post_tags", "post_tags.postId", "posts.id")
-      .leftJoin("tags", "tags.id", "post_tags.tagId")
-      .where("tags.name", "=", tagName)
-      .selectAll("posts")
-      .execute();
-
-    return posts.map((post) => ({ post }));
+    return (
+      await kysely
+        .selectFrom("posts")
+        .leftJoin("post_tags", "post_tags.postId", "posts.id")
+        .leftJoin("tags", "tags.id", "post_tags.tagId")
+        .where("tags.name", "=", tagName)
+        .selectAll("posts")
+        .execute()
+    ).map((post) => ({ post }));
   });
 
 export const createTagsForPost = createServerFn()
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        postId: z.number(),
-        tags: z.array(
-          z.object({
-            name: z.string().min(1),
-            id: z.number().optional(),
-          }),
-        ),
-      })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => createTagsForPostSchema.parse(input))
   .handler(async ({ data }) => {
     const { postId, tags } = data;
 
@@ -84,22 +74,14 @@ export const createTagsForPost = createServerFn()
   });
 
 export const getPostTags = createServerFn()
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        postId: z.number(),
-      })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => getPostTagsSchema.parse(input))
   .handler(async ({ data }) => {
     const { postId } = data;
 
-    const tags = await kysely
+    return await kysely
       .selectFrom("tags")
       .innerJoin("post_tags", "tags.id", "post_tags.tagId")
       .where("post_tags.postId", "=", postId)
       .select(["tags.id", "tags.name"])
       .execute();
-
-    return tags;
   });

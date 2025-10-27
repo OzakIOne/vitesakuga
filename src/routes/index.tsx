@@ -35,7 +35,7 @@ function Home() {
     {
       wait: 500,
       enabled: () => form.state.values.search.length > 2,
-    }
+    },
   );
 
   return (

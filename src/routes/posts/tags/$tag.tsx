@@ -2,7 +2,7 @@ import { Box, Heading, Stack, Text } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { PostList } from "src/components/PostList";
-import { fetchPostsByTag } from "src/lib/tags/tags.fn";
+import { getPostsByTag } from "src/lib/tags/tags.fn";
 import { z } from "zod";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
@@ -15,7 +15,7 @@ function RouteComponent() {
 
   const { data: posts } = useSuspenseQuery({
     queryKey: ["posts", "byTag", tag],
-    queryFn: () => fetchPostsByTag({ data: { tagName: tag } }),
+    queryFn: () => getPostsByTag({ data: { tagName: tag } }),
   });
 
   return (
