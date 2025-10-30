@@ -81,12 +81,9 @@ function RouteComponent() {
       onSubmit: UploadSchema,
     },
     onSubmit: async ({ value }) => {
-      console.log("Submitting upload form with values:", value);
       await context.queryClient.ensureQueryData(postsUploadOptions(value));
     },
   });
-
-  console.log("Form state:", { tags: form.state.values.tags });
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({

@@ -29,29 +29,16 @@ export const Route = createFileRoute("/api/posts")({
       POST: async ({ request }) => {
         const formData = await request.formData();
 
-        console.log("formData api:", { tags: formData.get("tags") });
-
-        const data: any = {};
-        const tagIds: number[] = [];
-        const newTags: string[] = [];
-
+        const data: Record<string, any> = {};
         for (const [key, value] of formData.entries()) {
-          if (key === "tagIds[]") {
-            tagIds.push(Number(value));
-          } else if (key === "newTags[]") {
-            newTags.push(value as string);
+          if (key === "tags") {
+            data[key] = JSON.parse(value as string);
           } else {
             data[key] = value;
           }
         }
 
-        data.tags = [
-          ...tagIds.map((id) => ({ id })),
-          ...newTags.map((name) => ({ name })),
-        ];
-
         const parsed = uploadSchema.safeParse(data);
-
         if (!parsed.success) throw new Error(`Error: ${parsed.error}`);
 
         const key = `${parsed.data.userId}_${parsed.data.video.name}`;
@@ -84,51 +71,39 @@ export const Route = createFileRoute("/api/posts")({
 
         const postId = newPost.id;
 
-        // 7️⃣ Separate existing tag IDs vs new tags
-        const existingTagIds = parsed.data.tags
-          .filter((t) => t.id !== undefined)
-          .map((t) => t.id!) as number[];
-        const newTagNames = parsed.data.tags
-          .filter((t) => t.id === undefined)
-          .map((t) => t.name);
+        if (parsed.data.tags && parsed.data.tags.length > 0) {
+          // Process each tag - create new ones and collect all tag IDs
+          const allTagIds: number[] = [];
 
-        const allTagIds: number[] = [...existingTagIds];
-
-        // Insert new tags (with conflict handling)
-        for (const name of newTagNames) {
-          try {
-            const tag = await kysely
-              .insertInto("tags")
-              .values({ name })
-              .onConflict((oc) => oc.column("name").doUpdateSet({ name }))
-              .returning("id")
-              .executeTakeFirstOrThrow();
-            allTagIds.push(tag.id);
-          } catch {
-            // If conflict resolution fails, try to fetch existing tag
-            const existingTag = await kysely
-              .selectFrom("tags")
-              .select("id")
-              .where("name", "=", name)
-              .executeTakeFirst();
-
-            if (existingTag) {
-              allTagIds.push(existingTag.id);
+          for (const tag of parsed.data.tags) {
+            if (tag.id !== undefined) {
+              allTagIds.push(tag.id);
+            } else {
+              // Create new tag with conflict handling
+              const newTag = await kysely
+                .insertInto("tags")
+                .values({ name: tag.name })
+                .onConflict((oc) =>
+                  oc.column("name").doUpdateSet({ name: tag.name })
+                )
+                .returning("id")
+                .executeTakeFirstOrThrow();
+              allTagIds.push(newTag.id);
             }
           }
-        }
 
-        // Link post to tags
-        if (allTagIds.length > 0) {
-          await kysely
-            .insertInto("postTags")
-            .values(
-              allTagIds.map((tagId) => ({
-                postId,
-                tagId,
-              }))
-            )
-            .execute();
+          // Link post to tags
+          if (allTagIds.length > 0) {
+            await kysely
+              .insertInto("post_tags")
+              .values(
+                allTagIds.map((tagId) => ({
+                  postId,
+                  tagId,
+                }))
+              )
+              .execute();
+          }
         }
 
         return newPost;
