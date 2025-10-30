@@ -25,7 +25,6 @@ interface TagInputProps {
 export function TagInput({ value, onChange }: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
 
-  // Fetch all tags from the database
   const { data: allTags = [] } = useQuery({
     queryKey: ["tags", "all"],
     queryFn: () => getAllTags(),
@@ -37,7 +36,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
     return allTags
       .filter((tag) => !selectedNames.includes(tag.name))
       .filter((tag) =>
-        tag.name.toLowerCase().includes(searchValue.toLowerCase()),
+        tag.name.toLowerCase().includes(searchValue.toLowerCase())
       );
   }, [allTags, searchValue, value]);
 
@@ -45,7 +44,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
   const showCreateOption = useMemo(() => {
     if (!searchValue.trim()) return false;
     const exactMatch = allTags.some(
-      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase(),
+      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase()
     );
     return !exactMatch;
   }, [searchValue, allTags]);

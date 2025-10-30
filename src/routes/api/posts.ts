@@ -29,6 +29,8 @@ export const Route = createFileRoute("/api/posts")({
       POST: async ({ request }) => {
         const formData = await request.formData();
 
+        console.log("formData api:", { tags: formData.get("tags") });
+
         const data: any = {};
         const tagIds: number[] = [];
         const newTags: string[] = [];
@@ -124,7 +126,7 @@ export const Route = createFileRoute("/api/posts")({
               allTagIds.map((tagId) => ({
                 postId,
                 tagId,
-              })),
+              }))
             )
             .execute();
         }

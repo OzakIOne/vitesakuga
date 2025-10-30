@@ -61,7 +61,7 @@ function RouteComponent() {
       if (!form.state.isDirty) return false;
 
       const shouldLeave = confirm(
-        "You have unsubmitted changes. Do you want to leave?",
+        "You have unsubmitted changes. Do you want to leave?"
       );
       return !shouldLeave;
     },
@@ -85,6 +85,8 @@ function RouteComponent() {
       await context.queryClient.ensureQueryData(postsUploadOptions(value));
     },
   });
+
+  console.log("Form state:", { tags: form.state.values.tags });
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({

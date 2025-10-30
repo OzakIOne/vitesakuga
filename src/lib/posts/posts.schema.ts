@@ -27,6 +27,19 @@ export const paginatedPostsResponseSchema = z.object({
   }),
 });
 
+export const searchPostsInputSchema = z.object({
+  q: z.string().trim().min(1),
+  page: z
+    .object({
+      size: z.number().min(1).max(100).default(20),
+      after: z.number().optional(),
+    })
+    .optional()
+    .default({ size: 20 }),
+});
+
+export const postIdSchema = z.coerce.number();
+
 export type PaginatedPostsResponse = z.infer<
   typeof paginatedPostsResponseSchema
 >;

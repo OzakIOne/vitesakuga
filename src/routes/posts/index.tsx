@@ -4,11 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { useEffect, useMemo, useRef } from "react";
 import { PostList } from "src/components/PostList";
-import {
-  fetchPosts,
-  type PaginatedPostsResponse,
-  searchPosts,
-} from "src/lib/posts/posts.fn";
+import { fetchPosts, searchPosts } from "src/lib/posts/posts.fn";
+import type { PaginatedPostsResponse } from "src/lib/posts/posts.schema";
 import z from "zod";
 
 const searchSchema = z.object({

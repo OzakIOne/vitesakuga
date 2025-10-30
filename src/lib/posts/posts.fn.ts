@@ -7,6 +7,8 @@ import type { UploadFormValues } from "src/routes/upload";
 import { z } from "zod";
 import {
   fetchPostsInputSchema,
+  postIdSchema,
+  searchPostsInputSchema,
   type PaginatedPostsResponse,
 } from "./posts.schema";
 
@@ -62,20 +64,7 @@ export const fetchPosts = createServerFn()
   });
 
 export const searchPosts = createServerFn()
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        q: z.string().trim().min(1),
-        page: z
-          .object({
-            size: z.number().min(1).max(100).default(20),
-            after: z.number().optional(),
-          })
-          .optional()
-          .default({ size: 20 }),
-      })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => searchPostsInputSchema.parse(input))
   .handler(async ({ data }): Promise<PaginatedPostsResponse> => {
     const { q, page } = data;
     const { size, after } = page;
@@ -84,7 +73,7 @@ export const searchPosts = createServerFn()
       .selectFrom("posts")
       .selectAll()
       .where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`)
       )
       .orderBy("id", "desc");
 
@@ -98,7 +87,7 @@ export const searchPosts = createServerFn()
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
       throw new Error(
-        `Error processing search results: ${parsed.error.message}`,
+        `Error processing search results: ${parsed.error.message}`
       );
     }
 
@@ -116,13 +105,13 @@ export const searchPosts = createServerFn()
       links: {
         self: after
           ? `/api/posts/search?q=${encodeURIComponent(
-              q,
+              q
             )}&page[after]=${after}&page[size]=${size}`
           : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts/search?q=${encodeURIComponent(
-                q,
+                q
               )}&page[after]=${afterCursor}&page[size]=${size}`
             : null,
       },
@@ -134,8 +123,6 @@ export const searchPosts = createServerFn()
       },
     };
   });
-
-const postIdSchema = z.coerce.number();
 
 export const fetchPost = createServerFn()
   .inputValidator((id: unknown) => postIdSchema.parse(id))
@@ -227,6 +214,7 @@ export const postsUploadOptions = (postData: UploadFormValues) =>
 
       tagIds.forEach((id) => formData.append("tagIds[]", id));
       newTagNames.forEach((name) => formData.append("newTags[]", name));
+      console.log("tags query option", { tags, tagIds, newTagNames });
 
       // submit
       const res = await fetch(`${DEPLOY_URL}/api/posts`, {
@@ -235,15 +223,9 @@ export const postsUploadOptions = (postData: UploadFormValues) =>
       });
 
       if (!res.ok) {
-        let errorData;
-        try {
-          errorData = await res.json();
-        } catch {
-          errorData = { error: await res.text() };
-        }
-        throw new Error(errorData.error || "Failed to upload post");
+        throw new Error((await res.json()) || "Failed to upload post");
       }
 
-      return res.json();
+      // return res.json();
     },
   });
