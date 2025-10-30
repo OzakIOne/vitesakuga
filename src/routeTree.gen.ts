@@ -18,7 +18,6 @@ import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as UsersIdRouteImport } from './routes/users.$id'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
-import { Route as ApiPostsRouteImport } from './routes/api/posts'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as PostsTagsTagRouteImport } from './routes/posts/tags/$tag'
@@ -68,11 +67,6 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
   path: '/posts/$postId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPostsRoute = ApiPostsRouteImport.update({
-  id: '/api/posts',
-  path: '/api/posts',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const authSignupRoute = authSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
-  '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRoute
   '/posts': typeof PostsIndexRoute
@@ -116,7 +109,6 @@ export interface FileRoutesByTo {
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
-  '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRoute
   '/posts': typeof PostsIndexRoute
@@ -133,7 +125,6 @@ export interface FileRoutesById {
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
-  '/api/posts': typeof ApiPostsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRoute
   '/posts/': typeof PostsIndexRoute
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/upload'
     | '/login'
     | '/signup'
-    | '/api/posts'
     | '/posts/$postId'
     | '/users/$id'
     | '/posts'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/upload'
     | '/login'
     | '/signup'
-    | '/api/posts'
     | '/posts/$postId'
     | '/users/$id'
     | '/posts'
@@ -181,7 +170,6 @@ export interface FileRouteTypes {
     | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
-    | '/api/posts'
     | '/posts/$postId'
     | '/users/$id'
     | '/posts/'
@@ -196,7 +184,6 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   ConvertRoute: typeof ConvertRoute
   UploadRoute: typeof UploadRoute
-  ApiPostsRoute: typeof ApiPostsRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   UsersIdRoute: typeof UsersIdRoute
   PostsIndexRoute: typeof PostsIndexRoute
@@ -270,13 +257,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsPostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/posts': {
-      id: '/api/posts'
-      path: '/api/posts'
-      fullPath: '/api/posts'
-      preLoaderRoute: typeof ApiPostsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(auth)/signup': {
       id: '/(auth)/signup'
       path: '/signup'
@@ -328,7 +308,6 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   ConvertRoute: ConvertRoute,
   UploadRoute: UploadRoute,
-  ApiPostsRoute: ApiPostsRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   UsersIdRoute: UsersIdRoute,
   PostsIndexRoute: PostsIndexRoute,

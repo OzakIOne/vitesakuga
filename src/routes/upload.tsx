@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  createToaster,
   Field,
   FileUpload,
   Icon,
@@ -10,74 +9,52 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
-  redirect,
   useBlocker,
   useNavigate,
   useRouteContext,
 } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/FieldInfo";
 import { TagInput } from "src/components/ui/tag-input";
-import { Video } from "src/components/Video";
-import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
-import { z } from "zod";
-import { TagSchema } from "./api/posts";
-import { useServerFn } from "@tanstack/react-start";
 import { toaster } from "src/components/ui/toaster";
+import { Video } from "src/components/Video";
+import {
+  authMiddleware,
+  type MiddlewareUser,
+} from "src/lib/auth/auth.middleware";
+import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
+import {
+  FileFormUploadSchema,
+  type FileUploadData,
+  type SerializedUploadData,
+} from "src/lib/posts/posts.schema";
+import { transformUploadFormData } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/upload")({
-  component: RouteComponent,
-  beforeLoad: async ({ context }) => {
-    if (!context.user) throw redirect({ to: "/login" });
+  server: {
+    middleware: [authMiddleware],
   },
+  component: RouteComponent,
 });
-
-const UploadSchema = z.object({
-  title: z.string().min(3, "You must have a length of at least 3"),
-  content: z.string().min(3, "You must have a length of at least 3"),
-  userId: z.string(),
-  video: z.file(),
-  source: z.url().or(z.literal("")).or(z.undefined()),
-  relatedPostId: z.number().or(z.undefined()),
-  tags: z.array(TagSchema),
-});
-
-export type UploadFormValues = {
-  title: string;
-  content: string;
-  source: string | undefined;
-  relatedPostId: number | undefined;
-  tags: z.infer<typeof TagSchema>[];
-  userId: string;
-  video: File | undefined;
-};
 
 function RouteComponent() {
-  const context = useRouteContext({ from: "/upload" });
+  const { user } = Route.useRouteContext() as MiddlewareUser;
+  const { queryClient } = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate({ from: "/posts" });
-
-  useBlocker({
-    shouldBlockFn: () => {
-      if (!form.state.isDirty) return false;
-
-      const shouldLeave = confirm(
-        "You have unsubmitted changes. Do you want to leave?"
-      );
-      return !shouldLeave;
-    },
-  });
 
   const uploadPostFn = useServerFn(uploadPost);
 
   const uploadPostMutation = useMutation({
-    mutationFn: (data: UploadFormValues) => uploadPostFn({ data }),
+    mutationFn: (data: SerializedUploadData) => uploadPostFn({ data }),
     onSuccess: (newPost) => {
-      context.queryClient.invalidateQueries({ queryKey: ["posts"] });
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       navigate({ to: `/posts/${newPost.id}` });
       toaster.create({
         title: "Upload successful",
@@ -97,49 +74,22 @@ function RouteComponent() {
     },
   });
 
-  const form = useForm({
-    defaultValues: {
-      title: "",
-      content: "",
-      source: undefined,
-      relatedPostId: undefined,
-      tags: [],
-      userId: context.user!.id,
-      video: undefined,
-    } as UploadFormValues,
-    validators: {
-      onSubmit: UploadSchema,
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!form.state.isDirty) return false;
+
+      const shouldLeave = confirm(
+        "You have unsubmitted changes. Do you want to leave?",
+      );
+      return !shouldLeave;
     },
-    onSubmit: async ({ value }) => {
-      await handleSubmit(value);
-      toaster.create({
-        title: "Upload successful",
-        description: "Your post has been uploaded successfully.",
-        type: "success",
-        duration: 5000,
-      });
-      // navigate({ to: "/posts" });
-    },
+    enableBeforeUnload: true,
   });
 
-  const handleSubmit = async (values: UploadFormValues) => {
+  const handleSubmit = async (values: FileUploadData): Promise<void> => {
     try {
-      // Convert File to ArrayBuffer
-      if (values.video) {
-        const arrayBuffer = await values.video.arrayBuffer();
-        const fileData = {
-          arrayBuffer,
-          name: values.video.name,
-          type: values.video.type,
-          size: values.video.size,
-        };
-        // Replace File object with our serializable version
-        const uploadData = {
-          ...values,
-          video: fileData,
-        };
-        await uploadPostMutation.mutateAsync(uploadData);
-      }
+      const uploadData = await transformUploadFormData(values);
+      await uploadPostMutation.mutateAsync(uploadData);
     } catch (error) {
       console.error("Upload failed:", error);
       toaster.create({
@@ -150,6 +100,24 @@ function RouteComponent() {
       });
     }
   };
+
+  const form = useForm({
+    defaultValues: {
+      title: "",
+      content: "",
+      source: undefined,
+      relatedPostId: undefined,
+      tags: [],
+      userId: user.id,
+      video: undefined,
+    } as FileUploadData,
+    validators: {
+      onSubmit: FileFormUploadSchema,
+    },
+    onSubmit: async ({ value }) => {
+      await handleSubmit(value);
+    },
+  });
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({

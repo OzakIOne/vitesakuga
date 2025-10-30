@@ -1,16 +1,14 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
-import { uploadSchema } from "src/routes/api/posts";
-import type { UploadFormValues } from "src/routes/upload";
 import { z } from "zod";
 import {
+  BufferFormUploadSchema,
   fetchPostsInputSchema,
+  type PaginatedPostsResponse,
   postIdSchema,
   searchPostsInputSchema,
-  type PaginatedPostsResponse,
 } from "./posts.schema";
 
 const cfclient = new S3Client({
@@ -83,7 +81,7 @@ export const searchPosts = createServerFn()
       .selectFrom("posts")
       .selectAll()
       .where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`)
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
       )
       .orderBy("id", "desc");
 
@@ -97,7 +95,7 @@ export const searchPosts = createServerFn()
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
       throw new Error(
-        `Error processing search results: ${parsed.error.message}`
+        `Error processing search results: ${parsed.error.message}`,
       );
     }
 
@@ -115,13 +113,13 @@ export const searchPosts = createServerFn()
       links: {
         self: after
           ? `/api/posts/search?q=${encodeURIComponent(
-              q
+              q,
             )}&page[after]=${after}&page[size]=${size}`
           : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts/search?q=${encodeURIComponent(
-                q
+                q,
               )}&page[after]=${afterCursor}&page[size]=${size}`
             : null,
       },
@@ -137,59 +135,72 @@ export const searchPosts = createServerFn()
 export const fetchPost = createServerFn()
   .inputValidator((id: unknown) => postIdSchema.parse(id))
   .handler(async (ctx) => {
-    const post = await kysely
+    const postWithUser = await kysely
       .selectFrom("posts")
-      .selectAll()
-      .where("id", "=", ctx.data)
+      .innerJoin("user", "user.id", "posts.userId")
+      .select([
+        "posts.id",
+        "posts.title",
+        "posts.content",
+        "posts.createdAt",
+        "posts.key",
+        "posts.source",
+        "posts.relatedPostId",
+        "user.id as userId",
+        "user.name as userName",
+        "user.image as userImage",
+      ])
+      .where("posts.id", "=", ctx.data)
       .executeTakeFirst();
 
-    if (!post) throw new Error(`Post ${ctx.data} not found`);
+    if (!postWithUser) throw new Error(`Post ${ctx.data} not found`);
 
-    const user = await kysely
-      .selectFrom("user")
-      .select(["image", "name", "id"])
-      .where("user.id", "=", post.userId)
-      .executeTakeFirst();
-
-    // ? useless? post must always be bind to a user so if a post is found then there is a user bind to it
-    if (!user) throw new Error(`User not found`);
-
-    // Fetch tags for the post
     const tags = await kysely
       .selectFrom("post_tags")
       .innerJoin("tags", "tags.id", "post_tags.tagId")
       .select(["tags.id", "tags.name"])
-      .where("post_tags.postId", "=", post.id)
+      .where("post_tags.postId", "=", postWithUser.id)
       .execute();
 
-    // Fetch related post if exists
-    const relatedPost = post.relatedPostId
+    const relatedPost = postWithUser.relatedPostId
       ? await kysely
           .selectFrom("posts")
           .selectAll()
-          .where("id", "=", post.relatedPostId)
+          .where("id", "=", postWithUser.relatedPostId)
           .executeTakeFirst()
       : null;
 
-    return { post, user, tags, relatedPost };
+    return {
+      post: {
+        id: postWithUser.id,
+        title: postWithUser.title,
+        content: postWithUser.content,
+        createdAt: postWithUser.createdAt,
+        relatedPostId: postWithUser.relatedPostId,
+        key: postWithUser.key,
+        source: postWithUser.source,
+      },
+      user: {
+        id: postWithUser.userId,
+        name: postWithUser.userName,
+        image: postWithUser.userImage,
+      },
+      tags,
+      relatedPost,
+    };
   });
 
 export const uploadPost = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => uploadSchema.parse(input))
+  .inputValidator((input: unknown) => BufferFormUploadSchema.parse(input))
   .handler(async ({ data }) => {
     const { video, title, content, userId, source, relatedPostId, tags } = data;
 
-    const key = `${userId}_${video.name}`;
-
-    const buffer: Buffer =
-      video instanceof File
-        ? Buffer.from(await video.arrayBuffer())
-        : Buffer.from(video.arrayBuffer);
+    const Key = `${userId}_${video.name}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.CLOUDFLARE_BUCKET || "",
-      Key: key,
-      Body: buffer,
+      Key,
+      Body: Buffer.from(video.arrayBuffer),
       ContentType: video.type,
     });
 
@@ -204,9 +215,9 @@ export const uploadPost = createServerFn({ method: "POST" })
         content,
         title,
         userId,
-        key,
-        source: source || null,
-        relatedPostId: relatedPostId ? Number(relatedPostId) : null,
+        key: Key,
+        source,
+        relatedPostId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -224,7 +235,7 @@ export const uploadPost = createServerFn({ method: "POST" })
             .insertInto("tags")
             .values({ name: tag.name })
             .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name })
+              oc.column("name").doUpdateSet({ name: tag.name }),
             )
             .returning("id")
             .executeTakeFirstOrThrow();

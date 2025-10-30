@@ -1,6 +1,6 @@
 import { Badge, Box, Heading, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import type { DbSchemaSelect } from "src/auth/db/schema";
+import type { DbSchemaSelect } from "src/lib/db/schema";
 import type { fetchPost } from "src/lib/posts/posts.fn";
 import { User } from "./User";
 import { Video } from "./Video";
@@ -13,8 +13,8 @@ export function Post({
 }: {
   post: Awaited<ReturnType<typeof fetchPost>>["post"];
   user: Awaited<ReturnType<typeof fetchPost>>["user"];
-  tags?: Array<{ id: number; name: string }>;
-  relatedPost?: Partial<DbSchemaSelect["posts"]> | null;
+  tags: Awaited<ReturnType<typeof fetchPost>>["tags"];
+  relatedPost: Awaited<ReturnType<typeof fetchPost>>["relatedPost"];
 }) {
   return (
     <>

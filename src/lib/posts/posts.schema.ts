@@ -43,3 +43,43 @@ export const postIdSchema = z.coerce.number();
 export type PaginatedPostsResponse = z.infer<
   typeof paginatedPostsResponseSchema
 >;
+
+export const TagSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1),
+});
+
+export const VideoSerializableSchema = z.object({
+  arrayBuffer: z.instanceof(ArrayBuffer),
+  name: z.string(),
+  type: z.string(),
+  size: z.number(),
+});
+
+export type VideoSerializableType = z.infer<typeof VideoSerializableSchema>;
+
+const BaseFormUploadSchema = z.object({
+  title: z.string().min(3, "You must have a length of at least 3"),
+  content: z.string().min(3, "You must have a length of at least 3"),
+  userId: z.string(),
+  source: z.url().or(z.literal("")).or(z.undefined()),
+  relatedPostId: z.number().or(z.undefined()),
+  tags: z.array(TagSchema),
+});
+
+export const FileFormUploadSchema = BaseFormUploadSchema.extend({
+  video: z.file(),
+});
+
+export const BufferFormUploadSchema = BaseFormUploadSchema.extend({
+  video: VideoSerializableSchema,
+});
+
+export type SerializedUploadData = z.infer<typeof BufferFormUploadSchema>;
+
+export type FileUploadData = Omit<
+  z.infer<typeof FileFormUploadSchema>,
+  "video"
+> & {
+  video: File | undefined;
+};
