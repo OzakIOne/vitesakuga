@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  createToaster,
   Field,
   FileUpload,
   Icon,
@@ -9,11 +10,12 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   redirect,
   useBlocker,
+  useNavigate,
   useRouteContext,
 } from "@tanstack/react-router";
 import { useState } from "react";
@@ -21,9 +23,11 @@ import { LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/FieldInfo";
 import { TagInput } from "src/components/ui/tag-input";
 import { Video } from "src/components/Video";
-import { postsUploadOptions, searchPosts } from "src/lib/posts/posts.fn";
+import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { z } from "zod";
 import { TagSchema } from "./api/posts";
+import { useServerFn } from "@tanstack/react-start";
+import { toaster } from "src/components/ui/toaster";
 
 export const Route = createFileRoute("/upload")({
   component: RouteComponent,
@@ -55,6 +59,7 @@ export type UploadFormValues = {
 function RouteComponent() {
   const context = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
+  const navigate = useNavigate({ from: "/posts" });
 
   useBlocker({
     shouldBlockFn: () => {
@@ -64,6 +69,31 @@ function RouteComponent() {
         "You have unsubmitted changes. Do you want to leave?"
       );
       return !shouldLeave;
+    },
+  });
+
+  const uploadPostFn = useServerFn(uploadPost);
+
+  const uploadPostMutation = useMutation({
+    mutationFn: (data: UploadFormValues) => uploadPostFn({ data }),
+    onSuccess: (newPost) => {
+      context.queryClient.invalidateQueries({ queryKey: ["posts"] });
+      navigate({ to: `/posts/${newPost.id}` });
+      toaster.create({
+        title: "Upload successful",
+        description: "Your post has been uploaded successfully.",
+        type: "success",
+        duration: 5000,
+      });
+    },
+    onError: (error) => {
+      console.error("Upload failed:", error);
+      toaster.create({
+        title: "Upload failed",
+        description: "There was an error uploading your post.",
+        type: "error",
+        duration: 5000,
+      });
     },
   });
 
@@ -81,9 +111,45 @@ function RouteComponent() {
       onSubmit: UploadSchema,
     },
     onSubmit: async ({ value }) => {
-      await context.queryClient.ensureQueryData(postsUploadOptions(value));
+      await handleSubmit(value);
+      toaster.create({
+        title: "Upload successful",
+        description: "Your post has been uploaded successfully.",
+        type: "success",
+        duration: 5000,
+      });
+      // navigate({ to: "/posts" });
     },
   });
+
+  const handleSubmit = async (values: UploadFormValues) => {
+    try {
+      // Convert File to ArrayBuffer
+      if (values.video) {
+        const arrayBuffer = await values.video.arrayBuffer();
+        const fileData = {
+          arrayBuffer,
+          name: values.video.name,
+          type: values.video.type,
+          size: values.video.size,
+        };
+        // Replace File object with our serializable version
+        const uploadData = {
+          ...values,
+          video: fileData,
+        };
+        await uploadPostMutation.mutateAsync(uploadData);
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toaster.create({
+        title: "Upload failed",
+        description: "There was an error uploading your post.",
+        type: "error",
+        duration: 5000,
+      });
+    }
+  };
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({

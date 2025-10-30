@@ -1,8 +1,9 @@
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
-import { DEPLOY_URL } from "src/lib/users/users.fn";
+import { uploadSchema } from "src/routes/api/posts";
 import type { UploadFormValues } from "src/routes/upload";
 import { z } from "zod";
 import {
@@ -11,6 +12,15 @@ import {
   searchPostsInputSchema,
   type PaginatedPostsResponse,
 } from "./posts.schema";
+
+const cfclient = new S3Client({
+  region: "auto",
+  endpoint: process.env.CLOUDFLARE_R2,
+  credentials: {
+    accessKeyId: process.env.CLOUDFLARE_ACCESS_KEY || "",
+    secretAccessKey: process.env.CLOUDFLARE_SECRET_KEY || "",
+  },
+});
 
 export const fetchPosts = createServerFn()
   .inputValidator((input: unknown) => fetchPostsInputSchema.parse(input))
@@ -164,35 +174,74 @@ export const fetchPost = createServerFn()
     return { post, user, tags, relatedPost };
   });
 
-export const postsUploadOptions = (postData: UploadFormValues) =>
-  queryOptions({
-    queryKey: ["posts", "upload", postData],
-    queryFn: async () => {
-      const formData = new FormData();
+export const uploadPost = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => uploadSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { video, title, content, userId, source, relatedPostId, tags } = data;
 
-      // cast to string numbers boolean
-      // array are json stringified
-      Object.entries(postData).forEach(([key, value]) => {
-        if (value != null) {
-          if (value instanceof File) {
-            formData.append(key, value);
-          } else if (Array.isArray(value) || typeof value === "object") {
-            formData.append(key, JSON.stringify(value));
-          } else {
-            formData.append(key, String(value));
-          }
+    const key = `${userId}_${video.name}`;
+
+    const buffer: Buffer =
+      video instanceof File
+        ? Buffer.from(await video.arrayBuffer())
+        : Buffer.from(video.arrayBuffer);
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.CLOUDFLARE_BUCKET || "",
+      Key: key,
+      Body: buffer,
+      ContentType: video.type,
+    });
+
+    const cfcmd = await cfclient.send(command);
+    if (cfcmd.$metadata.httpStatusCode !== 200)
+      throw new Error("There was an error uploading file");
+
+    // Create post
+    const newPost = await kysely
+      .insertInto("posts")
+      .values({
+        content,
+        title,
+        userId,
+        key,
+        source: source || null,
+        relatedPostId: relatedPostId ? Number(relatedPostId) : null,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const postId = newPost.id;
+
+    if (tags && tags.length > 0) {
+      // Process each tag - create new ones and collect all tag IDs
+      const allTagIds: number[] = [];
+
+      for (const tag of tags) {
+        if (tag.id === undefined) {
+          // Create new tag with conflict handling
+          const newTag = await kysely
+            .insertInto("tags")
+            .values({ name: tag.name })
+            .onConflict((oc) =>
+              oc.column("name").doUpdateSet({ name: tag.name })
+            )
+            .returning("id")
+            .executeTakeFirstOrThrow();
+          allTagIds.push(newTag.id);
+        } else {
+          allTagIds.push(tag.id);
         }
-      });
-
-      const res = await fetch(`${DEPLOY_URL}/api/posts`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error((await res.json()) || "Failed to upload post");
       }
 
-      return res.json();
-    },
+      // Link post to tags
+      if (allTagIds.length > 0) {
+        await kysely
+          .insertInto("post_tags")
+          .values(allTagIds.map((tagId) => ({ postId, tagId })))
+          .execute();
+      }
+    }
+
+    return newPost;
   });
