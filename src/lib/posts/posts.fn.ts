@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
+import { envServer } from "../env/server";
 import {
   BufferFormUploadSchema,
   fetchPostsInputSchema,
@@ -14,10 +15,10 @@ import {
 
 const cfclient = new S3Client({
   region: "auto",
-  endpoint: process.env.CLOUDFLARE_R2,
+  endpoint: envServer.CLOUDFLARE_R2,
   credentials: {
-    accessKeyId: process.env.CLOUDFLARE_ACCESS_KEY || "",
-    secretAccessKey: process.env.CLOUDFLARE_SECRET_KEY || "",
+    accessKeyId: envServer.CLOUDFLARE_ACCESS_KEY,
+    secretAccessKey: envServer.CLOUDFLARE_SECRET_KEY,
   },
 });
 
@@ -205,14 +206,14 @@ export const uploadPost = createServerFn({ method: "POST" })
       ?.replace(ext, ".jpg")}`;
 
     const videoCommand = new PutObjectCommand({
-      Bucket: process.env.CLOUDFLARE_BUCKET || "",
+      Bucket: envServer.CLOUDFLARE_BUCKET,
       Key: videoKey,
       Body: Buffer.from(video.arrayBuffer),
       ContentType: video.type,
     });
 
     const thumbnailCommand = new PutObjectCommand({
-      Bucket: process.env.CLOUDFLARE_BUCKET || "",
+      Bucket: envServer.CLOUDFLARE_BUCKET,
       Key: thumbnailKey,
       Body: Buffer.from(data.thumbnail.arrayBuffer),
       ContentType: data.thumbnail.type,

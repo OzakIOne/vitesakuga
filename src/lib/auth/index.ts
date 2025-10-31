@@ -1,11 +1,10 @@
 import { betterAuth } from "better-auth";
 import { reactStartCookies } from "better-auth/react-start";
-// import { env } from "~/env/server";
-// import { db } from "~/auth/db";
+import { envServer } from "src/lib/env/server";
 import { getPoolSingleton } from "../db/pool";
 
 export const auth = betterAuth({
-  baseURL: process.env.VITE_BASE_URL,
+  baseURL: envServer.VITE_BASE_URL,
   database: getPoolSingleton(),
 
   // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
@@ -22,12 +21,12 @@ export const auth = betterAuth({
   // https://www.better-auth.com/docs/concepts/oauth
   // socialProviders: {
   //   github: {
-  //     clientId: process.env.GITHUB_CLIENT_ID!,
-  //     clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+  //     clientId: env.GITHUB_CLIENT_ID!,
+  //     clientSecret: env.GITHUB_CLIENT_SECRET!,
   //   },
   //   google: {
-  //     clientId: process.env.GOOGLE_CLIENT_ID!,
-  //     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  //     clientId: env.GOOGLE_CLIENT_ID!,
+  //     clientSecret: env.GOOGLE_CLIENT_SECRET!,
   //   },
   // },
 

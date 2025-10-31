@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { useEffect, useMemo, useRef } from "react";
 import { PostList } from "src/components/PostList";
+import { envClient } from "src/lib/env/client";
 import { fetchPosts, searchPosts } from "src/lib/posts/posts.fn";
 import type { PaginatedPostsResponse } from "src/lib/posts/posts.schema";
 import z from "zod";
@@ -151,7 +152,7 @@ function PostsLayoutComponent() {
 
   return (
     <div className="p-4 w-full">
-      {process.env.NODE_ENV === "development" && (
+      {envClient.MODE === "development" && (
         <div>
           <p>Posts loaded: {posts.length}</p>
           <p>Has next page: {hasNextPage ? "Yes" : "No"}</p>
