@@ -56,6 +56,7 @@ export const VideoSerializableSchema = z.object({
   size: z.number(),
 });
 
+// TODO rename because also using this for thumbnail
 export type VideoSerializableType = z.infer<typeof VideoSerializableSchema>;
 
 const BaseFormUploadSchema = z.object({
@@ -69,17 +70,21 @@ const BaseFormUploadSchema = z.object({
 
 export const FileFormUploadSchema = BaseFormUploadSchema.extend({
   video: z.file(),
+  thumbnail: z.file(),
 });
 
 export const BufferFormUploadSchema = BaseFormUploadSchema.extend({
   video: VideoSerializableSchema,
+  thumbnail: VideoSerializableSchema,
 });
 
 export type SerializedUploadData = z.infer<typeof BufferFormUploadSchema>;
 
 export type FileUploadData = Omit<
   z.infer<typeof FileFormUploadSchema>,
-  "video"
+  "video" | "thumbnail"
 > & {
+  // TODO remove undefined because form ensure the file is present same for thumbnail
   video: File | undefined;
+  thumbnail: File | undefined;
 };

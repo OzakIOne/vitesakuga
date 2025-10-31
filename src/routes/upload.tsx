@@ -74,6 +74,34 @@ function RouteComponent() {
     },
   });
 
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
+
+  const captureThumbnail = async () => {
+    const video = document.querySelector("video");
+    if (!video) return;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.8),
+    );
+    if (!blob) return;
+
+    const file = new File([blob], "thumbnail.jpg", { type: "image/jpeg" });
+
+    const previewUrl = URL.createObjectURL(blob);
+    setThumbnail(previewUrl);
+
+    form.setFieldValue("thumbnail", file);
+  };
+
   useBlocker({
     shouldBlockFn: () => {
       if (!form.state.isDirty) return false;
@@ -110,6 +138,7 @@ function RouteComponent() {
       tags: [],
       userId: user.id,
       video: undefined,
+      thumbnail: undefined,
     } as FileUploadData,
     validators: {
       onSubmit: FileFormUploadSchema,
@@ -313,18 +342,43 @@ function RouteComponent() {
                     }}
                   >
                     <FileUpload.HiddenInput />
-                    <FileUpload.Dropzone>
-                      <Icon size="md" color="fg.muted">
-                        <LuUpload />
-                      </Icon>
-                      <FileUpload.DropzoneContent>
-                        <Box>Drag and drop files here</Box>
-                        <Box color="fg.muted">.mp4, .mov, .mkv</Box>
-                      </FileUpload.DropzoneContent>
-                    </FileUpload.Dropzone>
+                    {!field.state.value && (
+                      <FileUpload.Dropzone>
+                        <Icon size="md" color="fg.muted">
+                          <LuUpload />
+                        </Icon>
+                        <FileUpload.DropzoneContent>
+                          <Box>Drag and drop files here</Box>
+                          <Box color="fg.muted">.mp4, .mov, .mkv</Box>
+                        </FileUpload.DropzoneContent>
+                      </FileUpload.Dropzone>
+                    )}
                     <FileUpload.List showSize clearable />
                   </FileUpload.Root>
-                  {videoFilePreview && <Video url={videoFilePreview} bypass />}
+                  {videoFilePreview && (
+                    <>
+                      <Video url={videoFilePreview} bypass />
+
+                      <Button mt={3} onClick={captureThumbnail}>
+                        Generate Thumbnail from Current Frame
+                      </Button>
+
+                      {thumbnail && (
+                        <Box mt={3}>
+                          <Text mb={1}>Thumbnail Preview:</Text>
+                          <img
+                            src={thumbnail}
+                            alt="Video thumbnail"
+                            style={{
+                              width: "100%",
+                              borderRadius: "8px",
+                              border: "1px solid #ddd",
+                            }}
+                          />
+                        </Box>
+                      )}
+                    </>
+                  )}{" "}
                 </Field.Root>
                 <FieldInfo field={field} />
               </>

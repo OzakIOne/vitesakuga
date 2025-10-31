@@ -1,4 +1,12 @@
-import { Box, Button, Heading, HStack, Text, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Heading,
+  HStack,
+  Image,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import type { DbSchemaInsert } from "src/lib/db/schema";
@@ -12,6 +20,10 @@ function PostListComponent({
   q: string | undefined;
   pageSize: number | undefined;
 }) {
+  console.log("Rendering PostListComponent for post:", post);
+  const BaseURL = encodeURI(
+    "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
+  );
   return (
     <Link
       to="/posts/$postId"
@@ -35,6 +47,7 @@ function PostListComponent({
             {post.title}
           </Heading>
           <Text>{post.content}</Text>
+          <Image src={`${BaseURL}${post.thumbnailKey}`} alt={post.title} />
           <HStack>
             <Button size="sm" colorScheme="blue">
               View post

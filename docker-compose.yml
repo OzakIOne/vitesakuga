@@ -21,7 +21,7 @@ services:
       - PORT=4983
       - MASTERPASS=ozaki
     volumes:
-      - drizzle:/data/app
+      - drizzle:/app
     networks:
       - my_network
 

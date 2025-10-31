@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
@@ -143,7 +144,7 @@ export const fetchPost = createServerFn()
         "posts.title",
         "posts.content",
         "posts.createdAt",
-        "posts.key",
+        "posts.videoKey",
         "posts.source",
         "posts.relatedPostId",
         "user.id as userId",
@@ -177,7 +178,7 @@ export const fetchPost = createServerFn()
         content: postWithUser.content,
         createdAt: postWithUser.createdAt,
         relatedPostId: postWithUser.relatedPostId,
-        key: postWithUser.key,
+        videoKey: postWithUser.videoKey,
         source: postWithUser.source,
       },
       user: {
@@ -194,19 +195,36 @@ export const uploadPost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => BufferFormUploadSchema.parse(input))
   .handler(async ({ data }) => {
     const { video, title, content, userId, source, relatedPostId, tags } = data;
+    const ext = video.name.split(".").pop()!;
 
-    const Key = `${userId}_${video.name}`;
+    // TODO generate a hash based on video content to prevent duplicates instead of random UUID
+    const videoKey = `videos/${userId}/${randomUUID()}${ext}`;
+    const thumbnailKey = `thumbnails/${userId}/${videoKey
+      .split("/")
+      .pop()
+      ?.replace(ext, ".jpg")}`;
 
-    const command = new PutObjectCommand({
+    const videoCommand = new PutObjectCommand({
       Bucket: process.env.CLOUDFLARE_BUCKET || "",
-      Key,
+      Key: videoKey,
       Body: Buffer.from(video.arrayBuffer),
       ContentType: video.type,
     });
 
-    const cfcmd = await cfclient.send(command);
-    if (cfcmd.$metadata.httpStatusCode !== 200)
+    const thumbnailCommand = new PutObjectCommand({
+      Bucket: process.env.CLOUDFLARE_BUCKET || "",
+      Key: thumbnailKey,
+      Body: Buffer.from(data.thumbnail.arrayBuffer),
+      ContentType: data.thumbnail.type,
+    });
+
+    const videocmd = await cfclient.send(videoCommand);
+    if (videocmd.$metadata.httpStatusCode !== 200)
       throw new Error("There was an error uploading file");
+
+    const thumbnailcmd = await cfclient.send(thumbnailCommand);
+    if (thumbnailcmd.$metadata.httpStatusCode !== 200)
+      throw new Error("There was an error uploading thumbnail");
 
     // Create post
     const newPost = await kysely
@@ -215,7 +233,8 @@ export const uploadPost = createServerFn({ method: "POST" })
         content,
         title,
         userId,
-        key: Key,
+        videoKey,
+        thumbnailKey,
         source,
         relatedPostId,
       })

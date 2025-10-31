@@ -1,6 +1,5 @@
 import { Badge, Box, Heading, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import type { DbSchemaSelect } from "src/lib/db/schema";
 import type { fetchPost } from "src/lib/posts/posts.fn";
 import { User } from "./User";
 import { Video } from "./Video";
@@ -18,9 +17,9 @@ export function Post({
 }) {
   return (
     <>
-      {post.key && (
+      {post.videoKey && (
         <div className="w-lg">
-          <Video url={post.key} bypass={false} />
+          <Video url={post.videoKey} bypass={false} />
         </div>
       )}
       {post.title && <Heading as="h3">{post.title}</Heading>}

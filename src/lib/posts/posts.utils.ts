@@ -21,8 +21,12 @@ export async function transformUploadFormData(
   if (!values.video) {
     throw new Error("Video file is required");
   }
+  if (!values.thumbnail) {
+    throw new Error("Thumbnail file is required");
+  }
 
   const videoData = await videoFileToBuffer(values.video);
+  const thumbnailData = await videoFileToBuffer(values.thumbnail);
 
   return {
     title: values.title,
@@ -32,5 +36,6 @@ export async function transformUploadFormData(
     tags: values.tags,
     userId: values.userId,
     video: videoData,
+    thumbnail: thumbnailData,
   };
 }
