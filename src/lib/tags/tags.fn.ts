@@ -7,6 +7,7 @@ import {
   searchTagsSchema,
 } from "./tags.schema";
 
+// TODO knip unused
 export const searchTags = createServerFn()
   .inputValidator((input: unknown) => searchTagsSchema.parse(input))
   .handler(async ({ data }) => {
@@ -40,6 +41,7 @@ export const getPostsByTag = createServerFn()
     ).map((post) => ({ post }));
   });
 
+// TODO knip unused
 export const createTagsForPost = createServerFn()
   .inputValidator((input: unknown) => createTagsForPostSchema.parse(input))
   .handler(async ({ data }) => {
