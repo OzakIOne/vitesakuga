@@ -60,19 +60,20 @@ export const createTagsForPost = createServerFn()
             .execute();
           return newTag.id;
         }
-      }),
+      })
     );
 
     // Link tags to post
     await Promise.all(
       tagIds.map((tagId) =>
-        kysely.insertInto("post_tags").values({ postId, tagId }).execute(),
-      ),
+        kysely.insertInto("post_tags").values({ postId, tagId }).execute()
+      )
     );
 
     return { success: true };
   });
 
+// TODO knip unused
 export const getPostTags = createServerFn()
   .inputValidator((input: unknown) => getPostTagsSchema.parse(input))
   .handler(async ({ data }) => {

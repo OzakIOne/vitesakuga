@@ -13,7 +13,8 @@ export const commentSchema = z.object({
   userImage: z.string().nullable(),
 });
 
-export type Comment = z.infer<typeof commentSchema>;
+// TODO knip unused
+// export type Comment = z.infer<typeof commentSchema>;
 
 // Schema for creating a comment
 // TODO use schema fron drizzle ?

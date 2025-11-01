@@ -15,7 +15,7 @@ type KyselyDB<T extends Record<string, any>> = {
     : never]: T[K] extends { _: any } ? Kyselify<T[K]> : never;
 };
 
-export type DB = KyselyDB<DrizzleSchema>;
+type DB = KyselyDB<DrizzleSchema>;
 
 // export interface DB {
 //   account: Kyselify<DrizzleSchema["account"]>;

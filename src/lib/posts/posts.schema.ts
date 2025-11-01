@@ -13,7 +13,8 @@ export const fetchPostsInputSchema = z.object({
     .default({ size: 20 }),
 });
 
-export const paginatedPostsResponseSchema = z.object({
+// TODO knip unused ?? shouldnt we use it somewhere in the paginated search?
+const paginatedPostsResponseSchema = z.object({
   data: z.array(postsSelectSchema), // Primary data
   links: z.object({
     self: z.string(),
@@ -44,12 +45,12 @@ export type PaginatedPostsResponse = z.infer<
   typeof paginatedPostsResponseSchema
 >;
 
-export const TagSchema = z.object({
+const TagSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
 });
 
-export const VideoSerializableSchema = z.object({
+const VideoSerializableSchema = z.object({
   arrayBuffer: z.instanceof(ArrayBuffer),
   name: z.string(),
   type: z.string(),

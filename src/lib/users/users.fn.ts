@@ -4,14 +4,12 @@ import { userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
 import { userIdSchema } from "./users.schema";
 
-export const DEPLOY_URL = "http://localhost:3000";
-
 export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
   const parsed = z.array(userSelectSchema).safeParse(data);
   if (!parsed.success)
     throw new Error(
-      `There was an error processing the search results ${parsed.error}`,
+      `There was an error processing the search results ${parsed.error}`
     );
 
   return parsed.data;
