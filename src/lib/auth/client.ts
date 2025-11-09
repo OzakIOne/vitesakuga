@@ -1,8 +1,9 @@
 import { createAuthClient } from "better-auth/react";
-import { envServer } from "src/lib/env/server";
+import { envClient } from "src/lib/env/client";
 
 const authClient = createAuthClient({
-  baseURL: envServer.VITE_BASE_URL,
+  // ? Somehow envServer crashes but envClient works here
+  baseURL: envClient.VITE_BASE_URL,
 });
 
 export default authClient;
