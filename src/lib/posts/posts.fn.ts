@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
+import { auth } from "../auth";
 import { envServer } from "../env/server";
 import {
   BufferFormUploadSchema,
@@ -11,6 +13,7 @@ import {
   type PaginatedPostsResponse,
   postIdSchema,
   searchPostsInputSchema,
+  updatePostInputSchema,
 } from "./posts.schema";
 
 const cfclient = new S3Client({
@@ -83,7 +86,7 @@ export const searchPosts = createServerFn()
       .selectFrom("posts")
       .selectAll()
       .where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`)
       )
       .orderBy("id", "desc");
 
@@ -97,7 +100,7 @@ export const searchPosts = createServerFn()
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
       throw new Error(
-        `Error processing search results: ${parsed.error.message}`,
+        `Error processing search results: ${parsed.error.message}`
       );
     }
 
@@ -115,13 +118,13 @@ export const searchPosts = createServerFn()
       links: {
         self: after
           ? `/api/posts/search?q=${encodeURIComponent(
-              q,
+              q
             )}&page[after]=${after}&page[size]=${size}`
           : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts/search?q=${encodeURIComponent(
-                q,
+                q
               )}&page[after]=${afterCursor}&page[size]=${size}`
             : null,
       },
@@ -255,7 +258,7 @@ export const uploadPost = createServerFn({ method: "POST" })
             .insertInto("tags")
             .values({ name: tag.name })
             .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name }),
+              oc.column("name").doUpdateSet({ name: tag.name })
             )
             .returning("id")
             .executeTakeFirstOrThrow();
@@ -275,4 +278,95 @@ export const uploadPost = createServerFn({ method: "POST" })
     }
 
     return newPost;
+  });
+
+export const updatePost = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => updatePostInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    // Get the current user's session
+    const session = await auth.api.getSession({
+      headers: getRequestHeaders(),
+      query: {
+        disableCookieCache: true,
+      },
+    });
+
+    if (!session?.user) {
+      throw new Error("Unauthorized: You must be logged in to update a post");
+    }
+
+    const { postId, title, content, source, relatedPostId, tags } = data;
+
+    // Verify that the post belongs to the current user
+    const post = await kysely
+      .selectFrom("posts")
+      .select(["id", "userId"])
+      .where("id", "=", postId)
+      .executeTakeFirst();
+
+    if (!post) {
+      throw new Error(`Post ${postId} not found`);
+    }
+
+    if (post.userId !== session.user.id) {
+      throw new Error("Forbidden: You can only update your own posts");
+    }
+
+    // Update the post
+    const updatedPost = await kysely
+      .updateTable("posts")
+      .set({
+        title,
+        content,
+        source,
+        relatedPostId,
+      })
+      .where("id", "=", postId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // Handle tags update - delete existing and recreate
+    if (tags && tags.length > 0) {
+      // Delete existing post tags
+      await kysely
+        .deleteFrom("post_tags")
+        .where("postId", "=", postId)
+        .execute();
+
+      // Process each tag - create new ones and collect all tag IDs
+      const allTagIds: number[] = [];
+
+      for (const tag of tags) {
+        if (tag.id === undefined) {
+          // Create new tag with conflict handling
+          const newTag = await kysely
+            .insertInto("tags")
+            .values({ name: tag.name })
+            .onConflict((oc) =>
+              oc.column("name").doUpdateSet({ name: tag.name })
+            )
+            .returning("id")
+            .executeTakeFirstOrThrow();
+          allTagIds.push(newTag.id);
+        } else {
+          allTagIds.push(tag.id);
+        }
+      }
+
+      // Link post to new tags
+      if (allTagIds.length > 0) {
+        await kysely
+          .insertInto("post_tags")
+          .values(allTagIds.map((tagId) => ({ postId, tagId })))
+          .execute();
+      }
+    } else {
+      // Delete all tags if no tags provided
+      await kysely
+        .deleteFrom("post_tags")
+        .where("postId", "=", postId)
+        .execute();
+    }
+
+    return updatedPost;
   });

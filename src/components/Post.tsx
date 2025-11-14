@@ -1,4 +1,4 @@
-import { Badge, Box, Heading, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, Heading, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import type { fetchPost } from "src/lib/posts/posts.fn";
 import { User } from "./User";
@@ -9,12 +9,18 @@ export function Post({
   user,
   tags,
   relatedPost,
+  currentUserId,
+  onEditClick,
 }: {
   post: Awaited<ReturnType<typeof fetchPost>>["post"];
   user: Awaited<ReturnType<typeof fetchPost>>["user"];
   tags: Awaited<ReturnType<typeof fetchPost>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPost>>["relatedPost"];
+  currentUserId?: string;
+  onEditClick?: () => void;
 }) {
+  const isOwner = currentUserId === user.id;
+
   return (
     <>
       {post.videoKey && (
@@ -64,6 +70,14 @@ export function Post({
           >
             {relatedPost.title}
           </Link>
+        </Box>
+      )}
+
+      {isOwner && onEditClick && (
+        <Box mb={4}>
+          <Button onClick={onEditClick} colorScheme="blue">
+            Edit Post
+          </Button>
         </Box>
       )}
 

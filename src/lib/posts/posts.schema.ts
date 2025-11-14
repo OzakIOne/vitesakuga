@@ -89,3 +89,15 @@ export type FileUploadData = Omit<
   video: File | undefined;
   thumbnail: File | undefined;
 };
+
+// Schema for updating a post
+export const updatePostInputSchema = z.object({
+  postId: z.number(),
+  title: z.string().min(3, "You must have a length of at least 3"),
+  content: z.string().min(3, "You must have a length of at least 3"),
+  source: z.url().or(z.literal("")).or(z.undefined()),
+  relatedPostId: z.number().or(z.undefined()),
+  tags: z.array(TagSchema),
+});
+
+export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
