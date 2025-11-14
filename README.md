@@ -3,9 +3,9 @@
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
 - [ ] fix build and start errors
+- [ ] fix vite serve
 - [ ] transfer data from loaders to query
 - [x] better .env handling (crash if not defined and use zod to validate)
-- [ ] fix vite serve
 - [x] fix build with rolldown
 - [x] check cursor db implementation
 - [x] manage account page
@@ -17,8 +17,8 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
 ## Secondary
 
-- [ ] add more data to posts (author, source)
+- [ ] add more data to posts (author)
 - [x] add tags to posts
 - [ ] add search filters
-- [ ] ? add posts liking / ranking
+- [ ] ? add post ranking
 - [x] use kyselyfy from drizzle to cleanup database types
