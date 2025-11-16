@@ -1,12 +1,10 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { useEffect, useMemo, useRef } from "react";
 import { PostList } from "src/components/PostList";
 import { envClient } from "src/lib/env/client";
-import { fetchPosts, searchPosts } from "src/lib/posts/posts.fn";
-import type { PaginatedPostsResponse } from "src/lib/posts/posts.schema";
+import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
 import z from "zod";
 
 const searchSchema = z.object({
@@ -20,29 +18,21 @@ export const Route = createFileRoute("/posts/")({
     q: search.q,
     size: search.size || 20,
   }),
-  loader: async ({ deps: { q, size } }) => {
+  loader: async ({ context, deps: { q } }) => {
+    // Seed initial data into TanStack Query
+    const queryClient = context.queryClient;
+
     if (q) {
-      return await searchPosts({
-        data: {
-          q,
-          page: { size },
-        },
-      });
+      await queryClient.ensureInfiniteQueryData(postsInfiniteQueryOptions(q));
+    } else {
+      await queryClient.ensureInfiniteQueryData(postsInfiniteQueryOptions());
     }
-    return await fetchPosts({
-      data: {
-        page: { size: 5 }, // Initial load with smaller size
-      },
-    });
   },
   component: PostsLayoutComponent,
-  staleTime: 60 * 1000,
 });
 
 function PostsLayoutComponent() {
   const { q, size } = Route.useLoaderDeps();
-  const fetchPostsFn = useServerFn(fetchPosts);
-  const searchPostsFn = useServerFn(searchPosts);
 
   const {
     data,
@@ -51,33 +41,8 @@ function PostsLayoutComponent() {
     isFetchingNextPage,
     status,
     error,
-  } = useInfiniteQuery<PaginatedPostsResponse, Error>({
-    queryKey: ["posts", q],
-    queryFn: async ({ pageParam }) => {
-      const cursor = pageParam as number | undefined;
-
-      if (q) {
-        return searchPostsFn({
-          data: {
-            q,
-            page: { size: 20, after: cursor },
-          },
-        });
-      }
-
-      return fetchPostsFn({
-        data: {
-          page: { size: 20, after: cursor },
-        },
-      });
-    },
-    getNextPageParam: (lastPage) => {
-      return lastPage?.meta?.hasMore
-        ? lastPage?.meta?.cursors?.after
-        : undefined;
-    },
-    initialPageParam: undefined,
-    staleTime: 60 * 1000,
+  } = useInfiniteQuery({
+    ...postsInfiniteQueryOptions(q),
   });
 
   const posts = data?.pages?.flatMap((page) => page.data) ?? [];

@@ -5,15 +5,9 @@ import { commentSchema, createCommentSchema } from "./comments.schema";
 
 // Fetch comments for a post
 export const fetchComments = createServerFn()
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        postId: z.number(),
-      })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => z.number().parse(input))
   .handler(async (ctx) => {
-    const { postId } = ctx.data;
+    const postId = ctx.data;
 
     // Fetch comments for the post along with user info
     const comments = await kysely

@@ -1,5 +1,10 @@
 import { Box, Button, Text, Textarea } from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   createFileRoute,
   useNavigate,
@@ -9,19 +14,20 @@ import { useState } from "react";
 import { NotFound } from "src/components/NotFound";
 import { Post } from "src/components/Post";
 import { PostErrorComponent } from "src/components/PostError";
-import { addComment, fetchComments } from "src/lib/comments/comments.fn";
-import { fetchPost, updatePost } from "src/lib/posts/posts.fn";
+import { addComment } from "src/lib/comments/comments.fn";
+import { updatePost } from "src/lib/posts/posts.fn";
+import { postQueryOptions } from "src/lib/posts/posts.queries";
+import { commentsQueryOptions } from "src/lib/comments/comments.queries";
 
 export const Route = createFileRoute("/posts/$postId")({
-  loader: async ({ params: { postId } }) => {
+  loader: async ({ params: { postId }, context }) => {
     try {
       const id = parseInt(postId, 10);
       if (Number.isNaN(id)) {
         throw new Error("Invalid post ID");
       }
-      return await fetchPost({
-        data: id,
-      });
+      // Seed TanStack Query cache with post data
+      await context.queryClient.ensureQueryData(postQueryOptions(id));
     } catch (error) {
       if (error instanceof Error && error.message.includes("not found")) {
         throw new Error("not-found");
@@ -37,12 +43,17 @@ export const Route = createFileRoute("/posts/$postId")({
 });
 
 function PostComponent() {
-  const loaderData = Route.useLoaderData();
-  const { post, user, tags: initialTags, relatedPost } = loaderData;
+  const { postId } = Route.useParams();
+  const id = parseInt(postId, 10);
+
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
-
   const queryClient = useQueryClient();
+
+  // Use suspense query to get post data (with cached data from loader)
+  const { data: loaderData } = useSuspenseQuery(postQueryOptions(id));
+  const { post, user, tags: initialTags, relatedPost } = loaderData;
+
   const [comment, setComment] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -56,11 +67,8 @@ function PostComponent() {
   const currentUserId = context.user?.id;
   const isOwner = currentUserId === user.id;
 
-  const { data: comments } = useQuery({
-    queryKey: ["comments", post.id],
-    queryFn: () => fetchComments({ data: { postId: post.id || 0 } }),
-    enabled: !!post.id,
-  });
+  // Fetch comments with regular useQuery
+  const { data: comments } = useQuery(commentsQueryOptions(post.id));
 
   const addCommentMutation = useMutation({
     mutationFn: (newComment: {
@@ -85,7 +93,8 @@ function PostComponent() {
     }) => updatePost({ data }),
     onSuccess: () => {
       setIsEditMode(false);
-      queryClient.invalidateQueries();
+      // Invalidate post query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ["posts", id] });
     },
   });
 
