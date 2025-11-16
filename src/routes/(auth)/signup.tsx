@@ -61,7 +61,7 @@ function SignupForm() {
             await queryClient.invalidateQueries({ queryKey: ["user"] });
             navigate({ to: redirectUrl });
           },
-        },
+        }
       );
     },
   });
@@ -102,7 +102,11 @@ function SignupForm() {
               }}
             </form.Field>
 
-            <form.Field name="email">
+            <form.Field
+              name="email"
+              // TODO onChangeAsync => validateEmailUnique
+              // TODO onChangeDebounceMs={500}
+            >
               {(field) => {
                 // Avoid hasty abstractions. Render props are great!
                 return (
@@ -235,7 +239,7 @@ function SignupForm() {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
-                  },
+                  }
                 )
               }
             >
@@ -260,7 +264,7 @@ function SignupForm() {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
-                  },
+                  }
                 )
               }
             >
