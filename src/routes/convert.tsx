@@ -92,10 +92,6 @@ function RouteComponent() {
       const ext = output.container;
       const base = file.name.replace(/\.[^.]+$/, "");
       setConvertedName(`${base}-converted.${ext}`);
-    } catch (e: any) {
-      setError(e?.message || "Conversion failed. See console for details.");
-
-      console.error(e);
     } finally {
       setIsConverting(false);
     }
@@ -158,7 +154,7 @@ function RouteComponent() {
               value={output ? [output.label] : []}
               onSelect={(details) => {
                 const o = SUPPORTED_OUTPUTS.find(
-                  (opt) => opt.label === details.value,
+                  (opt) => opt.label === details.value
                 );
                 if (o) setOutput(o);
               }}
