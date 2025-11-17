@@ -2,7 +2,6 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { fetchPost, fetchPosts, searchPosts } from "./posts.fn";
 import type { PaginatedPostsResponse } from "./posts.schema";
 
-// Posts infinite query options
 export const postsInfiniteQueryOptions = (q?: string) => {
   return infiniteQueryOptions({
     queryKey: ["posts", q],
@@ -33,7 +32,6 @@ export const postsInfiniteQueryOptions = (q?: string) => {
   });
 };
 
-// Single post query options
 export const postQueryOptions = (postId: number) => {
   return queryOptions({
     queryKey: ["posts", postId],

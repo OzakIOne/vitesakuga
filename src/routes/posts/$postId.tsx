@@ -20,22 +20,11 @@ import { postQueryOptions } from "src/lib/posts/posts.queries";
 
 export const Route = createFileRoute("/posts/$postId")({
   loader: async ({ params: { postId }, context }) => {
-    try {
-      const id = parseInt(postId, 10);
-      if (Number.isNaN(id)) {
-        throw new Error("Invalid post ID");
-      }
-      // Seed TanStack Query cache with post data
-      await context.queryClient.ensureQueryData(postQueryOptions(id));
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("not found")) {
-        throw new Error("not-found");
-      }
-      throw error;
-    }
+    await context.queryClient.ensureQueryData(postQueryOptions(Number(postId)));
   },
   errorComponent: PostErrorComponent,
   component: PostComponent,
+  // TODO useless?
   notFoundComponent: () => {
     return <NotFound>Post not found</NotFound>;
   },
@@ -49,7 +38,6 @@ function PostComponent() {
   const context = useRouteContext({ from: "/posts/$postId" });
   const queryClient = useQueryClient();
 
-  // Use suspense query to get post data (with cached data from loader)
   const { data: loaderData } = useSuspenseQuery(postQueryOptions(id));
   const { post, user, tags: initialTags, relatedPost } = loaderData;
 
@@ -58,7 +46,6 @@ function PostComponent() {
   const currentUserId = context.user?.id;
   const isOwner = currentUserId === user.id;
 
-  // Edit post form
   const editForm = useForm({
     defaultValues: {
       title: post.title || "",
@@ -101,12 +88,8 @@ function PostComponent() {
   });
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      // Fallback to a specific route if no history
-      navigate({ to: "/posts" });
-    }
+    if (window.history.length > 1) window.history.back();
+    else navigate({ to: "/posts" });
   };
 
   const handleEditClick = () => {

@@ -19,14 +19,14 @@ export const Route = createFileRoute("/posts/")({
     size: search.size || 20,
   }),
   loader: async ({ context, deps: { q } }) => {
-    // Seed initial data into TanStack Query
-    const queryClient = context.queryClient;
-
-    if (q) {
-      await queryClient.ensureInfiniteQueryData(postsInfiniteQueryOptions(q));
-    } else {
-      await queryClient.ensureInfiniteQueryData(postsInfiniteQueryOptions());
-    }
+    if (q)
+      await context.queryClient.ensureInfiniteQueryData(
+        postsInfiniteQueryOptions(q)
+      );
+    else
+      await context.queryClient.ensureInfiniteQueryData(
+        postsInfiniteQueryOptions()
+      );
   },
   component: PostsLayoutComponent,
 });

@@ -1,7 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { fetchUser, fetchUsers } from "./users.fn";
 
-// All users query options
 export const usersQueryOptions = () => {
   return queryOptions({
     queryKey: ["users"],
@@ -13,7 +12,6 @@ export const usersQueryOptions = () => {
   });
 };
 
-// Single user query options
 export const userQueryOptions = (userId: string) => {
   return queryOptions({
     queryKey: ["users", userId],

@@ -8,7 +8,6 @@ import { userQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
   loader: async ({ params: { id }, context }) => {
-    // Seed initial data into TanStack Query
     await context.queryClient.ensureQueryData(userQueryOptions(id));
   },
   errorComponent: UserErrorComponent,

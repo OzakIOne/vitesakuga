@@ -13,7 +13,6 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
   const [comment, setComment] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch comments with useQuery
   const { data: comments } = useQuery(commentsQueryOptions(postId));
 
   const addCommentMutation = useMutation({
@@ -29,12 +28,7 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
   });
 
   const handleSubmitComment = async () => {
-    if (!comment.trim()) return;
-
-    if (!currentUserId) {
-      console.error("Missing currentUserId");
-      return;
-    }
+    if (!comment.trim() || !currentUserId) return;
 
     await addCommentMutation.mutateAsync({
       postId,

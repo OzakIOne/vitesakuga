@@ -1,7 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { fetchComments } from "./comments.fn";
 
-// Comments for a post query options
 export const commentsQueryOptions = (postId: number) => {
   return queryOptions({
     queryKey: ["comments", postId],

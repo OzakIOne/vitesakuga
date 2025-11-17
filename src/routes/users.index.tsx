@@ -5,7 +5,6 @@ import { usersQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/")({
   loader: async ({ context }) => {
-    // Seed initial data into TanStack Query
     await context.queryClient.ensureQueryData(usersQueryOptions());
   },
   component: UsersLayoutComponent,
