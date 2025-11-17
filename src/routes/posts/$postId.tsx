@@ -11,10 +11,10 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { Comments } from "src/components/Comments";
 import { NotFound } from "src/components/NotFound";
 import { Post } from "src/components/Post";
 import { PostErrorComponent } from "src/components/PostError";
-import { Comments } from "src/components/Comments";
 import { updatePost } from "src/lib/posts/posts.fn";
 import { postQueryOptions } from "src/lib/posts/posts.queries";
 

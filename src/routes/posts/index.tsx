@@ -21,11 +21,11 @@ export const Route = createFileRoute("/posts/")({
   loader: async ({ context, deps: { q } }) => {
     if (q)
       await context.queryClient.ensureInfiniteQueryData(
-        postsInfiniteQueryOptions(q)
+        postsInfiniteQueryOptions(q),
       );
     else
       await context.queryClient.ensureInfiniteQueryData(
-        postsInfiniteQueryOptions()
+        postsInfiniteQueryOptions(),
       );
   },
   component: PostsLayoutComponent,

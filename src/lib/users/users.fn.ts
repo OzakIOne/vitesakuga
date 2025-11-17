@@ -9,7 +9,7 @@ export const fetchUsers = createServerFn().handler(async () => {
   const parsed = z.array(userSelectSchema).safeParse(data);
   if (!parsed.success)
     throw new Error(
-      `There was an error processing the search results ${parsed.error}`
+      `There was an error processing the search results ${parsed.error}`,
     );
 
   return parsed.data;

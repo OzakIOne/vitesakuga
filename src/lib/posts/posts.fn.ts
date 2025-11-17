@@ -86,7 +86,7 @@ export const searchPosts = createServerFn()
       .selectFrom("posts")
       .selectAll()
       .where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`)
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
       )
       .orderBy("id", "desc");
 
@@ -100,7 +100,7 @@ export const searchPosts = createServerFn()
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
       throw new Error(
-        `Error processing search results: ${parsed.error.message}`
+        `Error processing search results: ${parsed.error.message}`,
       );
     }
 
@@ -118,13 +118,13 @@ export const searchPosts = createServerFn()
       links: {
         self: after
           ? `/api/posts/search?q=${encodeURIComponent(
-              q
+              q,
             )}&page[after]=${after}&page[size]=${size}`
           : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts/search?q=${encodeURIComponent(
-                q
+                q,
               )}&page[after]=${afterCursor}&page[size]=${size}`
             : null,
       },
@@ -258,7 +258,7 @@ export const uploadPost = createServerFn({ method: "POST" })
             .insertInto("tags")
             .values({ name: tag.name })
             .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name })
+              oc.column("name").doUpdateSet({ name: tag.name }),
             )
             .returning("id")
             .executeTakeFirstOrThrow();
@@ -343,7 +343,7 @@ export const updatePost = createServerFn({ method: "POST" })
             .insertInto("tags")
             .values({ name: tag.name })
             .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name })
+              oc.column("name").doUpdateSet({ name: tag.name }),
             )
             .returning("id")
             .executeTakeFirstOrThrow();

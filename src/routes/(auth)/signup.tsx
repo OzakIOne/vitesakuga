@@ -61,7 +61,7 @@ function SignupForm() {
             await queryClient.invalidateQueries({ queryKey: ["user"] });
             navigate({ to: redirectUrl });
           },
-        }
+        },
       );
     },
   });
@@ -239,7 +239,7 @@ function SignupForm() {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
-                  }
+                  },
                 )
               }
             >
@@ -264,7 +264,7 @@ function SignupForm() {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
-                  }
+                  },
                 )
               }
             >
