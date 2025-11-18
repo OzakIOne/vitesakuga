@@ -7,7 +7,7 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "serve": "vite serve",
-    "start": "node .output/server/index.mjs",
+    "start": "node --env-file=.env .output/server/index.mjs",
     "lint": "oxlint .",
     "tslint": "pnpx oxlint-tsgolint",
     "biome": "biome check --write",
@@ -17,11 +17,11 @@
     "knip": "knip"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.932.0",
+    "@aws-sdk/client-s3": "^3.933.0",
     "@chakra-ui/react": "^3.29.0",
     "@emotion/react": "^11.14.0",
-    "@remotion/media-parser": "^4.0.375",
-    "@remotion/webcodecs": "^4.0.375",
+    "@remotion/media-parser": "^4.0.376",
+    "@remotion/webcodecs": "^4.0.376",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/devtools-vite": "^0.3.11",
     "@tanstack/nitro-v2-vite-plugin": "^1.133.19",
@@ -41,6 +41,7 @@
     "drizzle-kit": "^0.31.7",
     "drizzle-orm": "^0.44.7",
     "drizzle-zod": "^0.8.3",
+    "ffprobe": "^1.1.2",
     "kysely": "^0.28.8",
     "media-chrome": "^4.15.1",
     "next-themes": "^0.4.6",
@@ -53,20 +54,20 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.5",
+    "@biomejs/biome": "^2.3.6",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
-    "@types/react": "^19.2.5",
+    "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
-    "@typescript/native-preview": "7.0.0-dev.20251116.1",
+    "@typescript/native-preview": "7.0.0-dev.20251118.1",
     "@vitejs/plugin-react": "^5.1.1",
-    "knip": "^5.69.1",
-    "oxlint": "^1.28.0",
+    "knip": "^5.70.0",
+    "oxlint": "^1.29.0",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "vite": "npm:rolldown-vite@^7.2.5",
     "vite-tsconfig-paths": "^5.1.4",
-    "wrangler": "^4.48.0"
+    "wrangler": "^4.49.0"
   },
   "packageManager": "pnpm@10.22.0",
   "devEngines": {
