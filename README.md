@@ -22,3 +22,4 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] add search filters
 - [ ] ? add post ranking
 - [x] use kyselyfy from drizzle to cleanup database types
+- [ ] ffprobe information `ffprobe -v quiet -print_format json -show_format -show_streams /path/video.mp4`

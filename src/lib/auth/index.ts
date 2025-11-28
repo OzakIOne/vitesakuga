@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { reactStartCookies } from "better-auth/react-start";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { envServer } from "src/lib/env/server";
 import { getPoolSingleton } from "../db/pool";
 
@@ -8,7 +8,7 @@ export const auth = betterAuth({
   database: getPoolSingleton(),
 
   // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
-  plugins: [reactStartCookies()],
+  plugins: [tanstackStartCookies()],
 
   // https://www.better-auth.com/docs/concepts/session-management#session-caching
   session: {
