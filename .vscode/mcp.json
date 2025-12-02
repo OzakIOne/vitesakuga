@@ -17,9 +17,8 @@
       ]
     },
     "chakra-ui": {
-      "command": "npx",
+      "command": "pnpx",
       "args": [
-        "-y",
         "@chakra-ui/react-mcp"
       ]
     }

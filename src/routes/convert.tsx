@@ -154,7 +154,7 @@ function RouteComponent() {
               value={output ? [output.label] : []}
               onSelect={(details) => {
                 const o = SUPPORTED_OUTPUTS.find(
-                  (opt) => opt.label === details.value
+                  (opt) => opt.label === details.value,
                 );
                 if (o) setOutput(o);
               }}

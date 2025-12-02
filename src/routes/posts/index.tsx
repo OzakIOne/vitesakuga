@@ -1,7 +1,8 @@
+import { Box, Flex, Text, VStack } from "@chakra-ui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import React, { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { PostList } from "src/components/PostList";
 import { envClient } from "src/lib/env/client";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
@@ -52,13 +53,14 @@ function PostsLayoutComponent() {
   const columnsPerRow = useMemo(() => {
     if (typeof window !== "undefined") {
       const width = window.innerWidth;
-      if (width >= 1536) return 4;
-      if (width >= 1280) return 3;
+      if (width >= 1920) return 6;
+      if (width >= 1536) return 5;
+      if (width >= 1280) return 4;
       if (width >= 1024) return 3;
       if (width >= 768) return 2;
       return 1;
     }
-    return 3;
+    return 6;
   }, []);
   const totalRows = Math.ceil(posts.length / columnsPerRow);
   const totalCols = columnsPerRow;
@@ -66,7 +68,7 @@ function PostsLayoutComponent() {
   const rowVirtualizer = useVirtualizer({
     count: hasNextPage ? totalRows + 1 : totalRows,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 280,
+    estimateSize: () => 240,
     overscan: 2,
   });
 
@@ -74,7 +76,7 @@ function PostsLayoutComponent() {
     horizontal: true,
     count: totalCols,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 300,
+    estimateSize: () => Math.floor(window.innerWidth / totalCols),
     overscan: 1,
   });
 
@@ -93,64 +95,78 @@ function PostsLayoutComponent() {
     }
   }, [hasNextPage, lastRow, totalRows, isFetchingNextPage, fetchNextPage]);
 
-  if (status === "pending") {
-    return (
-      <div className="p-4 w-full">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-600">Loading posts...</div>
-        </div>
-      </div>
-    );
-  }
-
   if (status === "error") {
     return (
-      <div className="p-4 w-full">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-red-600">
-            Error loading: {error?.message}
-          </div>
-        </div>
-      </div>
+      <VStack w="full" p={4} justify="center" h="64">
+        <Text fontSize="lg" color="red.600">
+          Error loading: {error?.message}
+        </Text>
+      </VStack>
     );
   }
 
   return (
-    <div className="p-4 w-full">
+    <Box w="full" bg="white">
       {envClient.MODE === "development" && (
-        <div>
-          <p>Posts loaded: {posts.length}</p>
-          <p>Has next page: {hasNextPage ? "Yes" : "No"}</p>
-          <p>
+        <VStack
+          p={4}
+          bg="gray.50"
+          borderBottom="1px"
+          borderColor="gray.200"
+          align="start"
+        >
+          <Text fontSize="sm">Posts loaded: {posts.length}</Text>
+          <Text fontSize="sm">Has next page: {hasNextPage ? "Yes" : "No"}</Text>
+          <Text fontSize="sm">
             Last cursor:{" "}
             {data?.pages?.[data.pages.length - 1]?.meta?.cursors?.after ||
               "N/A"}
-          </p>
-        </div>
+          </Text>
+        </VStack>
       )}
 
       {q && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
+        <Box
+          px={4}
+          py={3}
+          bg="blue.50"
+          borderBottom="1px"
+          borderColor="blue.200"
+        >
+          <Text fontSize="sm" color="blue.700">
             Search results for: <strong>{q}</strong>
-          </p>
-        </div>
+          </Text>
+        </Box>
       )}
 
-      <div
+      <Box
         ref={parentRef}
-        className="overflow-auto h-[85vh] w-full"
-        style={{ position: "relative" }}
+        overflow="auto"
+        h="calc(100vh - 60px)"
+        w="full"
+        position="relative"
       >
-        <div
+        <Box
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
-            width: `${columnVirtualizer.getTotalSize()}px`,
+            width: "100%",
             position: "relative",
           }}
         >
           {virtualRows.map((virtualRow) => (
-            <React.Fragment key={virtualRow.key}>
+            <Flex
+              key={virtualRow.key}
+              px={4}
+              position="absolute"
+              top={0}
+              left={0}
+              w="full"
+              h={`${virtualRow.size}px`}
+              style={{
+                transform: `translateY(${virtualRow.start}px)`,
+                boxSizing: "border-box",
+              }}
+            >
               {virtualCols.map((virtualCol) => {
                 const postIndex =
                   virtualRow.index * totalCols + virtualCol.index;
@@ -158,19 +174,22 @@ function PostsLayoutComponent() {
                 if (postIndex >= posts.length) {
                   if (virtualRow.index >= totalRows) {
                     return (
-                      <div
+                      <Flex
                         key={virtualCol.key}
-                        className="absolute flex items-center justify-center w-full text-gray-600"
+                        align="center"
+                        justify="center"
+                        color="gray.500"
                         style={{
-                          top: 0,
-                          left: 0,
-                          width: `${virtualCol.size}px`,
+                          width: `calc((100% - ${
+                            (totalCols - 1) * 16
+                          }px) / ${totalCols})`,
                           height: `${virtualRow.size}px`,
-                          transform: `translateX(${virtualCol.start}px) translateY(${virtualRow.start}px)`,
+                          marginRight:
+                            virtualCol.index < totalCols - 1 ? "16px" : "0",
                         }}
                       >
                         {hasNextPage && isFetchingNextPage && "Loading..."}
-                      </div>
+                      </Flex>
                     );
                   }
                   return null;
@@ -178,25 +197,25 @@ function PostsLayoutComponent() {
 
                 const post = posts[postIndex];
                 return (
-                  <div
+                  <Box
                     key={`${virtualRow.key}-${virtualCol.key}`}
                     style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: `${virtualCol.size}px`,
+                      width: `calc((100% - ${
+                        (totalCols - 1) * 16
+                      }px) / ${totalCols})`,
                       height: `${virtualRow.size}px`,
-                      transform: `translateX(${virtualCol.start}px) translateY(${virtualRow.start}px)`,
+                      marginRight:
+                        virtualCol.index < totalCols - 1 ? "16px" : "0",
                     }}
                   >
                     <PostList post={post} q={q} pageSize={size} />
-                  </div>
+                  </Box>
                 );
               })}
-            </React.Fragment>
+            </Flex>
           ))}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
 }
