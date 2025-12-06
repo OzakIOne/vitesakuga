@@ -11,19 +11,19 @@ services:
     networks:
       - my_network
 
-  drizzle-gate:
-    image: ghcr.io/drizzle-team/gateway:latest
-    container_name: drizzle-gate
-    restart: always
-    ports:
-      - "4983:4983"
-    environment:
-      - PORT=4983
-      - MASTERPASS=ozaki
-    volumes:
-      - drizzle:/app
-    networks:
-      - my_network
+  # drizzle-gate:
+  #   image: ghcr.io/drizzle-team/gateway:latest
+  #   container_name: drizzle-gate
+  #   restart: always
+  #   ports:
+  #     - "4983:4983"
+  #   environment:
+  #     - PORT=4983
+  #     - MASTERPASS=ozaki
+  #   volumes:
+  #     - drizzle:/app
+  #   networks:
+  #     - my_network
 
 networks:
   my_network:
@@ -31,4 +31,4 @@ networks:
 
 volumes:
   pgdata:
-  drizzle:
+  # drizzle:
