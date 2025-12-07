@@ -13,16 +13,16 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
+import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { PostFilters } from "src/components/PostFilters";
 import { PostList } from "src/components/PostList";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { SearchBox } from "src/components/SearchBox";
 import { envClient } from "src/lib/env/client";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
+import { postsFilterSearchSchema } from "src/lib/posts/posts.schema";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 import z from "zod";
-import { postsFilterSearchSchema } from "src/lib/posts/posts.schema";
 
 const searchSchema = postsFilterSearchSchema.extend({
   q: z.string().trim().min(1).optional(),
@@ -50,8 +50,13 @@ export const Route = createFileRoute("/posts/")({
 
 function PostsLayoutComponent() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { q, size, sortBy: urlSortBy, dateRange: urlDateRange } = Route.useSearch();
-  
+  const {
+    q,
+    size,
+    sortBy: urlSortBy,
+    dateRange: urlDateRange,
+  } = Route.useSearch();
+
   const sortBy = urlSortBy || "latest";
   const dateRange = urlDateRange || "all";
 
@@ -67,7 +72,7 @@ function PostsLayoutComponent() {
   });
 
   const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
-  
+
   const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
@@ -126,9 +131,7 @@ function PostsLayoutComponent() {
   if (status === "error") {
     return (
       <VStack w="full" p={4} justify="center" h="64">
-        <Text fontSize="lg">
-          Error loading: {error?.message}
-        </Text>
+        <Text fontSize="lg">Error loading: {error?.message}</Text>
       </VStack>
     );
   }
@@ -136,11 +139,7 @@ function PostsLayoutComponent() {
   return (
     <Box w="full" p={4}>
       {envClient.MODE === "development" && (
-        <VStack
-          p={4}
-          borderBottom="1px"
-          align="start"
-        >
+        <VStack p={4} borderBottom="1px" align="start">
           <Text fontSize="sm">Posts loaded: {allPosts.length}</Text>
           <Text fontSize="sm">Filtered posts: {posts.length}</Text>
           <Text fontSize="sm">Has next page: {hasNextPage ? "Yes" : "No"}</Text>
@@ -167,10 +166,7 @@ function PostsLayoutComponent() {
               <Heading size="sm" mb={3}>
                 Filters
               </Heading>
-              <PostFilters 
-                sortBy={sortBy} 
-                dateRange={dateRange}
-              />
+              <PostFilters sortBy={sortBy} dateRange={dateRange} />
             </Box>
           </VStack>
         </GridItem>

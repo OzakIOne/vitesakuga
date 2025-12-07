@@ -192,9 +192,7 @@ function PostComponent() {
               >
                 {updatePostMutation.isPending ? "Saving..." : "Save"}
               </Button>
-              <Button onClick={handleCancelEdit}>
-                Cancel
-              </Button>
+              <Button onClick={handleCancelEdit}>Cancel</Button>
             </Box>
 
             {updatePostMutation.isError && (
@@ -275,9 +273,7 @@ function PostComponent() {
                       to="/posts/$postId"
                       params={{ postId: String(relatedPost.id) }}
                     >
-                      <Text fontSize="sm">
-                        {relatedPost.title}
-                      </Text>
+                      <Text fontSize="sm">{relatedPost.title}</Text>
                     </Link>
                   </Box>
                 )}
@@ -306,4 +302,3 @@ function PostComponent() {
     </Box>
   );
 }
-

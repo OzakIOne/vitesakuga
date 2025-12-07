@@ -4,9 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { PostList } from "src/components/PostList";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { getPostsByTag } from "src/lib/tags/tags.fn";
-import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 import { postsFilterSearchSchema } from "src/lib/posts/posts.schema";
+import { filterAndSortPosts } from "src/lib/posts/posts.utils";
+import { getPostsByTag } from "src/lib/tags/tags.fn";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/posts/tags/$tag")({
 function RouteComponent() {
   const { tag } = Route.useParams();
   const { sortBy: urlSortBy, dateRange: urlDateRange } = Route.useSearch();
-  
+
   const sortBy = urlSortBy || "latest";
   const dateRange = urlDateRange || "all";
 
@@ -69,4 +69,3 @@ function RouteComponent() {
     </PostsPageLayout>
   );
 }
-

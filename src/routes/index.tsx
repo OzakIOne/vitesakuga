@@ -16,11 +16,7 @@ function Home() {
       justify={"center"}
     >
       <Heading className="text-2xl font-bold mb-4">ViteSakuga</Heading>
-      <SearchBox 
-        showTitle={false} 
-        placeholder="One piece..." 
-      />
+      <SearchBox showTitle={false} placeholder="One piece..." />
     </Stack>
   );
 }
-

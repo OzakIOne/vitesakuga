@@ -25,7 +25,9 @@ export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
             borderRadius="md"
             cursor="pointer"
             variant={sortBy === "latest" ? "solid" : "outline"}
-            onClick={() => navigate({ search: (prev) => ({ ...prev, sortBy: "latest" }) })}
+            onClick={() =>
+              navigate({ search: (prev) => ({ ...prev, sortBy: "latest" }) })
+            }
           >
             Latest
           </Badge>
@@ -35,7 +37,9 @@ export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
             borderRadius="md"
             cursor="pointer"
             variant={sortBy === "oldest" ? "solid" : "outline"}
-            onClick={() => navigate({ search: (prev) => ({ ...prev, sortBy: "oldest" }) })}
+            onClick={() =>
+              navigate({ search: (prev) => ({ ...prev, sortBy: "oldest" }) })
+            }
           >
             Oldest
           </Badge>
@@ -52,7 +56,9 @@ export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
             borderRadius="md"
             cursor="pointer"
             variant={dateRange === "all" ? "solid" : "outline"}
-            onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "all" }) })}
+            onClick={() =>
+              navigate({ search: (prev) => ({ ...prev, dateRange: "all" }) })
+            }
           >
             All Time
           </Badge>
@@ -62,7 +68,9 @@ export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
             borderRadius="md"
             cursor="pointer"
             variant={dateRange === "today" ? "solid" : "outline"}
-            onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "today" }) })}
+            onClick={() =>
+              navigate({ search: (prev) => ({ ...prev, dateRange: "today" }) })
+            }
           >
             Today
           </Badge>
@@ -72,7 +80,9 @@ export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
             borderRadius="md"
             cursor="pointer"
             variant={dateRange === "week" ? "solid" : "outline"}
-            onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) })}
+            onClick={() =>
+              navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) })
+            }
           >
             This Week
           </Badge>
@@ -82,7 +92,9 @@ export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
             borderRadius="md"
             cursor="pointer"
             variant={dateRange === "month" ? "solid" : "outline"}
-            onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "month" }) })}
+            onClick={() =>
+              navigate({ search: (prev) => ({ ...prev, dateRange: "month" }) })
+            }
           >
             This Month
           </Badge>

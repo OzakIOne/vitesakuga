@@ -113,6 +113,9 @@ export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
 
 export const postsFilterSearchSchema = z.object({
   sortBy: z.enum(["latest", "oldest"]).default("latest").optional(),
-  dateRange: z.enum(["all", "today", "week", "month"]).default("all").optional(),
+  dateRange: z
+    .enum(["all", "today", "week", "month"])
+    .default("all")
+    .optional(),
 });
 export type PostsFilterSearch = z.infer<typeof postsFilterSearchSchema>;

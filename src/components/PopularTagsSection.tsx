@@ -20,17 +20,8 @@ export function PopularTagsSection({ tags }: PopularTagsSectionProps) {
       {tags && tags.length > 0 ? (
         <Stack direction="row" flexWrap="wrap" gap={2}>
           {tags.map((tag) => (
-            <Link
-              key={tag.id}
-              to="/posts/tags/$tag"
-              params={{ tag: tag.name }}
-            >
-              <Badge
-                px={2}
-                py={1}
-                borderRadius="full"
-                cursor="pointer"
-              >
+            <Link key={tag.id} to="/posts/tags/$tag" params={{ tag: tag.name }}>
+              <Badge px={2} py={1} borderRadius="full" cursor="pointer">
                 {tag.name} ({tag.postCount})
               </Badge>
             </Link>

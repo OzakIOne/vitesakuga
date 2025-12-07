@@ -1,6 +1,6 @@
 import { Box, Heading, Input } from "@chakra-ui/react";
-import { useNavigate } from "@tanstack/react-router";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 interface SearchBoxProps {
@@ -72,4 +72,3 @@ export function SearchBox({
     </Box>
   );
 }
-
