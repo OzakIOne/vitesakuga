@@ -25,6 +25,15 @@ const paginatedPostsResponseSchema = z.object({
     cursors: z.object({
       after: z.number().nullable(),
     }),
+    popularTags: z
+      .array(
+        z.object({
+          id: z.number(),
+          name: z.string(),
+          postCount: z.number(),
+        }),
+      )
+      .optional(),
   }),
 });
 

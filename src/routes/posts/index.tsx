@@ -12,7 +12,7 @@ import {
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PostList } from "src/components/PostList";
 import { SearchBox } from "src/components/SearchBox";
 import { envClient } from "src/lib/env/client";
@@ -43,8 +43,14 @@ export const Route = createFileRoute("/posts/")({
   component: PostsLayoutComponent,
 });
 
+type SortBy = "latest" | "oldest";
+type DateRange = "all" | "today" | "week" | "month";
+
 function PostsLayoutComponent() {
   const { q, size } = Route.useLoaderDeps();
+
+  const [sortBy, setSortBy] = useState<SortBy>("latest");
+  const [dateRange, setDateRange] = useState<DateRange>("all");
 
   const {
     data,
@@ -57,7 +63,51 @@ function PostsLayoutComponent() {
     ...postsInfiniteQueryOptions(q),
   });
 
-  const posts = data?.pages?.flatMap((page) => page.data) ?? [];
+  const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
+  
+  const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
+
+  const filteredPosts = useMemo(() => {
+    let filtered = [...allPosts];
+
+    if (dateRange !== "all") {
+      const now = new Date();
+      
+      let cutoffDate: Date;
+      
+      switch (dateRange) {
+        case "today": {
+          cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        }
+        case "week": {
+          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        }
+        case "month": {
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        }
+        default:
+          cutoffDate = new Date(0);
+      }
+
+      filtered = filtered.filter((post) => {
+        const postDate = new Date(post.createdAt);
+        return postDate >= cutoffDate;
+      });
+    }
+
+    if (sortBy === "oldest") {
+      filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    } else {
+      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return filtered;
+  }, [allPosts, sortBy, dateRange]);
+
+  const posts = filteredPosts;
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +174,8 @@ function PostsLayoutComponent() {
           borderBottom="1px"
           align="start"
         >
-          <Text fontSize="sm">Posts loaded: {posts.length}</Text>
+          <Text fontSize="sm">Posts loaded: {allPosts.length}</Text>
+          <Text fontSize="sm">Filtered posts: {posts.length}</Text>
           <Text fontSize="sm">Has next page: {hasNextPage ? "Yes" : "No"}</Text>
           <Text fontSize="sm">
             Last cursor:{" "}
@@ -145,38 +196,28 @@ function PostsLayoutComponent() {
               <Heading size="sm" mb={3}>
                 Popular Tags
               </Heading>
-              <Stack direction="row" flexWrap="wrap" gap={2}>
-                <Link to="/posts/tags/$tag" params={{ tag: "sakuga" }}>
-                  <Badge
-                    px={2}
-                    py={1}
-                    borderRadius="full"
-                    cursor="pointer"
-                  >
-                    sakuga
-                  </Badge>
-                </Link>
-                <Link to="/posts/tags/$tag" params={{ tag: "animation" }}>
-                  <Badge
-                    px={2}
-                    py={1}
-                    borderRadius="full"
-                    cursor="pointer"
-                  >
-                    animation
-                  </Badge>
-                </Link>
-                <Link to="/posts/tags/$tag" params={{ tag: "effects" }}>
-                  <Badge
-                    px={2}
-                    py={1}
-                    borderRadius="full"
-                    cursor="pointer"
-                  >
-                    effects
-                  </Badge>
-                </Link>
-              </Stack>
+              {popularTags && popularTags.length > 0 ? (
+                <Stack direction="row" flexWrap="wrap" gap={2}>
+                  {popularTags.map((tag: { id: number; name: string; postCount: number }) => (
+                    <Link
+                      key={tag.id}
+                      to="/posts/tags/$tag"
+                      params={{ tag: tag.name }}
+                    >
+                      <Badge
+                        px={2}
+                        py={1}
+                        borderRadius="full"
+                        cursor="pointer"
+                      >
+                        {tag.name} ({tag.postCount})
+                      </Badge>
+                    </Link>
+                  ))}
+                </Stack>
+              ) : (
+                <Text fontSize="sm">No tags found</Text>
+              )}
             </Box>
 
             <Box p={4} borderRadius="md" shadow="md" border="1px">
@@ -194,24 +235,18 @@ function PostsLayoutComponent() {
                       py={1}
                       borderRadius="md"
                       cursor="pointer"
+                      variant={sortBy === "latest" ? "solid" : "outline"}
+                      onClick={() => setSortBy("latest")}
                     >
                       Latest
                     </Badge>
                     <Badge
-                      variant="outline"
                       px={2}
                       py={1}
                       borderRadius="md"
                       cursor="pointer"
-                    >
-                      Popular
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
+                      variant={sortBy === "oldest" ? "solid" : "outline"}
+                      onClick={() => setSortBy("oldest")}
                     >
                       Oldest
                     </Badge>
@@ -223,29 +258,42 @@ function PostsLayoutComponent() {
                   </Text>
                   <Stack direction="row" flexWrap="wrap" gap={2}>
                     <Badge
-                      variant="outline"
                       px={2}
                       py={1}
                       borderRadius="md"
                       cursor="pointer"
+                      variant={dateRange === "all" ? "solid" : "outline"}
+                      onClick={() => setDateRange("all")}
+                    >
+                      All Time
+                    </Badge>
+                    <Badge
+                      px={2}
+                      py={1}
+                      borderRadius="md"
+                      cursor="pointer"
+                      variant={dateRange === "today" ? "solid" : "outline"}
+                      onClick={() => setDateRange("today")}
                     >
                       Today
                     </Badge>
                     <Badge
-                      variant="outline"
                       px={2}
                       py={1}
                       borderRadius="md"
                       cursor="pointer"
+                      variant={dateRange === "week" ? "solid" : "outline"}
+                      onClick={() => setDateRange("week")}
                     >
                       This Week
                     </Badge>
                     <Badge
-                      variant="outline"
                       px={2}
                       py={1}
                       borderRadius="md"
                       cursor="pointer"
+                      variant={dateRange === "month" ? "solid" : "outline"}
+                      onClick={() => setDateRange("month")}
                     >
                       This Month
                     </Badge>

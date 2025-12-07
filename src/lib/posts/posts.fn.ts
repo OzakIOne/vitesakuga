@@ -56,6 +56,26 @@ export const fetchPosts = createServerFn()
     // Set cursors
     const afterCursor = datas.length > 0 ? datas[datas.length - 1].id : null;
 
+    // Calculate popular tags
+    const popularTagsResult = await kysely
+      .selectFrom("tags")
+      .innerJoin("post_tags", "tags.id", "post_tags.tagId")
+      .select([
+        "tags.id",
+        "tags.name",
+        kysely.fn.count("post_tags.postId").as("postCount"),
+      ])
+      .groupBy(["tags.id", "tags.name"])
+      .orderBy("postCount", "desc")
+      .limit(10)
+      .execute();
+
+    const popularTags = popularTagsResult.map((r) => ({
+      id: r.id,
+      name: r.name,
+      postCount: Number(r.postCount),
+    }));
+
     return {
       data: datas,
       links: {
@@ -72,6 +92,7 @@ export const fetchPosts = createServerFn()
         cursors: {
           after: afterCursor,
         },
+        popularTags,
       },
     };
   });
@@ -113,6 +134,34 @@ export const searchPosts = createServerFn()
     // Set cursors
     const afterCursor = datas.length > 0 ? datas[datas.length - 1].id : null;
 
+    // Calculate popular tags for posts matching the search query
+    const popularTagsResult = await kysely
+      .selectFrom("tags")
+      .innerJoin("post_tags", "tags.id", "post_tags.tagId")
+      .innerJoin("posts", "posts.id", "post_tags.postId")
+      .where((eb) =>
+        eb("posts.title", "ilike", `%${q}%`).or(
+          "posts.content",
+          "ilike",
+          `%${q}%`,
+        ),
+      )
+      .select([
+        "tags.id",
+        "tags.name",
+        kysely.fn.count("post_tags.postId").as("postCount"),
+      ])
+      .groupBy(["tags.id", "tags.name"])
+      .orderBy("postCount", "desc")
+      .limit(10)
+      .execute();
+
+    const popularTags = popularTagsResult.map((r) => ({
+      id: r.id,
+      name: r.name,
+      postCount: Number(r.postCount),
+    }));
+
     return {
       data: datas,
       links: {
@@ -133,6 +182,7 @@ export const searchPosts = createServerFn()
         cursors: {
           after: afterCursor,
         },
+        popularTags,
       },
     };
   });
