@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type {
   FileUploadData,
   SerializedUploadData,
@@ -38,4 +39,73 @@ export async function transformUploadFormData(
     video: videoData,
     thumbnail: thumbnailData,
   };
+}
+
+export type SortBy = "latest" | "oldest";
+export type DateRange = "all" | "today" | "week" | "month";
+
+export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
+  posts: T[],
+  dateRange: DateRange,
+): T[] {
+  if (dateRange === "all") {
+    return posts;
+  }
+
+  const now = new Date();
+  let cutoffDate: Date;
+
+  switch (dateRange) {
+    case "today": {
+      cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      break;
+    }
+    case "week": {
+      cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    }
+    case "month": {
+      cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    }
+    default:
+      cutoffDate = new Date(0);
+  }
+
+  return posts.filter((post) => {
+    const postDate = new Date(post.createdAt);
+    return postDate >= cutoffDate;
+  });
+}
+
+export function sortPostsByDate<T extends { createdAt: string | Date }>(
+  posts: T[],
+  sortBy: SortBy,
+): T[] {
+  const sorted = [...posts];
+
+  if (sortBy === "oldest") {
+    sorted.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  } else {
+    sorted.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }
+
+  return sorted;
+}
+
+export function filterAndSortPosts<T extends { createdAt: string | Date }>(
+  posts: T[],
+  options: {
+    sortBy: SortBy;
+    dateRange: DateRange;
+  },
+): T[] {
+  const filtered = filterPostsByDateRange(posts, options.dateRange);
+  return sortPostsByDate(filtered, options.sortBy);
 }

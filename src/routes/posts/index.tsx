@@ -13,17 +13,20 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
+import { PostFilters } from "src/components/PostFilters";
 import { PostList } from "src/components/PostList";
+import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { SearchBox } from "src/components/SearchBox";
 import { envClient } from "src/lib/env/client";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
+import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 import z from "zod";
+import { postsFilterSearchSchema } from "src/lib/posts/posts.schema";
 
-const searchSchema = z.object({
+const searchSchema = postsFilterSearchSchema.extend({
   q: z.string().trim().min(1).optional(),
   size: z.coerce.number().min(1).max(100).default(20).optional(),
-  sortBy: z.enum(["latest", "oldest"]).default("latest").optional(),
-  dateRange: z.enum(["all", "today", "week", "month"]).default("all").optional(),
 });
 
 export const Route = createFileRoute("/posts/")({
@@ -68,43 +71,7 @@ function PostsLayoutComponent() {
   const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
-    let filtered = [...allPosts];
-
-    if (dateRange !== "all") {
-      const now = new Date();
-      
-      let cutoffDate: Date;
-      
-      switch (dateRange) {
-        case "today": {
-          cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
-        }
-        case "week": {
-          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        }
-        case "month": {
-          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        }
-        default:
-          cutoffDate = new Date(0);
-      }
-
-      filtered = filtered.filter((post) => {
-        const postDate = new Date(post.createdAt);
-        return postDate >= cutoffDate;
-      });
-    }
-
-    if (sortBy === "oldest") {
-      filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    } else {
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
-    return filtered;
+    return filterAndSortPosts(allPosts, { sortBy, dateRange });
   }, [allPosts, sortBy, dateRange]);
 
   const posts = filteredPosts;
@@ -193,113 +160,17 @@ function PostsLayoutComponent() {
             </Box>
 
             <Box p={4} borderRadius="md" shadow="md" border="1px">
-              <Heading size="sm" mb={3}>
-                Popular Tags
-              </Heading>
-              {popularTags && popularTags.length > 0 ? (
-                <Stack direction="row" flexWrap="wrap" gap={2}>
-                  {popularTags.map((tag: { id: number; name: string; postCount: number }) => (
-                    <Link
-                      key={tag.id}
-                      to="/posts/tags/$tag"
-                      params={{ tag: tag.name }}
-                    >
-                      <Badge
-                        px={2}
-                        py={1}
-                        borderRadius="full"
-                        cursor="pointer"
-                      >
-                        {tag.name} ({tag.postCount})
-                      </Badge>
-                    </Link>
-                  ))}
-                </Stack>
-              ) : (
-                <Text fontSize="sm">No tags found</Text>
-              )}
+              <PopularTagsSection tags={popularTags} />
             </Box>
 
             <Box p={4} borderRadius="md" shadow="md" border="1px">
               <Heading size="sm" mb={3}>
                 Filters
               </Heading>
-              <VStack align="stretch" gap={3}>
-                <Box>
-                  <Text fontSize="xs" fontWeight="bold" mb={1}>
-                    Sort By
-                  </Text>
-                  <Stack direction="row" flexWrap="wrap" gap={2}>
-                    <Badge
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
-                      variant={sortBy === "latest" ? "solid" : "outline"}
-                      onClick={() => navigate({ search: (prev) => ({ ...prev, sortBy: "latest" }) })}
-                    >
-                      Latest
-                    </Badge>
-                    <Badge
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
-                      variant={sortBy === "oldest" ? "solid" : "outline"}
-                      onClick={() => navigate({ search: (prev) => ({ ...prev, sortBy: "oldest" }) })}
-                    >
-                      Oldest
-                    </Badge>
-                  </Stack>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" fontWeight="bold" mb={1}>
-                    Date Range
-                  </Text>
-                  <Stack direction="row" flexWrap="wrap" gap={2}>
-                    <Badge
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
-                      variant={dateRange === "all" ? "solid" : "outline"}
-                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "all" }) })}
-                    >
-                      All Time
-                    </Badge>
-                    <Badge
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
-                      variant={dateRange === "today" ? "solid" : "outline"}
-                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "today" }) })}
-                    >
-                      Today
-                    </Badge>
-                    <Badge
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
-                      variant={dateRange === "week" ? "solid" : "outline"}
-                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) })}
-                    >
-                      This Week
-                    </Badge>
-                    <Badge
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      cursor="pointer"
-                      variant={dateRange === "month" ? "solid" : "outline"}
-                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "month" }) })}
-                    >
-                      This Month
-                    </Badge>
-                  </Stack>
-                </Box>
-              </VStack>
+              <PostFilters 
+                sortBy={sortBy} 
+                dateRange={dateRange}
+              />
             </Box>
           </VStack>
         </GridItem>
