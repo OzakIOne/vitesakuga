@@ -1,43 +1,12 @@
-import { Button, Heading, HStack, Input, Stack } from "@chakra-ui/react";
-import { useForm } from "@tanstack/react-form";
-import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Heading, Stack } from "@chakra-ui/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { SearchBox } from "src/components/SearchBox";
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
 function Home() {
-  const navigate = useNavigate();
-
-  const form = useForm({
-    defaultValues: {
-      search: "",
-    },
-    onSubmit: ({ value }) => {
-      const val = value.search.trim();
-      if (!val) return;
-      navigate({
-        to: "/posts",
-        search: { q: val },
-      });
-    },
-  });
-
-  const setDebouncedQuery = useDebouncer(
-    (value: string) => {
-      if (!value.trim()) return;
-      navigate({
-        to: "/posts",
-        search: { q: value },
-      });
-    },
-    {
-      wait: 500,
-      enabled: () => form.state.values.search.length > 2,
-    },
-  );
-
   return (
     <Stack
       width={"full"}
@@ -47,35 +16,11 @@ function Home() {
       justify={"center"}
     >
       <Heading className="text-2xl font-bold mb-4">ViteSakuga</Heading>
-      <HStack align={"center"}>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setDebouncedQuery.flush();
-            await form.handleSubmit();
-          }}
-          className="mb-4 flex gap-2"
-        >
-          <form.Field name="search">
-            {(field) => (
-              <Input
-                className="input flex-1"
-                type="text"
-                placeholder="One piece..."
-                value={field.state.value}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  field.handleChange(val);
-                  setDebouncedQuery.maybeExecute(val);
-                }}
-              />
-            )}
-          </form.Field>
-          <Button type="submit" className="btn btn-primary">
-            Search
-          </Button>
-        </form>
-      </HStack>
+      <SearchBox 
+        showTitle={false} 
+        placeholder="One piece..." 
+      />
     </Stack>
   );
 }
+

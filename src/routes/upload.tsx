@@ -343,7 +343,7 @@ function RouteComponent() {
                   >
                     <FileUpload.HiddenInput />
                     {!field.state.value && (
-                      <FileUpload.Dropzone>
+                      <FileUpload.Dropzone minHeight='32'>
                         <Icon size="md" color="fg.muted">
                           <LuUpload />
                         </Icon>
