@@ -10,9 +10,9 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { PostList } from "src/components/PostList";
 import { SearchBox } from "src/components/SearchBox";
 import { envClient } from "src/lib/env/client";
@@ -22,6 +22,8 @@ import z from "zod";
 const searchSchema = z.object({
   q: z.string().trim().min(1).optional(),
   size: z.coerce.number().min(1).max(100).default(20).optional(),
+  sortBy: z.enum(["latest", "oldest"]).default("latest").optional(),
+  dateRange: z.enum(["all", "today", "week", "month"]).default("all").optional(),
 });
 
 export const Route = createFileRoute("/posts/")({
@@ -47,10 +49,11 @@ type SortBy = "latest" | "oldest";
 type DateRange = "all" | "today" | "week" | "month";
 
 function PostsLayoutComponent() {
-  const { q, size } = Route.useLoaderDeps();
-
-  const [sortBy, setSortBy] = useState<SortBy>("latest");
-  const [dateRange, setDateRange] = useState<DateRange>("all");
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { q, size, sortBy: urlSortBy, dateRange: urlDateRange } = Route.useSearch();
+  
+  const sortBy = urlSortBy || "latest";
+  const dateRange = urlDateRange || "all";
 
   const {
     data,
@@ -236,7 +239,7 @@ function PostsLayoutComponent() {
                       borderRadius="md"
                       cursor="pointer"
                       variant={sortBy === "latest" ? "solid" : "outline"}
-                      onClick={() => setSortBy("latest")}
+                      onClick={() => navigate({ search: (prev) => ({ ...prev, sortBy: "latest" }) })}
                     >
                       Latest
                     </Badge>
@@ -246,7 +249,7 @@ function PostsLayoutComponent() {
                       borderRadius="md"
                       cursor="pointer"
                       variant={sortBy === "oldest" ? "solid" : "outline"}
-                      onClick={() => setSortBy("oldest")}
+                      onClick={() => navigate({ search: (prev) => ({ ...prev, sortBy: "oldest" }) })}
                     >
                       Oldest
                     </Badge>
@@ -263,7 +266,7 @@ function PostsLayoutComponent() {
                       borderRadius="md"
                       cursor="pointer"
                       variant={dateRange === "all" ? "solid" : "outline"}
-                      onClick={() => setDateRange("all")}
+                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "all" }) })}
                     >
                       All Time
                     </Badge>
@@ -273,7 +276,7 @@ function PostsLayoutComponent() {
                       borderRadius="md"
                       cursor="pointer"
                       variant={dateRange === "today" ? "solid" : "outline"}
-                      onClick={() => setDateRange("today")}
+                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "today" }) })}
                     >
                       Today
                     </Badge>
@@ -283,7 +286,7 @@ function PostsLayoutComponent() {
                       borderRadius="md"
                       cursor="pointer"
                       variant={dateRange === "week" ? "solid" : "outline"}
-                      onClick={() => setDateRange("week")}
+                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) })}
                     >
                       This Week
                     </Badge>
@@ -293,7 +296,7 @@ function PostsLayoutComponent() {
                       borderRadius="md"
                       cursor="pointer"
                       variant={dateRange === "month" ? "solid" : "outline"}
-                      onClick={() => setDateRange("month")}
+                      onClick={() => navigate({ search: (prev) => ({ ...prev, dateRange: "month" }) })}
                     >
                       This Month
                     </Badge>
