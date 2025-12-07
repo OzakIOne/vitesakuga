@@ -45,9 +45,6 @@ export const Route = createFileRoute("/posts/")({
   component: PostsLayoutComponent,
 });
 
-type SortBy = "latest" | "oldest";
-type DateRange = "all" | "today" | "week" | "month";
-
 function PostsLayoutComponent() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { q, size, sortBy: urlSortBy, dateRange: urlDateRange } = Route.useSearch();
