@@ -1,7 +1,7 @@
 import { Badge, Box, Heading, Stack, Text, VStack } from "@chakra-ui/react";
 import { Link as RouterLink } from "@tanstack/react-router";
-import type { fetchPost } from "src/lib/posts/posts.fn";
 import { SearchBox } from "src/components/SearchBox";
+import type { fetchPost } from "src/lib/posts/posts.fn";
 
 interface PostDetailSidebarProps {
   post: Awaited<ReturnType<typeof fetchPost>>["post"];
@@ -32,12 +32,7 @@ export function PostDetailSidebar({
                 to="/posts/tags/$tag"
                 params={{ tag: tag.name }}
               >
-                <Badge
-                  px={2}
-                  py={1}
-                  borderRadius="full"
-                  cursor="pointer"
-                >
+                <Badge px={2} py={1} borderRadius="full" cursor="pointer">
                   {tag.name}
                 </Badge>
               </RouterLink>

@@ -6,12 +6,12 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { SidebarLayout } from "src/components/layouts/SidebarLayout";
 import { NotFound } from "src/components/NotFound";
-import { PostErrorComponent } from "src/components/PostError";
 import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
 import { PostDetailSidebar } from "src/components/PostDetail/PostDetailSidebar";
 import { PostEditForm } from "src/components/PostDetail/PostEditForm";
-import { SidebarLayout } from "src/components/layouts/SidebarLayout";
+import { PostErrorComponent } from "src/components/PostError";
 import { postQueryOptions } from "src/lib/posts/posts.queries";
 
 export const Route = createFileRoute("/posts/$postId")({

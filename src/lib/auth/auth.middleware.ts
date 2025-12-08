@@ -29,6 +29,8 @@ export const getUserSession = createServerFn().handler(async () => {
 export const authMiddleware = createMiddleware().server(async ({ next }) => {
   const user = await getUserInternal();
 
+  console.log("authMiddleware user:", user);
+
   if (!user) {
     throw redirect({ to: "/login" });
   }

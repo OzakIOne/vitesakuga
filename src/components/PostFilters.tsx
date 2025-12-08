@@ -7,7 +7,7 @@ type DateRange = "all" | "today" | "week" | "month";
 type PostFiltersProps = {
   sortBy: SortBy;
   dateRange: DateRange;
-}
+};
 
 export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
   const navigate = useNavigate({ from: "/posts" });

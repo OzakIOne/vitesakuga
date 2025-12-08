@@ -3,17 +3,13 @@ import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import type { DbSchemaInsert } from "src/lib/db/schema";
 
-type PostListProps ={
+type PostListProps = {
   post: DbSchemaInsert["posts"];
   q: string | undefined;
   pageSize: number | undefined;
-}
+};
 
-function PostListComponent({
-  post,
-  q,
-  pageSize,
-}: PostListProps) {
+function PostListComponent({ post, q, pageSize }: PostListProps) {
   const BaseURL = encodeURI(
     "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
   );

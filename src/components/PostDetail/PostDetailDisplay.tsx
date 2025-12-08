@@ -1,7 +1,7 @@
 import { Box, Button, VStack } from "@chakra-ui/react";
-import type { fetchPost } from "src/lib/posts/posts.fn";
 import { Comments } from "src/components/Comments";
 import { Post } from "src/components/Post";
+import type { fetchPost } from "src/lib/posts/posts.fn";
 
 interface PostDetailDisplayProps {
   post: Awaited<ReturnType<typeof fetchPost>>["post"];

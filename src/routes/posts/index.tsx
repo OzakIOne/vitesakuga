@@ -1,22 +1,19 @@
 import {
-  Badge,
   Box,
   Flex,
   Grid,
   GridItem,
   Heading,
-  Stack,
   Text,
   VStack,
 } from "@chakra-ui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
 import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { PostFilters } from "src/components/PostFilters";
 import { PostList } from "src/components/PostList";
-import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { SearchBox } from "src/components/SearchBox";
 import { envClient } from "src/lib/env/client";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
@@ -27,12 +24,8 @@ import z from "zod";
 const searchSchema = postsFilterSearchSchema.extend({
   q: z.string().trim().min(1).optional(),
   size: z.coerce.number().min(1).max(100).default(20).optional(),
-  sortBy: z
-    .enum(["latest", "oldest"])
-    .optional(),
-  dateRange: z
-    .enum(["all", "today", "week", "month"])
-    .optional(),
+  sortBy: z.enum(["latest", "oldest"]).optional(),
+  dateRange: z.enum(["all", "today", "week", "month"]).optional(),
 });
 
 export const Route = createFileRoute("/posts/")({
@@ -55,7 +48,6 @@ export const Route = createFileRoute("/posts/")({
 });
 
 function PostsLayoutComponent() {
-  const navigate = useNavigate({ from: Route.fullPath });
   const {
     q,
     size,

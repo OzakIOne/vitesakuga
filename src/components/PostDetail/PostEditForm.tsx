@@ -2,8 +2,8 @@ import { Box, Button, Text } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
-import { updatePost } from "src/lib/posts/posts.fn";
 import type { fetchPost } from "src/lib/posts/posts.fn";
+import { updatePost } from "src/lib/posts/posts.fn";
 
 interface PostEditFormProps {
   post: Awaited<ReturnType<typeof fetchPost>>["post"];
@@ -75,12 +75,12 @@ export function PostEditForm({
         Edit Post
       </Text>
       <form onSubmit={handleSubmit}>
-        <editForm.Field
-          name={"title" as const}
-        >
+        <editForm.Field name={"title" as const}>
           {(field) => (
             <Box mb={2}>
-              <Text fontWeight="bold" mb={1}>Title</Text>
+              <Text fontWeight="bold" mb={1}>
+                Title
+              </Text>
               <textarea
                 value={String(field.state.value ?? "")}
                 onBlur={field.handleBlur}
@@ -103,12 +103,12 @@ export function PostEditForm({
           )}
         </editForm.Field>
 
-        <editForm.Field
-          name={"content" as const}
-        >
+        <editForm.Field name={"content" as const}>
           {(field) => (
             <Box mb={2}>
-              <Text fontWeight="bold" mb={1}>Content</Text>
+              <Text fontWeight="bold" mb={1}>
+                Content
+              </Text>
               <textarea
                 value={String(field.state.value ?? "")}
                 onBlur={field.handleBlur}
@@ -132,12 +132,12 @@ export function PostEditForm({
           )}
         </editForm.Field>
 
-        <editForm.Field
-          name={"source" as const}
-        >
+        <editForm.Field name={"source" as const}>
           {(field) => (
             <Box mb={2}>
-              <Text fontWeight="bold" mb={1}>Source URL (optional)</Text>
+              <Text fontWeight="bold" mb={1}>
+                Source URL (optional)
+              </Text>
               <textarea
                 value={String(field.state.value ?? "")}
                 onBlur={field.handleBlur}
