@@ -4,13 +4,13 @@ import { useNavigate } from "@tanstack/react-router";
 type SortBy = "latest" | "oldest";
 type DateRange = "all" | "today" | "week" | "month";
 
-interface PostFiltersProps {
+type PostFiltersProps = {
   sortBy: SortBy;
   dateRange: DateRange;
 }
 
 export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/posts" });
 
   return (
     <VStack align="stretch" gap={3}>

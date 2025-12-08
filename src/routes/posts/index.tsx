@@ -27,6 +27,12 @@ import z from "zod";
 const searchSchema = postsFilterSearchSchema.extend({
   q: z.string().trim().min(1).optional(),
   size: z.coerce.number().min(1).max(100).default(20).optional(),
+  sortBy: z
+    .enum(["latest", "oldest"])
+    .optional(),
+  dateRange: z
+    .enum(["all", "today", "week", "month"])
+    .optional(),
 });
 
 export const Route = createFileRoute("/posts/")({
