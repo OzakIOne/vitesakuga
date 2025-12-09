@@ -12,20 +12,20 @@ import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/posts/")({
   validateSearch: postSearchSchema,
-  loaderDeps: ({ search }) => ({
-    q: search.q,
-    size: search.size || 20,
-  }),
-  loader: async ({ context, deps: { q } }) => {
-    if (q)
-      await context.queryClient.ensureInfiniteQueryData(
-        postsInfiniteQueryOptions(q),
-      );
-    else
-      await context.queryClient.ensureInfiniteQueryData(
-        postsInfiniteQueryOptions(),
-      );
-  },
+  // loaderDeps: ({ search }) => ({
+  //   q: search.q,
+  //   size: search.size || 20,
+  // }),
+  // loader: async ({ context, deps: { q } }) => {
+  //   if (q)
+  //     await context.queryClient.ensureInfiniteQueryData(
+  //       postsInfiniteQueryOptions(q),
+  //     );
+  //   else
+  //     await context.queryClient.ensureInfiniteQueryData(
+  //       postsInfiniteQueryOptions(),
+  //     );
+  // },
   component: PostsLayoutComponent,
 });
 

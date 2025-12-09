@@ -14,9 +14,9 @@ import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postQueryOptions } from "src/lib/posts/posts.queries";
 
 export const Route = createFileRoute("/posts/$postId")({
-  loader: async ({ params: { postId }, context }) => {
-    await context.queryClient.ensureQueryData(postQueryOptions(Number(postId)));
-  },
+  // loader: async ({ params: { postId }, context }) => {
+  //   await context.queryClient.ensureQueryData(postQueryOptions(Number(postId)));
+  // },
   errorComponent: PostErrorComponent,
   component: PostComponent,
   notFoundComponent: () => {

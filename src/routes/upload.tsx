@@ -6,7 +6,6 @@ import {
   Icon,
   Input,
   Text,
-  Textarea,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";

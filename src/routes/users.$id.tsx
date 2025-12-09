@@ -1,15 +1,15 @@
+import { Box } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Box } from "@chakra-ui/react";
+import { useMemo } from "react";
 import { NotFound } from "src/components/NotFound";
 import { PostList } from "src/components/PostList";
+import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
-import { userQueryOptions } from "src/lib/users/users.queries";
-import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postSearchSchema } from "src/lib/posts/posts.schema";
-import { useMemo } from "react";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
+import { userQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
   validateSearch: postSearchSchema,
@@ -50,6 +50,7 @@ function UserComponent() {
           id={data.data.user.id}
         />
 
+        {/* TODO virtualize */}
         <div className="flex flex-wrap gap-4">
           {filteredPosts.map((post) => (
             <div

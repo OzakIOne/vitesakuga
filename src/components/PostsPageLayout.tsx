@@ -2,7 +2,7 @@ import { Box, Grid, GridItem, Heading, VStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import type { DateRange, SortBy } from "src/lib/posts/posts.utils";
 import { PopularTagsSection } from "./PopularTagsSection";
-import { PostFilters, RegisteredRoutes } from "./PostFilters";
+import { PostFilters, type RegisteredRoutes } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
 
 export interface PopularTag {

@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import type { fetchPost } from "src/lib/posts/posts.fn";
 import { updatePost } from "src/lib/posts/posts.fn";
-import { FieldInfo } from "../form/FieldInfo";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormTextWrapper } from "../form/FieldText";
 
@@ -15,6 +14,8 @@ interface PostEditFormProps {
   onCancel: () => void;
   postId: number;
 }
+
+// TODO isDirty check so we don't lose changes accidentally
 
 export function PostEditForm({
   post,

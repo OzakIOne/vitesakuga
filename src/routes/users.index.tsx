@@ -4,9 +4,9 @@ import { User } from "src/components/User";
 import { usersQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/")({
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(usersQueryOptions());
-  },
+  // loader: async ({ context }) => {
+  //   await context.queryClient.ensureQueryData(usersQueryOptions());
+  // },
   component: UsersLayoutComponent,
 });
 

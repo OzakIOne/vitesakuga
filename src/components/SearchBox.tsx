@@ -19,6 +19,7 @@ export function SearchBox({
   const navigate = useNavigate();
   const [value, setValue] = useState(defaultValue);
 
+  // TODO readme change search behavior
   const handleSearch = (searchValue: string) => {
     const trimmed = searchValue.trim();
     if (trimmed) {
@@ -64,11 +65,6 @@ export function SearchBox({
           }
         }}
       />
-      {defaultValue && (
-        <Box fontSize="xs" mt={2}>
-          Searching for: <strong>{defaultValue}</strong>
-        </Box>
-      )}
     </Box>
   );
 }
