@@ -3,15 +3,15 @@ import { fetchComments } from "./comments.fn";
 
 export const commentsKeys = {
   all: ["comments"] as const,
-  byPost: (postId: number) => [...commentsKeys.all, "byPost", postId] as const,
+  post: (postId: number) => [...commentsKeys.all, "post", postId] as const,
 } as const;
 
 // Centralized queryOptions factories for comments feature
 export const commentsQueries = {
   // Comments for a specific post
-  byPost: (postId: number) =>
+  getComments: (postId: number) =>
     queryOptions({
-      queryKey: commentsKeys.byPost(postId),
+      queryKey: commentsKeys.post(postId),
       queryFn: async () => {
         return fetchComments({
           data: postId,
@@ -23,6 +23,6 @@ export const commentsQueries = {
 };
 
 // Backward compatibility export
-export const commentsQueryOptions = (postId: number) => {
-  return commentsQueries.byPost(postId);
+export const commentsQueryGetComments = (postId: number) => {
+  return commentsQueries.getComments(postId);
 };

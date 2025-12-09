@@ -1,12 +1,12 @@
 import { Badge, Box, Heading, Stack, Text, VStack } from "@chakra-ui/react";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { SearchBox } from "src/components/SearchBox";
-import type { fetchPost } from "src/lib/posts/posts.fn";
+import type { fetchPostDetail } from "src/lib/posts/posts.fn";
 
 interface PostDetailSidebarProps {
-  post: Awaited<ReturnType<typeof fetchPost>>["post"];
-  initialTags: Awaited<ReturnType<typeof fetchPost>>["tags"];
-  relatedPost: Awaited<ReturnType<typeof fetchPost>>["relatedPost"];
+  post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
+  initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
+  relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
 }
 
 export function PostDetailSidebar({

@@ -187,7 +187,7 @@ export const searchPosts = createServerFn()
     };
   });
 
-export const fetchPost = createServerFn()
+export const fetchPostDetail = createServerFn()
   .inputValidator((id: unknown) => postIdSchema.parse(id))
   .handler(async (ctx) => {
     const postWithUser = await kysely

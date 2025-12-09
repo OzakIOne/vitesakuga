@@ -20,6 +20,7 @@ import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
+import { usersKeys } from "src/lib/users/users.queries";
 import appCss from "src/styles/app.css?url";
 import { seo } from "src/utils/seo";
 
@@ -157,7 +158,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 size="xs"
                 onClick={async () => {
                   await authClient.signOut();
-                  await queryClient.invalidateQueries({ queryKey: ["user"] });
+                  await queryClient.invalidateQueries({
+                    queryKey: usersKeys.user,
+                  });
                   await router.invalidate();
                 }}
               >

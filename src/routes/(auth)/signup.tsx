@@ -8,6 +8,7 @@ import { IoLogoGithub } from "react-icons/io";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import authClient from "src/lib/auth/client";
+import { usersKeys } from "src/lib/users/users.queries";
 import { z } from "zod";
 
 export const Route = createFileRoute("/(auth)/signup")({
@@ -58,7 +59,7 @@ function SignupForm() {
             setIsLoading(false);
           },
           onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["user"] });
+            await queryClient.invalidateQueries({ queryKey: usersKeys.user });
             navigate({ to: redirectUrl });
           },
         },

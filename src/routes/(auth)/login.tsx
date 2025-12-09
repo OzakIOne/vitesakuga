@@ -6,6 +6,7 @@ import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { PasswordInput } from "src/components/ui/password-input";
 import authClient from "src/lib/auth/client";
+import { usersKeys } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/(auth)/login")({
   component: LoginForm,
@@ -42,7 +43,7 @@ function LoginForm() {
           setIsLoading(false);
         },
         onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: ["user"] });
+          await queryClient.invalidateQueries({ queryKey: usersKeys.user });
           navigate({ to: redirectUrl });
         },
       },

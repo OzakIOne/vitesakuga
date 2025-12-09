@@ -1,10 +1,14 @@
 import { Box, Button, Text, Textarea } from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useSuspenseQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { addComment } from "src/lib/comments/comments.fn";
 import {
   commentsKeys,
-  commentsQueryOptions,
+  commentsQueryGetComments,
 } from "src/lib/comments/comments.queries";
 
 interface CommentsProps {
@@ -16,7 +20,7 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
   const [comment, setComment] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: comments } = useQuery(commentsQueryOptions(postId));
+  const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
 
   const addCommentMutation = useMutation({
     mutationFn: (newComment: {
@@ -25,7 +29,7 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
       userId: string;
     }) => addComment({ data: newComment }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsKeys.byPost(postId) });
+      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
       setComment("");
     },
   });

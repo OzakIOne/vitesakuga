@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Heading, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import type { fetchPost } from "src/lib/posts/posts.fn";
+import type { fetchPostDetail } from "src/lib/posts/posts.fn";
 import { User } from "./User";
 import { Video } from "./Video";
 
@@ -12,10 +12,10 @@ export function Post({
   currentUserId,
   onEditClick,
 }: {
-  post: Awaited<ReturnType<typeof fetchPost>>["post"];
-  user: Awaited<ReturnType<typeof fetchPost>>["user"];
-  tags: Awaited<ReturnType<typeof fetchPost>>["tags"];
-  relatedPost: Awaited<ReturnType<typeof fetchPost>>["relatedPost"];
+  post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
+  user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
+  tags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
+  relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
   currentUserId?: string;
   onEditClick?: () => void;
 }) {

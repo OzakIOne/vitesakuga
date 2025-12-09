@@ -28,6 +28,7 @@ import {
   type MiddlewareUser,
 } from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
+import { postsKeys } from "src/lib/posts/posts.queries";
 import {
   FileFormUploadSchema,
   type FileUploadData,
@@ -54,7 +55,7 @@ function RouteComponent() {
     mutationFn: (data: SerializedUploadData) => uploadPostFn({ data }),
     onSuccess: (newPost) => {
       form.reset();
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: postsKeys.all });
       navigate({ to: `/posts/${newPost.id}` });
       toaster.create({
         title: "Upload successful",
@@ -150,7 +151,7 @@ function RouteComponent() {
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({
-    queryKey: ["posts", "search", relatedPostSearch],
+    queryKey: postsKeys.search(relatedPostSearch),
     queryFn: () =>
       searchPosts({
         data: {

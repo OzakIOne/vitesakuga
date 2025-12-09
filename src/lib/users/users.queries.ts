@@ -3,6 +3,7 @@ import { fetchUser, fetchUsers } from "./users.fn";
 
 export const usersKeys = {
   all: ["users"] as const,
+  user: ["user"] as const,
   list: () => [...usersKeys.all, "list"] as const,
   detail: (userId: string) => [...usersKeys.all, "detail", userId] as const,
 } as const;

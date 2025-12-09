@@ -13,9 +13,6 @@ import { userQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
   validateSearch: postSearchSchema,
-  loader: async ({ params: { id }, context }) => {
-    await context.queryClient.ensureQueryData(userQueryOptions(id));
-  },
   errorComponent: UserErrorComponent,
   component: UserComponent,
   notFoundComponent: () => {
@@ -25,8 +22,8 @@ export const Route = createFileRoute("/users/$id")({
 
 function UserComponent() {
   const { id } = Route.useParams();
-  const data = useSuspenseQuery(userQueryOptions(id));
   const { sortBy, dateRange } = Route.useSearch();
+  const data = useSuspenseQuery(userQueryOptions(id));
 
   const filteredPosts = useMemo(() => {
     return filterAndSortPosts(data.data.posts, {

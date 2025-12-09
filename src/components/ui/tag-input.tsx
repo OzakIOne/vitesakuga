@@ -10,7 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
-import { getAllTags } from "src/lib/tags/tags.fn";
+import { tagsQueryGetTags } from "src/lib/tags/tags.queries";
 
 type Tag = {
   id?: number;
@@ -25,10 +25,7 @@ interface TagInputProps {
 export function TagInput({ value, onChange }: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
 
-  const { data: allTags = [] } = useQuery({
-    queryKey: ["tags", "all"],
-    queryFn: () => getAllTags(),
-  });
+  const { data: allTags = [] } = useQuery(tagsQueryGetTags());
 
   // Filter tags based on search and exclude already selected tags
   const filteredTags = useMemo(() => {

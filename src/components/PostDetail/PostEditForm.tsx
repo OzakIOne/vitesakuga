@@ -2,14 +2,14 @@ import { Box, Button, Text } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
-import type { fetchPost } from "src/lib/posts/posts.fn";
+import type { fetchPostDetail } from "src/lib/posts/posts.fn";
 import { updatePost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormTextWrapper } from "../form/FieldText";
 
 interface PostEditFormProps {
-  post: Awaited<ReturnType<typeof fetchPost>>["post"];
-  initialTags: Awaited<ReturnType<typeof fetchPost>>["tags"];
+  post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
+  initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   onSuccess: () => void;
   onCancel: () => void;
   postId: number;

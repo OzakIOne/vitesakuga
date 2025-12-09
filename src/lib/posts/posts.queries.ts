@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { fetchPost, fetchPosts, searchPosts } from "./posts.fn";
+import { fetchPostDetail, fetchPosts, searchPosts } from "./posts.fn";
 import type { PaginatedPostsResponse } from "./posts.schema";
 
 export const postsKeys = {
@@ -57,7 +57,7 @@ export const postsQueries = {
     queryOptions({
       queryKey: postsKeys.detail(postId),
       queryFn: async () => {
-        return fetchPost({
+        return fetchPostDetail({
           data: postId,
         });
       },
@@ -71,6 +71,6 @@ export const postsInfiniteQueryOptions = (q?: string) => {
   return q ? postsQueries.search(q) : postsQueries.list();
 };
 
-export const postQueryOptions = (postId: number) => {
+export const postQueryDetail = (postId: number) => {
   return postsQueries.detail(postId);
 };
