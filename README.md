@@ -2,6 +2,7 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] fix upload failing if user doesnt generate a thumbnail
 - [x] fix build and start errors
 - [x] fix vite serve
 - [x] transfer data from loaders to query
