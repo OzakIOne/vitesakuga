@@ -9,6 +9,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] add some toasts to forms / mutations for success / errors
 - [ ] make a card component for displaying a single post in a list
 - [ ] avoid code duplication in the filter thing 
+- [ ] add cursor/pagination thing to /user /tag
 - [ ] move everything to query instead of router loader
 - [x] fix build and start errors
 - [x] fix vite serve
