@@ -1,16 +1,25 @@
 import { Badge, Box, Stack, Text, VStack } from "@chakra-ui/react";
-import { useNavigate } from "@tanstack/react-router";
+import { type RegisteredRouter, useNavigate } from "@tanstack/react-router";
 
+// TODO get types from zod schema
 type SortBy = "latest" | "oldest";
 type DateRange = "all" | "today" | "week" | "month";
+
+export type RegisteredRoutes =
+  RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
 
 type PostFiltersProps = {
   sortBy: SortBy;
   dateRange: DateRange;
+  fromRoute: RegisteredRoutes;
 };
 
-export function PostFilters({ sortBy, dateRange }: PostFiltersProps) {
-  const navigate = useNavigate({ from: "/posts" });
+export function PostFilters({
+  sortBy,
+  dateRange,
+  fromRoute,
+}: PostFiltersProps) {
+  const navigate = useNavigate({ from: fromRoute });
 
   return (
     <VStack align="stretch" gap={3}>

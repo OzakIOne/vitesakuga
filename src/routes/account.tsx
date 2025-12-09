@@ -14,7 +14,7 @@ import { useForm } from "@tanstack/react-form";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import * as React from "react";
 import { LuImage, LuUser } from "react-icons/lu";
-import { FieldInfo } from "src/components/FieldInfo";
+import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
 import {

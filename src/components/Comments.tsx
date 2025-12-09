@@ -2,7 +2,10 @@ import { Box, Button, Text, Textarea } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { addComment } from "src/lib/comments/comments.fn";
-import { commentsQueryOptions } from "src/lib/comments/comments.queries";
+import {
+  commentsKeys,
+  commentsQueryOptions,
+} from "src/lib/comments/comments.queries";
 
 interface CommentsProps {
   postId: number;
@@ -22,7 +25,7 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
       userId: string;
     }) => addComment({ data: newComment }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+      queryClient.invalidateQueries({ queryKey: commentsKeys.byPost(postId) });
       setComment("");
     },
   });

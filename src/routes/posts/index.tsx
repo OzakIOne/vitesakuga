@@ -1,35 +1,17 @@
-import {
-  Box,
-  Flex,
-  Grid,
-  GridItem,
-  Heading,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Box, Flex, GridItem, Text, VStack } from "@chakra-ui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
-import { PopularTagsSection } from "src/components/PopularTagsSection";
-import { PostFilters } from "src/components/PostFilters";
 import { PostList } from "src/components/PostList";
-import { SearchBox } from "src/components/SearchBox";
+import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { envClient } from "src/lib/env/client";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
-import { postsFilterSearchSchema } from "src/lib/posts/posts.schema";
+import { postSearchSchema } from "src/lib/posts/posts.schema";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
-import z from "zod";
-
-const searchSchema = postsFilterSearchSchema.extend({
-  q: z.string().trim().min(1).optional(),
-  size: z.coerce.number().min(1).max(100).default(20).optional(),
-  sortBy: z.enum(["latest", "oldest"]).optional(),
-  dateRange: z.enum(["all", "today", "week", "month"]).optional(),
-});
 
 export const Route = createFileRoute("/posts/")({
-  validateSearch: searchSchema,
+  validateSearch: postSearchSchema,
   loaderDeps: ({ search }) => ({
     q: search.q,
     size: search.size || 20,
@@ -48,15 +30,7 @@ export const Route = createFileRoute("/posts/")({
 });
 
 function PostsLayoutComponent() {
-  const {
-    q,
-    size,
-    sortBy: urlSortBy,
-    dateRange: urlDateRange,
-  } = Route.useSearch();
-
-  const sortBy = urlSortBy || "latest";
-  const dateRange = urlDateRange || "all";
+  const { q, size, sortBy, dateRange } = Route.useSearch();
 
   const {
     data,
@@ -74,10 +48,11 @@ function PostsLayoutComponent() {
   const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
-    return filterAndSortPosts(allPosts, { sortBy, dateRange });
+    return filterAndSortPosts(allPosts, {
+      sortBy,
+      dateRange,
+    });
   }, [allPosts, sortBy, dateRange]);
-
-  const posts = filteredPosts;
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +68,7 @@ function PostsLayoutComponent() {
     }
     return 6;
   }, []);
-  const totalRows = Math.ceil(posts.length / columnsPerRow);
+  const totalRows = Math.ceil(filteredPosts.length / columnsPerRow);
   const totalCols = columnsPerRow;
 
   const rowVirtualizer = useVirtualizer({
@@ -139,7 +114,7 @@ function PostsLayoutComponent() {
       {envClient.MODE === "development" && (
         <VStack p={4} borderBottom="1px" align="start">
           <Text fontSize="sm">Posts loaded: {allPosts.length}</Text>
-          <Text fontSize="sm">Filtered posts: {posts.length}</Text>
+          <Text fontSize="sm">Filtered posts: {filteredPosts.length}</Text>
           <Text fontSize="sm">Has next page: {hasNextPage ? "Yes" : "No"}</Text>
           <Text fontSize="sm">
             Last cursor:{" "}
@@ -148,27 +123,13 @@ function PostsLayoutComponent() {
           </Text>
         </VStack>
       )}
-
-      <Grid templateColumns={{ base: "1fr", lg: "1fr 3fr" }} gap={6} w="full">
-        <GridItem>
-          <VStack gap={4} align="stretch">
-            <Box p={4} borderRadius="md" shadow="md" border="1px">
-              <SearchBox defaultValue={q} />
-            </Box>
-
-            <Box p={4} borderRadius="md" shadow="md" border="1px">
-              <PopularTagsSection tags={popularTags} />
-            </Box>
-
-            <Box p={4} borderRadius="md" shadow="md" border="1px">
-              <Heading size="sm" mb={3}>
-                Filters
-              </Heading>
-              <PostFilters sortBy={sortBy} dateRange={dateRange} />
-            </Box>
-          </VStack>
-        </GridItem>
-
+      <PostsPageLayout
+        searchQuery={q}
+        popularTags={popularTags}
+        sortBy={sortBy}
+        dateRange={dateRange}
+        fromRoute="/posts"
+      >
         <GridItem>
           <Box
             ref={parentRef}
@@ -205,7 +166,7 @@ function PostsLayoutComponent() {
                     const postIndex =
                       virtualRow.index * totalCols + virtualCol.index;
 
-                    if (postIndex >= posts.length) {
+                    if (postIndex >= filteredPosts.length) {
                       if (virtualRow.index >= totalRows) {
                         return (
                           <Flex
@@ -228,7 +189,7 @@ function PostsLayoutComponent() {
                       return null;
                     }
 
-                    const post = posts[postIndex];
+                    const post = filteredPosts[postIndex];
                     return (
                       <Box
                         key={`${virtualRow.key}-${virtualCol.key}`}
@@ -250,7 +211,7 @@ function PostsLayoutComponent() {
             </Box>
           </Box>
         </GridItem>
-      </Grid>
+      </PostsPageLayout>
     </Box>
   );
 }

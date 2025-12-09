@@ -19,7 +19,8 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { LuUpload } from "react-icons/lu";
-import { FieldInfo } from "src/components/FieldInfo";
+import { FieldInfo } from "src/components/form/FieldInfo";
+import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
@@ -172,21 +173,7 @@ function RouteComponent() {
         <Box mb={6}>
           <form.Field name="title">
             {(field) => (
-              <>
-                <Field.Root required>
-                  <Field.Label>
-                    Title <Field.RequiredIndicator />
-                  </Field.Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                </Field.Root>
-                <FieldInfo field={field} />
-              </>
+              <FormTextWrapper field={field} label="Title" isRequired />
             )}
           </form.Field>
         </Box>
@@ -194,25 +181,13 @@ function RouteComponent() {
         <Box mb={6}>
           <form.Field name="content">
             {(field) => (
-              <>
-                <Field.Root required>
-                  <Field.Label>
-                    Description <Field.RequiredIndicator />
-                  </Field.Label>
-                  <Textarea
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    rows={4}
-                  />
-                  <Field.HelperText>
-                    A brief description of the animation
-                  </Field.HelperText>
-                </Field.Root>
-                <FieldInfo field={field} />
-              </>
+              <FormTextWrapper
+                field={field}
+                label="Description"
+                isRequired
+                asTextarea
+                helper="A brief description of the animation"
+              />
             )}
           </form.Field>
         </Box>
@@ -220,24 +195,11 @@ function RouteComponent() {
         <Box mb={6}>
           <form.Field name="source">
             {(field) => (
-              <>
-                <Field.Root>
-                  <Field.Label>Source URL</Field.Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value || ""}
-                    onBlur={field.handleBlur}
-                    onChange={(e) =>
-                      field.handleChange(e.target.value || undefined)
-                    }
-                  />
-                  <Field.HelperText>
-                    Link to the original source (Twitter, YouTube, etc.)
-                  </Field.HelperText>
-                </Field.Root>
-                <FieldInfo field={field} />
-              </>
+              <FormTextWrapper
+                field={field}
+                label="Source URL"
+                helper="Link to the original source (Twitter, YouTube, etc.)"
+              />
             )}
           </form.Field>
         </Box>

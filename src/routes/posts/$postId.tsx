@@ -6,12 +6,11 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import { useState } from "react";
-import { SidebarLayout } from "src/components/layouts/SidebarLayout";
 import { NotFound } from "src/components/NotFound";
 import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
-import { PostDetailSidebar } from "src/components/PostDetail/PostDetailSidebar";
 import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
+import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postQueryOptions } from "src/lib/posts/posts.queries";
 
 export const Route = createFileRoute("/posts/$postId")({
@@ -32,8 +31,9 @@ function PostComponent() {
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
 
-  const { data: loaderData } = useSuspenseQuery(postQueryOptions(id));
-  const { post, user, tags: initialTags, relatedPost } = loaderData;
+  const {
+    data: { post, user, tags: initialTags, relatedPost },
+  } = useSuspenseQuery(postQueryOptions(id));
 
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -64,26 +64,23 @@ function PostComponent() {
           postId={id}
         />
       ) : (
-        <SidebarLayout
-          sidebar={
-            <PostDetailSidebar
-              post={post}
-              initialTags={initialTags}
-              relatedPost={relatedPost}
-            />
-          }
-          content={
-            <PostDetailDisplay
-              post={post}
-              user={user}
-              initialTags={initialTags}
-              relatedPost={relatedPost}
-              currentUserId={currentUserId}
-              onEditClick={handleEditClick}
-              onBack={handleBack}
-            />
-          }
-        />
+        <PostsPageLayout
+          searchQuery={undefined}
+          popularTags={[]}
+          sortBy="latest"
+          dateRange="all"
+          fromRoute="/posts/$postId"
+        >
+          <PostDetailDisplay
+            post={post}
+            user={user}
+            initialTags={initialTags}
+            relatedPost={relatedPost}
+            currentUserId={currentUserId}
+            onEditClick={handleEditClick}
+            onBack={handleBack}
+          />
+        </PostsPageLayout>
       )}
     </Box>
   );

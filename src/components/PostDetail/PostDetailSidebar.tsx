@@ -20,7 +20,7 @@ export function PostDetailSidebar({
         <SearchBox />
       </Box>
 
-      {initialTags && initialTags.length > 0 && (
+      {initialTags.length > 0 && (
         <Box p={4} borderRadius="md" shadow="md" border="1px">
           <Heading size="sm" mb={3}>
             Tags
@@ -51,9 +51,7 @@ export function PostDetailSidebar({
           </Text>
           <Text fontSize="sm">
             <strong>Uploaded:</strong>{" "}
-            {post.createdAt
-              ? new Date(post.createdAt).toLocaleDateString()
-              : "N/A"}
+            {new Date(post.createdAt).toLocaleDateString()}
           </Text>
         </VStack>
       </Box>

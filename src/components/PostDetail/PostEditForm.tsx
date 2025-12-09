@@ -4,6 +4,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import type { fetchPost } from "src/lib/posts/posts.fn";
 import { updatePost } from "src/lib/posts/posts.fn";
+import { FieldInfo } from "../form/FieldInfo";
+import { postsKeys } from "src/lib/posts/posts.queries";
+import { FormTextWrapper } from "../form/FieldText";
 
 interface PostEditFormProps {
   post: Awaited<ReturnType<typeof fetchPost>>["post"];
@@ -24,9 +27,9 @@ export function PostEditForm({
 
   const editForm = useForm({
     defaultValues: {
-      title: post.title || "",
-      content: post.content || "",
-      source: post.source || "",
+      title: post.title,
+      content: post.content,
+      source: post.source || undefined,
       relatedPostId: post.relatedPostId || undefined,
       tags: initialTags,
     },
@@ -57,8 +60,7 @@ export function PostEditForm({
       tags: { id?: number; name: string }[];
     }) => updatePost({ data }),
     onSuccess: () => {
-      // Invalidate post query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ["posts", postId] });
+      queryClient.invalidateQueries({ queryKey: postsKeys.detail(postId) });
       onSuccess();
     },
   });
@@ -75,87 +77,36 @@ export function PostEditForm({
         Edit Post
       </Text>
       <form onSubmit={handleSubmit}>
-        <editForm.Field name={"title" as const}>
+        <editForm.Field name="title">
           {(field) => (
             <Box mb={2}>
-              <Text fontWeight="bold" mb={1}>
-                Title
-              </Text>
-              <textarea
-                value={String(field.state.value ?? "")}
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Title"
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontFamily: "inherit",
-                }}
-              />
-              {field.state.meta.errors && (
-                <Text fontSize="sm" color="red.500" mt={1}>
-                  {field.state.meta.errors.join(", ")}
-                </Text>
-              )}
+              <FormTextWrapper label="Title" field={field} isRequired />
             </Box>
           )}
         </editForm.Field>
 
-        <editForm.Field name={"content" as const}>
+        <editForm.Field name="content">
           {(field) => (
             <Box mb={2}>
-              <Text fontWeight="bold" mb={1}>
-                Content
-              </Text>
-              <textarea
-                value={String(field.state.value ?? "")}
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Content"
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontFamily: "inherit",
-                  minHeight: "100px",
-                }}
+              <FormTextWrapper
+                label="Content"
+                field={field}
+                isRequired
+                asTextarea
               />
-              {field.state.meta.errors && (
-                <Text fontSize="sm" color="red.500" mt={1}>
-                  {field.state.meta.errors.join(", ")}
-                </Text>
-              )}
             </Box>
           )}
         </editForm.Field>
 
-        <editForm.Field name={"source" as const}>
+        <editForm.Field name="source">
           {(field) => (
             <Box mb={2}>
-              <Text fontWeight="bold" mb={1}>
-                Source URL (optional)
-              </Text>
-              <textarea
-                value={String(field.state.value ?? "")}
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Source URL (optional)"
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontFamily: "inherit",
-                }}
+              <FormTextWrapper
+                label="Source URL"
+                field={field}
+                asTextarea
+                helper="Link to the original source (Twitter, YouTube, etc.)"
               />
-              {field.state.meta.errors && (
-                <Text fontSize="sm" color="red.500" mt={1}>
-                  {field.state.meta.errors.join(", ")}
-                </Text>
-              )}
             </Box>
           )}
         </editForm.Field>

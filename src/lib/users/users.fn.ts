@@ -34,5 +34,31 @@ export const fetchUser = createServerFn()
 
     if (!postsFromUser) throw new Error(`Post ${ctx.data} not found`);
 
-    return { user: userInfo, posts: postsFromUser };
+    // Calculate popular tags for this user's posts
+    const popularTagsResult = await kysely
+      .selectFrom("tags")
+      .innerJoin("post_tags", "tags.id", "post_tags.tagId")
+      .innerJoin("posts", "posts.id", "post_tags.postId")
+      .where("posts.userId", "=", ctx.data)
+      .select([
+        "tags.id",
+        "tags.name",
+        kysely.fn.count("post_tags.postId").as("postCount"),
+      ])
+      .groupBy(["tags.id", "tags.name"])
+      .orderBy("postCount", "desc")
+      .limit(10)
+      .execute();
+
+    const popularTags = popularTagsResult.map((r) => ({
+      id: r.id,
+      name: r.name,
+      postCount: Number(r.postCount),
+    }));
+
+    return {
+      user: userInfo,
+      posts: postsFromUser,
+      popularTags,
+    };
   });

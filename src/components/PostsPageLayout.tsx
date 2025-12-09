@@ -2,7 +2,7 @@ import { Box, Grid, GridItem, Heading, VStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import type { DateRange, SortBy } from "src/lib/posts/posts.utils";
 import { PopularTagsSection } from "./PopularTagsSection";
-import { PostFilters } from "./PostFilters";
+import { PostFilters, RegisteredRoutes } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
 
 export interface PopularTag {
@@ -12,28 +12,21 @@ export interface PopularTag {
 }
 
 export interface PostsPageLayoutProps {
-  /** Search query value for the SearchBox */
   searchQuery?: string;
-  /** Popular tags to display in the sidebar */
   popularTags: PopularTag[];
-  /** Current sort option */
   sortBy: SortBy;
-  /** Current date range filter */
   dateRange: DateRange;
-  /** Main content area */
   children: ReactNode;
+  fromRoute: RegisteredRoutes;
 }
 
-/**
- * Shared layout component for posts pages
- * Provides a 2-column layout with sidebar (search, tags, filters) and main content area
- */
 export function PostsPageLayout({
   searchQuery,
   popularTags,
   sortBy,
   dateRange,
   children,
+  fromRoute,
 }: PostsPageLayoutProps) {
   return (
     <Box w="full" p={4}>
@@ -44,15 +37,21 @@ export function PostsPageLayout({
               <SearchBox defaultValue={searchQuery} />
             </Box>
 
-            <Box p={4} borderRadius="md" shadow="md" border="1px">
-              <PopularTagsSection tags={popularTags} />
-            </Box>
+            {popularTags.length > 0 && (
+              <Box p={4} borderRadius="md" shadow="md" border="1px">
+                <PopularTagsSection tags={popularTags} />
+              </Box>
+            )}
 
             <Box p={4} borderRadius="md" shadow="md" border="1px">
               <Heading size="sm" mb={3}>
                 Filters
               </Heading>
-              <PostFilters sortBy={sortBy} dateRange={dateRange} />
+              <PostFilters
+                sortBy={sortBy}
+                dateRange={dateRange}
+                fromRoute={fromRoute}
+              />
             </Box>
           </VStack>
         </GridItem>

@@ -5,8 +5,8 @@ import type { DbSchemaInsert } from "src/lib/db/schema";
 
 type PostListProps = {
   post: DbSchemaInsert["posts"];
-  q: string | undefined;
-  pageSize: number | undefined;
+  q?: string;
+  pageSize?: number;
 };
 
 function PostListComponent({ post, q, pageSize }: PostListProps) {
@@ -23,7 +23,6 @@ function PostListComponent({ post, q, pageSize }: PostListProps) {
       }}
     >
       <VStack gap={2} h="full" cursor="pointer">
-        {/* Thumbnail Container */}
         <Box
           position="relative"
           w="full"
