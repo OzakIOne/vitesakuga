@@ -4,14 +4,21 @@ import {
   Box,
   Button,
   Center,
+  CloseButton,
+  Dialog,
   Field,
   Heading,
   Input,
   InputGroup,
+  Portal,
   Text,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import * as React from "react";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
@@ -41,6 +48,8 @@ function RouteComponent() {
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const router = useRouter();
+
+  const navigate = useNavigate();
 
   const profileForm = useForm({
     defaultValues: {
@@ -107,7 +116,6 @@ function RouteComponent() {
     },
   });
 
-  // TODO add confirmation
   const handleDeleteUser = async () => {
     try {
       await authClient.deleteUser();
@@ -118,6 +126,7 @@ function RouteComponent() {
         duration: 3000,
         closable: true,
       });
+      navigate({ to: "/" });
     } catch (err) {
       toaster.create({
         type: "error",
@@ -290,15 +299,41 @@ function RouteComponent() {
               </Center>
             </form>
           </div>
-          <Center>
-            <Button
-              onClick={handleDeleteUser}
-              colorPalette="red"
-              fontWeight="medium"
-            >
-              Delete Account
-            </Button>
-          </Center>
+
+          <Dialog.Root role="alertdialog">
+            <Center>
+              <Dialog.Trigger asChild>
+                <Button colorPalette="red">Delete Account</Button>
+              </Dialog.Trigger>
+            </Center>
+            <Portal>
+              <Dialog.Backdrop />
+              <Dialog.Positioner>
+                <Dialog.Content>
+                  <Dialog.Header>
+                    <Dialog.Title>Are you sure?</Dialog.Title>
+                  </Dialog.Header>
+                  <Dialog.Body>
+                    <p>
+                      This action cannot be undone and all your data will be
+                      permanently removed.
+                    </p>
+                  </Dialog.Body>
+                  <Dialog.Footer>
+                    <Dialog.ActionTrigger asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </Dialog.ActionTrigger>
+                    <Button colorPalette="red" onClick={handleDeleteUser}>
+                      Confirm account deletion
+                    </Button>
+                  </Dialog.Footer>
+                  <Dialog.CloseTrigger asChild>
+                    <CloseButton size="sm" />
+                  </Dialog.CloseTrigger>
+                </Dialog.Content>
+              </Dialog.Positioner>
+            </Portal>
+          </Dialog.Root>
         </div>
       </div>
     </Box>
