@@ -117,3 +117,5 @@ export const postSearchSchema = z.object({
   sortBy: z.enum(["latest", "oldest"]).default("latest"),
   dateRange: z.enum(["all", "today", "week", "month"]).default("all"),
 });
+
+export type PostSearchParams = z.infer<typeof postSearchSchema>;

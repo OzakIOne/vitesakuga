@@ -4,8 +4,8 @@ import type { PaginatedPostsResponse } from "./posts.schema";
 
 export const postsKeys = {
   all: ["posts"] as const,
-  list: () => [...postsKeys.all, "list"] as const,
-  search: (q: string) => [...postsKeys.all, "search", q] as const,
+  list: () => [...postsKeys.all, "list"] as readonly string[],
+  search: (q: string) => [...postsKeys.all, "search", q] as readonly string[],
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
 } as const;
 

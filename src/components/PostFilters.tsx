@@ -1,17 +1,11 @@
 import { Badge, Box, Stack, Text, VStack } from "@chakra-ui/react";
-import { type RegisteredRouter, useNavigate } from "@tanstack/react-router";
-
-// TODO get types from zod schema
-type SortBy = "latest" | "oldest";
-type DateRange = "all" | "today" | "week" | "month";
-
-export type RegisteredRoutes =
-  RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
+import { useNavigate } from "@tanstack/react-router";
+import { PostsPageLayoutProps } from "./PostsPageLayout";
 
 type PostFiltersProps = {
-  sortBy: SortBy;
-  dateRange: DateRange;
-  fromRoute: RegisteredRoutes;
+  sortBy: PostsPageLayoutProps["sortBy"];
+  dateRange: PostsPageLayoutProps["dateRange"];
+  fromRoute: PostsPageLayoutProps["fromRoute"];
 };
 
 export function PostFilters({

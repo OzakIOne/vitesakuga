@@ -6,22 +6,20 @@ import type { fetchPostDetail } from "src/lib/posts/posts.fn";
 import { updatePost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormTextWrapper } from "../form/FieldText";
+import { useBlocker } from "@tanstack/react-router";
 
-interface PostEditFormProps {
+type PostEditFormProps = {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
   initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   onSuccess: () => void;
   onCancel: () => void;
   postId: number;
-}
-
-// TODO isDirty check so we don't lose changes accidentally
+};
 
 export function PostEditForm({
   post,
   initialTags,
   onSuccess,
-  onCancel,
   postId,
 }: PostEditFormProps) {
   const queryClient = useQueryClient();
@@ -66,18 +64,29 @@ export function PostEditForm({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    editForm.handleSubmit();
-  };
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!editForm.state.isDirty) return false;
+
+      const shouldLeave = confirm(
+        "You have unsaved changes. Do you want to leave?",
+      );
+      return !shouldLeave;
+    },
+    enableBeforeUnload: true,
+  });
 
   return (
     <Box shadow={"md"} borderRadius={"md"} padding={"4"} mb={4}>
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Edit Post
       </Text>
-      <form onSubmit={handleSubmit}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          editForm.handleSubmit();
+        }}
+      >
         <editForm.Field name="title">
           {(field) => (
             <Box mb={2}>
@@ -112,25 +121,23 @@ export function PostEditForm({
           )}
         </editForm.Field>
 
-        <Box mb={4} display="flex" gap={2}>
-          <Button
-            type="submit"
-            disabled={
-              updatePostMutation.isPending || editForm.state.isSubmitting
-            }
-          >
-            {updatePostMutation.isPending ? "Saving..." : "Save"}
-          </Button>
-          <Button onClick={onCancel}>Cancel</Button>
-        </Box>
-
-        {updatePostMutation.isError && (
-          <Text color="red.500" mb={4}>
-            {updatePostMutation.error instanceof Error
-              ? updatePostMutation.error.message
-              : "Error updating post"}
-          </Text>
-        )}
+        <editForm.Subscribe
+          selector={(state) => [
+            state.canSubmit,
+            state.isSubmitting,
+            state.isPristine,
+          ]}
+        >
+          {([canSubmit, isSubmitting, isPristine]) => (
+            <Button
+              type="submit"
+              disabled={!canSubmit || isPristine}
+              loading={isSubmitting}
+            >
+              {isSubmitting ? "Saving..." : "Save"}
+            </Button>
+          )}
+        </editForm.Subscribe>
       </form>
     </Box>
   );

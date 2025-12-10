@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type {
   FileUploadData,
   SerializedUploadData,
@@ -40,9 +39,6 @@ export async function transformUploadFormData(
     thumbnail: thumbnailData,
   };
 }
-
-export type SortBy = "latest" | "oldest";
-export type DateRange = "all" | "today" | "week" | "month";
 
 export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   posts: T[],

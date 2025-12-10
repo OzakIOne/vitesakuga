@@ -349,13 +349,17 @@ function RouteComponent() {
         </Box>
 
         <form.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting]}
+          selector={(state) => [
+            state.canSubmit,
+            state.isSubmitting,
+            state.isPristine,
+          ]}
         >
-          {([canSubmit, isSubmitting]) => (
+          {([canSubmit, isSubmitting, isPristine]) => (
             <Button
               type="submit"
               colorScheme="blue"
-              disabled={!canSubmit}
+              disabled={!canSubmit || isPristine}
               loading={isSubmitting}
               style={{ width: "100%" }}
             >

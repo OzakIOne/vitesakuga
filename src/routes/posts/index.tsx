@@ -25,9 +25,7 @@ function PostsLayoutComponent() {
     isFetchingNextPage,
     status,
     error,
-  } = useInfiniteQuery({
-    ...postsInfiniteQueryOptions(q),
-  });
+  } = useInfiniteQuery(postsInfiniteQueryOptions(q));
 
   const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
 

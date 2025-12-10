@@ -1,24 +1,28 @@
 import { Box, Grid, GridItem, Heading, VStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import type { DateRange, SortBy } from "src/lib/posts/posts.utils";
 import { PopularTagsSection } from "./PopularTagsSection";
-import { PostFilters, type RegisteredRoutes } from "./PostFilters";
+import { PostFilters } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
+import type { PostSearchParams } from "src/lib/posts/posts.schema";
+import { RegisteredRouter } from "@tanstack/react-router";
 
-export interface PopularTag {
+type RegisteredRoutes =
+  RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
+
+type PopularTag = {
   id: number;
   name: string;
   postCount: number;
-}
+};
 
-export interface PostsPageLayoutProps {
+export type PostsPageLayoutProps = {
   searchQuery?: string;
   popularTags: PopularTag[];
-  sortBy: SortBy;
-  dateRange: DateRange;
+  sortBy: PostSearchParams["sortBy"];
+  dateRange: PostSearchParams["dateRange"];
   children: ReactNode;
   fromRoute: RegisteredRoutes;
-}
+};
 
 export function PostsPageLayout({
   searchQuery,
