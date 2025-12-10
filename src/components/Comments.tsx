@@ -1,8 +1,8 @@
 import { Box, Button, Text, Textarea } from "@chakra-ui/react";
 import {
   useMutation,
-  useSuspenseQuery,
   useQueryClient,
+  useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useState } from "react";
 import { addComment } from "src/lib/comments/comments.fn";
