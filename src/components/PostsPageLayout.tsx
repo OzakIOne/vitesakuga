@@ -1,10 +1,10 @@
 import { Box, Grid, GridItem, Heading, VStack } from "@chakra-ui/react";
+import type { RegisteredRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import type { PostSearchParams } from "src/lib/posts/posts.schema";
 import { PopularTagsSection } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
-import type { PostSearchParams } from "src/lib/posts/posts.schema";
-import { RegisteredRouter } from "@tanstack/react-router";
 
 type RegisteredRoutes =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
