@@ -61,7 +61,7 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
             />
             <Button
               onClick={handleSubmitComment}
-              disabled={addCommentMutation.isPending}
+              disabled={addCommentMutation.isPending || !comment.trim()}
               colorScheme="blue"
             >
               {addCommentMutation.isPending ? "Adding..." : "Add Comment"}

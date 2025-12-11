@@ -8,7 +8,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { relations } from "node_modules/drizzle-orm";
-import { user } from "./auth.schema";
+import { createInsertSchema, user } from "./auth.schema";
 
 export const tags = pgTable("tags", {
   id: serial("id").primaryKey(),
@@ -82,3 +82,5 @@ export const comments = pgTable("comments", {
     .references(() => user.id)
     .notNull(),
 });
+
+export const commentInsertSchema = createInsertSchema(comments);

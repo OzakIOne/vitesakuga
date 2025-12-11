@@ -23,8 +23,7 @@ export const Route = createFileRoute("/posts/$postId")({
 
 function PostComponent() {
   const { postId } = Route.useParams();
-  const id = parseInt(postId, 10);
-
+  const id = Number(postId);
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
 
