@@ -2,15 +2,18 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] add <Suspense> for suspenseQueries
+- [ ] ask neo how to better handle currentUserId /src/routes/posts/$postId.tsx `const currentUserId = context.user?.id;`
+- [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
 - [ ] fix upload failing if user doesnt generate a thumbnail
-- [ ] virtualize posts of other pages than /posts so /user/id /tags/tag and make component of rendered list to avoid code duplication
-- [ ] fix virtualize .window error
+- [x] virtualize posts of other pages than /posts so /user/id /tags/tag and make component of rendered list to avoid code duplication
+- [x] fix virtualize .window error
 - [ ] maybe change search behavior, if we are in user route then search should search for users and not go back to default posts route?
 - [ ] add some toasts to forms / mutations for success / errors
 - [ ] make a card component for displaying a single post in a list
-- [ ] avoid code duplication in the filter thing 
-- [ ] add cursor/pagination thing to /user /tag
-- [ ] move everything to query instead of router loader
+- [ ] avoid code duplication in the filter thing
+- [x] add cursor/pagination thing to /user /tag
+- [x] move everything to query instead of router loader
 - [x] fix build and start errors
 - [x] fix vite serve
 - [x] transfer data from loaders to query

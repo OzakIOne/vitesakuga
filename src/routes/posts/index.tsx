@@ -12,6 +12,8 @@ import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 export const Route = createFileRoute("/posts/")({
   validateSearch: postSearchSchema,
   component: PostsLayoutComponent,
+  // fix initial window is not defined error
+  ssr: "data-only",
 });
 
 function PostsLayoutComponent() {

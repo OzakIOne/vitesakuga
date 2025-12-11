@@ -15,6 +15,8 @@ export const Route = createFileRoute("/users/$id")({
   validateSearch: postSearchSchema,
   errorComponent: UserErrorComponent,
   component: UserComponent,
+  // fix initial window is not defined error
+  ssr: "data-only",
   notFoundComponent: () => {
     return <NotFound>User not found</NotFound>;
   },

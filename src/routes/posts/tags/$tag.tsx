@@ -11,6 +11,8 @@ import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
   validateSearch: postSearchSchema,
+  // fix initial window is not defined error
+  ssr: "data-only",
 });
 
 function RouteComponent() {
