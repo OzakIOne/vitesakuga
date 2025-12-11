@@ -420,16 +420,54 @@ export const updatePost = createServerFn({ method: "POST" })
   });
 
 export const getPostsByTag = createServerFn()
-  .inputValidator((tag: unknown) => z.string().parse(tag))
-  .handler(async ({ data: tagName }) => {
-    // Get posts for the specific tag
-    const results = await kysely
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        tag: z.string(),
+        page: z
+          .object({
+            size: z.number().min(1).max(100).default(20),
+            after: z.number().optional(),
+          })
+          .optional()
+          .default({ size: 20 }),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { tag: tagName, page } = data;
+    const { size, after } = page;
+
+    // Fetch posts for the specific tag with pagination
+    let query = kysely
       .selectFrom("posts")
-      .leftJoin("post_tags", "post_tags.postId", "posts.id")
-      .leftJoin("tags", "tags.id", "post_tags.tagId")
+      .innerJoin("post_tags", "post_tags.postId", "posts.id")
+      .innerJoin("tags", "tags.id", "post_tags.tagId")
       .where("tags.name", "=", tagName)
       .selectAll("posts")
-      .execute();
+      .orderBy("posts.id", "desc");
+
+    // Apply cursor for forward pagination
+    if (after) {
+      query = query.where("posts.id", "<", after);
+    }
+
+    const items = await query.limit(size + 1).execute();
+
+    const parsed = z.array(postsSelectSchema).safeParse(items);
+    if (!parsed.success) {
+      throw new Error(`Error processing posts by tag: ${parsed.error.message}`);
+    }
+
+    const posts = parsed.data;
+    const hasMore = posts.length > size;
+
+    // Remove extra item if present
+    const postsData = hasMore ? posts.slice(0, size) : posts;
+
+    // Set cursors
+    const afterCursor =
+      postsData.length > 0 ? postsData[postsData.length - 1].id : null;
 
     // Calculate popular tags for posts that share the same tag
     const popularTagsResult = await kysely
@@ -461,7 +499,26 @@ export const getPostsByTag = createServerFn()
     }));
 
     return {
-      posts: results.map((post) => ({ post })),
-      popularTags,
+      data: postsData,
+      links: {
+        self: after
+          ? `/posts/tags/${encodeURIComponent(
+              tagName,
+            )}?page[after]=${after}&page[size]=${size}`
+          : `/posts/tags/${encodeURIComponent(tagName)}?page[size]=${size}`,
+        next:
+          hasMore && afterCursor
+            ? `/posts/tags/${encodeURIComponent(
+                tagName,
+              )}?page[after]=${afterCursor}&page[size]=${size}`
+            : null,
+      },
+      meta: {
+        hasMore,
+        cursors: {
+          after: afterCursor,
+        },
+        popularTags,
+      },
     };
   });

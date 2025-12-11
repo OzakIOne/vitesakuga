@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { fetchUser, fetchUsers } from "./users.fn";
 
 export const usersKeys = {
@@ -20,14 +20,23 @@ export const usersQueries = {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
     }),
-  // Single user detail with posts
+  // Single user detail with posts - using infinite pagination
   detail: (userId: string) =>
-    queryOptions({
+    infiniteQueryOptions({
       queryKey: usersKeys.detail(userId),
-      queryFn: async () => {
+      queryFn: async ({ pageParam }: { pageParam?: number }) => {
         return fetchUser({
-          data: userId,
+          data: {
+            userId,
+            page: { size: 20, after: pageParam },
+          },
         });
+      },
+      initialPageParam: undefined as number | undefined,
+      getNextPageParam: (lastPage) => {
+        return lastPage?.meta?.hasMore
+          ? lastPage?.meta?.cursors?.after
+          : undefined;
       },
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes

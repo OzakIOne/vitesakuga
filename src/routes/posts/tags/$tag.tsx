@@ -1,5 +1,5 @@
 import { Box, Heading } from "@chakra-ui/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { VirtualizedPostList } from "src/components/VirtualizedPostList";
@@ -17,15 +17,27 @@ function RouteComponent() {
   const { tag } = Route.useParams();
   const { sortBy, dateRange } = Route.useSearch();
 
-  const {
-    data: { posts, popularTags },
-  } = useSuspenseQuery(postsQueryByTag(tag));
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    useInfiniteQuery(postsQueryByTag(tag));
 
-  const allPosts = posts.map(({ post }) => post);
+  const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
+
+  const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
     return filterAndSortPosts(allPosts, { sortBy, dateRange });
   }, [allPosts, sortBy, dateRange]);
+
+  if (status === "error") {
+    return (
+      <Box p={4} borderRadius="md" border="1px">
+        <Heading as="h1" mb={6}>
+          Posts tagged with "{tag}"
+        </Heading>
+        <Box p={4}>Error loading posts</Box>
+      </Box>
+    );
+  }
 
   return (
     <PostsPageLayout
@@ -43,7 +55,12 @@ function RouteComponent() {
         {filteredPosts.length === 0 ? (
           <Box p={4}>No posts found with this tag.</Box>
         ) : (
-          <VirtualizedPostList posts={filteredPosts} />
+          <VirtualizedPostList
+            posts={filteredPosts}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            onFetchNextPage={fetchNextPage}
+          />
         )}
       </Box>
     </PostsPageLayout>

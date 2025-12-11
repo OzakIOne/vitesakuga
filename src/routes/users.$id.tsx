@@ -1,9 +1,9 @@
 import { Box } from "@chakra-ui/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { NotFound } from "src/components/NotFound";
-import { PostList } from "src/components/PostList";
+import { VirtualizedPostList } from "src/components/VirtualizedPostList";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
@@ -23,41 +23,45 @@ export const Route = createFileRoute("/users/$id")({
 function UserComponent() {
   const { id } = Route.useParams();
   const { sortBy, dateRange } = Route.useSearch();
-  const data = useSuspenseQuery(userQueryOptions(id));
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    useInfiniteQuery(userQueryOptions(id));
+
+  const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
+  const userData = data?.pages?.[0];
 
   const filteredPosts = useMemo(() => {
-    return filterAndSortPosts(data.data.posts, {
+    return filterAndSortPosts(allPosts, {
       sortBy,
       dateRange,
     });
-  }, [data.data.posts, sortBy, dateRange]);
+  }, [allPosts, sortBy, dateRange]);
+
+  if (status === "error" || !userData) {
+    return <NotFound>User not found</NotFound>;
+  }
 
   return (
     <Box p={4}>
       <PostsPageLayout
         searchQuery={undefined}
-        popularTags={data.data.popularTags}
+        popularTags={userData.meta?.popularTags ?? []}
         sortBy={sortBy}
         dateRange={dateRange}
         fromRoute="/users/$id"
       >
         <User
-          name={data.data.user.name}
-          image={data.data.user.image}
-          id={data.data.user.id}
+          name={userData.user.name}
+          image={userData.user.image}
+          id={userData.user.id}
         />
 
-        {/* TODO virtualize */}
-        <div className="flex flex-wrap gap-4">
-          {filteredPosts.map((post) => (
-            <div
-              key={post.id}
-              className="flex-1 min-w-[250px] max-w-sm border rounded-lg p-4 shadow hover:shadow-md transition"
-            >
-              <PostList post={post} q={undefined} pageSize={undefined} />
-            </div>
-          ))}
-        </div>
+        <VirtualizedPostList
+          posts={filteredPosts}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          onFetchNextPage={fetchNextPage}
+        />
       </PostsPageLayout>
     </Box>
   );

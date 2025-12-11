@@ -70,12 +70,21 @@ export const postsQueries = {
       gcTime: 5 * 60 * 1000, // 5 minutes
     }),
   byTag: (tagName: string) =>
-    queryOptions({
+    infiniteQueryOptions({
       queryKey: postsKeys.byTag(tagName),
-      queryFn: async () => {
-        // This function should call the appropriate function to get posts by tag
-        // For example, it could be getPostsByTag from tags.fn.ts
-        return getPostsByTag({ data: tagName });
+      queryFn: async ({ pageParam }: { pageParam?: number }) => {
+        return getPostsByTag({
+          data: {
+            tag: tagName,
+            page: { size: 20, after: pageParam },
+          },
+        });
+      },
+      initialPageParam: undefined as number | undefined,
+      getNextPageParam: (lastPage) => {
+        return lastPage?.meta?.hasMore
+          ? lastPage?.meta?.cursors?.after
+          : undefined;
       },
       staleTime: 60 * 1000, // 1 minute
       gcTime: 5 * 60 * 1000, // 5 minutes
