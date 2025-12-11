@@ -420,7 +420,7 @@ export const updatePost = createServerFn({ method: "POST" })
     return updatedPost;
   });
 
-  export const getPostsByTag = createServerFn()
+export const getPostsByTag = createServerFn()
   .inputValidator((tag: unknown) => z.string().parse(tag))
   .handler(async ({ data: tagName }) => {
     // Get posts for the specific tag
