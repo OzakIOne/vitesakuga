@@ -1,9 +1,8 @@
-import { Box, Flex, GridItem, Text, VStack } from "@chakra-ui/react";
+import { Box, GridItem, Text, VStack } from "@chakra-ui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef } from "react";
-import { PostList } from "src/components/PostList";
+import { useMemo } from "react";
+import { VirtualizedPostList } from "src/components/VirtualizedPostList";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { envClient } from "src/lib/env/client";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
@@ -38,53 +37,6 @@ function PostsLayoutComponent() {
     });
   }, [allPosts, sortBy, dateRange]);
 
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const columnsPerRow = useMemo(() => {
-    if (typeof window !== "undefined") {
-      const width = window.innerWidth;
-      if (width >= 1920) return 6;
-      if (width >= 1536) return 5;
-      if (width >= 1280) return 4;
-      if (width >= 1024) return 3;
-      if (width >= 768) return 2;
-      return 1;
-    }
-    return 6;
-  }, []);
-  const totalRows = Math.ceil(filteredPosts.length / columnsPerRow);
-  const totalCols = columnsPerRow;
-
-  const rowVirtualizer = useVirtualizer({
-    count: hasNextPage ? totalRows + 1 : totalRows,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 240,
-    overscan: 2,
-  });
-
-  const columnVirtualizer = useVirtualizer({
-    horizontal: true,
-    count: totalCols,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => Math.floor(window.innerWidth / totalCols),
-    overscan: 1,
-  });
-
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  const virtualCols = columnVirtualizer.getVirtualItems();
-
-  const lastRow = virtualRows[virtualRows.length - 1];
-  useEffect(() => {
-    if (
-      hasNextPage &&
-      lastRow &&
-      lastRow.index >= totalRows - 1 &&
-      !isFetchingNextPage
-    ) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, lastRow, totalRows, isFetchingNextPage, fetchNextPage]);
-
   if (status === "error") {
     return (
       <VStack w="full" p={4} justify="center" h="64">
@@ -115,85 +67,14 @@ function PostsLayoutComponent() {
         fromRoute="/posts"
       >
         <GridItem>
-          <Box
-            ref={parentRef}
-            overflow="auto"
-            h="calc(100vh - 120px)"
-            w="full"
-            position="relative"
-            borderRadius="md"
-            shadow="md"
-            border="1px"
-          >
-            <Box
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
-            >
-              {virtualRows.map((virtualRow) => (
-                <Flex
-                  key={virtualRow.key}
-                  px={4}
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  w="full"
-                  h={`${virtualRow.size}px`}
-                  style={{
-                    transform: `translateY(${virtualRow.start}px)`,
-                    boxSizing: "border-box",
-                  }}
-                >
-                  {virtualCols.map((virtualCol) => {
-                    const postIndex =
-                      virtualRow.index * totalCols + virtualCol.index;
-
-                    if (postIndex >= filteredPosts.length) {
-                      if (virtualRow.index >= totalRows) {
-                        return (
-                          <Flex
-                            key={virtualCol.key}
-                            align="center"
-                            justify="center"
-                            style={{
-                              width: `calc((100% - ${
-                                (totalCols - 1) * 16
-                              }px) / ${totalCols})`,
-                              height: `${virtualRow.size}px`,
-                              marginRight:
-                                virtualCol.index < totalCols - 1 ? "16px" : "0",
-                            }}
-                          >
-                            {hasNextPage && isFetchingNextPage && "Loading..."}
-                          </Flex>
-                        );
-                      }
-                      return null;
-                    }
-
-                    const post = filteredPosts[postIndex];
-                    return (
-                      <Box
-                        key={`${virtualRow.key}-${virtualCol.key}`}
-                        style={{
-                          width: `calc((100% - ${
-                            (totalCols - 1) * 16
-                          }px) / ${totalCols})`,
-                          height: `${virtualRow.size}px`,
-                          marginRight:
-                            virtualCol.index < totalCols - 1 ? "16px" : "0",
-                        }}
-                      >
-                        <PostList post={post} q={q} pageSize={size} />
-                      </Box>
-                    );
-                  })}
-                </Flex>
-              ))}
-            </Box>
-          </Box>
+          <VirtualizedPostList
+            posts={filteredPosts}
+            searchQuery={q}
+            pageSize={size}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            onFetchNextPage={fetchNextPage}
+          />
         </GridItem>
       </PostsPageLayout>
     </Box>

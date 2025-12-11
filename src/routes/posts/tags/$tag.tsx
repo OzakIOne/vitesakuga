@@ -1,8 +1,8 @@
-import { Box, Heading, Stack, Text } from "@chakra-ui/react";
+import { Box, Heading } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { PostList } from "src/components/PostList";
+import { VirtualizedPostList } from "src/components/VirtualizedPostList";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postsQueryByTag } from "src/lib/posts/posts.queries";
 import { postSearchSchema } from "src/lib/posts/posts.schema";
@@ -41,18 +41,9 @@ function RouteComponent() {
         </Heading>
 
         {filteredPosts.length === 0 ? (
-          <Text>No posts found with this tag.</Text>
+          <Box p={4}>No posts found with this tag.</Box>
         ) : (
-          <Stack direction="row" wrap="wrap" justify="start" gap={4}>
-            {filteredPosts.map((post) => (
-              <PostList
-                key={post.id}
-                post={post}
-                q={undefined}
-                pageSize={undefined}
-              />
-            ))}
-          </Stack>
+          <VirtualizedPostList posts={filteredPosts} />
         )}
       </Box>
     </PostsPageLayout>

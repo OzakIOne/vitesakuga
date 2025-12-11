@@ -10,7 +10,6 @@ import { envServer } from "../env/server";
 import {
   BufferFormUploadSchema,
   fetchPostsInputSchema,
-  type PaginatedPostsResponse,
   searchPostsInputSchema,
   updatePostInputSchema,
 } from "./posts.schema";
@@ -26,7 +25,7 @@ const cfclient = new S3Client({
 
 export const fetchPosts = createServerFn()
   .inputValidator((input: unknown) => fetchPostsInputSchema.parse(input))
-  .handler(async ({ data }): Promise<PaginatedPostsResponse> => {
+  .handler(async ({ data }) => {
     const { page } = data;
     const { size, after } = page;
 
@@ -98,7 +97,7 @@ export const fetchPosts = createServerFn()
 
 export const searchPosts = createServerFn()
   .inputValidator((input: unknown) => searchPostsInputSchema.parse(input))
-  .handler(async ({ data }): Promise<PaginatedPostsResponse> => {
+  .handler(async ({ data }) => {
     const { q, page } = data;
     const { size, after } = page;
 
