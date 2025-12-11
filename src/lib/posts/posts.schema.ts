@@ -48,8 +48,6 @@ export const searchPostsInputSchema = z.object({
     .default({ size: 20 }),
 });
 
-export const postIdSchema = z.coerce.number();
-
 export type PaginatedPostsResponse = z.infer<
   typeof paginatedPostsResponseSchema
 >;

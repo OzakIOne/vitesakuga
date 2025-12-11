@@ -4,9 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { PostList } from "src/components/PostList";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { postsQueryByTag } from "src/lib/posts/posts.queries";
 import { postSearchSchema } from "src/lib/posts/posts.schema";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
-import { getPostsByTag } from "src/lib/tags/tags.fn";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
@@ -19,12 +19,9 @@ function RouteComponent() {
 
   const {
     data: { posts, popularTags },
-  } = useSuspenseQuery({
-    queryKey: ["posts", "byTag", tag],
-    queryFn: () => getPostsByTag({ data: { tagName: tag } }),
-  });
+  } = useSuspenseQuery(postsQueryByTag(tag));
 
-  const allPosts = posts?.map(({ post }) => post) ?? [];
+  const allPosts = posts.map(({ post }) => post);
 
   const filteredPosts = useMemo(() => {
     return filterAndSortPosts(allPosts, { sortBy, dateRange });

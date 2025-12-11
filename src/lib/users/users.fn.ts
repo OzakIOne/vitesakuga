@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
-import { userIdSchema } from "./users.schema";
 
 export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
@@ -16,30 +15,30 @@ export const fetchUsers = createServerFn().handler(async () => {
 });
 
 export const fetchUser = createServerFn()
-  .inputValidator((id: unknown) => userIdSchema.parse(id))
-  .handler(async (ctx) => {
+  .inputValidator((user: unknown) => z.string().parse(user))
+  .handler(async ({ data: userId }) => {
     const userInfo = await kysely
       .selectFrom("user")
       .select(["name", "image", "id"])
-      .where("id", "=", ctx.data)
+      .where("id", "=", userId)
       .executeTakeFirstOrThrow();
 
-    if (!userInfo) throw new Error(`User ${ctx.data} not found`);
+    if (!userInfo) throw new Error(`User ${userId} not found`);
 
     const postsFromUser = await kysely
       .selectFrom("posts")
       .selectAll()
-      .where("userId", "=", ctx.data)
+      .where("userId", "=", userId)
       .execute();
 
-    if (!postsFromUser) throw new Error(`Post ${ctx.data} not found`);
+    if (!postsFromUser) throw new Error(`Posts for user ${userId} not found`);
 
     // Calculate popular tags for this user's posts
     const popularTagsResult = await kysely
       .selectFrom("tags")
       .innerJoin("post_tags", "tags.id", "post_tags.tagId")
       .innerJoin("posts", "posts.id", "post_tags.postId")
-      .where("posts.userId", "=", ctx.data)
+      .where("posts.userId", "=", userId)
       .select([
         "tags.id",
         "tags.name",

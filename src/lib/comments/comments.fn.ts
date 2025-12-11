@@ -6,9 +6,7 @@ import { commentSchema } from "./comments.schema";
 
 export const fetchComments = createServerFn()
   .inputValidator((input: unknown) => z.number().parse(input))
-  .handler(async (ctx) => {
-    const postId = ctx.data;
-
+  .handler(async ({ data: postId }) => {
     // Fetch comments for the post along with user info
     const comments = await kysely
       .selectFrom("comments")
@@ -36,8 +34,8 @@ export const fetchComments = createServerFn()
 
 export const addComment = createServerFn()
   .inputValidator((input: unknown) => commentInsertSchema.parse(input))
-  .handler(async (ctx) => {
-    const { postId, content, userId } = ctx.data;
+  .handler(async ({ data }) => {
+    const { postId, content, userId } = data;
 
     return await kysely
       .insertInto("comments")

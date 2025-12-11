@@ -12,10 +12,16 @@ import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postQueryDetail } from "src/lib/posts/posts.queries";
+import z from "zod";
 
 export const Route = createFileRoute("/posts/$postId")({
   errorComponent: PostErrorComponent,
   component: PostComponent,
+  params: {
+    parse: (params) => ({
+      postId: z.coerce.number().parse(params.postId),
+    }),
+  },
   notFoundComponent: () => {
     return <NotFound>Post not found</NotFound>;
   },
@@ -23,31 +29,22 @@ export const Route = createFileRoute("/posts/$postId")({
 
 function PostComponent() {
   const { postId } = Route.useParams();
-  const id = Number(postId);
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
 
   const {
     data: { post, user, tags: initialTags, relatedPost },
-  } = useSuspenseQuery(postQueryDetail(id));
+  } = useSuspenseQuery(postQueryDetail(postId));
 
   const [isEditMode, setIsEditMode] = useState(false);
 
   const currentUserId = context.user?.id;
   const isOwner = currentUserId === user.id;
 
-  const handleBack = () => {
-    if (window.history.length > 1) window.history.back();
-    else navigate({ to: "/posts" });
-  };
-
-  const handleEditClick = () => {
-    setIsEditMode(true);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditMode(false);
-  };
+  const handleBack = () =>
+    window.history.length > 1 ? window.history.back() : navigate({ to: ".." });
+  const handleEditClick = () => setIsEditMode(true);
+  const handleCancelEdit = () => setIsEditMode(false);
 
   return (
     <Box p={4}>
@@ -57,7 +54,7 @@ function PostComponent() {
           initialTags={initialTags}
           onSuccess={() => setIsEditMode(false)}
           onCancel={handleCancelEdit}
-          postId={id}
+          postId={postId}
         />
       ) : (
         <PostsPageLayout
