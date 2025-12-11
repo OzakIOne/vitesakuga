@@ -65,7 +65,7 @@ export function Post({
           </Text>
           <Link
             to="/posts/$postId"
-            params={{ postId: String(relatedPost.id) }}
+            params={{ postId: relatedPost.id }}
             className="text-blue-500 hover:underline"
           >
             {relatedPost.title}

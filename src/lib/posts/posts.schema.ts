@@ -1,5 +1,4 @@
 import z from "zod";
-import { postsSelectSchema } from "../db/schema";
 
 // Schema for pagination parameters following JSON:API cursor pagination profile
 export const fetchPostsInputSchema = z.object({
@@ -13,30 +12,6 @@ export const fetchPostsInputSchema = z.object({
     .default({ size: 20 }),
 });
 
-// TODO knip unused ?? shouldnt we use it somewhere in the paginated search?
-const paginatedPostsResponseSchema = z.object({
-  data: z.array(postsSelectSchema), // Primary data
-  links: z.object({
-    self: z.string(),
-    next: z.string().nullable(),
-  }),
-  meta: z.object({
-    hasMore: z.boolean(),
-    cursors: z.object({
-      after: z.number().nullable(),
-    }),
-    popularTags: z
-      .array(
-        z.object({
-          id: z.number(),
-          name: z.string(),
-          postCount: z.number(),
-        }),
-      )
-      .optional(),
-  }),
-});
-
 export const searchPostsInputSchema = z.object({
   q: z.string().trim().min(1),
   page: z
@@ -48,24 +23,10 @@ export const searchPostsInputSchema = z.object({
     .default({ size: 20 }),
 });
 
-export type PaginatedPostsResponse = z.infer<
-  typeof paginatedPostsResponseSchema
->;
-
 const TagSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
 });
-
-const VideoSerializableSchema = z.object({
-  arrayBuffer: z.instanceof(ArrayBuffer),
-  name: z.string(),
-  type: z.string(),
-  size: z.number(),
-});
-
-// TODO rename because also using this for thumbnail
-export type VideoSerializableType = z.infer<typeof VideoSerializableSchema>;
 
 const BaseFormUploadSchema = z.object({
   title: z.string().min(3, "You must have a length of at least 3"),
@@ -81,9 +42,18 @@ export const FileFormUploadSchema = BaseFormUploadSchema.extend({
   thumbnail: z.file(),
 });
 
+const BufferSerializableSchema = z.object({
+  arrayBuffer: z.instanceof(ArrayBuffer),
+  name: z.string(),
+  type: z.string(),
+  size: z.number(),
+});
+
+export type BufferSerializableType = z.infer<typeof BufferSerializableSchema>;
+
 export const BufferFormUploadSchema = BaseFormUploadSchema.extend({
-  video: VideoSerializableSchema,
-  thumbnail: VideoSerializableSchema,
+  video: BufferSerializableSchema,
+  thumbnail: BufferSerializableSchema,
 });
 
 export type SerializedUploadData = z.infer<typeof BufferFormUploadSchema>;

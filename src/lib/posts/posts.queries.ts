@@ -5,7 +5,6 @@ import {
   getPostsByTag,
   searchPosts,
 } from "./posts.fn";
-import type { PaginatedPostsResponse } from "./posts.schema";
 
 export const postsKeys = {
   all: ["posts"] as const,
@@ -29,7 +28,7 @@ export const postsQueries = {
         });
       },
       initialPageParam: undefined as number | undefined,
-      getNextPageParam: (lastPage: PaginatedPostsResponse) => {
+      getNextPageParam: (lastPage) => {
         return lastPage?.meta?.hasMore
           ? lastPage?.meta?.cursors?.after
           : undefined;
@@ -50,7 +49,7 @@ export const postsQueries = {
         });
       },
       initialPageParam: undefined as number | undefined,
-      getNextPageParam: (lastPage: PaginatedPostsResponse) => {
+      getNextPageParam: (lastPage) => {
         return lastPage?.meta?.hasMore
           ? lastPage?.meta?.cursors?.after
           : undefined;

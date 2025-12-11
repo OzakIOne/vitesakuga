@@ -16,7 +16,7 @@ function PostListComponent({ post, q, pageSize }: PostListProps) {
   return (
     <Link
       to="/posts/$postId"
-      params={{ postId: String(post.id) }}
+      params={{ postId: post.id! }}
       search={{
         q,
         size: pageSize,

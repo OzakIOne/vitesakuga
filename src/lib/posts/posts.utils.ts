@@ -1,10 +1,13 @@
 import type {
   FileUploadData,
+  PostSearchParams,
   SerializedUploadData,
-  VideoSerializableType,
+  BufferSerializableType,
 } from "./posts.schema";
+import { subWeeks, subMonths, isAfter, startOfDay } from "date-fns";
+import { orderBy } from "lodash-es";
 
-async function videoFileToBuffer(file: File): Promise<VideoSerializableType> {
+async function fileToBuffer(file: File): Promise<BufferSerializableType> {
   const arrayBuffer = await file.arrayBuffer();
 
   return {
@@ -25,8 +28,8 @@ export async function transformUploadFormData(
     throw new Error("Thumbnail file is required");
   }
 
-  const videoData = await videoFileToBuffer(values.video);
-  const thumbnailData = await videoFileToBuffer(values.thumbnail);
+  const videoData = await fileToBuffer(values.video);
+  const thumbnailData = await fileToBuffer(values.thumbnail);
 
   return {
     title: values.title,
@@ -42,64 +45,39 @@ export async function transformUploadFormData(
 
 export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   posts: T[],
-  dateRange: DateRange,
+  dateRange: PostSearchParams["dateRange"],
 ): T[] {
   if (dateRange === "all") {
     return posts;
   }
 
   const now = new Date();
-  let cutoffDate: Date;
+  const cutoffDate =
+    {
+      today: startOfDay(now),
+      week: subWeeks(now, 1),
+      month: subMonths(now, 1),
+    }[dateRange] ?? new Date(0);
 
-  switch (dateRange) {
-    case "today": {
-      cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      break;
-    }
-    case "week": {
-      cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      break;
-    }
-    case "month": {
-      cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      break;
-    }
-    default:
-      cutoffDate = new Date(0);
-  }
-
-  return posts.filter((post) => {
-    const postDate = new Date(post.createdAt);
-    return postDate >= cutoffDate;
-  });
+  return posts.filter((post) => isAfter(new Date(post.createdAt), cutoffDate));
 }
 
 export function sortPostsByDate<T extends { createdAt: string | Date }>(
   posts: T[],
-  sortBy: SortBy,
+  sortBy: PostSearchParams["sortBy"],
 ): T[] {
-  const sorted = [...posts];
-
-  if (sortBy === "oldest") {
-    sorted.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
-  } else {
-    sorted.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  }
-
-  return sorted;
+  return orderBy(
+    posts,
+    [(post) => new Date(post.createdAt).getTime()],
+    [sortBy === "oldest" ? "asc" : "desc"],
+  );
 }
 
 export function filterAndSortPosts<T extends { createdAt: string | Date }>(
   posts: T[],
   options: {
-    sortBy: SortBy;
-    dateRange: DateRange;
+    sortBy: PostSearchParams["sortBy"];
+    dateRange: PostSearchParams["dateRange"];
   },
 ): T[] {
   const filtered = filterPostsByDateRange(posts, options.dateRange);
