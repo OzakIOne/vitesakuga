@@ -9,7 +9,7 @@ type PostListProps = {
   pageSize?: number;
 };
 
-function PostListComponent({ post, q, pageSize }: PostListProps) {
+function PostCardComponent({ post, q, pageSize }: PostListProps) {
   const BaseURL = encodeURI(
     "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
   );
@@ -70,4 +70,4 @@ function PostListComponent({ post, q, pageSize }: PostListProps) {
   );
 }
 
-export const PostList = memo(PostListComponent);
+export const PostCard = memo(PostCardComponent);

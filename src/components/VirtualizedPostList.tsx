@@ -2,7 +2,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
 import type { DbSchemaInsert } from "src/lib/db/schema";
-import { PostList } from "./PostList";
+import { PostCard } from "./PostCard";
 
 type VirtualizedPostListProps = {
   posts: DbSchemaInsert["posts"][];
@@ -138,7 +138,7 @@ export function VirtualizedPostList({
                       virtualCol.index < totalCols - 1 ? "16px" : "0",
                   }}
                 >
-                  <PostList post={post} q={searchQuery} pageSize={pageSize} />
+                  <PostCard post={post} q={searchQuery} pageSize={pageSize} />
                 </Box>
               );
             })}
