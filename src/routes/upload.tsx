@@ -115,6 +115,56 @@ function RouteComponent() {
     enableBeforeUnload: true,
   });
 
+  const generateDefaultThumbnail = async (videoFile: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.src = URL.createObjectURL(videoFile);
+      video.crossOrigin = "anonymous";
+
+      const drawFrame = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get canvas context"));
+          return;
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Failed to generate thumbnail"));
+              return;
+            }
+
+            const file = new File([blob], "thumbnail.jpg", {
+              type: "image/jpeg",
+            });
+            resolve(file);
+            URL.revokeObjectURL(video.src);
+          },
+          "image/jpeg",
+          0.8,
+        );
+      };
+
+      video.onloadedmetadata = () => {
+        video.currentTime = 0;
+      };
+
+      video.onseeked = () => {
+        drawFrame();
+      };
+
+      video.onerror = () => {
+        reject(new Error("Failed to load video"));
+      };
+    });
+  };
+
   const handleSubmit = async (values: FileUploadData): Promise<void> => {
     try {
       const uploadData = await transformUploadFormData(values);
@@ -292,15 +342,37 @@ function RouteComponent() {
                     maxW="xl"
                     alignItems="stretch"
                     accept={["video/*,.mkv"]}
-                    onFileChange={(details) => {
+                    onFileChange={async (details) => {
                       const file = details.acceptedFiles[0] || null;
                       field.handleChange(file);
                       if (file) {
                         const previewURL = URL.createObjectURL(file);
                         setVideoPreviewUrl(previewURL);
-                      } else {
-                        setVideoPreviewUrl(null);
+
+                        // Auto-generate thumbnail from first frame
+                        try {
+                          const defaultThumbnail =
+                            await generateDefaultThumbnail(file);
+                          form.setFieldValue("thumbnail", defaultThumbnail);
+                          const thumbnailPreview =
+                            URL.createObjectURL(defaultThumbnail);
+                          setThumbnail(thumbnailPreview);
+                        } catch (error) {
+                          console.error(
+                            "Failed to auto-generate thumbnail:",
+                            error,
+                          );
+                          toaster.create({
+                            title: "Thumbnail generation failed",
+                            description:
+                              "Please generate a thumbnail manually.",
+                            type: "error",
+                            duration: 3000,
+                          });
+                        }
+                        return;
                       }
+                      setVideoPreviewUrl(null);
                     }}
                   >
                     <FileUpload.HiddenInput />
