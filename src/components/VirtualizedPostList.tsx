@@ -71,6 +71,34 @@ export function VirtualizedPostList({
     }
   }, [hasNextPage, lastRow, totalRows, isFetchingNextPage, onFetchNextPage]);
 
+  if (posts.length === 0) {
+    return (
+      <Box
+        ref={parentRef}
+        overflow="auto"
+        h="calc(100vh - 120px)"
+        w="full"
+        position="relative"
+        borderRadius="md"
+        shadow="md"
+        border="1px"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Box textAlign="center">
+          <Box fontSize="lg" fontWeight="medium" color="gray.600">
+            No posts found
+            {searchQuery && ` for query "${searchQuery}"`}
+          </Box>
+          <Box fontSize="sm" color="gray.500" mt={2}>
+            Try adjusting your search or filters
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box
       ref={parentRef}
