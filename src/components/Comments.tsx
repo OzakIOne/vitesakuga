@@ -1,10 +1,10 @@
-import { Box, Button, Text, Textarea } from "@chakra-ui/react";
+import { Box, Button, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
 import {
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { addComment } from "src/lib/comments/comments.fn";
 import {
   commentsKeys,
@@ -16,7 +16,7 @@ interface CommentsProps {
   currentUserId?: string;
 }
 
-export function Comments({ postId, currentUserId }: CommentsProps) {
+function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const [comment, setComment] = useState("");
   const queryClient = useQueryClient();
 
@@ -88,5 +88,20 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
         ))}
       </Box>
     </Box>
+  );
+}
+
+export function Comments({ postId, currentUserId }: CommentsProps) {
+  return (
+    <Suspense
+      fallback={
+        <Stack spacing={4}>
+          <Spinner size="sm" />
+          <Text>Loading comments...</Text>
+        </Stack>
+      }
+    >
+      <CommentsContent postId={postId} currentUserId={currentUserId} />
+    </Suspense>
   );
 }

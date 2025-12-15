@@ -1,11 +1,11 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   useNavigate,
   useRouteContext,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { NotFound } from "src/components/NotFound";
 import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
 import { PostEditForm } from "src/components/PostDetail/PostEditForm";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/posts/$postId")({
   },
 });
 
-function PostComponent() {
+function PostContentComponent() {
   const { postId } = Route.useParams();
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
@@ -76,5 +76,20 @@ function PostComponent() {
         </PostsPageLayout>
       )}
     </Box>
+  );
+}
+
+function PostComponent() {
+  return (
+    <Suspense
+      fallback={
+        <Stack align="center" justify="center" minH="600px">
+          <Spinner size="lg" />
+          <Text>Loading post...</Text>
+        </Stack>
+      }
+    >
+      <PostContentComponent />
+    </Suspense>
   );
 }

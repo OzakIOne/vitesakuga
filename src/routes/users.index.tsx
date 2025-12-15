@@ -1,5 +1,7 @@
+import { Spinner, Stack, Text } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { Suspense } from "react";
 import { User } from "src/components/User";
 import { usersQueryOptions } from "src/lib/users/users.queries";
 
@@ -7,7 +9,7 @@ export const Route = createFileRoute("/users/")({
   component: UsersLayoutComponent,
 });
 
-function UsersLayoutComponent() {
+function UsersContent() {
   const usersQuery = useSuspenseQuery(usersQueryOptions());
 
   return (
@@ -16,5 +18,20 @@ function UsersLayoutComponent() {
         <User key={user.id} name={user.name} image={user.image} id={user.id} />
       ))}
     </div>
+  );
+}
+
+function UsersLayoutComponent() {
+  return (
+    <Suspense
+      fallback={
+        <Stack align="center" justify="center" minH="400px">
+          <Spinner size="lg" />
+          <Text>Loading users...</Text>
+        </Stack>
+      }
+    >
+      <UsersContent />
+    </Suspense>
   );
 }

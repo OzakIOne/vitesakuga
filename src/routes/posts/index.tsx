@@ -1,7 +1,7 @@
-import { Box, GridItem, Text, VStack } from "@chakra-ui/react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { Box, GridItem, Spinner, Stack, Text, VStack } from "@chakra-ui/react";
+import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { VirtualizedPostList } from "src/components/VirtualizedPostList";
 import { envClient } from "src/lib/env/client";
@@ -16,17 +16,11 @@ export const Route = createFileRoute("/posts/")({
   ssr: "data-only",
 });
 
-function PostsLayoutComponent() {
+function PostsContent() {
   const { q, size, sortBy, dateRange } = Route.useSearch();
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    status,
-    error,
-  } = useInfiniteQuery(postsInfiniteQueryOptions(q));
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useSuspenseInfiniteQuery(postsInfiniteQueryOptions(q));
 
   const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
 
@@ -38,14 +32,6 @@ function PostsLayoutComponent() {
       dateRange,
     });
   }, [allPosts, sortBy, dateRange]);
-
-  if (status === "error") {
-    return (
-      <VStack w="full" p={4} justify="center" h="64">
-        <Text fontSize="lg">Error loading: {error?.message}</Text>
-      </VStack>
-    );
-  }
 
   return (
     <Box w="full" p={4}>
@@ -80,5 +66,20 @@ function PostsLayoutComponent() {
         </GridItem>
       </PostsPageLayout>
     </Box>
+  );
+}
+
+function PostsLayoutComponent() {
+  return (
+    <Suspense
+      fallback={
+        <Stack align="center" justify="center" minH="600px">
+          <Spinner size="lg" />
+          <Text>Loading posts...</Text>
+        </Stack>
+      }
+    >
+      <PostsContent />
+    </Suspense>
   );
 }
