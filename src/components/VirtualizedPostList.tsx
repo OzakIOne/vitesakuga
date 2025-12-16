@@ -1,6 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DbSchemaInsert } from "src/lib/db/schema";
 import { PostCard } from "./PostCard";
 
@@ -22,19 +22,35 @@ export function VirtualizedPostList({
   onFetchNextPage,
 }: VirtualizedPostListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
 
-  const columnsPerRow = useMemo(() => {
-    if (typeof window !== "undefined") {
-      const width = window.innerWidth;
-      if (width >= 1920) return 6;
-      if (width >= 1536) return 5;
-      if (width >= 1280) return 4;
-      if (width >= 1024) return 3;
-      if (width >= 768) return 2;
-      return 1;
-    }
-    return 6;
+  // Update container width on resize
+  useEffect(() => {
+    const updateWidth = () => {
+      if (parentRef.current) {
+        setContainerWidth(parentRef.current.clientWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
   }, []);
+
+  // Calculate columns based on container width with better breakpoints
+  const columnsPerRow = useMemo(() => {
+    if (containerWidth === 0) return 6;
+
+    // Minimum card width: 280px, with 16px gap between cards
+    const minCardWidth = 280;
+    const gap = 16;
+
+    // Calculate max columns that fit comfortably
+    const maxColumns = Math.floor((containerWidth + gap) / (minCardWidth + gap));
+
+    // Cap at 6 columns and ensure at least 1
+    return Math.min(Math.max(1, maxColumns), 6);
+  }, [containerWidth]);
 
   const totalRows = Math.ceil(posts.length / columnsPerRow);
   const totalCols = columnsPerRow;
@@ -50,7 +66,7 @@ export function VirtualizedPostList({
     horizontal: true,
     count: totalCols,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => Math.floor(window.innerWidth / totalCols),
+    estimateSize: () => Math.floor((containerWidth || window.innerWidth) / totalCols),
     overscan: 1,
   });
 

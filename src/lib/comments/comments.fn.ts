@@ -48,3 +48,52 @@ export const addComment = createServerFn()
       .returning(["id", "postId", "content", "userId", "createdAt"])
       .executeTakeFirstOrThrow();
   });
+
+export const deleteComment = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({
+      commentId: z.number(),
+      postId: z.number(),
+    }).parse(input)
+  )
+  .handler(async ({ data }) => {
+    const { commentId, postId } = data;
+
+    // Get the current user's session
+    const { auth: betterAuth } = await import("src/lib/auth");
+    const { getRequestHeaders } = await import("@tanstack/react-start/server");
+
+    const session = await betterAuth.api.getSession({
+      headers: getRequestHeaders(),
+      query: {
+        disableCookieCache: true,
+      },
+    });
+
+    if (!session?.user) {
+      throw new Error("Unauthorized: You must be logged in to delete a comment");
+    }
+
+    // Verify that the comment belongs to the current user
+    const comment = await kysely
+      .selectFrom("comments")
+      .select(["id", "userId"])
+      .where("id", "=", commentId)
+      .executeTakeFirst();
+
+    if (!comment) {
+      throw new Error(`Comment ${commentId} not found`);
+    }
+
+    if (comment.userId !== session.user.id) {
+      throw new Error("Forbidden: You can only delete your own comments");
+    }
+
+    // Delete the comment
+    await kysely
+      .deleteFrom("comments")
+      .where("id", "=", commentId)
+      .execute();
+
+    return { success: true };
+  });

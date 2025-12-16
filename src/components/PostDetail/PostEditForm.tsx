@@ -6,6 +6,7 @@ import type { fetchPostDetail } from "src/lib/posts/posts.fn";
 import { updatePost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormTextWrapper } from "../form/FieldText";
+import { toaster } from "../ui/toaster";
 
 type PostEditFormProps = {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
@@ -59,7 +60,23 @@ export function PostEditForm({
     }) => updatePost({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postsKeys.detail(postId) });
+      toaster.create({
+        type: "success",
+        title: "Post updated",
+        description: "Your post has been successfully updated.",
+        duration: 3000,
+        closable: true,
+      });
       onSuccess();
+    },
+    onError: (error) => {
+      toaster.create({
+        type: "error",
+        title: "Error updating post",
+        description: error instanceof Error ? error.message : "Failed to update post",
+        duration: 5000,
+        closable: true,
+      });
     },
   });
 

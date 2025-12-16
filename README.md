@@ -2,7 +2,7 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
-- [ ] add <Suspense> for suspenseQueries
+- [x] add <Suspense> for suspenseQueries
 - [ ] ask neo how to better handle currentUserId /src/routes/posts/$postId.tsx `const currentUserId = context.user?.id;`
 - [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
 - [x] fix upload failing if user doesnt generate a thumbnail
@@ -25,7 +25,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [x] modify posts
 - [x] add preview image to post
 - [ ] better ui
-- [ ] scroll restoration from post to back to posts list
+- [x] scroll restoration from post to back to posts list (only works in prod build not dev)
 
 ## Secondary
 
