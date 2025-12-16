@@ -46,7 +46,9 @@ export function VirtualizedPostList({
     const gap = 16;
 
     // Calculate max columns that fit comfortably
-    const maxColumns = Math.floor((containerWidth + gap) / (minCardWidth + gap));
+    const maxColumns = Math.floor(
+      (containerWidth + gap) / (minCardWidth + gap),
+    );
 
     // Cap at 6 columns and ensure at least 1
     return Math.min(Math.max(1, maxColumns), 6);
@@ -66,7 +68,8 @@ export function VirtualizedPostList({
     horizontal: true,
     count: totalCols,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => Math.floor((containerWidth || window.innerWidth) / totalCols),
+    estimateSize: () =>
+      Math.floor((containerWidth || window.innerWidth) / totalCols),
     overscan: 1,
   });
 

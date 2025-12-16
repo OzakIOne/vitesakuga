@@ -1,14 +1,14 @@
 import {
   Box,
   Button,
+  CloseButton,
+  Dialog,
+  IconButton,
+  Portal,
   Spinner,
   Stack,
   Text,
   Textarea,
-  IconButton,
-  Dialog,
-  Portal,
-  CloseButton,
 } from "@chakra-ui/react";
 import {
   useMutation,
@@ -31,7 +31,9 @@ interface CommentsProps {
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const [comment, setComment] = useState("");
-  const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(null);
+  const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
+    null,
+  );
   const queryClient = useQueryClient();
 
   const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
@@ -57,7 +59,8 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       toaster.create({
         type: "error",
         title: "Error adding comment",
-        description: error instanceof Error ? error.message : "Failed to add comment",
+        description:
+          error instanceof Error ? error.message : "Failed to add comment",
         duration: 5000,
         closable: true,
       });
@@ -81,7 +84,8 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       toaster.create({
         type: "error",
         title: "Error deleting comment",
-        description: error instanceof Error ? error.message : "Failed to delete comment",
+        description:
+          error instanceof Error ? error.message : "Failed to delete comment",
         duration: 5000,
         closable: true,
       });
@@ -90,7 +94,10 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
 
   const handleDeleteComment = async () => {
     if (commentIdToDelete !== null) {
-      await deleteCommentMutation.mutateAsync({ commentId: commentIdToDelete, postId });
+      await deleteCommentMutation.mutateAsync({
+        commentId: commentIdToDelete,
+        postId,
+      });
       setCommentIdToDelete(null);
     }
   };
@@ -187,7 +194,10 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
                 <Dialog.Title>Delete Comment?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <p>Are you sure you want to delete this comment? This action cannot be undone.</p>
+                <p>
+                  Are you sure you want to delete this comment? This action
+                  cannot be undone.
+                </p>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.ActionTrigger asChild>

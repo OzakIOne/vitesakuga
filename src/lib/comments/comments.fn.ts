@@ -51,10 +51,12 @@ export const addComment = createServerFn()
 
 export const deleteComment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({
-      commentId: z.number(),
-      postId: z.number(),
-    }).parse(input)
+    z
+      .object({
+        commentId: z.number(),
+        postId: z.number(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { commentId, postId } = data;
@@ -71,7 +73,9 @@ export const deleteComment = createServerFn({ method: "POST" })
     });
 
     if (!session?.user) {
-      throw new Error("Unauthorized: You must be logged in to delete a comment");
+      throw new Error(
+        "Unauthorized: You must be logged in to delete a comment",
+      );
     }
 
     // Verify that the comment belongs to the current user
@@ -90,10 +94,7 @@ export const deleteComment = createServerFn({ method: "POST" })
     }
 
     // Delete the comment
-    await kysely
-      .deleteFrom("comments")
-      .where("id", "=", commentId)
-      .execute();
+    await kysely.deleteFrom("comments").where("id", "=", commentId).execute();
 
     return { success: true };
   });

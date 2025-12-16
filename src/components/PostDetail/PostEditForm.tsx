@@ -73,7 +73,8 @@ export function PostEditForm({
       toaster.create({
         type: "error",
         title: "Error updating post",
-        description: error instanceof Error ? error.message : "Failed to update post",
+        description:
+          error instanceof Error ? error.message : "Failed to update post",
         duration: 5000,
         closable: true,
       });

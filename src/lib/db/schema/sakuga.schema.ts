@@ -74,7 +74,7 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   postId: bigint({ mode: "number" })
-    .references(() => posts.id)
+    .references(() => posts.id, { onDelete: "cascade" })
     .notNull(),
   content: text().notNull(),
   createdAt: timestamp().defaultNow().notNull(),
