@@ -26,11 +26,11 @@ export function PostEditForm({
 
   const editForm = useForm({
     defaultValues: {
-      title: post.title,
       content: post.content,
-      source: post.source || undefined,
       relatedPostId: post.relatedPostId || undefined,
+      source: post.source || undefined,
       tags: initialTags,
+      title: post.title,
     },
     onSubmit: async ({ value }) => {
       if (!post.id) {
@@ -39,12 +39,12 @@ export function PostEditForm({
       }
 
       await updatePostMutation.mutateAsync({
-        postId: post.id,
-        title: value.title,
         content: value.content,
-        source: value.source || undefined,
+        postId: post.id,
         relatedPostId: value.relatedPostId || undefined,
+        source: value.source || undefined,
         tags: value.tags,
+        title: value.title,
       });
     },
   });
@@ -58,30 +58,31 @@ export function PostEditForm({
       relatedPostId?: number;
       tags: { id?: number; name: string }[];
     }) => updatePost({ data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: postsKeys.detail(postId) });
-      toaster.create({
-        type: "success",
-        title: "Post updated",
-        description: "Your post has been successfully updated.",
-        duration: 3000,
-        closable: true,
-      });
-      onSuccess();
-    },
     onError: (error) => {
       toaster.create({
-        type: "error",
-        title: "Error updating post",
+        closable: true,
         description:
           error instanceof Error ? error.message : "Failed to update post",
         duration: 5000,
-        closable: true,
+        title: "Error updating post",
+        type: "error",
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: postsKeys.detail(postId) });
+      toaster.create({
+        closable: true,
+        description: "Your post has been successfully updated.",
+        duration: 3000,
+        title: "Post updated",
+        type: "success",
+      });
+      onSuccess();
     },
   });
 
   useBlocker({
+    enableBeforeUnload: true,
     shouldBlockFn: () => {
       if (!editForm.state.isDirty) return false;
 
@@ -90,11 +91,10 @@ export function PostEditForm({
       );
       return !shouldLeave;
     },
-    enableBeforeUnload: true,
   });
 
   return (
-    <Box shadow={"md"} borderRadius={"md"} padding={"4"} mb={4}>
+    <Box borderRadius={"md"} mb={4} padding={"4"} shadow={"md"}>
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Edit Post
       </Text>
@@ -107,7 +107,7 @@ export function PostEditForm({
         <editForm.Field name="title">
           {(field) => (
             <Box mb={2}>
-              <FormTextWrapper label="Title" field={field} isRequired />
+              <FormTextWrapper field={field} isRequired label="Title" />
             </Box>
           )}
         </editForm.Field>
@@ -116,10 +116,10 @@ export function PostEditForm({
           {(field) => (
             <Box mb={2}>
               <FormTextWrapper
-                label="Content"
+                asTextarea
                 field={field}
                 isRequired
-                asTextarea
+                label="Content"
               />
             </Box>
           )}
@@ -129,10 +129,10 @@ export function PostEditForm({
           {(field) => (
             <Box mb={2}>
               <FormTextWrapper
-                label="Source URL"
-                field={field}
                 asTextarea
+                field={field}
                 helper="Link to the original source (Twitter, YouTube, etc.)"
+                label="Source URL"
               />
             </Box>
           )}
@@ -147,9 +147,9 @@ export function PostEditForm({
         >
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button
-              type="submit"
               disabled={!canSubmit || isPristine}
               loading={isSubmitting}
+              type="submit"
             >
               {isSubmitting ? "Saving..." : "Save"}
             </Button>

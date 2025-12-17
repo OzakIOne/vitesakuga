@@ -1,4 +1,4 @@
-import { Button, Center } from "@chakra-ui/react";
+import { Box, Button, Center } from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
@@ -30,49 +30,13 @@ export const Route = createRootRouteWithContext<{
 }>()({
   beforeLoad: async ({ context }) => {
     const user = await context.queryClient.fetchQuery({
-      queryKey: ["user"],
       queryFn: ({ signal }) => getUserSession({ signal }),
+      queryKey: ["user"],
       staleTime: 60 * 60 * 1000,
     }); // we're using react-query for caching, see router.tsx
     return { user };
   },
-  head: () => ({
-    meta: [
-      {
-        charSet: "utf-8",
-      },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      ...seo({
-        title: "Vitesakuga",
-        description: `Sakugabooru clone made with tanstack.`,
-      }),
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      {
-        rel: "apple-touch-icon",
-        sizes: "180x180",
-        href: "/apple-touch-icon.png",
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        sizes: "32x32",
-        href: "/favicon-32x32.png",
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        sizes: "16x16",
-        href: "/favicon-16x16.png",
-      },
-      { rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
-      { rel: "icon", href: "/favicon.ico" },
-    ],
-  }),
+  component: RootComponent,
   errorComponent: (props) => {
     return (
       <RootDocument>
@@ -80,8 +44,44 @@ export const Route = createRootRouteWithContext<{
       </RootDocument>
     );
   },
+  head: () => ({
+    links: [
+      { href: appCss, rel: "stylesheet" },
+      {
+        href: "/apple-touch-icon.png",
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+      },
+      {
+        href: "/favicon-32x32.png",
+        rel: "icon",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        href: "/favicon-16x16.png",
+        rel: "icon",
+        sizes: "16x16",
+        type: "image/png",
+      },
+      { color: "#fffff", href: "/site.webmanifest", rel: "manifest" },
+      { href: "/favicon.ico", rel: "icon" },
+    ],
+    meta: [
+      {
+        charSet: "utf-8",
+      },
+      {
+        content: "width=device-width, initial-scale=1",
+        name: "viewport",
+      },
+      ...seo({
+        description: `Sakugabooru clone made with tanstack.`,
+        title: "Vitesakuga",
+      }),
+    ],
+  }),
   notFoundComponent: () => <NotFound />,
-  component: RootComponent,
 });
 
 function RootComponent() {
@@ -106,56 +106,63 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <Center gap={2}>
+        <Center
+          gap={2}
+          left={0}
+          position="absolute"
+          py={2}
+          right={0}
+          top={0}
+          zIndex={10}
+        >
           <Link
-            to="/"
+            activeOptions={{ exact: true }}
             activeProps={{
               className: "link",
             }}
-            activeOptions={{ exact: true }}
+            to="/"
           >
             Home
           </Link>{" "}
           <Link
-            className=""
-            to="/posts"
             activeProps={{
               className: "link",
             }}
+            className=""
+            to="/posts"
           >
             Posts
           </Link>{" "}
           <Link
-            to="/users"
             activeProps={{
               className: "link",
             }}
+            to="/users"
           >
             Users
           </Link>{" "}
           <Link
-            to="/upload"
             activeProps={{
               className: "link",
             }}
+            to="/upload"
           >
             Upload
           </Link>{" "}
           <Link
-            to="/convert"
             activeProps={{
               className: "link",
             }}
+            to="/convert"
           >
             Convert video
           </Link>{" "}
           {ctx.user ? (
             <>
-              <Link to="/account" className="link">
+              <Link className="link" to="/account">
                 Account
               </Link>{" "}
               <Button
-                size="xs"
                 onClick={async () => {
                   await authClient.signOut();
                   await queryClient.invalidateQueries({
@@ -163,23 +170,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   });
                   await router.invalidate();
                 }}
+                size="xs"
               >
                 Sign Out
               </Button>
             </>
           ) : (
             <>
-              <Link to="/login" className="link">
+              <Link className="link" to="/login">
                 Login
               </Link>{" "}
-              <Link to="/signup" className="link">
+              <Link className="link" to="/signup">
                 Sign Up
               </Link>
             </>
           )}
         </Center>
-        <hr />
-        {children}
+        <Box pt={16}>{children}</Box>
         <Toaster />
         <TanStackDevtools
           plugins={[

@@ -17,10 +17,10 @@ export const Route = createFileRoute("/(auth)/signup")({
 
 const SignUpSchema = z
   .object({
-    name: z.string().min(3, "You must have a length of at least 3"),
-    email: z.email(),
-    password: z.string().min(8, "You must have a length of at least 8"),
     confirm_password: z.string(),
+    email: z.email(),
+    name: z.string().min(3, "You must have a length of at least 3"),
+    password: z.string().min(8, "You must have a length of at least 8"),
   })
   .refine((data) => data.password === data.confirm_password, {
     message: "Passwords do not match",
@@ -37,21 +37,18 @@ function SignupForm() {
 
   const form = useForm({
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
       confirm_password: "",
-    },
-    validators: {
-      onChange: SignUpSchema,
+      email: "",
+      name: "",
+      password: "",
     },
     onSubmit: ({ value }) => {
       authClient.signUp.email(
         {
-          name: value.name,
-          email: value.email,
-          password: value.password,
           callbackURL: redirectUrl,
+          email: value.email,
+          name: value.name,
+          password: value.password,
         },
         {
           onError: (ctx) => {
@@ -64,6 +61,9 @@ function SignupForm() {
           },
         },
       );
+    },
+    validators: {
+      onChange: SignUpSchema,
     },
   });
 
@@ -89,12 +89,12 @@ function SignupForm() {
                       <Input
                         id={field.name}
                         name={field.name}
-                        placeholder="John doe"
-                        value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
                           field.handleChange(e.target.value);
                         }}
+                        placeholder="John doe"
+                        value={field.state.value}
                       />
                     </Field.Root>
                     <FieldInfo field={field} />
@@ -119,12 +119,12 @@ function SignupForm() {
                       <Input
                         id={field.name}
                         name={field.name}
-                        placeholder="hello@example.com"
-                        value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
                           field.handleChange(e.target.value);
                         }}
+                        placeholder="hello@example.com"
+                        value={field.state.value}
                       />
                     </Field.Root>
 
@@ -144,14 +144,14 @@ function SignupForm() {
                         Password <Field.RequiredIndicator />
                       </Field.Label>
                       <PasswordInput
-                        type="password"
                         id={field.name}
                         name={field.name}
-                        value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
                           field.handleChange(e.target.value);
                         }}
+                        type="password"
+                        value={field.state.value}
                       />
                     </Field.Root>
                     <FieldInfo field={field} />
@@ -175,14 +175,14 @@ function SignupForm() {
                         Confirm password <Field.RequiredIndicator />
                       </Field.Label>
                       <PasswordInput
-                        type="password"
                         id={field.name}
                         name={field.name}
-                        value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
                           field.handleChange(e.target.value);
                         }}
+                        type="password"
+                        value={field.state.value}
                       />
                     </Field.Root>
                     <FieldInfo field={field} />
@@ -196,25 +196,25 @@ function SignupForm() {
               selector={(state) => [state.canSubmit, state.isSubmitting]}
             >
               {([canSubmit, isSubmitting]) => (
-                <Button type="submit" className="btn" disabled={!canSubmit}>
+                <Button className="btn" disabled={!canSubmit} type="submit">
                   {isSubmitting ? "Signing up..." : "Sign up"}
                 </Button>
               )}
             </form.Subscribe>
           </div>
           {errorMessage && (
-            <div role="alert" className="alert alert-error">
+            <div className="alert alert-error" role="alert">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6 shrink-0 stroke-current"
                 fill="none"
                 viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
               <span>{errorMessage}</span>
@@ -223,51 +223,51 @@ function SignupForm() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Button
-              type="button"
               disabled={isLoading}
               onClick={() =>
                 authClient.signIn.social(
                   {
-                    provider: "github",
                     callbackURL: redirectUrl,
+                    provider: "github",
                   },
                   {
-                    onRequest: () => {
-                      setIsLoading(true);
-                      setErrorMessage("");
-                    },
                     onError: (ctx) => {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
+                    onRequest: () => {
+                      setIsLoading(true);
+                      setErrorMessage("");
+                    },
                   },
                 )
               }
+              type="button"
             >
               <IoLogoGithub />
               Login with GitHub
             </Button>
             <Button
-              type="button"
               disabled={isLoading}
               onClick={() =>
                 authClient.signIn.social(
                   {
-                    provider: "google",
                     callbackURL: redirectUrl,
+                    provider: "google",
                   },
                   {
-                    onRequest: () => {
-                      setIsLoading(true);
-                      setErrorMessage("");
-                    },
                     onError: (ctx) => {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
+                    onRequest: () => {
+                      setIsLoading(true);
+                      setErrorMessage("");
+                    },
                   },
                 )
               }
+              type="button"
             >
               <FcGoogle />
               Login with Google

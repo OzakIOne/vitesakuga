@@ -40,10 +40,10 @@ export const addComment = createServerFn()
     return await kysely
       .insertInto("comments")
       .values({
-        postId,
         content,
-        userId,
         createdAt: new Date(),
+        postId,
+        userId,
       })
       .returning(["id", "postId", "content", "userId", "createdAt"])
       .executeTakeFirstOrThrow();
@@ -54,12 +54,11 @@ export const deleteComment = createServerFn({ method: "POST" })
     z
       .object({
         commentId: z.number(),
-        postId: z.number(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { commentId, postId } = data;
+    const { commentId } = data;
 
     // Get the current user's session
     const { auth: betterAuth } = await import("src/lib/auth");

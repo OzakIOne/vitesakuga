@@ -15,15 +15,15 @@ import { postQueryDetail } from "src/lib/posts/posts.queries";
 import z from "zod";
 
 export const Route = createFileRoute("/posts/$postId")({
-  errorComponent: PostErrorComponent,
   component: PostComponent,
+  errorComponent: PostErrorComponent,
+  notFoundComponent: () => {
+    return <NotFound>Post not found</NotFound>;
+  },
   params: {
     parse: (params) => ({
       postId: z.coerce.number().parse(params.postId),
     }),
-  },
-  notFoundComponent: () => {
-    return <NotFound>Post not found</NotFound>;
   },
 });
 
@@ -50,29 +50,38 @@ function PostContentComponent() {
     <Box p={4}>
       {isEditMode && isOwner ? (
         <PostEditForm
-          post={post}
           initialTags={initialTags}
-          onSuccess={() => setIsEditMode(false)}
           onCancel={handleCancelEdit}
+          onSuccess={() => setIsEditMode(false)}
+          post={post}
           postId={postId}
         />
       ) : (
         <PostsPageLayout
-          searchQuery={undefined}
-          popularTags={[]}
-          sortBy="latest"
           dateRange="all"
           fromRoute="/posts/$postId"
+          popularTags={[]}
+          searchQuery={undefined}
+          sortBy="latest"
         >
-          <PostDetailDisplay
-            post={post}
-            user={user}
-            initialTags={initialTags}
-            relatedPost={relatedPost}
-            currentUserId={currentUserId}
-            onEditClick={handleEditClick}
-            onBack={handleBack}
-          />
+          <Suspense
+            fallback={
+              <Stack align="center" justify="center" minH="600px">
+                <Spinner size="lg" />
+                <Text>Loading post...</Text>
+              </Stack>
+            }
+          >
+            <PostDetailDisplay
+              currentUserId={currentUserId}
+              initialTags={initialTags}
+              onBack={handleBack}
+              onEditClick={handleEditClick}
+              post={post}
+              relatedPost={relatedPost}
+              user={user}
+            />
+          </Suspense>
         </PostsPageLayout>
       )}
     </Box>
@@ -80,16 +89,5 @@ function PostContentComponent() {
 }
 
 function PostComponent() {
-  return (
-    <Suspense
-      fallback={
-        <Stack align="center" justify="center" minH="600px">
-          <Spinner size="lg" />
-          <Text>Loading post...</Text>
-        </Stack>
-      }
-    >
-      <PostContentComponent />
-    </Suspense>
-  );
+  return <PostContentComponent />;
 }

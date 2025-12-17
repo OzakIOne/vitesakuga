@@ -85,33 +85,33 @@ export function TagInput({ value, onChange }: TagInputProps) {
   return (
     <Box>
       <Combobox.Root
-        multiple
         closeOnSelect
-        width="full"
-        value={value.map((tag) => tag.name)}
         collection={collection}
-        onValueChange={handleValueChange}
+        multiple
         onInputValueChange={(details) => setSearchValue(details.inputValue)}
+        onValueChange={handleValueChange}
+        value={value.map((tag) => tag.name)}
+        width="full"
       >
         {value.length > 0 && (
           <Wrap gap="2" mb={2}>
             {value.map((tag) => (
               <Badge
+                alignItems="center"
+                display="flex"
+                gap={1}
                 key={tag.name}
                 px={2}
                 py={1}
-                display="flex"
-                alignItems="center"
-                gap={1}
               >
                 {tag.name}
                 <Icon
+                  _hover={{ color: "red.500" }}
                   cursor="pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemoveTag(tag);
                   }}
-                  _hover={{ color: "red.500" }}
                 >
                   <LuX />
                 </Icon>
@@ -133,7 +133,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
               <Combobox.ItemGroup>
                 {items.length > 0 ? (
                   items.map((item) => (
-                    <Combobox.Item key={item} item={item}>
+                    <Combobox.Item item={item} key={item}>
                       {item}
                       <Combobox.ItemIndicator />
                     </Combobox.Item>

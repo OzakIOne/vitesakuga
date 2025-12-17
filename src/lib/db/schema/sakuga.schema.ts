@@ -11,9 +11,9 @@ import { relations } from "node_modules/drizzle-orm";
 import { createInsertSchema, user } from "./auth.schema";
 
 export const tags = pgTable("tags", {
+  createdAt: timestamp().defaultNow().notNull(),
   id: serial("id").primaryKey(),
   name: text().notNull().unique(),
-  createdAt: timestamp().defaultNow().notNull(),
 });
 
 export const tagsRelations = relations(tags, ({ many }) => ({
@@ -35,17 +35,17 @@ export const postTags = pgTable(
 );
 
 export const posts = pgTable("posts", {
-  id: serial("id").primaryKey(),
-  title: text().notNull(),
   content: text().notNull(),
-  videoKey: text().notNull(),
-  thumbnailKey: text().notNull(),
-  source: text(),
-  relatedPostId: integer(),
   createdAt: timestamp().defaultNow().notNull(),
+  id: serial("id").primaryKey(),
+  relatedPostId: integer(),
+  source: text(),
+  thumbnailKey: text().notNull(),
+  title: text().notNull(),
   userId: text()
     .references(() => user.id)
     .notNull(),
+  videoKey: text().notNull(),
 });
 
 export const postTagsRelations = relations(postTags, ({ one }) => ({
@@ -60,24 +60,24 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
-  user: one(user, {
-    fields: [posts.userId],
-    references: [user.id],
-  }),
+  postTags: many(postTags),
   relatedPost: one(posts, {
     fields: [posts.relatedPostId],
     references: [posts.id],
   }),
-  postTags: many(postTags),
+  user: one(user, {
+    fields: [posts.userId],
+    references: [user.id],
+  }),
 }));
 
 export const comments = pgTable("comments", {
+  content: text().notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
   id: serial("id").primaryKey(),
   postId: bigint({ mode: "number" })
     .references(() => posts.id, { onDelete: "cascade" })
     .notNull(),
-  content: text().notNull(),
-  createdAt: timestamp().defaultNow().notNull(),
   userId: text()
     .references(() => user.id)
     .notNull(),

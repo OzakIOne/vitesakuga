@@ -1,7 +1,7 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { NotFound } from "src/components/NotFound";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
@@ -12,30 +12,31 @@ import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 import { userQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
-  validateSearch: postSearchSchema,
+  component: UserLayoutComponent,
   errorComponent: UserErrorComponent,
-  component: UserComponent,
-  // fix initial window is not defined error
-  ssr: "data-only",
   notFoundComponent: () => {
     return <NotFound>User not found</NotFound>;
   },
+  // fix initial window is not defined error
+  ssr: "data-only",
+  validateSearch: postSearchSchema,
 });
 
-function UserComponent() {
+function UserContent() {
   const { id } = Route.useParams();
-  const { sortBy, dateRange } = Route.useSearch();
+  const { sortBy, dateRange, tags, q, size } = Route.useSearch();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
-    useInfiniteQuery(userQueryOptions(id));
+    useInfiniteQuery(userQueryOptions(id, tags, q));
 
   const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
   const userData = data?.pages?.[0];
+  const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
     return filterAndSortPosts(allPosts, {
-      sortBy,
       dateRange,
+      sortBy,
     });
   }, [allPosts, sortBy, dateRange]);
 
@@ -46,25 +47,41 @@ function UserComponent() {
   return (
     <Box p={4}>
       <PostsPageLayout
-        searchQuery={undefined}
-        popularTags={userData.meta?.popularTags ?? []}
-        sortBy={sortBy}
         dateRange={dateRange}
         fromRoute="/users/$id"
+        popularTags={popularTags}
+        searchQuery={q}
+        selectedTags={tags}
+        sortBy={sortBy}
       >
         <User
-          name={userData.user.name}
-          image={userData.user.image}
           id={userData.user.id}
+          image={userData.user.image}
+          name={userData.user.name}
         />
 
-        <VirtualizedPostList
-          posts={filteredPosts}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          onFetchNextPage={fetchNextPage}
-        />
+        <Suspense
+          fallback={
+            <Stack align="center" justify="center" minH="600px">
+              <Spinner size="lg" />
+              <Text>Loading posts...</Text>
+            </Stack>
+          }
+        >
+          <VirtualizedPostList
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            onFetchNextPage={fetchNextPage}
+            pageSize={size}
+            posts={filteredPosts}
+            searchQuery={q}
+          />
+        </Suspense>
       </PostsPageLayout>
     </Box>
   );
+}
+
+function UserLayoutComponent() {
+  return <UserContent />;
 }

@@ -25,7 +25,7 @@ export function Post({
     <>
       {post.videoKey && (
         <div className="w-lg">
-          <Video url={post.videoKey} bypass={false} />
+          <Video bypass={false} url={post.videoKey} />
         </div>
       )}
       {post.title && <Heading as="h3">{post.title}</Heading>}
@@ -36,19 +36,19 @@ export function Post({
           <Text fontWeight="bold" mb={2}>
             Tags:
           </Text>
-          <Stack direction="row" gap={2} flexWrap="wrap">
+          <Stack direction="row" flexWrap="wrap" gap={2}>
             {tags.map((tag) => (
               <Link
                 key={tag.id}
-                to="/posts/tags/$tag"
                 params={{ tag: tag.name }}
+                to="/posts/tags/$tag"
               >
                 <Badge
-                  key={tag.id}
+                  borderRadius="full"
                   colorScheme="blue"
+                  key={tag.id}
                   px={2}
                   py={1}
-                  borderRadius="full"
                 >
                   {tag.name}
                 </Badge>
@@ -64,9 +64,9 @@ export function Post({
             Related Post:
           </Text>
           <Link
-            to="/posts/$postId"
-            params={{ postId: relatedPost.id }}
             className="text-blue-500 hover:underline"
+            params={{ postId: relatedPost.id }}
+            to="/posts/$postId"
           >
             {relatedPost.title}
           </Link>
@@ -75,13 +75,13 @@ export function Post({
 
       {isOwner && onEditClick && (
         <Box mb={4}>
-          <Button onClick={onEditClick} colorScheme="blue">
+          <Button colorScheme="blue" onClick={onEditClick}>
             Edit Post
           </Button>
         </Box>
       )}
 
-      {user.name && <User name={user.name} image={user.image} id={user.id} />}
+      {user.name && <User id={user.id} image={user.image} name={user.name} />}
     </>
   );
 }

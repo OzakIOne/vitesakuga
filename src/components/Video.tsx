@@ -22,17 +22,17 @@ export function Video({ url, bypass }: { url: string; bypass: boolean }) {
   return (
     <MediaController
       style={{
-        width: "100%",
         aspectRatio: "16/9",
+        width: "100%",
       }}
     >
       <ReactPlayer
+        controls={false}
         slot="media"
         src={bypass ? url : BaseURL + url}
-        controls={false}
         style={{
-          width: "100%",
           height: "100%",
+          width: "100%",
         }}
       />
       <MediaControlBar>

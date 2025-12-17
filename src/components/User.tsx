@@ -11,7 +11,7 @@ export function User({
   id: string;
 }) {
   return (
-    <Link to="/users/$id" params={{ id }}>
+    <Link params={{ id }} to="/users/$id">
       <Card.Root size="sm">
         <Card.Body>
           <HStack>

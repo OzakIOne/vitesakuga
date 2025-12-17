@@ -23,26 +23,26 @@ export function PostFilters({
         </Text>
         <Stack direction="row" flexWrap="wrap" gap={2}>
           <Badge
-            px={2}
-            py={1}
             borderRadius="md"
             cursor="pointer"
-            variant={sortBy === "latest" ? "solid" : "outline"}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, sortBy: "latest" }) })
             }
+            px={2}
+            py={1}
+            variant={sortBy === "latest" ? "solid" : "outline"}
           >
             Latest
           </Badge>
           <Badge
-            px={2}
-            py={1}
             borderRadius="md"
             cursor="pointer"
-            variant={sortBy === "oldest" ? "solid" : "outline"}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, sortBy: "oldest" }) })
             }
+            px={2}
+            py={1}
+            variant={sortBy === "oldest" ? "solid" : "outline"}
           >
             Oldest
           </Badge>
@@ -54,50 +54,50 @@ export function PostFilters({
         </Text>
         <Stack direction="row" flexWrap="wrap" gap={2}>
           <Badge
-            px={2}
-            py={1}
             borderRadius="md"
             cursor="pointer"
-            variant={dateRange === "all" ? "solid" : "outline"}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "all" }) })
             }
+            px={2}
+            py={1}
+            variant={dateRange === "all" ? "solid" : "outline"}
           >
             All Time
           </Badge>
           <Badge
-            px={2}
-            py={1}
             borderRadius="md"
             cursor="pointer"
-            variant={dateRange === "today" ? "solid" : "outline"}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "today" }) })
             }
+            px={2}
+            py={1}
+            variant={dateRange === "today" ? "solid" : "outline"}
           >
             Today
           </Badge>
           <Badge
-            px={2}
-            py={1}
             borderRadius="md"
             cursor="pointer"
-            variant={dateRange === "week" ? "solid" : "outline"}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) })
             }
+            px={2}
+            py={1}
+            variant={dateRange === "week" ? "solid" : "outline"}
           >
             This Week
           </Badge>
           <Badge
-            px={2}
-            py={1}
             borderRadius="md"
             cursor="pointer"
-            variant={dateRange === "month" ? "solid" : "outline"}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "month" }) })
             }
+            px={2}
+            py={1}
+            variant={dateRange === "month" ? "solid" : "outline"}
           >
             This Month
           </Badge>

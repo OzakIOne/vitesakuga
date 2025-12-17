@@ -30,17 +30,17 @@ import {
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import {
-  FileFormUploadSchema,
   type FileUploadData,
+  FormFileUploadSchema,
   type SerializedUploadData,
 } from "src/lib/posts/posts.schema";
 import { transformUploadFormData } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/upload")({
+  component: RouteComponent,
   server: {
     middleware: [authMiddleware],
   },
-  component: RouteComponent,
 });
 
 function RouteComponent() {
@@ -53,24 +53,24 @@ function RouteComponent() {
 
   const uploadPostMutation = useMutation({
     mutationFn: (data: SerializedUploadData) => uploadPostFn({ data }),
+    onError: (error) => {
+      console.error("Upload failed:", error);
+      toaster.create({
+        description: "There was an error uploading your post.",
+        duration: 5000,
+        title: "Upload failed",
+        type: "error",
+      });
+    },
     onSuccess: (newPost) => {
       form.reset();
       queryClient.invalidateQueries({ queryKey: postsKeys.all });
       navigate({ to: `/posts/${newPost.id}` });
       toaster.create({
-        title: "Upload successful",
         description: "Your post has been uploaded successfully.",
+        duration: 5000,
+        title: "Upload successful",
         type: "success",
-        duration: 5000,
-      });
-    },
-    onError: (error) => {
-      console.error("Upload failed:", error);
-      toaster.create({
-        title: "Upload failed",
-        description: "There was an error uploading your post.",
-        type: "error",
-        duration: 5000,
       });
     },
   });
@@ -104,6 +104,7 @@ function RouteComponent() {
   };
 
   useBlocker({
+    enableBeforeUnload: true,
     shouldBlockFn: () => {
       if (!form.state.isDirty) return false;
 
@@ -112,7 +113,6 @@ function RouteComponent() {
       );
       return !shouldLeave;
     },
-    enableBeforeUnload: true,
   });
 
   const generateDefaultThumbnail = async (videoFile: File): Promise<File> => {
@@ -172,44 +172,44 @@ function RouteComponent() {
     } catch (error) {
       console.error("Upload failed:", error);
       toaster.create({
-        title: "Upload failed",
         description: "There was an error uploading your post.",
-        type: "error",
         duration: 5000,
+        title: "Upload failed",
+        type: "error",
       });
     }
   };
 
   const form = useForm({
     defaultValues: {
-      title: "",
       content: "",
-      source: undefined,
       relatedPostId: undefined,
+      source: undefined,
       tags: [],
+      thumbnail: undefined,
+      title: "",
       userId: user.id,
       video: undefined,
-      thumbnail: undefined,
     } as FileUploadData,
-    validators: {
-      onSubmit: FileFormUploadSchema,
-    },
     onSubmit: async ({ value }) => {
       await handleSubmit(value);
+    },
+    validators: {
+      onSubmit: FormFileUploadSchema,
     },
   });
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({
-    queryKey: postsKeys.search(relatedPostSearch),
+    enabled: relatedPostSearch.length > 2,
     queryFn: () =>
       searchPosts({
         data: {
-          q: relatedPostSearch,
           page: { size: 5 },
+          q: relatedPostSearch,
         },
       }),
-    enabled: relatedPostSearch.length > 2,
+    queryKey: postsKeys.search(relatedPostSearch),
   });
 
   return (
@@ -223,7 +223,7 @@ function RouteComponent() {
         <Box mb={6}>
           <form.Field name="title">
             {(field) => (
-              <FormTextWrapper field={field} label="Title" isRequired />
+              <FormTextWrapper field={field} isRequired label="Title" />
             )}
           </form.Field>
         </Box>
@@ -232,11 +232,11 @@ function RouteComponent() {
           <form.Field name="content">
             {(field) => (
               <FormTextWrapper
-                field={field}
-                label="Description"
-                isRequired
                 asTextarea
+                field={field}
                 helper="A brief description of the animation"
+                isRequired
+                label="Description"
               />
             )}
           </form.Field>
@@ -247,8 +247,8 @@ function RouteComponent() {
             {(field) => (
               <FormTextWrapper
                 field={field}
-                label="Source URL"
                 helper="Link to the original source (Twitter, YouTube, etc.)"
+                label="Source URL"
               />
             )}
           </form.Field>
@@ -260,34 +260,34 @@ function RouteComponent() {
               <Field.Root>
                 <Field.Label>Related Post</Field.Label>
                 <Input
+                  onChange={(e) => setRelatedPostSearch(e.target.value)}
                   placeholder="Search for related posts..."
                   value={relatedPostSearch}
-                  onChange={(e) => setRelatedPostSearch(e.target.value)}
                 />
                 {relatedPosts && relatedPosts.data.length > 0 && (
                   <Box
-                    mt={2}
-                    p={2}
                     border="1px"
                     borderColor="gray.200"
                     borderRadius="md"
                     maxH="200px"
+                    mt={2}
                     overflowY="auto"
+                    p={2}
                   >
                     {relatedPosts.data.map((post) => (
                       <Box
-                        key={post.id}
-                        p={2}
-                        cursor="pointer"
-                        borderRadius="sm"
                         _hover={{ bg: "gray.100" }}
+                        borderRadius="sm"
+                        cursor="pointer"
+                        key={post.id}
                         onClick={() => {
                           field.handleChange(Number(post.id)); // Convert to number
                           setRelatedPostSearch(post.title);
                         }}
+                        p={2}
                       >
                         <Text fontWeight="medium">{post.title}</Text>
-                        <Text fontSize="sm" color="gray.600">
+                        <Text color="gray.600" fontSize="sm">
                           {post.content.substring(0, 60)}...
                         </Text>
                       </Box>
@@ -295,17 +295,17 @@ function RouteComponent() {
                   </Box>
                 )}
                 {field.state.value && (
-                  <Box mt={2} p={2} bg="blue.50" borderRadius="md">
+                  <Box bg="blue.50" borderRadius="md" mt={2} p={2}>
                     <Text fontSize="sm">
                       Selected Post ID: {field.state.value}
                     </Text>
                     <Button
-                      size="sm"
                       mt={1}
                       onClick={() => {
                         field.handleChange(undefined);
                         setRelatedPostSearch("");
                       }}
+                      size="sm"
                     >
                       Clear
                     </Button>
@@ -322,8 +322,8 @@ function RouteComponent() {
               <Field.Root>
                 <Field.Label>Tags</Field.Label>
                 <TagInput
-                  value={field.state.value}
                   onChange={(newTags) => field.handleChange(newTags)}
+                  value={field.state.value}
                 />
               </Field.Root>
             )}
@@ -339,9 +339,9 @@ function RouteComponent() {
                     Video <Field.RequiredIndicator />
                   </Field.Label>
                   <FileUpload.Root
-                    maxW="xl"
-                    alignItems="stretch"
                     accept={["video/*,.mkv"]}
+                    alignItems="stretch"
+                    maxW="xl"
                     onFileChange={async (details) => {
                       const file = details.acceptedFiles[0] || null;
                       field.handleChange(file);
@@ -363,11 +363,11 @@ function RouteComponent() {
                             error,
                           );
                           toaster.create({
-                            title: "Thumbnail generation failed",
                             description:
                               "Please generate a thumbnail manually.",
-                            type: "error",
                             duration: 3000,
+                            title: "Thumbnail generation failed",
+                            type: "error",
                           });
                         }
                         return;
@@ -378,7 +378,7 @@ function RouteComponent() {
                     <FileUpload.HiddenInput />
                     {!field.state.value && (
                       <FileUpload.Dropzone minHeight="32">
-                        <Icon size="md" color="fg.muted">
+                        <Icon color="fg.muted" size="md">
                           <LuUpload />
                         </Icon>
                         <FileUpload.DropzoneContent>
@@ -387,11 +387,11 @@ function RouteComponent() {
                         </FileUpload.DropzoneContent>
                       </FileUpload.Dropzone>
                     )}
-                    <FileUpload.List showSize clearable />
+                    <FileUpload.List clearable showSize />
                   </FileUpload.Root>
                   {videoFilePreview && (
                     <>
-                      <Video url={videoFilePreview} bypass />
+                      <Video bypass url={videoFilePreview} />
 
                       <Button mt={3} onClick={captureThumbnail}>
                         Generate Thumbnail from Current Frame
@@ -401,12 +401,12 @@ function RouteComponent() {
                         <Box mt={3}>
                           <Text mb={1}>Thumbnail Preview:</Text>
                           <img
-                            src={thumbnail}
                             alt="Video thumbnail"
+                            src={thumbnail}
                             style={{
-                              width: "100%",
-                              borderRadius: "8px",
                               border: "1px solid #ddd",
+                              borderRadius: "8px",
+                              width: "100%",
                             }}
                           />
                         </Box>
@@ -429,11 +429,11 @@ function RouteComponent() {
         >
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button
-              type="submit"
               colorScheme="blue"
               disabled={!canSubmit || isPristine}
               loading={isSubmitting}
               style={{ width: "100%" }}
+              type="submit"
             >
               {isSubmitting ? "Uploading..." : "Upload"}
             </Button>

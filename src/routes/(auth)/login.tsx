@@ -33,9 +33,9 @@ function LoginForm() {
 
     authClient.signIn.email(
       {
+        callbackURL: redirectUrl,
         email,
         password,
-        callbackURL: redirectUrl,
       },
       {
         onError: (ctx) => {
@@ -66,10 +66,10 @@ function LoginForm() {
               <Field.Label>
                 Password <Field.RequiredIndicator />
               </Field.Label>
-              <PasswordInput type="password" name="password" id="password" />
+              <PasswordInput id="password" name="password" type="password" />
             </Field.Root>
 
-            <Button type="submit" className="btn" disabled={isLoading}>
+            <Button className="btn" disabled={isLoading} type="submit">
               {isLoading && (
                 <span className="loading loading-spinner loading-lg" />
               )}
@@ -84,51 +84,51 @@ function LoginForm() {
           <div className="grid grid-cols-2 gap-4">
             <Button
               className="btn "
-              type="button"
               disabled={isLoading}
               onClick={() =>
                 authClient.signIn.social(
                   {
-                    provider: "github",
                     callbackURL: redirectUrl,
+                    provider: "github",
                   },
                   {
-                    onRequest: () => {
-                      setIsLoading(true);
-                      setErrorMessage("");
-                    },
                     onError: (ctx) => {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
+                    onRequest: () => {
+                      setIsLoading(true);
+                      setErrorMessage("");
+                    },
                   },
                 )
               }
+              type="button"
             >
               <IoLogoGithub />
               Login with GitHub
             </Button>
             <Button
-              type="button"
               disabled={isLoading}
               onClick={() =>
                 authClient.signIn.social(
                   {
-                    provider: "google",
                     callbackURL: redirectUrl,
+                    provider: "google",
                   },
                   {
-                    onRequest: () => {
-                      setIsLoading(true);
-                      setErrorMessage("");
-                    },
                     onError: (ctx) => {
                       setIsLoading(false);
                       setErrorMessage(ctx.error.message);
                     },
+                    onRequest: () => {
+                      setIsLoading(true);
+                      setErrorMessage("");
+                    },
                   },
                 )
               }
+              type="button"
             >
               <FcGoogle />
               Login with Google

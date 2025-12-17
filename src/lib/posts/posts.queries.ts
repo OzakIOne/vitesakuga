@@ -8,92 +8,96 @@ import {
 
 export const postsKeys = {
   all: ["posts"] as const,
-  list: () => [...postsKeys.all, "list"] as readonly string[],
-  search: (q: string) => [...postsKeys.all, "search", q] as readonly string[],
-  detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
   byTag: (tagName: string) => [...postsKeys.all, "byTag", tagName] as const,
+  detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
+  list: () => [...postsKeys.all, "list"] as readonly string[],
+  search: (q: string, tags: string[]) =>
+    [...postsKeys.all, "search", q, { tags }] as const,
 } as const;
 
 // Centralized queryOptions factories for posts feature
 export const postsQueries = {
-  // List all posts with infinite scrolling
-  list: () =>
+  byTag: (tagName: string) =>
     infiniteQueryOptions({
-      queryKey: postsKeys.list(),
-      queryFn: async ({ pageParam }: { pageParam?: number }) => {
-        return fetchPosts({
-          data: {
-            page: { size: 20, after: pageParam },
-          },
-        });
-      },
-      initialPageParam: undefined as number | undefined,
+      gcTime: 5 * 60 * 1000, // 5 minutes
       getNextPageParam: (lastPage) => {
         return lastPage?.meta?.hasMore
           ? lastPage?.meta?.cursors?.after
           : undefined;
       },
-      staleTime: 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
-    }),
-  // Search posts with infinite scrolling
-  search: (q: string) =>
-    infiniteQueryOptions({
-      queryKey: postsKeys.search(q),
+      initialPageParam: undefined as number | undefined,
       queryFn: async ({ pageParam }: { pageParam?: number }) => {
-        return searchPosts({
+        return getPostsByTag({
           data: {
-            q,
-            page: { size: 20, after: pageParam },
+            page: { after: pageParam, size: 20 },
+            tag: tagName,
           },
         });
       },
-      initialPageParam: undefined as number | undefined,
-      getNextPageParam: (lastPage) => {
-        return lastPage?.meta?.hasMore
-          ? lastPage?.meta?.cursors?.after
-          : undefined;
-      },
+      queryKey: postsKeys.byTag(tagName),
       staleTime: 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
     }),
   // Single post detail
   detail: (postId: number) =>
     queryOptions({
-      queryKey: postsKeys.detail(postId),
+      gcTime: 5 * 60 * 1000, // 5 minutes
       queryFn: async () => {
         return fetchPostDetail({
           data: postId,
         });
       },
+      queryKey: postsKeys.detail(postId),
       staleTime: 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
     }),
-  byTag: (tagName: string) =>
+  // List all posts with infinite scrolling
+  list: () =>
     infiniteQueryOptions({
-      queryKey: postsKeys.byTag(tagName),
-      queryFn: async ({ pageParam }: { pageParam?: number }) => {
-        return getPostsByTag({
-          data: {
-            tag: tagName,
-            page: { size: 20, after: pageParam },
-          },
-        });
-      },
-      initialPageParam: undefined as number | undefined,
+      gcTime: 5 * 60 * 1000, // 5 minutes
       getNextPageParam: (lastPage) => {
         return lastPage?.meta?.hasMore
           ? lastPage?.meta?.cursors?.after
           : undefined;
       },
+      initialPageParam: undefined as number | undefined,
+      queryFn: async ({ pageParam }: { pageParam?: number }) => {
+        return fetchPosts({
+          data: {
+            page: { after: pageParam, size: 20 },
+          },
+        });
+      },
+      queryKey: postsKeys.list(),
       staleTime: 60 * 1000, // 1 minute
+    }),
+  // Search posts with infinite scrolling
+  search: (q: string, tags: string[]) =>
+    infiniteQueryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes
+      getNextPageParam: (lastPage) => {
+        return lastPage?.meta?.hasMore
+          ? lastPage?.meta?.cursors?.after
+          : undefined;
+      },
+      initialPageParam: undefined as number | undefined,
+      queryFn: async ({ pageParam }: { pageParam?: number }) => {
+        return searchPosts({
+          data: {
+            page: { after: pageParam, size: 20 },
+            q,
+            tags,
+          },
+        });
+      },
+      queryKey: postsKeys.search(q, tags),
+      staleTime: 60 * 1000, // 1 minute
     }),
 };
 
 // Backward compatibility exports
-export const postsInfiniteQueryOptions = (q?: string) => {
-  return q ? postsQueries.search(q) : postsQueries.list();
+export const postsInfiniteQueryOptions = (q: string, tags: string[]) => {
+  if (q || tags.length > 0) return postsQueries.search(q, tags);
+
+  return postsQueries.list();
 };
 
 export const postQueryDetail = (postId: number) => {

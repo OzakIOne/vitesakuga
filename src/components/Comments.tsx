@@ -44,50 +44,50 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       content: string;
       userId: string;
     }) => addComment({ data: newComment }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
-      toaster.create({
-        type: "success",
-        title: "Comment added",
-        description: "Your comment has been successfully posted.",
-        duration: 3000,
-        closable: true,
-      });
-      setComment("");
-    },
     onError: (error) => {
       toaster.create({
-        type: "error",
-        title: "Error adding comment",
+        closable: true,
         description:
           error instanceof Error ? error.message : "Failed to add comment",
         duration: 5000,
-        closable: true,
+        title: "Error adding comment",
+        type: "error",
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
+      toaster.create({
+        closable: true,
+        description: "Your comment has been successfully posted.",
+        duration: 3000,
+        title: "Comment added",
+        type: "success",
+      });
+      setComment("");
     },
   });
 
   const deleteCommentMutation = useMutation({
     mutationFn: (data: { commentId: number; postId: number }) =>
       deleteComment({ data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
-      toaster.create({
-        type: "success",
-        title: "Comment deleted",
-        description: "Your comment has been successfully deleted.",
-        duration: 3000,
-        closable: true,
-      });
-    },
     onError: (error) => {
       toaster.create({
-        type: "error",
-        title: "Error deleting comment",
+        closable: true,
         description:
           error instanceof Error ? error.message : "Failed to delete comment",
         duration: 5000,
+        title: "Error deleting comment",
+        type: "error",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
+      toaster.create({
         closable: true,
+        description: "Your comment has been successfully deleted.",
+        duration: 3000,
+        title: "Comment deleted",
+        type: "success",
       });
     },
   });
@@ -106,14 +106,14 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
     if (!comment.trim() || !currentUserId) return;
 
     await addCommentMutation.mutateAsync({
-      postId,
       content: comment.trim(),
+      postId,
       userId: currentUserId,
     });
   };
 
   return (
-    <Box shadow={"md"} borderRadius={"md"} padding={"4"}>
+    <Box borderRadius={"md"} padding={"4"} shadow={"md"}>
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Comments
       </Text>
@@ -122,15 +122,15 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
         {currentUserId ? (
           <>
             <Textarea
-              value={comment}
+              mb={2}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Write a comment..."
-              mb={2}
+              value={comment}
             />
             <Button
-              onClick={handleSubmitComment}
-              disabled={addCommentMutation.isPending || !comment.trim()}
               colorScheme="blue"
+              disabled={addCommentMutation.isPending || !comment.trim()}
+              onClick={handleSubmitComment}
             >
               {addCommentMutation.isPending ? "Adding..." : "Add Comment"}
             </Button>
@@ -145,17 +145,17 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       <Box>
         {comments?.map((comment) => (
           <Box
-            key={comment.id}
-            p={3}
+            alignItems="flex-start"
             borderRadius="md"
-            shadow="sm"
-            mb={3}
             display="flex"
             justifyContent="space-between"
-            alignItems="flex-start"
+            key={comment.id}
+            mb={3}
+            p={3}
+            shadow="sm"
           >
             <Box flex="1">
-              <Text fontSize="sm" color="gray.600" mb={1}>
+              <Text color="gray.600" fontSize="sm" mb={1}>
                 {comment.userName || "Anonymous"} •{" "}
                 {comment.createdAt
                   ? new Date(comment.createdAt).toLocaleDateString()
@@ -166,13 +166,13 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
             {currentUserId === comment.userId && (
               <IconButton
                 aria-label="Delete comment"
-                size="sm"
-                variant="ghost"
                 colorScheme="red"
-                onClick={() => setCommentIdToDelete(comment.id)}
+                flexShrink={0}
                 loading={deleteCommentMutation.isPending}
                 ms={2}
-                flexShrink={0}
+                onClick={() => setCommentIdToDelete(comment.id)}
+                size="sm"
+                variant="ghost"
               >
                 <LuTrash2 />
               </IconButton>
@@ -182,9 +182,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       </Box>
 
       <Dialog.Root
-        role="alertdialog"
-        open={commentIdToDelete !== null}
         onOpenChange={() => setCommentIdToDelete(null)}
+        open={commentIdToDelete !== null}
+        role="alertdialog"
       >
         <Portal>
           <Dialog.Backdrop />
@@ -205,8 +205,8 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
                 </Dialog.ActionTrigger>
                 <Button
                   colorPalette="red"
-                  onClick={handleDeleteComment}
                   loading={deleteCommentMutation.isPending}
+                  onClick={handleDeleteComment}
                 >
                   Delete Comment
                 </Button>
@@ -232,7 +232,7 @@ export function Comments({ postId, currentUserId }: CommentsProps) {
         </Stack>
       }
     >
-      <CommentsContent postId={postId} currentUserId={currentUserId} />
+      <CommentsContent currentUserId={currentUserId} postId={postId} />
     </Suspense>
   );
 }

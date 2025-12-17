@@ -25,16 +25,16 @@ type OutputFormat = {
 
 const SUPPORTED_OUTPUTS: OutputFormat[] = [
   {
-    label: "MP4 (H.264/AAC)",
-    container: "mp4",
-    videoCodec: "h264",
     audioCodec: "aac",
+    container: "mp4",
+    label: "MP4 (H.264/AAC)",
+    videoCodec: "h264",
   },
   {
-    label: "WebM (VP9/Opus)",
-    container: "webm",
-    videoCodec: "vp9",
     audioCodec: "opus",
+    container: "webm",
+    label: "WebM (VP9/Opus)",
+    videoCodec: "vp9",
   },
 ];
 
@@ -81,10 +81,10 @@ function RouteComponent() {
       // Dynamically import to avoid SSR issues
       const { convertMedia } = await import("@remotion/webcodecs");
       const result = await convertMedia({
-        src: file,
-        container: output.container,
-        videoCodec: output.videoCodec,
         audioCodec: output.audioCodec,
+        container: output.container,
+        src: file,
+        videoCodec: output.videoCodec,
       });
       const blob = await result.save();
       const url = URL.createObjectURL(blob);
@@ -106,16 +106,16 @@ function RouteComponent() {
 
   return (
     <Container maxW="xl" py={8}>
-      <Box p={6} borderRadius="lg" shadow="md">
-        <Heading size="lg" mb={4}>
+      <Box borderRadius="lg" p={6} shadow="md">
+        <Heading mb={4} size="lg">
           Video/Audio Converter
         </Heading>
         <Text mb={4}>
           Convert your video or audio file to another format directly in your
           browser using WebCodecs. Powered by{" "}
           <Link
-            href="https://www.remotion.dev/docs/webcodecs/convert-a-video"
             color="blue.500"
+            href="https://www.remotion.dev/docs/webcodecs/convert-a-video"
           >
             Remotion WebCodecs
           </Link>
@@ -124,9 +124,9 @@ function RouteComponent() {
 
         <Box mb={4}>
           <FileUpload.Root
-            maxW="xl"
-            alignItems="stretch"
             accept={["video/*", "audio/*", ".mkv"]}
+            alignItems="stretch"
+            maxW="xl"
             onChange={handleFileChange}
           >
             <FileUpload.HiddenInput />
@@ -134,12 +134,12 @@ function RouteComponent() {
               <Icon as={LuUpload} boxSize={6} color="gray.500" mb={2} />
               <FileUpload.DropzoneContent>
                 <Text>Drag and drop files here</Text>
-                <Text fontSize="sm" color="gray.500">
+                <Text color="gray.500" fontSize="sm">
                   .mp4, .mov, .mkv, .webm, .avi, .ts, .wav, .mp3, .flac
                 </Text>
               </FileUpload.DropzoneContent>
             </FileUpload.Dropzone>
-            <FileUpload.List showSize clearable />
+            <FileUpload.List clearable showSize />
           </FileUpload.Root>
         </Box>
 
@@ -148,16 +148,16 @@ function RouteComponent() {
             <Text mb={2}>Output Format</Text>
             <Select.Root
               collection={outputFormats}
-              size="md"
-              width="full"
               disabled={isConverting}
-              value={output ? [output.label] : []}
               onSelect={(details) => {
                 const o = SUPPORTED_OUTPUTS.find(
                   (opt) => opt.label === details.value,
                 );
                 if (o) setOutput(o);
               }}
+              size="md"
+              value={output ? [output.label] : []}
+              width="full"
             >
               <Select.Label>Output Format</Select.Label>
               <Select.Control>
@@ -188,17 +188,17 @@ function RouteComponent() {
 
         <Button
           colorScheme="blue"
-          onClick={handleConvert}
           disabled={!file || isConverting}
           loading={isConverting}
           loadingText="Converting"
           mb={4}
+          onClick={handleConvert}
         >
           Convert
         </Button>
 
         {error && (
-          <Alert.Root status="error" mb={4}>
+          <Alert.Root mb={4} status="error">
             <Alert.Content>
               <Alert.Indicator />
               <Alert.Title>Error</Alert.Title>
@@ -208,33 +208,33 @@ function RouteComponent() {
         )}
 
         {downloadUrl && (
-          <Alert.Root status="success" mb={4}>
+          <Alert.Root mb={4} status="success">
             <Alert.Content>
               <Alert.Indicator />
               <Alert.Title>Success</Alert.Title>
               <Alert.Description>
                 <Text>Conversion complete!</Text>
-                <Button asChild size="sm" colorScheme="green" mt={2}>
-                  <a href={downloadUrl} download={convertedName}>
+                <Button asChild colorScheme="green" mt={2} size="sm">
+                  <a download={convertedName} href={downloadUrl}>
                     Download
                   </a>
                 </Button>
                 {downloadUrl &&
                   (output?.container === "mp4" ? (
                     <video
-                      src={downloadUrl}
                       controls
+                      src={downloadUrl}
                       style={{
+                        borderRadius: "0.5rem",
                         marginTop: "1rem",
                         maxHeight: "256px",
                         width: "100%",
-                        borderRadius: "0.5rem",
                       }}
                     />
                   ) : (
                     <audio
-                      src={downloadUrl}
                       controls
+                      src={downloadUrl}
                       style={{
                         marginTop: "1rem",
                         width: "100%",
@@ -246,11 +246,11 @@ function RouteComponent() {
           </Alert.Root>
         )}
 
-        <Text fontSize="sm" color="gray.600">
+        <Text color="gray.600" fontSize="sm">
           Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac,
           aac, m3u8
         </Text>
-        <Text fontSize="sm" color="gray.600">
+        <Text color="gray.600" fontSize="sm">
           Supported output: MP4 (H.264/AAC), WebM (VP9/Opus)
         </Text>
       </Box>

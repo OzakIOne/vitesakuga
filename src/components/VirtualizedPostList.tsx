@@ -59,17 +59,17 @@ export function VirtualizedPostList({
 
   const rowVirtualizer = useVirtualizer({
     count: hasNextPage ? totalRows + 1 : totalRows,
-    getScrollElement: () => parentRef.current,
     estimateSize: () => 240,
+    getScrollElement: () => parentRef.current,
     overscan: 2,
   });
 
   const columnVirtualizer = useVirtualizer({
-    horizontal: true,
     count: totalCols,
-    getScrollElement: () => parentRef.current,
     estimateSize: () =>
       Math.floor((containerWidth || window.innerWidth) / totalCols),
+    getScrollElement: () => parentRef.current,
+    horizontal: true,
     overscan: 1,
   });
 
@@ -93,24 +93,24 @@ export function VirtualizedPostList({
   if (posts.length === 0) {
     return (
       <Box
-        ref={parentRef}
-        overflow="auto"
-        h="calc(100vh - 120px)"
-        w="full"
-        position="relative"
-        borderRadius="md"
-        shadow="md"
-        border="1px"
-        display="flex"
         alignItems="center"
+        border="1px"
+        borderRadius="md"
+        display="flex"
+        h="calc(100vh - 120px)"
         justifyContent="center"
+        overflow="auto"
+        position="relative"
+        ref={parentRef}
+        shadow="md"
+        w="full"
       >
         <Box textAlign="center">
-          <Box fontSize="lg" fontWeight="medium" color="gray.600">
+          <Box color="gray.600" fontSize="lg" fontWeight="medium">
             No posts found
             {searchQuery && ` for query "${searchQuery}"`}
           </Box>
-          <Box fontSize="sm" color="gray.500" mt={2}>
+          <Box color="gray.500" fontSize="sm" mt={2}>
             Try adjusting your search or filters
           </Box>
         </Box>
@@ -120,35 +120,33 @@ export function VirtualizedPostList({
 
   return (
     <Box
-      ref={parentRef}
-      overflow="auto"
-      h="calc(100vh - 120px)"
-      w="full"
-      position="relative"
       borderRadius="md"
-      shadow="md"
-      border="1px"
+      h="calc(100vh - 120px)"
+      overflow="auto"
+      position="relative"
+      ref={parentRef}
+      w="full"
     >
       <Box
         style={{
           height: `${rowVirtualizer.getTotalSize()}px`,
-          width: "100%",
           position: "relative",
+          width: "100%",
         }}
       >
         {virtualRows.map((virtualRow) => (
           <Flex
-            key={virtualRow.key}
-            px={4}
-            position="absolute"
-            top={0}
-            left={0}
-            w="full"
             h={`${virtualRow.size}px`}
+            key={virtualRow.key}
+            left={0}
+            position="absolute"
+            px={4}
             style={{
-              transform: `translateY(${virtualRow.start}px)`,
               boxSizing: "border-box",
+              transform: `translateY(${virtualRow.start}px)`,
             }}
+            top={0}
+            w="full"
           >
             {virtualCols.map((virtualCol) => {
               const postIndex = virtualRow.index * totalCols + virtualCol.index;
@@ -157,14 +155,14 @@ export function VirtualizedPostList({
                 if (virtualRow.index >= totalRows) {
                   return (
                     <Flex
-                      key={virtualCol.key}
                       align="center"
                       justify="center"
+                      key={virtualCol.key}
                       style={{
-                        width: `calc((100% - ${(totalCols - 1) * 16}px) / ${totalCols})`,
                         height: `${virtualRow.size}px`,
                         marginRight:
                           virtualCol.index < totalCols - 1 ? "16px" : "0",
+                        width: `calc((100% - ${(totalCols - 1) * 16}px) / ${totalCols})`,
                       }}
                     >
                       {hasNextPage && isFetchingNextPage && "Loading..."}
@@ -178,14 +176,17 @@ export function VirtualizedPostList({
               return (
                 <Box
                   key={`${virtualRow.key}-${virtualCol.key}`}
+                  p={2}
+                  rounded={4}
+                  shadow={"md"}
                   style={{
-                    width: `calc((100% - ${(totalCols - 1) * 16}px) / ${totalCols})`,
                     height: `${virtualRow.size}px`,
                     marginRight:
                       virtualCol.index < totalCols - 1 ? "16px" : "0",
+                    width: `calc((100% - ${(totalCols - 1) * 16}px) / ${totalCols})`,
                   }}
                 >
-                  <PostCard post={post} q={searchQuery} pageSize={pageSize} />
+                  <PostCard pageSize={pageSize} post={post} q={searchQuery} />
                 </Box>
               );
             })}

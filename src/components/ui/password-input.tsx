@@ -53,14 +53,14 @@ export const PasswordInput = React.forwardRef<
     defaultVisible,
     visible: visibleProp,
     onVisibleChange,
-    visibilityIcon = { on: <LuEye />, off: <LuEyeOff /> },
+    visibilityIcon = { off: <LuEyeOff />, on: <LuEye /> },
     ...rest
   } = props;
 
   const [visible, setVisible] = useControllableState({
-    value: visibleProp,
     defaultValue: defaultVisible || false,
     onChange: onVisibleChange,
+    value: visibleProp,
   });
 
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -95,14 +95,14 @@ const VisibilityTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
   function VisibilityTrigger(props, ref) {
     return (
       <IconButton
-        tabIndex={-1}
-        ref={ref}
-        me="-2"
-        aspectRatio="square"
-        size="sm"
-        variant="ghost"
-        height="calc(100% - {spacing.2})"
         aria-label="Toggle password visibility"
+        aspectRatio="square"
+        height="calc(100% - {spacing.2})"
+        me="-2"
+        ref={ref}
+        size="sm"
+        tabIndex={-1}
+        variant="ghost"
         {...props}
       />
     );
@@ -128,17 +128,17 @@ export const PasswordStrengthMeter = React.forwardRef<
       <HStack width="full" {...rest}>
         {Array.from({ length: max }).map((_, index) => (
           <Box
-            key={index}
-            height="1"
-            flex="1"
-            rounded="sm"
-            data-selected={index < value ? "" : undefined}
-            layerStyle="fill.subtle"
-            colorPalette="gray"
             _selected={{
               colorPalette,
               layerStyle: "fill.solid",
             }}
+            colorPalette="gray"
+            data-selected={index < value ? "" : undefined}
+            flex="1"
+            height="1"
+            key={index}
+            layerStyle="fill.subtle"
+            rounded="sm"
           />
         ))}
       </HStack>
@@ -150,10 +150,10 @@ export const PasswordStrengthMeter = React.forwardRef<
 function getColorPalette(percent: number) {
   switch (true) {
     case percent < 33:
-      return { label: "Low", colorPalette: "red" };
+      return { colorPalette: "red", label: "Low" };
     case percent < 66:
-      return { label: "Medium", colorPalette: "orange" };
+      return { colorPalette: "orange", label: "Medium" };
     default:
-      return { label: "High", colorPalette: "green" };
+      return { colorPalette: "green", label: "High" };
   }
 }

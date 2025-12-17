@@ -11,8 +11,8 @@ import {
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter();
   const isRoot = useMatch({
-    strict: false,
     select: (state) => state.id === rootRouteId,
+    strict: false,
   });
 
   console.error("DefaultCatchBoundary Error:", error);
@@ -30,19 +30,19 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
         </Button>
         {isRoot ? (
           <Link
-            to="/"
             className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded text-white uppercase font-extrabold`}
+            to="/"
           >
             Home
           </Link>
         ) : (
           <Link
-            to="/"
             className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded text-white uppercase font-extrabold`}
             onClick={(e) => {
               e.preventDefault();
               window.history.back();
             }}
+            to="/"
           >
             Go Back
           </Link>

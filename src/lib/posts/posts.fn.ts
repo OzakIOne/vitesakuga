@@ -13,14 +13,15 @@ import {
   searchPostsInputSchema,
   updatePostInputSchema,
 } from "./posts.schema";
+import { mapPopularTags } from "./posts.utils";
 
 const cfclient = new S3Client({
-  region: "auto",
-  endpoint: envServer.CLOUDFLARE_R2,
   credentials: {
     accessKeyId: envServer.CLOUDFLARE_ACCESS_KEY,
     secretAccessKey: envServer.CLOUDFLARE_SECRET_KEY,
   },
+  endpoint: envServer.CLOUDFLARE_R2,
+  region: "auto",
 });
 
 export const fetchPosts = createServerFn()
@@ -68,29 +69,23 @@ export const fetchPosts = createServerFn()
       .limit(10)
       .execute();
 
-    const popularTags = popularTagsResult.map((r) => ({
-      id: r.id,
-      name: r.name,
-      postCount: Number(r.postCount),
-    }));
-
     return {
       data: datas,
       links: {
-        self: after
-          ? `/api/posts?page[after]=${after}&page[size]=${size}`
-          : `/api/posts?page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts?page[after]=${afterCursor}&page[size]=${size}`
             : null,
+        self: after
+          ? `/api/posts?page[after]=${after}&page[size]=${size}`
+          : `/api/posts?page[size]=${size}`,
       },
       meta: {
-        hasMore,
         cursors: {
           after: afterCursor,
         },
-        popularTags,
+        hasMore,
+        popularTags: mapPopularTags(popularTagsResult),
       },
     };
   });
@@ -98,20 +93,32 @@ export const fetchPosts = createServerFn()
 export const searchPosts = createServerFn()
   .inputValidator((input: unknown) => searchPostsInputSchema.parse(input))
   .handler(async ({ data }) => {
-    const { q, page } = data;
+    const { q, tags, page } = data;
     const { size, after } = page;
 
-    let query = kysely
-      .selectFrom("posts")
-      .selectAll()
-      .where((eb) =>
+    let query = kysely.selectFrom("posts").selectAll();
+
+    if (q) {
+      query = query.where((eb) =>
         eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
-      )
-      .orderBy("id", "desc");
+      );
+    }
+
+    if (tags.length > 0) {
+      query = query
+        .innerJoin("post_tags", "post_tags.postId", "posts.id")
+        .innerJoin("tags", "tags.id", "post_tags.tagId")
+        .where("tags.name", "in", tags)
+        .selectAll("posts")
+        .distinct();
+    }
+
+    // TODO error: ORDER BY "id" is ambiguous when doing a query + tags
+    // query = query.orderBy("id", "desc");
 
     // Apply cursor for forward pagination
     if (after) {
-      query = query.where("id", "<", after);
+      query = query.where("posts.id", "<", after);
     }
 
     const items = await query.limit(size + 1).execute();
@@ -154,33 +161,27 @@ export const searchPosts = createServerFn()
       .limit(10)
       .execute();
 
-    const popularTags = popularTagsResult.map((r) => ({
-      id: r.id,
-      name: r.name,
-      postCount: Number(r.postCount),
-    }));
-
     return {
       data: datas,
       links: {
-        self: after
-          ? `/api/posts/search?q=${encodeURIComponent(
-              q,
-            )}&page[after]=${after}&page[size]=${size}`
-          : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/api/posts/search?q=${encodeURIComponent(
-                q,
-              )}&page[after]=${afterCursor}&page[size]=${size}`
+              q,
+            )}&page[after]=${afterCursor}&page[size]=${size}`
             : null,
+        self: after
+          ? `/api/posts/search?q=${encodeURIComponent(
+            q,
+          )}&page[after]=${after}&page[size]=${size}`
+          : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
       },
       meta: {
-        hasMore,
         cursors: {
           after: afterCursor,
         },
-        popularTags,
+        hasMore,
+        popularTags: mapPopularTags(popularTagsResult),
       },
     };
   });
@@ -217,29 +218,29 @@ export const fetchPostDetail = createServerFn()
 
     const relatedPost = postWithUser.relatedPostId
       ? await kysely
-          .selectFrom("posts")
-          .selectAll()
-          .where("id", "=", postWithUser.relatedPostId)
-          .executeTakeFirst()
+        .selectFrom("posts")
+        .selectAll()
+        .where("id", "=", postWithUser.relatedPostId)
+        .executeTakeFirst()
       : null;
 
     return {
       post: {
-        id: postWithUser.id,
-        title: postWithUser.title,
         content: postWithUser.content,
         createdAt: postWithUser.createdAt,
+        id: postWithUser.id,
         relatedPostId: postWithUser.relatedPostId,
-        videoKey: postWithUser.videoKey,
         source: postWithUser.source,
+        title: postWithUser.title,
+        videoKey: postWithUser.videoKey,
       },
+      relatedPost,
+      tags,
       user: {
         id: postWithUser.userId,
-        name: postWithUser.userName,
         image: postWithUser.userImage,
+        name: postWithUser.userName,
       },
-      tags,
-      relatedPost,
     };
   });
 
@@ -257,17 +258,17 @@ export const uploadPost = createServerFn({ method: "POST" })
       ?.replace(ext, ".jpg")}`;
 
     const videoCommand = new PutObjectCommand({
-      Bucket: envServer.CLOUDFLARE_BUCKET,
-      Key: videoKey,
       Body: Buffer.from(video.arrayBuffer),
+      Bucket: envServer.CLOUDFLARE_BUCKET,
       ContentType: video.type,
+      Key: videoKey,
     });
 
     const thumbnailCommand = new PutObjectCommand({
-      Bucket: envServer.CLOUDFLARE_BUCKET,
-      Key: thumbnailKey,
       Body: Buffer.from(data.thumbnail.arrayBuffer),
+      Bucket: envServer.CLOUDFLARE_BUCKET,
       ContentType: data.thumbnail.type,
+      Key: thumbnailKey,
     });
 
     const videocmd = await cfclient.send(videoCommand);
@@ -283,19 +284,19 @@ export const uploadPost = createServerFn({ method: "POST" })
       .insertInto("posts")
       .values({
         content,
+        relatedPostId,
+        source,
+        thumbnailKey,
         title,
         userId,
         videoKey,
-        thumbnailKey,
-        source,
-        relatedPostId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
 
     const postId = newPost.id;
 
-    if (tags && tags.length > 0) {
+    if (tags.length > 0) {
       // Process each tag - create new ones and collect all tag IDs
       const allTagIds: number[] = [];
 
@@ -328,6 +329,7 @@ export const uploadPost = createServerFn({ method: "POST" })
     return newPost;
   });
 
+// TODO see how this handle partial errors, like if something broke does it create an inconsistent state?
 export const updatePost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => updatePostInputSchema.parse(input))
   .handler(async ({ data }) => {
@@ -364,10 +366,10 @@ export const updatePost = createServerFn({ method: "POST" })
     const updatedPost = await kysely
       .updateTable("posts")
       .set({
-        title,
         content,
-        source,
         relatedPostId,
+        source,
+        title,
       })
       .where("id", "=", postId)
       .returningAll()
@@ -396,9 +398,8 @@ export const updatePost = createServerFn({ method: "POST" })
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
-        } else {
-          allTagIds.push(tag.id);
         }
+        else allTagIds.push(tag.id);
       }
 
       // Link post to new tags
@@ -423,14 +424,14 @@ export const getPostsByTag = createServerFn()
   .inputValidator((input: unknown) =>
     z
       .object({
-        tag: z.string(),
         page: z
           .object({
-            size: z.number().min(1).max(100).default(20),
             after: z.number().optional(),
+            size: z.number().min(1).max(100).default(20),
           })
           .optional()
           .default({ size: 20 }),
+        tag: z.string(),
       })
       .parse(input),
   )
@@ -492,33 +493,27 @@ export const getPostsByTag = createServerFn()
       .limit(10)
       .execute();
 
-    const popularTags = popularTagsResult.map((r) => ({
-      id: r.id,
-      name: r.name,
-      postCount: Number(r.postCount),
-    }));
-
     return {
       data: postsData,
       links: {
-        self: after
-          ? `/posts/tags/${encodeURIComponent(
-              tagName,
-            )}?page[after]=${after}&page[size]=${size}`
-          : `/posts/tags/${encodeURIComponent(tagName)}?page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/posts/tags/${encodeURIComponent(
-                tagName,
-              )}?page[after]=${afterCursor}&page[size]=${size}`
+              tagName,
+            )}?page[after]=${afterCursor}&page[size]=${size}`
             : null,
+        self: after
+          ? `/posts/tags/${encodeURIComponent(
+            tagName,
+          )}?page[after]=${after}&page[size]=${size}`
+          : `/posts/tags/${encodeURIComponent(tagName)}?page[size]=${size}`,
       },
       meta: {
-        hasMore,
         cursors: {
           after: afterCursor,
         },
-        popularTags,
+        hasMore,
+        popularTags: mapPopularTags(popularTagsResult),
       },
     };
   });

@@ -35,18 +35,18 @@ export function FormTextWrapper({
           <Textarea
             id={field.name}
             name={field.name}
-            value={field.state.value}
             onBlur={field.handleBlur}
             onChange={(e) => field.handleChange(e.target.value)}
+            value={field.state.value}
             {...inputProps}
           />
         ) : (
           <Input
             id={field.name}
             name={field.name}
-            value={field.state.value}
             onBlur={field.handleBlur}
             onChange={(e) => field.handleChange(e.target.value)}
+            value={field.state.value}
             {...inputProps}
           />
         )}

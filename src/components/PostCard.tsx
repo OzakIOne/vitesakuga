@@ -15,52 +15,52 @@ function PostCardComponent({ post, q, pageSize }: PostListProps) {
   );
   return (
     <Link
-      to="/posts/$postId"
       params={{ postId: post.id! }}
       search={{
         q,
         size: pageSize,
       }}
+      to="/posts/$postId"
     >
-      <VStack gap={2} h="full" cursor="pointer">
+      <VStack cursor="pointer" gap={2} h="full">
         <Box
-          position="relative"
-          w="full"
-          overflow="hidden"
-          borderRadius="lg"
-          bg="gray.900"
-          aspectRatio="16 / 9"
           _groupHover={{
             filter: "brightness(0.75)",
           }}
+          aspectRatio="16 / 9"
+          bg="gray.900"
+          borderRadius="lg"
+          overflow="hidden"
+          position="relative"
           transitionDuration="200ms"
           transitionProperty="all"
+          w="full"
         >
           <Image
-            src={`${BaseURL}${post.thumbnailKey}`}
             alt={post.title}
-            w="full"
             h="full"
             objectFit="contain"
+            src={`${BaseURL}${post.thumbnailKey}`}
+            w="full"
           />
         </Box>
 
         {/* Content Container */}
         <HStack gap={3} px={1} w="full">
           {/* Info Container */}
-          <VStack gap={1} flex={1} minW={0} align="start">
+          <VStack align="start" flex={1} gap={1} minW={0}>
             <Heading
-              as="h3"
-              size="sm"
-              lineClamp={2}
               _groupHover={{
                 color: "gray.600",
               }}
+              as="h3"
+              lineClamp={2}
+              size="sm"
               transitionProperty="colors"
             >
               {post.title}
             </Heading>
-            <Text fontSize="xs" color="gray.600" lineClamp={1}>
+            <Text color="gray.600" fontSize="xs" lineClamp={1}>
               {post.content}
             </Text>
           </VStack>

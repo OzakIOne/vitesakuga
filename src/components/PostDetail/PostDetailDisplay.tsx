@@ -23,23 +23,23 @@ export function PostDetailDisplay({
   onBack,
 }: PostDetailDisplayProps) {
   return (
-    <VStack gap={4} align="stretch">
-      <Button onClick={onBack} alignSelf="flex-start">
+    <VStack align="stretch" gap={4}>
+      <Button alignSelf="flex-start" onClick={onBack}>
         Back
       </Button>
 
-      <Box p={4} borderRadius="md" shadow="md" border="1px">
+      <Box border="1px" borderRadius="md" p={4} shadow="md">
         <Post
-          post={post}
-          user={user}
-          tags={initialTags}
-          relatedPost={relatedPost}
           currentUserId={currentUserId}
           onEditClick={onEditClick}
+          post={post}
+          relatedPost={relatedPost}
+          tags={initialTags}
+          user={user}
         />
       </Box>
 
-      <Comments postId={post.id} currentUserId={currentUserId} />
+      <Comments currentUserId={currentUserId} postId={post.id} />
     </VStack>
   );
 }

@@ -4,23 +4,37 @@ import z from "zod";
 export const fetchPostsInputSchema = z.object({
   page: z
     .object({
-      size: z.number().min(1).max(100).default(20), // page[size]
       after: z.number().optional(), // page[after] - cursor for next page
       before: z.number().optional(), // page[before] - cursor for previous page
+      size: z.number().min(1).max(100).default(20), // page[size]
     })
     .optional()
     .default({ size: 20 }),
 });
 
 export const searchPostsInputSchema = z.object({
-  q: z.string().trim().min(1),
   page: z
     .object({
-      size: z.number().min(1).max(100).default(20),
       after: z.number().optional(),
+      size: z.number().min(1).max(100).default(20),
     })
     .optional()
     .default({ size: 20 }),
+  q: z.string().trim().default(""),
+  tags: z.array(z.string()).default([]),
+});
+
+export const fetchUserInputSchema = z.object({
+  page: z
+    .object({
+      after: z.number().optional(),
+      size: z.number().min(1).max(100).default(20),
+    })
+    .optional()
+    .default({ size: 20 }),
+  q: z.string().trim().default(""),
+  tags: z.array(z.string()).default([]),
+  userId: z.string(),
 });
 
 const TagSchema = z.object({
@@ -28,38 +42,38 @@ const TagSchema = z.object({
   name: z.string().min(1),
 });
 
-const BaseFormUploadSchema = z.object({
-  title: z.string().min(3, "You must have a length of at least 3"),
+const FormBaseUploadSchema = z.object({
   content: z.string().min(3, "You must have a length of at least 3"),
-  userId: z.string(),
-  source: z.url().or(z.literal("")).or(z.undefined()),
   relatedPostId: z.number().or(z.undefined()),
+  source: z.url().or(z.literal("")).or(z.undefined()),
   tags: z.array(TagSchema),
+  title: z.string().min(3, "You must have a length of at least 3"),
+  userId: z.string(),
 });
 
-export const FileFormUploadSchema = BaseFormUploadSchema.extend({
-  video: z.file(),
+export const FormFileUploadSchema = FormBaseUploadSchema.extend({
   thumbnail: z.file(),
+  video: z.file(),
 });
 
 const BufferSerializableSchema = z.object({
   arrayBuffer: z.instanceof(ArrayBuffer),
   name: z.string(),
-  type: z.string(),
   size: z.number(),
+  type: z.string(),
 });
 
 export type BufferSerializableType = z.infer<typeof BufferSerializableSchema>;
 
-export const BufferFormUploadSchema = BaseFormUploadSchema.extend({
-  video: BufferSerializableSchema,
+export const BufferFormUploadSchema = FormBaseUploadSchema.extend({
   thumbnail: BufferSerializableSchema,
+  video: BufferSerializableSchema,
 });
 
 export type SerializedUploadData = z.infer<typeof BufferFormUploadSchema>;
 
 export type FileUploadData = Omit<
-  z.infer<typeof FileFormUploadSchema>,
+  z.infer<typeof FormFileUploadSchema>,
   "video" | "thumbnail"
 > & {
   // TODO remove undefined because form ensure the file is present same for thumbnail
@@ -69,21 +83,22 @@ export type FileUploadData = Omit<
 
 // Schema for updating a post
 export const updatePostInputSchema = z.object({
-  postId: z.number(),
-  title: z.string().min(3, "You must have a length of at least 3"),
   content: z.string().min(3, "You must have a length of at least 3"),
-  source: z.url().or(z.literal("")).or(z.undefined()),
+  postId: z.number(),
   relatedPostId: z.number().or(z.undefined()),
+  source: z.url().or(z.literal("")).or(z.undefined()),
   tags: z.array(TagSchema),
+  title: z.string().min(3, "You must have a length of at least 3"),
 });
 
 export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
 
 export const postSearchSchema = z.object({
-  q: z.string().trim().min(1).optional(),
+  dateRange: z.enum(["all", "today", "week", "month"]).default("all"),
+  q: z.string().trim().default(""),
   size: z.coerce.number().min(1).max(100).default(20).optional(),
   sortBy: z.enum(["latest", "oldest"]).default("latest"),
-  dateRange: z.enum(["all", "today", "week", "month"]).default("all"),
+  tags: z.array(z.string()).default([]),
 });
 
 export type PostSearchParams = z.infer<typeof postSearchSchema>;

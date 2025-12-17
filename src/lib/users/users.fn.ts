@@ -2,17 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
-
-const fetchUserInputSchema = z.object({
-  userId: z.string(),
-  page: z
-    .object({
-      size: z.number().min(1).max(100).default(20),
-      after: z.number().optional(),
-    })
-    .optional()
-    .default({ size: 20 }),
-});
+import { fetchUserInputSchema } from "../posts/posts.schema";
+import { mapPopularTags } from "../posts/posts.utils";
 
 export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
@@ -25,10 +16,10 @@ export const fetchUsers = createServerFn().handler(async () => {
   return parsed.data;
 });
 
-export const fetchUser = createServerFn()
+export const fetchUserPosts = createServerFn()
   .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))
   .handler(async ({ data }) => {
-    const { userId, page } = data;
+    const { userId, tags, q, page } = data;
     const { size, after } = page;
 
     const userInfo = await kysely
@@ -43,12 +34,28 @@ export const fetchUser = createServerFn()
     let query = kysely
       .selectFrom("posts")
       .selectAll()
-      .where("userId", "=", userId)
-      .orderBy("id", "desc");
+      .where("userId", "=", userId);
+
+    if (q) {
+      query = query.where((eb) =>
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
+      );
+    }
+
+    if (tags.length > 0) {
+      query = query
+        .innerJoin("post_tags", "post_tags.postId", "posts.id")
+        .innerJoin("tags", "tags.id", "post_tags.tagId")
+        .where("tags.name", "in", tags)
+        .selectAll("posts")
+        .distinct();
+    }
+
+    query = query.orderBy("id", "desc");
 
     // Apply cursor for forward pagination
     if (after) {
-      query = query.where("id", "<", after);
+      query = query.where("posts.id", "<", after);
     }
 
     const items = await query.limit(size + 1).execute();
@@ -84,30 +91,24 @@ export const fetchUser = createServerFn()
       .limit(10)
       .execute();
 
-    const popularTags = popularTagsResult.map((r) => ({
-      id: r.id,
-      name: r.name,
-      postCount: Number(r.postCount),
-    }));
-
     return {
-      user: userInfo,
       data: postsData,
       links: {
-        self: after
-          ? `/users/${userId}?page[after]=${after}&page[size]=${size}`
-          : `/users/${userId}?page[size]=${size}`,
         next:
           hasMore && afterCursor
             ? `/users/${userId}?page[after]=${afterCursor}&page[size]=${size}`
             : null,
+        self: after
+          ? `/users/${userId}?page[after]=${after}&page[size]=${size}`
+          : `/users/${userId}?page[size]=${size}`,
       },
       meta: {
-        hasMore,
         cursors: {
           after: afterCursor,
         },
-        popularTags,
+        hasMore,
+        popularTags: mapPopularTags(popularTagsResult),
       },
+      user: userInfo,
     };
   });

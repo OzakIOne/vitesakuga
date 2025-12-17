@@ -11,14 +11,13 @@ export const commentsQueries = {
   // Comments for a specific post
   getComments: (postId: number) =>
     queryOptions({
-      queryKey: commentsKeys.post(postId),
-      queryFn: async () => {
-        return fetchComments({
-          data: postId,
-        });
-      },
-      staleTime: 30 * 1000, // 30 seconds
       gcTime: 5 * 60 * 1000, // 5 minutes
+      queryFn: async () =>
+        fetchComments({
+          data: postId,
+        }),
+      queryKey: commentsKeys.post(postId),
+      staleTime: 30 * 1000, // 30 seconds
     }),
 };
 

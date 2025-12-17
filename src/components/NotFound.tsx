@@ -9,14 +9,14 @@ export function NotFound({ children }: { children?: any }) {
       </div>
       <p className="flex items-center gap-2 flex-wrap">
         <Button
-          onClick={() => window.history.back()}
           className="bg-emerald-500 text-white px-2 py-1 rounded uppercase font-black text-sm"
+          onClick={() => window.history.back()}
         >
           Go back
         </Button>
         <Link
-          to="/"
           className="bg-cyan-600 text-white px-2 py-1 rounded uppercase font-black text-sm"
+          to="/"
         >
           Start Over
         </Link>

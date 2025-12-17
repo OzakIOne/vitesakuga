@@ -10,33 +10,32 @@ import { postSearchSchema } from "src/lib/posts/posts.schema";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/posts/")({
-  validateSearch: postSearchSchema,
   component: PostsLayoutComponent,
   // fix initial window is not defined error
   ssr: "data-only",
+  validateSearch: postSearchSchema,
 });
 
 function PostsContent() {
-  const { q, size, sortBy, dateRange } = Route.useSearch();
+  const { q, tags, size, sortBy, dateRange } = Route.useSearch();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useSuspenseInfiniteQuery(postsInfiniteQueryOptions(q));
+    useSuspenseInfiniteQuery(postsInfiniteQueryOptions(q, tags));
 
   const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
-
   const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
     return filterAndSortPosts(allPosts, {
-      sortBy,
       dateRange,
+      sortBy,
     });
   }, [allPosts, sortBy, dateRange]);
 
   return (
-    <Box w="full" p={4}>
+    <Box p={4} w="full">
       {envClient.MODE === "development" && (
-        <VStack p={4} borderBottom="1px" align="start">
+        <VStack align="start" borderBottom="1px" p={4}>
           <Text fontSize="sm">Posts loaded: {allPosts.length}</Text>
           <Text fontSize="sm">Filtered posts: {filteredPosts.length}</Text>
           <Text fontSize="sm">Has next page: {hasNextPage ? "Yes" : "No"}</Text>
@@ -48,21 +47,31 @@ function PostsContent() {
         </VStack>
       )}
       <PostsPageLayout
-        searchQuery={q}
-        popularTags={popularTags}
-        sortBy={sortBy}
         dateRange={dateRange}
         fromRoute="/posts"
+        popularTags={popularTags}
+        searchQuery={q}
+        selectedTags={tags}
+        sortBy={sortBy}
       >
         <GridItem>
-          <VirtualizedPostList
-            posts={filteredPosts}
-            searchQuery={q}
-            pageSize={size}
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            onFetchNextPage={fetchNextPage}
-          />
+          <Suspense
+            fallback={
+              <Stack align="center" justify="center" minH="600px">
+                <Spinner size="lg" />
+                <Text>Loading posts...</Text>
+              </Stack>
+            }
+          >
+            <VirtualizedPostList
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onFetchNextPage={fetchNextPage}
+              pageSize={size}
+              posts={filteredPosts}
+              searchQuery={q}
+            />
+          </Suspense>
         </GridItem>
       </PostsPageLayout>
     </Box>
@@ -70,16 +79,5 @@ function PostsContent() {
 }
 
 function PostsLayoutComponent() {
-  return (
-    <Suspense
-      fallback={
-        <Stack align="center" justify="center" minH="600px">
-          <Spinner size="lg" />
-          <Text>Loading posts...</Text>
-        </Stack>
-      }
-    >
-      <PostsContent />
-    </Suspense>
-  );
+  return <PostsContent />;
 }

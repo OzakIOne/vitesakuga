@@ -8,10 +8,10 @@ export const getPoolSingleton = () => {
 
   pool = new Pool({
     database: envServer.POSTGRES_DB,
-    user: envServer.POSTGRES_USER,
-    password: envServer.POSTGRES_PASSWORD,
     host: envServer.POSTGRES_HOST,
+    password: envServer.POSTGRES_PASSWORD,
     port: 5432,
+    user: envServer.POSTGRES_USER,
     // max: env.DATABASE_MAX_CONNECTIONS,
     // min: env.DATABASE_MIN_CONNECTIONS,
     // Production optimizations

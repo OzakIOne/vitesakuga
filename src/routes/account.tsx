@@ -32,15 +32,15 @@ import authClient from "src/lib/auth/client";
 import z from "zod";
 
 export const Route = createFileRoute("/account")({
+  component: RouteComponent,
   server: {
     middleware: [authMiddleware],
   },
-  component: RouteComponent,
 });
 
 const profileSchema = z.object({
-  name: z.string(),
   image: z.url().or(z.literal("")),
+  name: z.string(),
 });
 
 function RouteComponent() {
@@ -53,11 +53,8 @@ function RouteComponent() {
 
   const profileForm = useForm({
     defaultValues: {
-      name: user.name,
       image: user.image,
-    },
-    validators: {
-      onChange: profileSchema,
+      name: user.name,
     },
     onSubmit: async ({ value }) => {
       setServerError(null);
@@ -65,21 +62,24 @@ function RouteComponent() {
         await authClient.updateUser(value);
         await router.invalidate();
         toaster.create({
-          type: "success",
-          title: "Profile updated",
+          closable: true,
           description: "Your profile has been successfully updated.",
           duration: 3000,
-          closable: true,
+          title: "Profile updated",
+          type: "success",
         });
       } catch (err) {
         toaster.create({
-          type: "error",
-          title: "Error updating profile",
+          closable: true,
           description: err,
           duration: 5000,
-          closable: true,
+          title: "Error updating profile",
+          type: "error",
         });
       }
+    },
+    validators: {
+      onChange: profileSchema,
     },
   });
 
@@ -92,25 +92,25 @@ function RouteComponent() {
       setServerError(null);
       try {
         await authClient.changePassword({
-          newPassword: value.newPassword,
           currentPassword: value.currentPassword,
+          newPassword: value.newPassword,
           revokeOtherSessions: true,
         });
         formApi.reset();
         toaster.create({
-          type: "success",
-          title: "Password updated",
+          closable: true,
           description: "Your password has been successfully changed.",
           duration: 3000,
-          closable: true,
+          title: "Password updated",
+          type: "success",
         });
       } catch (err) {
         toaster.create({
-          type: "error",
-          title: "Error changing password",
+          closable: true,
           description: err,
           duration: 5000,
-          closable: true,
+          title: "Error changing password",
+          type: "error",
         });
       }
     },
@@ -120,20 +120,20 @@ function RouteComponent() {
     try {
       await authClient.deleteUser();
       toaster.create({
-        type: "success",
-        title: "Account deleted",
+        closable: true,
         description: "Your account has been successfully deleted.",
         duration: 3000,
-        closable: true,
+        title: "Account deleted",
+        type: "success",
       });
       navigate({ to: "/" });
     } catch (err) {
       toaster.create({
-        type: "error",
-        title: "Error deleting account",
+        closable: true,
         description: err,
         duration: 5000,
-        closable: true,
+        title: "Error deleting account",
+        type: "error",
       });
     }
   };
@@ -146,7 +146,7 @@ function RouteComponent() {
             <AvatarGroup>
               <Avatar.Root size="2xl">
                 <Avatar.Fallback />
-                <Avatar.Image src={user.image || ""} className="rounded-full" />
+                <Avatar.Image className="rounded-full" src={user.image || ""} />
               </Avatar.Root>
             </AvatarGroup>
             <div className="flex-1 min-w-0">
@@ -170,15 +170,15 @@ function RouteComponent() {
 
         <div className="space-y-8">
           <div>
-            <Heading size="lg" className="mb-2">
+            <Heading className="mb-2" size="lg">
               Profile Information
             </Heading>
             <form
+              className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 profileForm.handleSubmit();
               }}
-              className="space-y-4"
             >
               <profileForm.Field name="name">
                 {(field) => (
@@ -187,10 +187,10 @@ function RouteComponent() {
                       <Field.Label>Display Name</Field.Label>
                       <InputGroup startElement={<LuUser />}>
                         <Input
-                          value={field.state.value}
+                          className="w-full h-12"
                           onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="Enter your display name"
-                          className="w-full h-12"
+                          value={field.state.value}
                         />
                       </InputGroup>
                     </Field.Root>
@@ -205,11 +205,11 @@ function RouteComponent() {
                       <Field.Label>Profile Picture URL</Field.Label>
                       <InputGroup startElement={<LuImage />}>
                         <Input
-                          type="url"
-                          value={field.state.value}
+                          className="w-full h-12"
                           onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="https://example.com/avatar.jpg"
-                          className="w-full h-12"
+                          type="url"
+                          value={field.state.value}
                         />
                       </InputGroup>
                     </Field.Root>
@@ -236,10 +236,10 @@ function RouteComponent() {
                 {([isSubmitting]) => (
                   <Center>
                     <Button
-                      type="submit"
-                      marginTop="4"
                       disabled={isSubmitting}
                       fontWeight="medium"
+                      marginTop="4"
+                      type="submit"
                     >
                       {isSubmitting ? "Saving..." : "Save Profile Changes"}
                     </Button>
@@ -251,22 +251,22 @@ function RouteComponent() {
 
           <div className="pt-10 border-t">
             <form
+              className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 passwordForm.handleSubmit();
               }}
-              className="space-y-4"
             >
               <passwordForm.Field name="currentPassword">
                 {(field) => (
                   <Field.Root>
                     <Field.Label>Current Password</Field.Label>
                     <PasswordInput
-                      type="password"
-                      value={field.state.value}
+                      className="w-full h-12"
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Enter current password"
-                      className="w-full h-12"
+                      type="password"
+                      value={field.state.value}
                     />
                   </Field.Root>
                 )}
@@ -277,11 +277,11 @@ function RouteComponent() {
                   <Field.Root>
                     <Field.Label>New Password</Field.Label>
                     <PasswordInput
-                      type="password"
-                      value={field.state.value}
+                      className="w-full h-12"
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Enter new password"
-                      className="w-full h-12"
+                      type="password"
+                      value={field.state.value}
                     />
                   </Field.Root>
                 )}
@@ -289,10 +289,10 @@ function RouteComponent() {
 
               <Center>
                 <Button
-                  type="submit"
                   colorPalette="orange"
                   fontWeight="medium"
                   margin="4"
+                  type="submit"
                 >
                   Update Password
                 </Button>

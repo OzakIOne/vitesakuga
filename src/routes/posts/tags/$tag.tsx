@@ -10,9 +10,9 @@ import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
-  validateSearch: postSearchSchema,
   // fix initial window is not defined error
   ssr: "data-only",
+  validateSearch: postSearchSchema,
 });
 
 function RouteComponent() {
@@ -27,12 +27,12 @@ function RouteComponent() {
   const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
 
   const filteredPosts = useMemo(() => {
-    return filterAndSortPosts(allPosts, { sortBy, dateRange });
+    return filterAndSortPosts(allPosts, { dateRange, sortBy });
   }, [allPosts, sortBy, dateRange]);
 
   if (status === "error") {
     return (
-      <Box p={4} borderRadius="md" border="1px">
+      <Box border="1px" borderRadius="md" p={4}>
         <Heading as="h1" mb={6}>
           Posts tagged with "{tag}"
         </Heading>
@@ -43,13 +43,13 @@ function RouteComponent() {
 
   return (
     <PostsPageLayout
-      searchQuery={undefined}
-      popularTags={popularTags}
-      sortBy={sortBy}
       dateRange={dateRange}
       fromRoute="/posts/tags/$tag"
+      popularTags={popularTags}
+      searchQuery={undefined}
+      sortBy={sortBy}
     >
-      <Box p={4} borderRadius="md" border="1px">
+      <Box border="1px" borderRadius="md" p={4}>
         <Heading as="h1" mb={6}>
           Posts tagged with "{tag}"
         </Heading>
@@ -58,10 +58,10 @@ function RouteComponent() {
           <Box p={4}>No posts found with this tag.</Box>
         ) : (
           <VirtualizedPostList
-            posts={filteredPosts}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             onFetchNextPage={fetchNextPage}
+            posts={filteredPosts}
           />
         )}
       </Box>

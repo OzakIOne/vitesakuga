@@ -6,16 +6,16 @@ export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
 });
 
 export const user = pgTable("user", {
-  id: text().primaryKey(),
-  name: text().notNull(),
+  createdAt: timestamp()
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
   email: text().notNull().unique(),
   emailVerified: boolean()
     .$defaultFn(() => false)
     .notNull(),
+  id: text().primaryKey(),
   image: text(),
-  createdAt: timestamp()
-    .$defaultFn(() => /* @__PURE__ */ new Date())
-    .notNull(),
+  name: text().notNull(),
   updatedAt: timestamp()
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -25,12 +25,12 @@ export const userSelectSchema = createSelectSchema(user);
 export const userInsertSchema = createInsertSchema(user);
 
 export const session = pgTable("session", {
-  id: text().primaryKey(),
-  expiresAt: timestamp().notNull(),
-  token: text().notNull().unique(),
   createdAt: timestamp().notNull(),
-  updatedAt: timestamp().notNull(),
+  expiresAt: timestamp().notNull(),
+  id: text().primaryKey(),
   ipAddress: text(),
+  token: text().notNull().unique(),
+  updatedAt: timestamp().notNull(),
   userAgent: text(),
   userId: text()
     .notNull()
@@ -38,28 +38,28 @@ export const session = pgTable("session", {
 });
 
 export const account = pgTable("account", {
-  id: text().primaryKey(),
+  accessToken: text(),
+  accessTokenExpiresAt: timestamp(),
   accountId: text().notNull(),
+  createdAt: timestamp().notNull(),
+  id: text().primaryKey(),
+  idToken: text(),
+  password: text(),
   providerId: text().notNull(),
+  refreshToken: text(),
+  refreshTokenExpiresAt: timestamp(),
+  scope: text(),
+  updatedAt: timestamp().notNull(),
   userId: text()
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  accessToken: text(),
-  refreshToken: text(),
-  idToken: text(),
-  accessTokenExpiresAt: timestamp(),
-  refreshTokenExpiresAt: timestamp(),
-  scope: text(),
-  password: text(),
-  createdAt: timestamp().notNull(),
-  updatedAt: timestamp().notNull(),
 });
 
 export const verification = pgTable("verification", {
+  createdAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
+  expiresAt: timestamp().notNull(),
   id: text().primaryKey(),
   identifier: text().notNull(),
-  value: text().notNull(),
-  expiresAt: timestamp().notNull(),
-  createdAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
   updatedAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
+  value: text().notNull(),
 });

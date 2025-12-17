@@ -13,8 +13,8 @@ async function fileToBuffer(file: File): Promise<BufferSerializableType> {
   return {
     arrayBuffer,
     name: file.name,
-    type: file.type,
     size: file.size,
+    type: file.type,
   };
 }
 
@@ -32,14 +32,14 @@ export async function transformUploadFormData(
   const thumbnailData = await fileToBuffer(values.thumbnail);
 
   return {
-    title: values.title,
     content: values.content,
-    source: values.source,
     relatedPostId: values.relatedPostId,
+    source: values.source,
     tags: values.tags,
+    thumbnail: thumbnailData,
+    title: values.title,
     userId: values.userId,
     video: videoData,
-    thumbnail: thumbnailData,
   };
 }
 
@@ -54,9 +54,9 @@ export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   const now = new Date();
   const cutoffDate =
     {
+      month: subMonths(now, 1),
       today: startOfDay(now),
       week: subWeeks(now, 1),
-      month: subMonths(now, 1),
     }[dateRange] ?? new Date(0);
 
   return posts.filter((post) => isAfter(new Date(post.createdAt), cutoffDate));
@@ -82,4 +82,14 @@ export function filterAndSortPosts<T extends { createdAt: string | Date }>(
 ): T[] {
   const filtered = filterPostsByDateRange(posts, options.dateRange);
   return sortPostsByDate(filtered, options.sortBy);
+}
+
+export function mapPopularTags(
+  t: { id: number; name: string; postCount: number | bigint | string }[],
+) {
+  return t.map((r) => ({
+    id: r.id,
+    name: r.name,
+    postCount: Number(r.postCount),
+  }));
 }
