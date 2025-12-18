@@ -1,18 +1,15 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import {
-  fetchPostDetail,
-  fetchPosts,
-  getPostsByTag,
-  searchPosts,
-} from "./posts.fn";
+import { fetchPostDetail, getPostsByTag, searchPosts } from "./posts.fn";
+import type { PostsSearchParams } from "./posts.schema";
 
 export const postsKeys = {
   all: ["posts"] as const,
   byTag: (tagName: string) => [...postsKeys.all, "byTag", tagName] as const,
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
-  list: () => [...postsKeys.all, "list"] as readonly string[],
-  search: (q: string, tags: string[]) =>
-    [...postsKeys.all, "search", q, { tags }] as const,
+  list: (sortBy?: string, dateRange?: string) =>
+    [...postsKeys.all, "list", { dateRange, sortBy }] as const,
+  search: (q: string, tags: string[], sortBy?: string, dateRange?: string) =>
+    [...postsKeys.all, "search", q, { dateRange, sortBy, tags }] as const,
 } as const;
 
 // Centralized queryOptions factories for posts feature
@@ -50,54 +47,63 @@ export const postsQueries = {
       staleTime: 60 * 1000, // 1 minute
     }),
   // List all posts with infinite scrolling
-  list: () =>
-    infiniteQueryOptions({
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      getNextPageParam: (lastPage) => {
-        return lastPage?.meta?.hasMore
-          ? lastPage?.meta?.cursors?.after
-          : undefined;
-      },
-      initialPageParam: undefined as number | undefined,
-      queryFn: async ({ pageParam }: { pageParam?: number }) => {
-        return fetchPosts({
-          data: {
-            page: { after: pageParam, size: 20 },
-          },
-        });
-      },
-      queryKey: postsKeys.list(),
-      staleTime: 60 * 1000, // 1 minute
-    }),
+  list: (
+    sortBy: string,
+    dateRange: string,
+    initialPage: number,
+    pageSize: number,
+  ) => postsQueries.search("", [], sortBy, dateRange, initialPage, pageSize),
+
   // Search posts with infinite scrolling
-  search: (q: string, tags: string[]) =>
+  search: (
+    q: string,
+    tags: string[],
+    sortBy: string,
+    dateRange: string,
+    initialPage: number,
+    pageSize: number,
+  ) =>
     infiniteQueryOptions({
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 5 * 60 * 1000,
       getNextPageParam: (lastPage) => {
-        return lastPage?.meta?.hasMore
-          ? lastPage?.meta?.cursors?.after
-          : undefined;
+        const { currentPage, totalPages } = lastPage.meta.pagination;
+        return currentPage < totalPages ? currentPage + 1 : undefined;
       },
-      initialPageParam: undefined as number | undefined,
-      queryFn: async ({ pageParam }: { pageParam?: number }) => {
+      getPreviousPageParam: (firstPage) => {
+        const { currentPage } = firstPage.meta.pagination;
+        return currentPage > 1 ? currentPage - 1 : undefined;
+      },
+      initialPageParam: initialPage,
+      maxPages: 10, // Keep max 10 pages in memory to prevent excessive memory usage
+      queryFn: async ({ pageParam }: { pageParam: number }) => {
         return searchPosts({
           data: {
-            page: { after: pageParam, size: 20 },
+            dateRange,
+            page: {
+              offset: (pageParam - 1) * pageSize,
+              size: pageSize,
+            },
             q,
+            sortBy,
             tags,
           },
         });
       },
-      queryKey: postsKeys.search(q, tags),
-      staleTime: 60 * 1000, // 1 minute
+      queryKey: postsKeys.search(q, tags, sortBy, dateRange),
+      staleTime: 60 * 1000,
     }),
 };
 
 // Backward compatibility exports
-export const postsInfiniteQueryOptions = (q: string, tags: string[]) => {
-  if (q || tags.length > 0) return postsQueries.search(q, tags);
-
-  return postsQueries.list();
+export const postsInfiniteQueryOptions = (
+  q: PostsSearchParams["q"],
+  tags: PostsSearchParams["tags"],
+  sortBy: PostsSearchParams["sortBy"],
+  dateRange: PostsSearchParams["dateRange"],
+  initialPage: number,
+  pageSize: number,
+) => {
+  return postsQueries.search(q, tags, sortBy, dateRange, initialPage, pageSize);
 };
 
 export const postQueryDetail = (postId: number) => {

@@ -7,7 +7,7 @@ import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
 import { VirtualizedPostList } from "src/components/VirtualizedPostList";
-import { postSearchSchema } from "src/lib/posts/posts.schema";
+import { postsSearchSchema } from "src/lib/posts/posts.schema";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 import { userQueryOptions } from "src/lib/users/users.queries";
 
@@ -19,12 +19,12 @@ export const Route = createFileRoute("/users/$id")({
   },
   // fix initial window is not defined error
   ssr: "data-only",
-  validateSearch: postSearchSchema,
+  validateSearch: postsSearchSchema,
 });
 
 function UserContent() {
   const { id } = Route.useParams();
-  const { sortBy, dateRange, tags, q, size } = Route.useSearch();
+  const { sortBy, dateRange, tags, q } = Route.useSearch();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery(userQueryOptions(id, tags, q));

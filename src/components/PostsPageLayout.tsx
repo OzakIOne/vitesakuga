@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import type { RegisteredRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import type { PostSearchParams } from "src/lib/posts/posts.schema";
+import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 import { type PopularTag, PopularTagsSection } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
@@ -21,8 +21,8 @@ export type PostsPageLayoutProps = {
   searchQuery?: string;
   selectedTags?: string[];
   popularTags: PopularTag[];
-  sortBy: PostSearchParams["sortBy"];
-  dateRange: PostSearchParams["dateRange"];
+  sortBy: PostsSearchParams["sortBy"];
+  dateRange: PostsSearchParams["dateRange"];
   children: ReactNode;
   fromRoute: RegisteredRoutes;
 };

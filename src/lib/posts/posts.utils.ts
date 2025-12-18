@@ -3,7 +3,7 @@ import { orderBy } from "lodash-es";
 import type {
   BufferSerializableType,
   FileUploadData,
-  PostSearchParams,
+  PostsSearchParams,
   SerializedUploadData,
 } from "./posts.schema";
 
@@ -45,7 +45,7 @@ export async function transformUploadFormData(
 
 export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   posts: T[],
-  dateRange: PostSearchParams["dateRange"],
+  dateRange: PostsSearchParams["dateRange"],
 ): T[] {
   if (dateRange === "all") {
     return posts;
@@ -64,7 +64,7 @@ export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
 
 export function sortPostsByDate<T extends { createdAt: string | Date }>(
   posts: T[],
-  sortBy: PostSearchParams["sortBy"],
+  sortBy: PostsSearchParams["sortBy"],
 ): T[] {
   return orderBy(
     posts,
@@ -76,8 +76,8 @@ export function sortPostsByDate<T extends { createdAt: string | Date }>(
 export function filterAndSortPosts<T extends { createdAt: string | Date }>(
   posts: T[],
   options: {
-    sortBy: PostSearchParams["sortBy"];
-    dateRange: PostSearchParams["dateRange"];
+    sortBy: PostsSearchParams["sortBy"];
+    dateRange: PostsSearchParams["dateRange"];
   },
 ): T[] {
   const filtered = filterPostsByDateRange(posts, options.dateRange);

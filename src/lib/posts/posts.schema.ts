@@ -1,42 +1,5 @@
 import z from "zod";
 
-// Schema for pagination parameters following JSON:API cursor pagination profile
-export const fetchPostsInputSchema = z.object({
-  page: z
-    .object({
-      after: z.number().optional(), // page[after] - cursor for next page
-      before: z.number().optional(), // page[before] - cursor for previous page
-      size: z.number().min(1).max(100).default(20), // page[size]
-    })
-    .optional()
-    .default({ size: 20 }),
-});
-
-export const searchPostsInputSchema = z.object({
-  page: z
-    .object({
-      after: z.number().optional(),
-      size: z.number().min(1).max(100).default(20),
-    })
-    .optional()
-    .default({ size: 20 }),
-  q: z.string().trim().default(""),
-  tags: z.array(z.string()).default([]),
-});
-
-export const fetchUserInputSchema = z.object({
-  page: z
-    .object({
-      after: z.number().optional(),
-      size: z.number().min(1).max(100).default(20),
-    })
-    .optional()
-    .default({ size: 20 }),
-  q: z.string().trim().default(""),
-  tags: z.array(z.string()).default([]),
-  userId: z.string(),
-});
-
 const TagSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
@@ -93,12 +56,25 @@ export const updatePostInputSchema = z.object({
 
 export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
 
-export const postSearchSchema = z.object({
+const searchPostsBaseSchema = z.object({
   dateRange: z.enum(["all", "today", "week", "month"]).default("all"),
   q: z.string().trim().default(""),
-  size: z.coerce.number().min(1).max(100).default(20).optional(),
-  sortBy: z.enum(["latest", "oldest"]).default("latest"),
+  sortBy: z.enum(["newest", "oldest"]).default("newest"),
   tags: z.array(z.string()).default([]),
 });
 
-export type PostSearchParams = z.infer<typeof postSearchSchema>;
+export const searchPostsServerSchema = searchPostsBaseSchema.extend({
+  page: z
+    .object({
+      offset: z.number().min(0).default(0),
+      size: z.number().min(1).max(100).default(20),
+    })
+    .optional()
+    .default({ offset: 0, size: 20 }),
+});
+
+export const postsSearchSchema = searchPostsBaseSchema.extend({
+  page: z.number().int().min(1).optional().default(1),
+});
+
+export type PostsSearchParams = z.infer<typeof postsSearchSchema>;

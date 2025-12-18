@@ -5,14 +5,14 @@ import { useMemo } from "react";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { VirtualizedPostList } from "src/components/VirtualizedPostList";
 import { postsQueryByTag } from "src/lib/posts/posts.queries";
-import { postSearchSchema } from "src/lib/posts/posts.schema";
+import { postsSearchSchema } from "src/lib/posts/posts.schema";
 import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
   // fix initial window is not defined error
   ssr: "data-only",
-  validateSearch: postSearchSchema,
+  validateSearch: postsSearchSchema,
 });
 
 function RouteComponent() {

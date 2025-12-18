@@ -9,8 +9,7 @@ import { auth } from "../auth";
 import { envServer } from "../env/server";
 import {
   BufferFormUploadSchema,
-  fetchPostsInputSchema,
-  searchPostsInputSchema,
+  searchPostsServerSchema,
   updatePostInputSchema,
 } from "./posts.schema";
 import { mapPopularTags } from "./posts.utils";
@@ -24,104 +23,70 @@ const cfclient = new S3Client({
   region: "auto",
 });
 
-export const fetchPosts = createServerFn()
-  .inputValidator((input: unknown) => fetchPostsInputSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { page } = data;
-    const { size, after } = page;
-
-    // Simple cursor-based query - only handle 'after' for infinite scrolling
-    let query = kysely.selectFrom("posts").selectAll().orderBy("id", "desc"); // Newest first
-
-    // If we have a cursor, get posts older than this ID
-    if (after) {
-      query = query.where("id", "<", after);
-    }
-
-    // Fetch one extra item to check if there are more pages
-    const items = await query.limit(size + 1).execute();
-
-    const parsed = z.array(postsSelectSchema).safeParse(items);
-    if (!parsed.success) {
-      throw new Error(`Error processing posts: ${parsed.error.message}`);
-    }
-
-    const posts = parsed.data;
-    const hasMore = posts.length > size;
-
-    // Remove extra item if present
-    const datas = hasMore ? posts.slice(0, size) : posts;
-
-    // Set cursors
-    const afterCursor = datas.length > 0 ? datas[datas.length - 1].id : null;
-
-    // Calculate popular tags
-    const popularTagsResult = await kysely
-      .selectFrom("tags")
-      .innerJoin("post_tags", "tags.id", "post_tags.tagId")
-      .select([
-        "tags.id",
-        "tags.name",
-        kysely.fn.count("post_tags.postId").as("postCount"),
-      ])
-      .groupBy(["tags.id", "tags.name"])
-      .orderBy("postCount", "desc")
-      .limit(10)
-      .execute();
-
-    return {
-      data: datas,
-      links: {
-        next:
-          hasMore && afterCursor
-            ? `/api/posts?page[after]=${afterCursor}&page[size]=${size}`
-            : null,
-        self: after
-          ? `/api/posts?page[after]=${after}&page[size]=${size}`
-          : `/api/posts?page[size]=${size}`,
-      },
-      meta: {
-        cursors: {
-          after: afterCursor,
-        },
-        hasMore,
-        popularTags: mapPopularTags(popularTagsResult),
-      },
-    };
-  });
-
 export const searchPosts = createServerFn()
-  .inputValidator((input: unknown) => searchPostsInputSchema.parse(input))
+  .inputValidator((input: unknown) => searchPostsServerSchema.parse(input))
   .handler(async ({ data }) => {
-    const { q, tags, page } = data;
-    const { size, after } = page;
+    const { q, tags, page, sortBy, dateRange } = data;
+    const { size, offset } = page;
 
-    let query = kysely.selectFrom("posts").selectAll();
+    let query = kysely.selectFrom("posts").selectAll("posts");
 
+    // Search filter
     if (q) {
       query = query.where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
+        eb("posts.title", "ilike", `%${q}%`).or(
+          "posts.content",
+          "ilike",
+          `%${q}%`,
+        ),
       );
     }
 
+    // Tags filter
     if (tags.length > 0) {
       query = query
         .innerJoin("post_tags", "post_tags.postId", "posts.id")
         .innerJoin("tags", "tags.id", "post_tags.tagId")
         .where("tags.name", "in", tags)
-        .selectAll("posts")
         .distinct();
     }
 
-    // TODO error: ORDER BY "id" is ambiguous when doing a query + tags
-    // query = query.orderBy("id", "desc");
+    // Date range filter
+    if (dateRange !== "all") {
+      const now = new Date();
+      let startDate: Date;
 
-    // Apply cursor for forward pagination
-    if (after) {
-      query = query.where("posts.id", "<", after);
+      switch (dateRange) {
+        case "today":
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case "week":
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case "month":
+          startDate = new Date(now.setMonth(now.getMonth() - 1));
+          break;
+      }
+
+      query = query.where("posts.createdAt", ">=", startDate);
     }
 
-    const items = await query.limit(size + 1).execute();
+    // Get total count for pagination metadata
+    const countQuery = query
+      .clearSelect()
+      .select((eb) => eb.fn.countAll().as("count"));
+
+    const countResult = await countQuery.executeTakeFirst();
+    const totalCount = Number(countResult?.count ?? 0);
+
+    // Sort
+    query = query.orderBy(
+      "posts.createdAt",
+      sortBy === "oldest" ? "asc" : "desc",
+    );
+
+    // Apply offset and limit
+    const items = await query.offset(offset).limit(size).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
@@ -131,26 +96,49 @@ export const searchPosts = createServerFn()
     }
 
     const posts = parsed.data;
-    const hasMore = posts.length > size;
-
-    // Remove extra item if present
-    const datas = hasMore ? posts.slice(0, size) : posts;
-
-    // Set cursors
-    const afterCursor = datas.length > 0 ? datas[datas.length - 1].id : null;
+    const hasMore = offset + size < totalCount;
+    const hasPrevious = offset > 0;
 
     // Calculate popular tags for posts matching the search query
-    const popularTagsResult = await kysely
+    let popularTagsQuery = kysely
       .selectFrom("tags")
       .innerJoin("post_tags", "tags.id", "post_tags.tagId")
-      .innerJoin("posts", "posts.id", "post_tags.postId")
-      .where((eb) =>
+      .innerJoin("posts", "posts.id", "post_tags.postId");
+
+    if (q) {
+      popularTagsQuery = popularTagsQuery.where((eb) =>
         eb("posts.title", "ilike", `%${q}%`).or(
           "posts.content",
           "ilike",
           `%${q}%`,
         ),
-      )
+      );
+    }
+
+    if (dateRange !== "all") {
+      const now = new Date();
+      let startDate: Date;
+
+      switch (dateRange) {
+        case "today":
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case "week":
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case "month":
+          startDate = new Date(now.setMonth(now.getMonth() - 1));
+          break;
+      }
+
+      popularTagsQuery = popularTagsQuery.where(
+        "posts.createdAt",
+        ">=",
+        startDate,
+      );
+    }
+
+    const popularTagsResult = await popularTagsQuery
       .select([
         "tags.id",
         "tags.name",
@@ -161,26 +149,21 @@ export const searchPosts = createServerFn()
       .limit(10)
       .execute();
 
+    const totalPages = Math.ceil(totalCount / size);
+    const currentPage = Math.floor(offset / size) + 1;
+
     return {
-      data: datas,
-      links: {
-        next:
-          hasMore && afterCursor
-            ? `/api/posts/search?q=${encodeURIComponent(
-              q,
-            )}&page[after]=${afterCursor}&page[size]=${size}`
-            : null,
-        self: after
-          ? `/api/posts/search?q=${encodeURIComponent(
-            q,
-          )}&page[after]=${after}&page[size]=${size}`
-          : `/api/posts/search?q=${encodeURIComponent(q)}&page[size]=${size}`,
-      },
+      data: posts,
       meta: {
-        cursors: {
-          after: afterCursor,
+        pagination: {
+          currentPage,
+          hasMore,
+          hasPrevious,
+          limit: size,
+          offset,
+          total: totalCount,
+          totalPages,
         },
-        hasMore,
         popularTags: mapPopularTags(popularTagsResult),
       },
     };
@@ -218,10 +201,10 @@ export const fetchPostDetail = createServerFn()
 
     const relatedPost = postWithUser.relatedPostId
       ? await kysely
-        .selectFrom("posts")
-        .selectAll()
-        .where("id", "=", postWithUser.relatedPostId)
-        .executeTakeFirst()
+          .selectFrom("posts")
+          .selectAll()
+          .where("id", "=", postWithUser.relatedPostId)
+          .executeTakeFirst()
       : null;
 
     return {
@@ -398,8 +381,7 @@ export const updatePost = createServerFn({ method: "POST" })
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
-        }
-        else allTagIds.push(tag.id);
+        } else allTagIds.push(tag.id);
       }
 
       // Link post to new tags
@@ -499,13 +481,13 @@ export const getPostsByTag = createServerFn()
         next:
           hasMore && afterCursor
             ? `/posts/tags/${encodeURIComponent(
-              tagName,
-            )}?page[after]=${afterCursor}&page[size]=${size}`
+                tagName,
+              )}?page[after]=${afterCursor}&page[size]=${size}`
             : null,
         self: after
           ? `/posts/tags/${encodeURIComponent(
-            tagName,
-          )}?page[after]=${after}&page[size]=${size}`
+              tagName,
+            )}?page[after]=${after}&page[size]=${size}`
           : `/posts/tags/${encodeURIComponent(tagName)}?page[size]=${size}`,
       },
       meta: {

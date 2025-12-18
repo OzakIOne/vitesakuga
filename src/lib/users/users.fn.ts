@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
-import { fetchUserInputSchema } from "../posts/posts.schema";
 import { mapPopularTags } from "../posts/posts.utils";
+import { fetchUserInputSchema } from "../users/users.schema";
 
 export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
