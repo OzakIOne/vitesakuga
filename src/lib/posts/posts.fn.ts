@@ -230,7 +230,16 @@ export const fetchPostDetail = createServerFn()
 export const uploadPost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => BufferFormUploadSchema.parse(input))
   .handler(async ({ data }) => {
-    const { video, title, content, userId, source, relatedPostId, tags } = data;
+    const {
+      video,
+      title,
+      content,
+      userId,
+      source,
+      relatedPostId,
+      tags,
+      videoMetadata,
+    } = data;
     const ext = video.name.split(".").pop()!;
 
     // TODO generate a hash based on video content to prevent duplicates instead of random UUID
@@ -273,6 +282,7 @@ export const uploadPost = createServerFn({ method: "POST" })
         title,
         userId,
         videoKey,
+        videoMetadata,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

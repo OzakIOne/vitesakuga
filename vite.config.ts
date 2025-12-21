@@ -5,6 +5,8 @@ import viteReact from "@vitejs/plugin-react";
 import { nitroV2Plugin } from "@tanstack/nitro-v2-vite-plugin";
 import { devtools } from "@tanstack/devtools-vite";
 import tailwindcss from "@tailwindcss/vite";
+import { viteStaticCopy } from 'vite-plugin-static-copy'
+import path from 'node:path'
 
 export default defineConfig({
   server: {
@@ -20,5 +22,16 @@ export default defineConfig({
       { target: 'node-server' }
       */),
     viteReact(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: path.resolve(
+            import.meta.dirname,
+            'node_modules/mediainfo.js/dist/MediaInfoModule.wasm'
+          ),
+          dest: '',
+        },
+      ],
+    }),
   ],
 });

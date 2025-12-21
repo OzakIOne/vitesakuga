@@ -1,5 +1,25 @@
 import z from "zod";
 
+export const VideoMetadataSchema = z.object({
+  BitDepth: z.coerce.number(),
+  BitRate: z.coerce.number(),
+  ChromaSubsampling: z.string(),
+  CodecID: z.string(),
+  ColorSpace: z.string(),
+  colour_primaries: z.string(),
+  DisplayAspectRatio: z.string(),
+  Duration: z.coerce.number(),
+  Encoded_Library_Name: z.string(),
+  Encoded_Library_Settings: z.string(),
+  Format_Profile: z.string(),
+  FrameCount: z.coerce.number(),
+  FrameRate: z.coerce.number(),
+  Height: z.coerce.number(),
+  Width: z.coerce.number(),
+});
+
+export type VideoMetadata = z.infer<typeof VideoMetadataSchema>;
+
 const TagSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
@@ -17,6 +37,7 @@ const FormBaseUploadSchema = z.object({
 export const FormFileUploadSchema = FormBaseUploadSchema.extend({
   thumbnail: z.file(),
   video: z.file(),
+  videoMetadata: VideoMetadataSchema,
 });
 
 const BufferSerializableSchema = z.object({
@@ -28,13 +49,16 @@ const BufferSerializableSchema = z.object({
 
 export type BufferSerializableType = z.infer<typeof BufferSerializableSchema>;
 
+// Server Function requires file as Buffer
 export const BufferFormUploadSchema = FormBaseUploadSchema.extend({
   thumbnail: BufferSerializableSchema,
   video: BufferSerializableSchema,
+  videoMetadata: z.json(),
 });
 
 export type SerializedUploadData = z.infer<typeof BufferFormUploadSchema>;
 
+// Overwrite the types of video and thumbnail to file because TS yells about zod File Type in tanstack form
 export type FileUploadData = Omit<
   z.infer<typeof FormFileUploadSchema>,
   "video" | "thumbnail"

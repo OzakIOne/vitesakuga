@@ -1,10 +1,10 @@
 import { Box, Heading, HStack, Image, Text, VStack } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
-import type { DbSchemaInsert } from "src/lib/db/schema";
+import type { DbSchemaSelect } from "src/lib/db/schema";
 
 type PostListProps = {
-  post: DbSchemaInsert["posts"];
+  post: DbSchemaSelect["posts"];
   q?: string;
   pageSize?: number;
 };
@@ -15,7 +15,7 @@ function PostCardComponent({ post, q, pageSize }: PostListProps) {
   );
   return (
     <Link
-      params={{ postId: post.id! }}
+      params={{ postId: post.id }}
       search={{
         q,
         size: pageSize,

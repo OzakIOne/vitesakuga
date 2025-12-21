@@ -1,6 +1,7 @@
 import {
   bigint,
   integer,
+  json,
   pgTable,
   primaryKey,
   serial,
@@ -46,6 +47,7 @@ export const posts = pgTable("posts", {
     .references(() => user.id)
     .notNull(),
   videoKey: text().notNull(),
+  videoMetadata: json().notNull(),
 });
 
 export const postTagsRelations = relations(postTags, ({ one }) => ({

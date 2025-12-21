@@ -16,7 +16,9 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import type { MediaInfo, MediaInfoResult } from "mediainfo.js";
+import mediaInfoFactory from "mediainfo.js";
+import { useEffect, useRef, useState } from "react";
 import { LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
@@ -33,8 +35,12 @@ import {
   type FileUploadData,
   FormFileUploadSchema,
   type SerializedUploadData,
+  VideoMetadataSchema,
 } from "src/lib/posts/posts.schema";
-import { transformUploadFormData } from "src/lib/posts/posts.utils";
+import {
+  makeReadChunk,
+  transformUploadFormData,
+} from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/upload")({
   component: RouteComponent,
@@ -48,6 +54,7 @@ function RouteComponent() {
   const { queryClient } = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate({ from: "/posts" });
+  const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
 
   const uploadPostFn = useServerFn(uploadPost);
 
@@ -180,6 +187,22 @@ function RouteComponent() {
     }
   };
 
+  useEffect(() => {
+    mediaInfoFactory({
+      format: "JSON",
+      locateFile: () => "/MediaInfoModule.wasm",
+    }).then((mi) => {
+      mediaInfoRef.current = mi;
+    });
+
+    return () => {
+      if (mediaInfoRef.current) {
+        mediaInfoRef.current.close();
+      }
+    };
+  }, []);
+
+  // TODO fix those fucking types
   const form = useForm({
     defaultValues: {
       content: "",
@@ -190,7 +213,8 @@ function RouteComponent() {
       title: "",
       userId: user.id,
       video: undefined,
-    } as FileUploadData,
+      videoMetadata: undefined,
+    } as unknown as FileUploadData,
     onSubmit: async ({ value }) => {
       await handleSubmit(value);
     },
@@ -345,10 +369,23 @@ function RouteComponent() {
                     onFileChange={async (details) => {
                       const file = details.acceptedFiles[0] || null;
                       field.handleChange(file);
-                      if (file) {
+                      if (file && mediaInfoRef.current) {
                         const previewURL = URL.createObjectURL(file);
                         setVideoPreviewUrl(previewURL);
-
+                        mediaInfoRef.current
+                          .analyzeData(file.size, makeReadChunk(file))
+                          .then((value) => {
+                            const datajson: MediaInfoResult = JSON.parse(value);
+                            const videoTrack = datajson.media?.track.find(
+                              (el) => el["@type"] === "Video",
+                            );
+                            const parsedData =
+                              VideoMetadataSchema.parse(videoTrack);
+                            form.setFieldValue("videoMetadata", parsedData);
+                          })
+                          .catch((error: unknown) => {
+                            console.error(error);
+                          });
                         // Auto-generate thumbnail from first frame
                         try {
                           const defaultThumbnail =

@@ -1,5 +1,6 @@
 import { isAfter, startOfDay, subMonths, subWeeks } from "date-fns";
 import { orderBy } from "lodash-es";
+import type { ReadChunkFunc } from "mediainfo.js";
 import type {
   BufferSerializableType,
   FileUploadData,
@@ -18,6 +19,11 @@ async function fileToBuffer(file: File): Promise<BufferSerializableType> {
   };
 }
 
+export function makeReadChunk(file: File): ReadChunkFunc {
+  return async (chunkSize: number, offset: number) =>
+    new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
+}
+
 export async function transformUploadFormData(
   values: FileUploadData,
 ): Promise<SerializedUploadData> {
@@ -30,6 +36,7 @@ export async function transformUploadFormData(
 
   const videoData = await fileToBuffer(values.video);
   const thumbnailData = await fileToBuffer(values.thumbnail);
+  const videoMetadataJson = values.videoMetadata || {};
 
   return {
     content: values.content,
@@ -40,6 +47,7 @@ export async function transformUploadFormData(
     title: values.title,
     userId: values.userId,
     video: videoData,
+    videoMetadata: videoMetadataJson,
   };
 }
 
