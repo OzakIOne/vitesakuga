@@ -26,7 +26,7 @@ function LoginForm() {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    if (!email || !password) return;
+    if (!(email && password)) return;
 
     setIsLoading(true);
     setErrorMessage("");
@@ -51,7 +51,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center with-full h-fit p-4">
+    <div className="with-full flex h-fit flex-col items-center justify-center p-4">
       <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
@@ -70,20 +70,16 @@ function LoginForm() {
             </Field.Root>
 
             <Button className="btn" disabled={isLoading} type="submit">
-              {isLoading && (
-                <span className="loading loading-spinner loading-lg" />
-              )}
+              {isLoading && <span className="loading loading-spinner loading-lg" />}
               {isLoading ? "Logging in..." : "Login"}
             </Button>
           </div>
           {errorMessage && (
-            <span className="text-destructive text-center text-sm">
-              {errorMessage}
-            </span>
+            <span className="text-center text-destructive text-sm">{errorMessage}</span>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Button
-              className="btn "
+              className="btn"
               disabled={isLoading}
               onClick={() =>
                 authClient.signIn.social(

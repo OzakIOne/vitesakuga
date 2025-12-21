@@ -3,7 +3,7 @@ import { Comments } from "src/components/Comments";
 import { Post } from "src/components/Post";
 import type { fetchPostDetail } from "src/lib/posts/posts.fn";
 
-interface PostDetailDisplayProps {
+type PostDetailDisplayProps = {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
@@ -11,7 +11,7 @@ interface PostDetailDisplayProps {
   currentUserId?: string;
   onEditClick: () => void;
   onBack: () => void;
-}
+};
 
 export function PostDetailDisplay({
   post,

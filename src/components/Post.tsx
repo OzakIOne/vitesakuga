@@ -38,18 +38,8 @@ export function Post({
           </Text>
           <Stack direction="row" flexWrap="wrap" gap={2}>
             {tags.map((tag) => (
-              <Link
-                key={tag.id}
-                params={{ tag: tag.name }}
-                to="/posts/tags/$tag"
-              >
-                <Badge
-                  borderRadius="full"
-                  colorScheme="blue"
-                  key={tag.id}
-                  px={2}
-                  py={1}
-                >
+              <Link key={tag.id} params={{ tag: tag.name }} to="/posts/tags/$tag">
+                <Badge borderRadius="full" colorScheme="blue" key={tag.id} px={2} py={1}>
                   {tag.name}
                 </Badge>
               </Link>

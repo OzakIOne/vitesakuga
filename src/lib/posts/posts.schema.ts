@@ -1,48 +1,43 @@
 import z from "zod";
 
+export const VideoMetadataSchema = z.object({
+  BitDepth: z.coerce.number(),
+  BitRate: z.coerce.number(),
+  ChromaSubsampling: z.string(),
+  CodecID: z.string(),
+  ColorSpace: z.string(),
+  colour_primaries: z.string(),
+  DisplayAspectRatio: z.string(),
+  Duration: z.coerce.number(),
+  Encoded_Library_Name: z.string(),
+  Encoded_Library_Settings: z.string(),
+  Format_Profile: z.string(),
+  FrameCount: z.coerce.number(),
+  FrameRate: z.coerce.number(),
+  Height: z.coerce.number(),
+  Width: z.coerce.number(),
+});
+
+export type VideoMetadata = z.infer<typeof VideoMetadataSchema>;
+
 const TagSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
 });
 
-const FormBaseUploadSchema = z.object({
+export const FormFileUploadSchema = z.object({
   content: z.string().min(3, "You must have a length of at least 3"),
   relatedPostId: z.number().or(z.undefined()),
   source: z.url().or(z.literal("")).or(z.undefined()),
   tags: z.array(TagSchema),
   title: z.string().min(3, "You must have a length of at least 3"),
   userId: z.string(),
+  thumbnail: z.instanceof(File),
+  video: z.instanceof(File),
+  videoMetadata: VideoMetadataSchema,
 });
 
-export const FormFileUploadSchema = FormBaseUploadSchema.extend({
-  thumbnail: z.file(),
-  video: z.file(),
-});
-
-const BufferSerializableSchema = z.object({
-  arrayBuffer: z.instanceof(ArrayBuffer),
-  name: z.string(),
-  size: z.number(),
-  type: z.string(),
-});
-
-export type BufferSerializableType = z.infer<typeof BufferSerializableSchema>;
-
-export const BufferFormUploadSchema = FormBaseUploadSchema.extend({
-  thumbnail: BufferSerializableSchema,
-  video: BufferSerializableSchema,
-});
-
-export type SerializedUploadData = z.infer<typeof BufferFormUploadSchema>;
-
-export type FileUploadData = Omit<
-  z.infer<typeof FormFileUploadSchema>,
-  "video" | "thumbnail"
-> & {
-  // TODO remove undefined because form ensure the file is present same for thumbnail
-  video: File | undefined;
-  thumbnail: File | undefined;
-};
+export type FileUploadData = z.infer<typeof FormFileUploadSchema>;
 
 // Schema for updating a post
 export const updatePostInputSchema = z.object({
@@ -64,13 +59,8 @@ const searchPostsBaseSchema = z.object({
 });
 
 export const searchPostsServerSchema = searchPostsBaseSchema.extend({
-  page: z
-    .object({
-      offset: z.number().min(0).default(0),
-      size: z.number().min(1).max(100).default(20),
-    })
-    .optional()
-    .default({ offset: 0, size: 20 }),
+  page: z.number().min(0).default(0),
+  pageSize: z.number().min(1).max(100).default(30),
 });
 
 export const postsSearchSchema = searchPostsBaseSchema.extend({

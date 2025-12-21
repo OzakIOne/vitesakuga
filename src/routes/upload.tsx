@@ -1,40 +1,26 @@
-import {
-  Box,
-  Button,
-  Field,
-  FileUpload,
-  Icon,
-  Input,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Button, Field, FileUpload, Icon, Input, Text } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  useBlocker,
-  useNavigate,
-  useRouteContext,
-} from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import type { MediaInfo, MediaInfoResult } from "mediainfo.js";
+import mediaInfoFactory from "mediainfo.js";
+import { useEffect, useRef, useState } from "react";
 import { LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import {
-  authMiddleware,
-  type MiddlewareUser,
-} from "src/lib/auth/auth.middleware";
+import { type MiddlewareUser, authMiddleware } from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import {
   type FileUploadData,
   FormFileUploadSchema,
-  type SerializedUploadData,
+  VideoMetadataSchema,
 } from "src/lib/posts/posts.schema";
-import { transformUploadFormData } from "src/lib/posts/posts.utils";
+import { buildFormData, makeReadChunk } from "src/lib/posts/posts.utils";
 
 export const Route = createFileRoute("/upload")({
   component: RouteComponent,
@@ -48,11 +34,10 @@ function RouteComponent() {
   const { queryClient } = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate({ from: "/posts" });
-
-  const uploadPostFn = useServerFn(uploadPost);
+  const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
 
   const uploadPostMutation = useMutation({
-    mutationFn: (data: SerializedUploadData) => uploadPostFn({ data }),
+    mutationFn: (data: FormData) => uploadPost({ data }),
     onError: (error) => {
       console.error("Upload failed:", error);
       toaster.create({
@@ -62,7 +47,7 @@ function RouteComponent() {
         type: "error",
       });
     },
-    onSuccess: (newPost) => {
+    onSuccess: (newPost: any) => {
       form.reset();
       queryClient.invalidateQueries({ queryKey: postsKeys.all });
       navigate({ to: `/posts/${newPost.id}` });
@@ -108,9 +93,7 @@ function RouteComponent() {
     shouldBlockFn: () => {
       if (!form.state.isDirty) return false;
 
-      const shouldLeave = confirm(
-        "You have unsubmitted changes. Do you want to leave?",
-      );
+      const shouldLeave = confirm("You have unsubmitted changes. Do you want to leave?");
       return !shouldLeave;
     },
   });
@@ -166,30 +149,38 @@ function RouteComponent() {
   };
 
   const handleSubmit = async (values: FileUploadData): Promise<void> => {
-    try {
-      const uploadData = await transformUploadFormData(values);
-      await uploadPostMutation.mutateAsync(uploadData);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toaster.create({
-        description: "There was an error uploading your post.",
-        duration: 5000,
-        title: "Upload failed",
-        type: "error",
-      });
-    }
+    const formData = buildFormData(values);
+
+    await uploadPostMutation.mutateAsync(formData);
   };
 
+  useEffect(() => {
+    mediaInfoFactory({
+      format: "JSON",
+      locateFile: () => "/MediaInfoModule.wasm",
+    }).then((mi) => {
+      mediaInfoRef.current = mi;
+    });
+
+    return () => {
+      if (mediaInfoRef.current) {
+        mediaInfoRef.current.close();
+      }
+    };
+  }, []);
+
+  // TODO fix those fucking types
   const form = useForm({
     defaultValues: {
       content: "",
       relatedPostId: undefined,
-      source: undefined,
+      source: "",
       tags: [],
-      thumbnail: undefined,
+      thumbnail: undefined as unknown as File,
       title: "",
       userId: user.id,
-      video: undefined,
+      video: undefined as unknown as File,
+      videoMetadata: {} as any,
     } as FileUploadData,
     onSubmit: async ({ value }) => {
       await handleSubmit(value);
@@ -209,7 +200,7 @@ function RouteComponent() {
           q: relatedPostSearch,
         },
       }),
-    queryKey: postsKeys.search(relatedPostSearch),
+    queryKey: postsKeys.search(relatedPostSearch, []),
   });
 
   return (
@@ -222,9 +213,7 @@ function RouteComponent() {
       >
         <Box mb={6}>
           <form.Field name="title">
-            {(field) => (
-              <FormTextWrapper field={field} isRequired label="Title" />
-            )}
+            {(field) => <FormTextWrapper field={field} isRequired label="Title" />}
           </form.Field>
         </Box>
 
@@ -296,9 +285,7 @@ function RouteComponent() {
                 )}
                 {field.state.value && (
                   <Box bg="blue.50" borderRadius="md" mt={2} p={2}>
-                    <Text fontSize="sm">
-                      Selected Post ID: {field.state.value}
-                    </Text>
+                    <Text fontSize="sm">Selected Post ID: {field.state.value}</Text>
                     <Button
                       mt={1}
                       onClick={() => {
@@ -345,26 +332,32 @@ function RouteComponent() {
                     onFileChange={async (details) => {
                       const file = details.acceptedFiles[0] || null;
                       field.handleChange(file);
-                      if (file) {
+                      if (file && mediaInfoRef.current) {
                         const previewURL = URL.createObjectURL(file);
                         setVideoPreviewUrl(previewURL);
-
+                        mediaInfoRef.current
+                          .analyzeData(file.size, makeReadChunk(file))
+                          .then((value) => {
+                            const datajson: MediaInfoResult = JSON.parse(value);
+                            const videoTrack = datajson.media?.track.find(
+                              (el) => el["@type"] === "Video",
+                            );
+                            const parsedData = VideoMetadataSchema.parse(videoTrack);
+                            form.setFieldValue("videoMetadata", parsedData);
+                          })
+                          .catch((error: unknown) => {
+                            console.error(error);
+                          });
                         // Auto-generate thumbnail from first frame
                         try {
-                          const defaultThumbnail =
-                            await generateDefaultThumbnail(file);
+                          const defaultThumbnail = await generateDefaultThumbnail(file);
                           form.setFieldValue("thumbnail", defaultThumbnail);
-                          const thumbnailPreview =
-                            URL.createObjectURL(defaultThumbnail);
+                          const thumbnailPreview = URL.createObjectURL(defaultThumbnail);
                           setThumbnail(thumbnailPreview);
                         } catch (error) {
-                          console.error(
-                            "Failed to auto-generate thumbnail:",
-                            error,
-                          );
+                          console.error("Failed to auto-generate thumbnail:", error);
                           toaster.create({
-                            description:
-                              "Please generate a thumbnail manually.",
+                            description: "Please generate a thumbnail manually.",
                             duration: 3000,
                             title: "Thumbnail generation failed",
                             type: "error",
@@ -421,11 +414,7 @@ function RouteComponent() {
         </Box>
 
         <form.Subscribe
-          selector={(state) => [
-            state.canSubmit,
-            state.isSubmitting,
-            state.isPristine,
-          ]}
+          selector={(state) => [state.canSubmit, state.isSubmitting, state.isPristine]}
         >
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button

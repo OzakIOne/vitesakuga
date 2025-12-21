@@ -7,7 +7,7 @@ export const commentsKeys = {
 } as const;
 
 // Centralized queryOptions factories for comments feature
-export const commentsQueries = {
+const commentsQueries = {
   // Comments for a specific post
   getComments: (postId: number) =>
     queryOptions({

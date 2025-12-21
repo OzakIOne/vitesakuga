@@ -7,9 +7,9 @@ export type PopularTag = {
   postCount: number;
 };
 
-interface PopularTagsSectionProps {
+type PopularTagsSectionProps = {
   tags: PopularTag[];
-}
+};
 
 export function PopularTagsSection({ tags }: PopularTagsSectionProps) {
   return (

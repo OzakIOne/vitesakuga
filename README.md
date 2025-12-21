@@ -2,14 +2,22 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
+- [ ] try pulumni to setup project bucket and domain name from scratch with typescript
+- [ ] add dompurify with z.transform to schemas
+- [ ] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
+- [ ] cleanup post schemas and server fn
+- [x] Store list scroll position and loaded data state in the URL, so when a user shares the URL, it restores the exact position in the infinite list (like pagination)
+- [ ] prevent the sidebar from blinking of rerender / Suspense somehow
+- [x] in the searchbox add the feature that is in the taginput component with tag suggestion to allow for easier tag search
 - [x] add <Suspense> for suspenseQueries
 - [ ] ask neo how to better handle currentUserId /src/routes/posts/$postId.tsx `const currentUserId = context.user?.id;`
 - [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
 - [x] fix upload failing if user doesnt generate a thumbnail
 - [x] virtualize posts of other pages than /posts so /user/id /tags/tag and make component of rendered list to avoid code duplication
 - [x] fix virtualize .window error
-- [ ] maybe change search behavior, if we are in user route then search should search for users and not go back to default posts route?
-- [ ] add some toasts to forms / mutations for success / errors
+- [x] maybe change search behavior, if we are in user route then search should search for users and not go back to default posts route?
+- [x] add some toasts to forms / mutations for success / errors
 - [x] make a card component for displaying a single post in a list
 - [x] avoid code duplication in the filter thing
 - [x] add cursor/pagination thing to /user /tag

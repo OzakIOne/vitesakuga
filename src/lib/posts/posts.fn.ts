@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -8,7 +8,7 @@ import { z } from "zod";
 import { auth } from "../auth";
 import { envServer } from "../env/server";
 import {
-  BufferFormUploadSchema,
+  FormFileUploadSchema,
   searchPostsServerSchema,
   updatePostInputSchema,
 } from "./posts.schema";
@@ -26,19 +26,15 @@ const cfclient = new S3Client({
 export const searchPosts = createServerFn()
   .inputValidator((input: unknown) => searchPostsServerSchema.parse(input))
   .handler(async ({ data }) => {
-    const { q, tags, page, sortBy, dateRange } = data;
-    const { size, offset } = page;
-
+    const { q, tags, page, pageSize, sortBy, dateRange } = data;
+    const offset = page * pageSize;
+    console.log("Query for page", page);
     let query = kysely.selectFrom("posts").selectAll("posts");
 
     // Search filter
     if (q) {
       query = query.where((eb) =>
-        eb("posts.title", "ilike", `%${q}%`).or(
-          "posts.content",
-          "ilike",
-          `%${q}%`,
-        ),
+        eb("posts.title", "ilike", `%${q}%`).or("posts.content", "ilike", `%${q}%`),
       );
     }
 
@@ -72,31 +68,24 @@ export const searchPosts = createServerFn()
     }
 
     // Get total count for pagination metadata
-    const countQuery = query
-      .clearSelect()
-      .select((eb) => eb.fn.countAll().as("count"));
+    const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
 
     const countResult = await countQuery.executeTakeFirst();
     const totalCount = Number(countResult?.count ?? 0);
 
     // Sort
-    query = query.orderBy(
-      "posts.createdAt",
-      sortBy === "oldest" ? "asc" : "desc",
-    );
+    query = query.orderBy("posts.createdAt", sortBy === "oldest" ? "asc" : "desc");
 
     // Apply offset and limit
-    const items = await query.offset(offset).limit(size).execute();
+    const items = await query.offset(offset).limit(pageSize).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
-      throw new Error(
-        `Error processing search results: ${parsed.error.message}`,
-      );
+      throw new Error(`Error processing search results: ${parsed.error.message}`);
     }
 
     const posts = parsed.data;
-    const hasMore = offset + size < totalCount;
+    const hasMore = offset + pageSize < totalCount;
     const hasPrevious = offset > 0;
 
     // Calculate popular tags for posts matching the search query
@@ -107,11 +96,7 @@ export const searchPosts = createServerFn()
 
     if (q) {
       popularTagsQuery = popularTagsQuery.where((eb) =>
-        eb("posts.title", "ilike", `%${q}%`).or(
-          "posts.content",
-          "ilike",
-          `%${q}%`,
-        ),
+        eb("posts.title", "ilike", `%${q}%`).or("posts.content", "ilike", `%${q}%`),
       );
     }
 
@@ -131,26 +116,29 @@ export const searchPosts = createServerFn()
           break;
       }
 
-      popularTagsQuery = popularTagsQuery.where(
-        "posts.createdAt",
-        ">=",
-        startDate,
-      );
+      popularTagsQuery = popularTagsQuery.where("posts.createdAt", ">=", startDate);
     }
 
     const popularTagsResult = await popularTagsQuery
-      .select([
-        "tags.id",
-        "tags.name",
-        kysely.fn.count("post_tags.postId").as("postCount"),
-      ])
+      .select(["tags.id", "tags.name", kysely.fn.count("post_tags.postId").as("postCount")])
       .groupBy(["tags.id", "tags.name"])
       .orderBy("postCount", "desc")
       .limit(10)
       .execute();
 
-    const totalPages = Math.ceil(totalCount / size);
-    const currentPage = Math.floor(offset / size) + 1;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    // currentPage in response can be 1-based for frontend convenience if desired,
+    // but let's keep it consistent with input (0-based) or return both.
+    // Standard practice often returns the requested page.
+    // The previous implementation returned `Math.floor(offset / size) + 1` (1-based).
+    // Let's stick to returning 1-based current page to be friendly to UI, or matches legacy behavior?
+    // User requested "page=0 is 0-30", so input is 0-based.
+    // Let's return the 0-based page to match input, OR return 1-based for UI display.
+    // I'll return `page` (0-based) as `pageIndex` and `page + 1` as `currentPage` to be safe/explicit?
+    // Actually the previous return was:
+    // currentPage: Math.floor(offset / size) + 1;
+    // Let's keep `currentPage` as 1-based for UI.
+    const currentPage = page + 1;
 
     return {
       data: posts,
@@ -159,7 +147,7 @@ export const searchPosts = createServerFn()
           currentPage,
           hasMore,
           hasPrevious,
-          limit: size,
+          limit: pageSize,
           offset,
           total: totalCount,
           totalPages,
@@ -171,7 +159,9 @@ export const searchPosts = createServerFn()
 
 export const fetchPostDetail = createServerFn()
   .inputValidator((postId: unknown) => z.coerce.number().parse(postId))
-  .handler(async ({ data: postId }) => {
+  .handler(async ({ data }) => {
+    const postId = data;
+
     const postWithUser = await kysely
       .selectFrom("posts")
       .innerJoin("user", "user.id", "posts.userId")
@@ -183,6 +173,7 @@ export const fetchPostDetail = createServerFn()
         "posts.videoKey",
         "posts.source",
         "posts.relatedPostId",
+        "posts.videoMetadata",
         "user.id as userId",
         "user.name as userName",
         "user.image as userImage",
@@ -190,7 +181,9 @@ export const fetchPostDetail = createServerFn()
       .where("posts.id", "=", postId)
       .executeTakeFirst();
 
-    if (!postWithUser) throw new Error(`Post ${postId} not found`);
+    if (!postWithUser) {
+      throw new Error(`Post ${postId} not found`);
+    }
 
     const tags = await kysely
       .selectFrom("post_tags")
@@ -216,6 +209,7 @@ export const fetchPostDetail = createServerFn()
         source: postWithUser.source,
         title: postWithUser.title,
         videoKey: postWithUser.videoKey,
+        videoMetadata: postWithUser.videoMetadata,
       },
       relatedPost,
       tags,
@@ -224,43 +218,54 @@ export const fetchPostDetail = createServerFn()
         image: postWithUser.userImage,
         name: postWithUser.userName,
       },
-    };
+    } as any;
   });
 
 export const uploadPost = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => BufferFormUploadSchema.parse(input))
+  .inputValidator((data: FormData) => {
+    const raw = Object.fromEntries(data.entries());
+    const normalized = {
+      ...raw,
+      tags: raw.tags ? JSON.parse(raw.tags as string) : [],
+      videoMetadata: raw.videoMetadata ? JSON.parse(raw.videoMetadata as string) : undefined,
+    };
+    return FormFileUploadSchema.parse(normalized);
+  })
   .handler(async ({ data }) => {
-    const { video, title, content, userId, source, relatedPostId, tags } = data;
+    const { video, thumbnail, title, content, userId, source, relatedPostId, tags, videoMetadata } =
+      data;
+
     const ext = video.name.split(".").pop()!;
 
-    // TODO generate a hash based on video content to prevent duplicates instead of random UUID
-    const videoKey = `videos/${userId}/${randomUUID()}${ext}`;
+    const videoKey = `videos/${userId}/${randomUUID()}.${ext}`;
     const thumbnailKey = `thumbnails/${userId}/${videoKey
       .split("/")
-      .pop()
-      ?.replace(ext, ".jpg")}`;
+      .pop()!
+      .replace(new RegExp(`\\.${ext}$`), ".jpg")}`;
 
     const videoCommand = new PutObjectCommand({
-      Body: Buffer.from(video.arrayBuffer),
+      Body: Buffer.from(await video.arrayBuffer()),
       Bucket: envServer.CLOUDFLARE_BUCKET,
       ContentType: video.type,
       Key: videoKey,
     });
 
     const thumbnailCommand = new PutObjectCommand({
-      Body: Buffer.from(data.thumbnail.arrayBuffer),
+      Body: Buffer.from(await thumbnail.arrayBuffer()),
       Bucket: envServer.CLOUDFLARE_BUCKET,
-      ContentType: data.thumbnail.type,
+      ContentType: thumbnail.type,
       Key: thumbnailKey,
     });
 
     const videocmd = await cfclient.send(videoCommand);
-    if (videocmd.$metadata.httpStatusCode !== 200)
+    if (videocmd.$metadata.httpStatusCode !== 200) {
       throw new Error("There was an error uploading file");
+    }
 
     const thumbnailcmd = await cfclient.send(thumbnailCommand);
-    if (thumbnailcmd.$metadata.httpStatusCode !== 200)
+    if (thumbnailcmd.$metadata.httpStatusCode !== 200) {
       throw new Error("There was an error uploading thumbnail");
+    }
 
     // Create post
     const newPost = await kysely
@@ -273,6 +278,7 @@ export const uploadPost = createServerFn({ method: "POST" })
         title,
         userId,
         videoKey,
+        videoMetadata: videoMetadata as any, // Cast videoMetadata to any
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -289,9 +295,7 @@ export const uploadPost = createServerFn({ method: "POST" })
           const newTag = await kysely
             .insertInto("tags")
             .values({ name: tag.name })
-            .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name }),
-            )
+            .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
@@ -309,7 +313,7 @@ export const uploadPost = createServerFn({ method: "POST" })
       }
     }
 
-    return newPost;
+    return newPost as any;
   });
 
 // TODO see how this handle partial errors, like if something broke does it create an inconsistent state?
@@ -361,10 +365,7 @@ export const updatePost = createServerFn({ method: "POST" })
     // Handle tags update - delete existing and recreate
     if (tags && tags.length > 0) {
       // Delete existing post tags
-      await kysely
-        .deleteFrom("post_tags")
-        .where("postId", "=", postId)
-        .execute();
+      await kysely.deleteFrom("post_tags").where("postId", "=", postId).execute();
 
       // Process each tag - create new ones and collect all tag IDs
       const allTagIds: number[] = [];
@@ -375,9 +376,7 @@ export const updatePost = createServerFn({ method: "POST" })
           const newTag = await kysely
             .insertInto("tags")
             .values({ name: tag.name })
-            .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name }),
-            )
+            .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
@@ -393,33 +392,25 @@ export const updatePost = createServerFn({ method: "POST" })
       }
     } else {
       // Delete all tags if no tags provided
-      await kysely
-        .deleteFrom("post_tags")
-        .where("postId", "=", postId)
-        .execute();
+      await kysely.deleteFrom("post_tags").where("postId", "=", postId).execute();
     }
 
-    return updatedPost;
+    return updatedPost as any;
   });
 
 export const getPostsByTag = createServerFn()
   .inputValidator((input: unknown) =>
     z
       .object({
-        page: z
-          .object({
-            after: z.number().optional(),
-            size: z.number().min(1).max(100).default(20),
-          })
-          .optional()
-          .default({ size: 20 }),
+        page: z.number().min(0).default(0),
+        pageSize: z.number().min(1).max(100).default(20),
         tag: z.string(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { tag: tagName, page } = data;
-    const { size, after } = page;
+    const { tag: tagName, page, pageSize } = data;
+    const offset = page * pageSize;
 
     // Fetch posts for the specific tag with pagination
     let query = kysely
@@ -427,15 +418,18 @@ export const getPostsByTag = createServerFn()
       .innerJoin("post_tags", "post_tags.postId", "posts.id")
       .innerJoin("tags", "tags.id", "post_tags.tagId")
       .where("tags.name", "=", tagName)
-      .selectAll("posts")
-      .orderBy("posts.id", "desc");
+      .selectAll("posts");
 
-    // Apply cursor for forward pagination
-    if (after) {
-      query = query.where("posts.id", "<", after);
-    }
+    // Get total count for pagination metadata
+    const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
+    const countResult = await countQuery.executeTakeFirst();
+    const totalCount = Number(countResult?.count ?? 0);
 
-    const items = await query.limit(size + 1).execute();
+    // Sort
+    query = query.orderBy("posts.createdAt", "desc");
+
+    // Apply offset and limit
+    const items = await query.offset(offset).limit(pageSize).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
@@ -443,14 +437,8 @@ export const getPostsByTag = createServerFn()
     }
 
     const posts = parsed.data;
-    const hasMore = posts.length > size;
-
-    // Remove extra item if present
-    const postsData = hasMore ? posts.slice(0, size) : posts;
-
-    // Set cursors
-    const afterCursor =
-      postsData.length > 0 ? postsData[postsData.length - 1].id : null;
+    const hasMore = offset + pageSize < totalCount;
+    const hasPrevious = offset > 0;
 
     // Calculate popular tags for posts that share the same tag
     const popularTagsResult = await kysely
@@ -465,36 +453,27 @@ export const getPostsByTag = createServerFn()
           .where("tags.name", "=", tagName)
           .select("posts.id"),
       )
-      .select([
-        "tags.id",
-        "tags.name",
-        kysely.fn.count("post_tags.postId").as("postCount"),
-      ])
+      .select(["tags.id", "tags.name", kysely.fn.count("post_tags.postId").as("postCount")])
       .groupBy(["tags.id", "tags.name"])
       .orderBy("postCount", "desc")
       .limit(10)
       .execute();
 
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const currentPage = page + 1;
+
     return {
-      data: postsData,
-      links: {
-        next:
-          hasMore && afterCursor
-            ? `/posts/tags/${encodeURIComponent(
-                tagName,
-              )}?page[after]=${afterCursor}&page[size]=${size}`
-            : null,
-        self: after
-          ? `/posts/tags/${encodeURIComponent(
-              tagName,
-            )}?page[after]=${after}&page[size]=${size}`
-          : `/posts/tags/${encodeURIComponent(tagName)}?page[size]=${size}`,
-      },
+      data: posts,
       meta: {
-        cursors: {
-          after: afterCursor,
+        pagination: {
+          currentPage,
+          hasMore,
+          hasPrevious,
+          limit: pageSize,
+          offset,
+          total: totalCount,
+          totalPages,
         },
-        hasMore,
         popularTags: mapPopularTags(popularTagsResult),
       },
     };

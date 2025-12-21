@@ -1,13 +1,13 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getAllPopularTags, getAllTags } from "./tags.fn";
 
-export const tagsKeys = {
+const tagsKeys = {
   all: ["tags"] as const,
   list: () => [...tagsKeys.all, "all"] as const,
   popular: () => [...tagsKeys.all, "popular"] as const,
 } as const;
 
-export const tagsQueries = {
+const tagsQueries = {
   getPopularTags: () =>
     queryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes

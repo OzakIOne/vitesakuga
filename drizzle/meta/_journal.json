@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1761400958128,
-      "tag": "0000_shocking_unicorn",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1761401044413,
-      "tag": "0001_redundant_stepford_cuckoos",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1761920443201,
-      "tag": "0002_flawless_scrambler",
+      "when": 1766354352744,
+      "tag": "0000_even_zeigeist",
       "breakpoints": true
     }
   ]

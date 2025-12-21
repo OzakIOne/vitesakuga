@@ -1,21 +1,15 @@
-import {
-  Field,
-  Input,
-  type InputProps,
-  Textarea,
-  type TextareaProps,
-} from "@chakra-ui/react";
+import { Field, Input, type InputProps, Textarea, type TextareaProps } from "@chakra-ui/react";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { FieldInfo } from "./FieldInfo";
 
-interface FormTextareaFieldProps {
+type FormTextareaFieldProps = {
   field: AnyFieldApi;
   label?: string;
   isRequired?: boolean;
   helper?: string;
   asTextarea?: boolean;
   inputProps?: InputProps & TextareaProps;
-}
+};
 
 export function FormTextWrapper({
   field,

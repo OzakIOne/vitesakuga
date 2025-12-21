@@ -5,11 +5,11 @@ import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
-  createRootRouteWithContext,
   HeadContent,
   Link,
   Outlet,
   Scripts,
+  createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
@@ -76,7 +76,7 @@ export const Route = createRootRouteWithContext<{
         name: "viewport",
       },
       ...seo({
-        description: `Sakugabooru clone made with tanstack.`,
+        description: "Sakugabooru clone made with tanstack.",
         title: "Vitesakuga",
       }),
     ],
@@ -106,15 +106,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <Center
-          gap={2}
-          left={0}
-          position="absolute"
-          py={2}
-          right={0}
-          top={0}
-          zIndex={10}
-        >
+        <Center gap={2} left={0} position="absolute" py={2} right={0} top={0} zIndex={10}>
           <Link
             activeOptions={{ exact: true }}
             activeProps={{

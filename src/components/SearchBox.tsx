@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Combobox,
-  createListCollection,
   Field,
   Group,
   Heading,
@@ -11,6 +10,7 @@ import {
   Input,
   Portal,
   Wrap,
+  createListCollection,
 } from "@chakra-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useQuery } from "@tanstack/react-query";
@@ -19,13 +19,13 @@ import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
 import { tagsQueryGetTags } from "src/lib/tags/tags.queries";
 
-interface SearchBoxProps {
+type SearchBoxProps = {
   defaultValue?: string;
   defaultTags?: string[];
   placeholder?: string;
   showTitle?: boolean;
   title?: string;
-}
+};
 
 export function SearchBox({
   defaultValue = "",
@@ -47,21 +47,16 @@ export function SearchBox({
   const filteredTags = useMemo(() => {
     return allTags
       .filter((tag) => !tags.includes(tag.name))
-      .filter((tag) =>
-        tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()),
-      )
+      .filter((tag) => tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()))
       .map((tag) => tag.name);
   }, [allTags, tagSearchValue, tags]);
 
   // ? usememo useful?
-  const collection = useMemo(
-    () => createListCollection({ items: filteredTags }),
-    [filteredTags],
-  );
+  const collection = useMemo(() => createListCollection({ items: filteredTags }), [filteredTags]);
 
   const handleAddTag = (details: Combobox.ValueChangeDetails) => {
     const newValues = details.value;
-    const addedValue = newValues[newValues.length - 1];
+    const addedValue = newValues.at(-1);
 
     if (addedValue && !tags.includes(addedValue)) {
       const newTags = [...tags, addedValue];
@@ -131,14 +126,7 @@ export function SearchBox({
           {tags.length > 0 && (
             <Wrap gap="2" mb={2}>
               {tags.map((tag) => (
-                <Badge
-                  alignItems="center"
-                  display="flex"
-                  gap={1}
-                  key={tag}
-                  px={2}
-                  py={1}
-                >
+                <Badge alignItems="center" display="flex" gap={1} key={tag} px={2} py={1}>
                   {tag}
                   <Icon
                     _hover={{ color: "red.500" }}
@@ -155,9 +143,7 @@ export function SearchBox({
             closeOnSelect
             collection={collection}
             multiple
-            onInputValueChange={(details) =>
-              setTagSearchValue(details.inputValue)
-            }
+            onInputValueChange={(details) => setTagSearchValue(details.inputValue)}
             onValueChange={handleAddTag}
             value={tags}
           >

@@ -16,12 +16,7 @@ type PostEditFormProps = {
   postId: number;
 };
 
-export function PostEditForm({
-  post,
-  initialTags,
-  onSuccess,
-  postId,
-}: PostEditFormProps) {
+export function PostEditForm({ post, initialTags, onSuccess, postId }: PostEditFormProps) {
   const queryClient = useQueryClient();
 
   const editForm = useForm({
@@ -61,8 +56,7 @@ export function PostEditForm({
     onError: (error) => {
       toaster.create({
         closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to update post",
+        description: error instanceof Error ? error.message : "Failed to update post",
         duration: 5000,
         title: "Error updating post",
         type: "error",
@@ -84,11 +78,11 @@ export function PostEditForm({
   useBlocker({
     enableBeforeUnload: true,
     shouldBlockFn: () => {
-      if (!editForm.state.isDirty) return false;
-
-      const shouldLeave = confirm(
-        "You have unsaved changes. Do you want to leave?",
-      );
+      if (!editForm.state.isDirty) {
+        return false;
+      }
+      // TODO replace with chakra ui thing i use
+      const shouldLeave = confirm("You have unsaved changes. Do you want to leave?");
       return !shouldLeave;
     },
   });
@@ -115,12 +109,7 @@ export function PostEditForm({
         <editForm.Field name="content">
           {(field) => (
             <Box mb={2}>
-              <FormTextWrapper
-                asTextarea
-                field={field}
-                isRequired
-                label="Content"
-              />
+              <FormTextWrapper asTextarea field={field} isRequired label="Content" />
             </Box>
           )}
         </editForm.Field>
@@ -139,18 +128,10 @@ export function PostEditForm({
         </editForm.Field>
 
         <editForm.Subscribe
-          selector={(state) => [
-            state.canSubmit,
-            state.isSubmitting,
-            state.isPristine,
-          ]}
+          selector={(state) => [state.canSubmit, state.isSubmitting, state.isPristine]}
         >
           {([canSubmit, isSubmitting, isPristine]) => (
-            <Button
-              disabled={!canSubmit || isPristine}
-              loading={isSubmitting}
-              type="submit"
-            >
+            <Button disabled={!canSubmit || isPristine} loading={isSubmitting} type="submit">
               {isSubmitting ? "Saving..." : "Save"}
             </Button>
           )}

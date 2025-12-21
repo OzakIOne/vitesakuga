@@ -1,49 +1,36 @@
 import { isAfter, startOfDay, subMonths, subWeeks } from "date-fns";
 import { orderBy } from "lodash-es";
-import type {
-  BufferSerializableType,
-  FileUploadData,
-  PostsSearchParams,
-  SerializedUploadData,
-} from "./posts.schema";
+import type { ReadChunkFunc } from "mediainfo.js";
+import type { PostsSearchParams } from "./posts.schema";
 
-async function fileToBuffer(file: File): Promise<BufferSerializableType> {
-  const arrayBuffer = await file.arrayBuffer();
-
-  return {
-    arrayBuffer,
-    name: file.name,
-    size: file.size,
-    type: file.type,
-  };
+export function makeReadChunk(file: File): ReadChunkFunc {
+  return async (chunkSize: number, offset: number) =>
+    new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
 }
 
-export async function transformUploadFormData(
-  values: FileUploadData,
-): Promise<SerializedUploadData> {
-  if (!values.video) {
-    throw new Error("Video file is required");
-  }
-  if (!values.thumbnail) {
-    throw new Error("Thumbnail file is required");
-  }
+export function buildFormData<T extends Record<string, any>>(values: T) {
+  const formData = new FormData();
 
-  const videoData = await fileToBuffer(values.video);
-  const thumbnailData = await fileToBuffer(values.thumbnail);
+  Object.entries(values).forEach(([key, value]) => {
+    if (value == null) return;
 
-  return {
-    content: values.content,
-    relatedPostId: values.relatedPostId,
-    source: values.source,
-    tags: values.tags,
-    thumbnail: thumbnailData,
-    title: values.title,
-    userId: values.userId,
-    video: videoData,
-  };
+    if (value instanceof File) {
+      formData.append(key, value);
+      return;
+    }
+
+    if (Array.isArray(value) || typeof value === "object") {
+      formData.append(key, JSON.stringify(value));
+      return;
+    }
+
+    formData.append(key, String(value));
+  });
+
+  return formData;
 }
 
-export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
+function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   posts: T[],
   dateRange: PostsSearchParams["dateRange"],
 ): T[] {
@@ -62,7 +49,7 @@ export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   return posts.filter((post) => isAfter(new Date(post.createdAt), cutoffDate));
 }
 
-export function sortPostsByDate<T extends { createdAt: string | Date }>(
+function sortPostsByDate<T extends { createdAt: string | Date }>(
   posts: T[],
   sortBy: PostsSearchParams["sortBy"],
 ): T[] {

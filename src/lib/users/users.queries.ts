@@ -10,28 +10,23 @@ export const usersKeys = {
 } as const;
 
 // Centralized queryOptions factories for users feature
-export const usersQueries = {
+const usersQueries = {
   // Single user detail with posts - using infinite pagination
-  detail: (userId: string, tags?: string[], q?: string) =>
-    infiniteQueryOptions({
+  detail: (userId: string, tags: string[] = [], q: string = "", page: number, pageSize: number) =>
+    queryOptions({
       gcTime: 10 * 60 * 1000, // 10 minutes
-      getNextPageParam: (lastPage) => {
-        return lastPage?.meta?.hasMore
-          ? lastPage?.meta?.cursors?.after
-          : undefined;
-      },
-      initialPageParam: undefined as number | undefined,
-      queryFn: async ({ pageParam }: { pageParam?: number }) => {
+      queryFn: async () => {
         return fetchUserPosts({
           data: {
-            page: { after: pageParam, size: 20 },
+            page,
+            pageSize, // Pass pageSize
             q,
             tags,
             userId,
           },
         });
       },
-      queryKey: usersKeys.detail(userId, tags, q),
+      queryKey: [...usersKeys.detail(userId, tags, q), page, pageSize],
       staleTime: 5 * 60 * 1000, // 5 minutes
     }),
   // List all users
@@ -49,6 +44,12 @@ export const usersQueryOptions = () => {
   return usersQueries.listUsers();
 };
 
-export const userQueryOptions = (userId: string, tags: string[], q: string) => {
-  return usersQueries.detail(userId, tags, q);
+export const userQueryOptions = (
+  userId: string,
+  tags: string[],
+  q: string,
+  page: number,
+  pageSize: number,
+) => {
+  return usersQueries.detail(userId, tags, q, page - 1, pageSize);
 };

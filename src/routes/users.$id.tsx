@@ -1,14 +1,14 @@
-import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { Box, SimpleGrid, Spinner, Stack, Text } from "@chakra-ui/react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 import { NotFound } from "src/components/NotFound";
+import { Pagination } from "src/components/Pagination";
+import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
-import { VirtualizedPostList } from "src/components/VirtualizedPostList";
 import { postsSearchSchema } from "src/lib/posts/posts.schema";
-import { filterAndSortPosts } from "src/lib/posts/posts.utils";
 import { userQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
@@ -24,25 +24,22 @@ export const Route = createFileRoute("/users/$id")({
 
 function UserContent() {
   const { id } = Route.useParams();
-  const { sortBy, dateRange, tags, q } = Route.useSearch();
+  const { sortBy, dateRange, tags, q, page } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const pageSize = 30;
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
-    useInfiniteQuery(userQueryOptions(id, tags, q));
+  const { data } = useSuspenseQuery(userQueryOptions(id, tags ?? [], q ?? "", page, pageSize));
 
-  const allPosts = data?.pages?.flatMap((page) => page.data) ?? [];
-  const userData = data?.pages?.[0];
-  const popularTags = data?.pages?.[0]?.meta?.popularTags ?? [];
+  const posts = data.data;
+  const popularTags = data.meta.popularTags;
+  const { totalPages } = data.meta.pagination;
 
-  const filteredPosts = useMemo(() => {
-    return filterAndSortPosts(allPosts, {
-      dateRange,
-      sortBy,
+  const handlePageChange = (newPage: number) => {
+    navigate({
+      search: (prev) => ({ ...prev, page: newPage }),
     });
-  }, [allPosts, sortBy, dateRange]);
-
-  if (status === "error" || !userData) {
-    return <NotFound>User not found</NotFound>;
-  }
+    window.scrollTo({ behavior: "smooth", top: 0 });
+  };
 
   return (
     <Box p={4}>
@@ -54,11 +51,7 @@ function UserContent() {
         selectedTags={tags}
         sortBy={sortBy}
       >
-        <User
-          id={userData.user.id}
-          image={userData.user.image}
-          name={userData.user.name}
-        />
+        <User id={data.user.id} image={data.user.image} name={data.user.name} />
 
         <Suspense
           fallback={
@@ -68,14 +61,34 @@ function UserContent() {
             </Stack>
           }
         >
-          <VirtualizedPostList
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            onFetchNextPage={fetchNextPage}
-            pageSize={size}
-            posts={filteredPosts}
-            searchQuery={q}
-          />
+          {posts.length === 0 ? (
+            <Box
+              alignItems="center"
+              border="1px solid"
+              borderColor="gray.200"
+              borderRadius="md"
+              display="flex"
+              h="200px"
+              justifyContent="center"
+            >
+              <Text color="gray.500">No posts found</Text>
+            </Box>
+          ) : (
+            <>
+              <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4} mb={8}>
+                {posts.map((post) => (
+                  <Box key={post.id}>
+                    <PostCard post={post} />
+                  </Box>
+                ))}
+              </SimpleGrid>
+              <Pagination
+                currentPage={page}
+                onPageChange={handlePageChange}
+                totalPages={totalPages}
+              />
+            </>
+          )}
         </Suspense>
       </PostsPageLayout>
     </Box>

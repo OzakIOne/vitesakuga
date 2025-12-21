@@ -8,10 +8,9 @@ import { fetchUserInputSchema } from "../users/users.schema";
 export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
   const parsed = z.array(userSelectSchema).safeParse(data);
-  if (!parsed.success)
-    throw new Error(
-      `There was an error processing the search results ${parsed.error}`,
-    );
+  if (!parsed.success) {
+    throw new Error(`There was an error processing the search results ${parsed.error}`);
+  }
 
   return parsed.data;
 });
@@ -19,8 +18,8 @@ export const fetchUsers = createServerFn().handler(async () => {
 export const fetchUserPosts = createServerFn()
   .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))
   .handler(async ({ data }) => {
-    const { userId, tags, q, page } = data;
-    const { size, after } = page;
+    const { userId, tags, q, page, pageSize } = data;
+    const offset = page * pageSize;
 
     const userInfo = await kysely
       .selectFrom("user")
@@ -28,18 +27,15 @@ export const fetchUserPosts = createServerFn()
       .where("id", "=", userId)
       .executeTakeFirstOrThrow();
 
-    if (!userInfo) throw new Error(`User ${userId} not found`);
+    if (!userInfo) {
+      throw new Error(`User ${userId} not found`);
+    }
 
     // Fetch user's posts with pagination
-    let query = kysely
-      .selectFrom("posts")
-      .selectAll()
-      .where("userId", "=", userId);
+    let query = kysely.selectFrom("posts").selectAll().where("userId", "=", userId);
 
     if (q) {
-      query = query.where((eb) =>
-        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
-      );
+      query = query.where((eb) => eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`));
     }
 
     if (tags.length > 0) {
@@ -51,14 +47,15 @@ export const fetchUserPosts = createServerFn()
         .distinct();
     }
 
+    // Get total count for pagination metadata
+    const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
+    const countResult = await countQuery.executeTakeFirst();
+    const totalCount = Number(countResult?.count ?? 0);
+
     query = query.orderBy("id", "desc");
 
-    // Apply cursor for forward pagination
-    if (after) {
-      query = query.where("posts.id", "<", after);
-    }
-
-    const items = await query.limit(size + 1).execute();
+    // Apply offset and limit
+    const items = await query.offset(offset).limit(pageSize).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
@@ -66,14 +63,8 @@ export const fetchUserPosts = createServerFn()
     }
 
     const posts = parsed.data;
-    const hasMore = posts.length > size;
-
-    // Remove extra item if present
-    const postsData = hasMore ? posts.slice(0, size) : posts;
-
-    // Set cursors
-    const afterCursor =
-      postsData.length > 0 ? postsData[postsData.length - 1].id : null;
+    const hasMore = offset + pageSize < totalCount;
+    const hasPrevious = offset > 0;
 
     // Calculate popular tags for this user's posts
     const popularTagsResult = await kysely
@@ -81,32 +72,27 @@ export const fetchUserPosts = createServerFn()
       .innerJoin("post_tags", "tags.id", "post_tags.tagId")
       .innerJoin("posts", "posts.id", "post_tags.postId")
       .where("posts.userId", "=", userId)
-      .select([
-        "tags.id",
-        "tags.name",
-        kysely.fn.count("post_tags.postId").as("postCount"),
-      ])
+      .select(["tags.id", "tags.name", kysely.fn.count("post_tags.postId").as("postCount")])
       .groupBy(["tags.id", "tags.name"])
       .orderBy("postCount", "desc")
       .limit(10)
       .execute();
 
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const currentPage = page + 1;
+
     return {
-      data: postsData,
-      links: {
-        next:
-          hasMore && afterCursor
-            ? `/users/${userId}?page[after]=${afterCursor}&page[size]=${size}`
-            : null,
-        self: after
-          ? `/users/${userId}?page[after]=${after}&page[size]=${size}`
-          : `/users/${userId}?page[size]=${size}`,
-      },
+      data: posts,
       meta: {
-        cursors: {
-          after: afterCursor,
+        pagination: {
+          currentPage,
+          hasMore,
+          hasPrevious,
+          limit: pageSize,
+          offset,
+          total: totalCount,
+          totalPages,
         },
-        hasMore,
         popularTags: mapPopularTags(popularTagsResult),
       },
       user: userInfo,

@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Container,
-  createListCollection,
   FileUpload,
   Heading,
   Icon,
@@ -11,6 +10,7 @@ import {
   Portal,
   Select,
   Text,
+  createListCollection,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import React, { useState } from "react";
@@ -51,9 +51,7 @@ export const Route = createFileRoute("/convert")({
 
 function RouteComponent() {
   const [file, setFile] = useState<File | null>(null);
-  const [output, setOutput] = useState<
-    (typeof SUPPORTED_OUTPUTS)[0] | undefined
-  >();
+  const [output, setOutput] = useState<(typeof SUPPORTED_OUTPUTS)[0] | undefined>();
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -69,7 +67,7 @@ function RouteComponent() {
   };
 
   const handleConvert = async () => {
-    if (!file || !output) {
+    if (!(file && output)) {
       setError("Please select a file and output format.");
       return;
     }
@@ -111,12 +109,9 @@ function RouteComponent() {
           Video/Audio Converter
         </Heading>
         <Text mb={4}>
-          Convert your video or audio file to another format directly in your
-          browser using WebCodecs. Powered by{" "}
-          <Link
-            color="blue.500"
-            href="https://www.remotion.dev/docs/webcodecs/convert-a-video"
-          >
+          Convert your video or audio file to another format directly in your browser using
+          WebCodecs. Powered by{" "}
+          <Link color="blue.500" href="https://www.remotion.dev/docs/webcodecs/convert-a-video">
             Remotion WebCodecs
           </Link>
           .
@@ -150,9 +145,7 @@ function RouteComponent() {
               collection={outputFormats}
               disabled={isConverting}
               onSelect={(details) => {
-                const o = SUPPORTED_OUTPUTS.find(
-                  (opt) => opt.label === details.value,
-                );
+                const o = SUPPORTED_OUTPUTS.find((opt) => opt.label === details.value);
                 if (o) setOutput(o);
               }}
               size="md"
@@ -247,8 +240,7 @@ function RouteComponent() {
         )}
 
         <Text color="gray.600" fontSize="sm">
-          Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac,
-          aac, m3u8
+          Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac, aac, m3u8
         </Text>
         <Text color="gray.600" fontSize="sm">
           Supported output: MP4 (H.264/AAC), WebM (VP9/Opus)
