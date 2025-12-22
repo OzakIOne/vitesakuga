@@ -190,7 +190,9 @@ export const fetchPostDetail = createServerFn()
       .where("posts.id", "=", postId)
       .executeTakeFirst();
 
-    if (!postWithUser) throw new Error(`Post ${postId} not found`);
+    if (!postWithUser) {
+      throw new Error(`Post ${postId} not found`);
+    }
 
     const tags = await kysely
       .selectFrom("post_tags")
@@ -264,12 +266,14 @@ export const uploadPost = createServerFn({ method: "POST" })
     });
 
     const videocmd = await cfclient.send(videoCommand);
-    if (videocmd.$metadata.httpStatusCode !== 200)
+    if (videocmd.$metadata.httpStatusCode !== 200) {
       throw new Error("There was an error uploading file");
+    }
 
     const thumbnailcmd = await cfclient.send(thumbnailCommand);
-    if (thumbnailcmd.$metadata.httpStatusCode !== 200)
+    if (thumbnailcmd.$metadata.httpStatusCode !== 200) {
       throw new Error("There was an error uploading thumbnail");
+    }
 
     // Create post
     const newPost = await kysely

@@ -68,7 +68,7 @@ function SignupForm() {
   });
 
   return (
-    <div className="flex flex-col items-center justify-center with-full h-fit p-4">
+    <div className="with-full flex h-fit flex-col items-center justify-center p-4">
       <form
         onSubmit={async (e) => {
           e.preventDefault();

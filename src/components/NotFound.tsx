@@ -7,15 +7,15 @@ export function NotFound({ children }: { children?: any }) {
       <div className="text-gray-600 dark:text-gray-400">
         {children || <p>The page you are looking for does not exist.</p>}
       </div>
-      <p className="flex items-center gap-2 flex-wrap">
+      <p className="flex flex-wrap items-center gap-2">
         <Button
-          className="bg-emerald-500 text-white px-2 py-1 rounded uppercase font-black text-sm"
+          className="rounded bg-emerald-500 px-2 py-1 font-black text-sm text-white uppercase"
           onClick={() => window.history.back()}
         >
           Go back
         </Button>
         <Link
-          className="bg-cyan-600 text-white px-2 py-1 rounded uppercase font-black text-sm"
+          className="rounded bg-cyan-600 px-2 py-1 font-black text-sm text-white uppercase"
           to="/"
         >
           Start Over

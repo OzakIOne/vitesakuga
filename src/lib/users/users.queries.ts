@@ -10,7 +10,7 @@ export const usersKeys = {
 } as const;
 
 // Centralized queryOptions factories for users feature
-export const usersQueries = {
+const usersQueries = {
   // Single user detail with posts - using infinite pagination
   detail: (userId: string, tags?: string[], q?: string) =>
     infiniteQueryOptions({

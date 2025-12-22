@@ -8,11 +8,21 @@ const FETCH_PREVIOUS_THRESHOLD = 2;
 const FETCH_NEXT_THRESHOLD = 3;
 
 const getColumnsPerRow = (width: number): number => {
-  if (width >= 1536) return 6;
-  if (width >= 1280) return 5;
-  if (width >= 1024) return 4;
-  if (width >= 768) return 3;
-  if (width >= 640) return 2;
+  if (width >= 1536) {
+    return 6;
+  }
+  if (width >= 1280) {
+    return 5;
+  }
+  if (width >= 1024) {
+    return 4;
+  }
+  if (width >= 768) {
+    return 3;
+  }
+  if (width >= 640) {
+    return 2;
+  }
   return 1;
 };
 
@@ -157,8 +167,7 @@ export const VirtualizedPostList = ({
     }
 
     if (
-      !firstRow ||
-      !onPageChange ||
+      !(firstRow && onPageChange) ||
       columnsPerRow === 0 ||
       isFetchingNextPage ||
       isFetchingPreviousPage

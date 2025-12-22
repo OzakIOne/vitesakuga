@@ -13,7 +13,8 @@
     "includes": [
       "src/**/*.{js,jsx,ts,tsx}",
       "!src/routeTree.gen.ts",
-      "!src/vite-env.d.ts"
+      "!src/vite-env.d.ts",
+      "!src/components/ui/*"
     ]
   },
   "formatter": {
@@ -22,12 +23,22 @@
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double"
+      "quoteStyle": "double",
+      "trailingCommas": "all"
     }
   },
   "linter": {
     "enabled": true,
     "rules": {
+      "style": {
+        "useFilenamingConvention": "off",
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": {
+            "style": "type"
+          }
+        }
+      },
       "complexity": {
         "noExcessiveCognitiveComplexity": "error"
       },
@@ -41,5 +52,6 @@
     "clientKind": "git",
     "enabled": true,
     "useIgnoreFile": true
-  }
+  },
+  "extends": ["ultracite/core", "ultracite/react", "ultracite/remix"]
 }

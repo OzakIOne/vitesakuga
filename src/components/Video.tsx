@@ -38,12 +38,12 @@ export function Video({ url, bypass }: { url: string; bypass: boolean }) {
       <MediaControlBar>
         <MediaPlayButton />
         <MediaSeekBackwardButton seekOffset={0.04}>
-          <span className="border-white border-1 px-1 mx-1 text-xs" slot="icon">
+          <span className="mx-1 border-1 border-white px-1 text-xs" slot="icon">
             &#60;1f
           </span>
         </MediaSeekBackwardButton>
         <MediaSeekForwardButton seekOffset={0.04}>
-          <span className="border-white border-1 px-1 mx-1 text-xs" slot="icon">
+          <span className="mx-1 border-1 border-white px-1 text-xs" slot="icon">
             1f&#62;
           </span>
         </MediaSeekForwardButton>

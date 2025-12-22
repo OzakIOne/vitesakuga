@@ -84,8 +84,10 @@ export function PostEditForm({
   useBlocker({
     enableBeforeUnload: true,
     shouldBlockFn: () => {
-      if (!editForm.state.isDirty) return false;
-
+      if (!editForm.state.isDirty) {
+        return false;
+      }
+      // TODO replace with chakra ui thing i use
       const shouldLeave = confirm(
         "You have unsaved changes. Do you want to leave?",
       );

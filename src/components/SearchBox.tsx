@@ -19,13 +19,13 @@ import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
 import { tagsQueryGetTags } from "src/lib/tags/tags.queries";
 
-interface SearchBoxProps {
+type SearchBoxProps = {
   defaultValue?: string;
   defaultTags?: string[];
   placeholder?: string;
   showTitle?: boolean;
   title?: string;
-}
+};
 
 export function SearchBox({
   defaultValue = "",
@@ -61,7 +61,7 @@ export function SearchBox({
 
   const handleAddTag = (details: Combobox.ValueChangeDetails) => {
     const newValues = details.value;
-    const addedValue = newValues[newValues.length - 1];
+    const addedValue = newValues.at(-1);
 
     if (addedValue && !tags.includes(addedValue)) {
       const newTags = [...tags, addedValue];

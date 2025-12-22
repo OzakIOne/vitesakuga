@@ -8,10 +8,11 @@ import { fetchUserInputSchema } from "../users/users.schema";
 export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
   const parsed = z.array(userSelectSchema).safeParse(data);
-  if (!parsed.success)
+  if (!parsed.success) {
     throw new Error(
       `There was an error processing the search results ${parsed.error}`,
     );
+  }
 
   return parsed.data;
 });
@@ -28,7 +29,9 @@ export const fetchUserPosts = createServerFn()
       .where("id", "=", userId)
       .executeTakeFirstOrThrow();
 
-    if (!userInfo) throw new Error(`User ${userId} not found`);
+    if (!userInfo) {
+      throw new Error(`User ${userId} not found`);
+    }
 
     // Fetch user's posts with pagination
     let query = kysely
@@ -72,8 +75,7 @@ export const fetchUserPosts = createServerFn()
     const postsData = hasMore ? posts.slice(0, size) : posts;
 
     // Set cursors
-    const afterCursor =
-      postsData.length > 0 ? postsData[postsData.length - 1].id : null;
+    const afterCursor = postsData.length > 0 ? postsData.at(-1).id : null;
 
     // Calculate popular tags for this user's posts
     const popularTagsResult = await kysely

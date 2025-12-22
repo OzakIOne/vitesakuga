@@ -51,7 +51,7 @@ export async function transformUploadFormData(
   };
 }
 
-export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
+function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   posts: T[],
   dateRange: PostsSearchParams["dateRange"],
 ): T[] {
@@ -70,7 +70,7 @@ export function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   return posts.filter((post) => isAfter(new Date(post.createdAt), cutoffDate));
 }
 
-export function sortPostsByDate<T extends { createdAt: string | Date }>(
+function sortPostsByDate<T extends { createdAt: string | Date }>(
   posts: T[],
   sortBy: PostsSearchParams["sortBy"],
 ): T[] {

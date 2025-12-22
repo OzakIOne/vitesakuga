@@ -4,7 +4,9 @@ import { envServer } from "../env/server";
 let pool: Pool | null = null;
 
 export const getPoolSingleton = () => {
-  if (pool) return pool;
+  if (pool) {
+    return pool;
+  }
 
   pool = new Pool({
     database: envServer.POSTGRES_DB,

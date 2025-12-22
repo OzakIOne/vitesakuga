@@ -7,7 +7,7 @@ export const tagsKeys = {
   popular: () => [...tagsKeys.all, "popular"] as const,
 } as const;
 
-export const tagsQueries = {
+const tagsQueries = {
   getPopularTags: () =>
     queryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes

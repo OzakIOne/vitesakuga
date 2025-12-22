@@ -24,10 +24,10 @@ import {
 } from "src/lib/comments/comments.queries";
 import { toaster } from "./ui/toaster";
 
-interface CommentsProps {
+type CommentsProps = {
   postId: number;
   currentUserId?: string;
-}
+};
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const [comment, setComment] = useState("");
@@ -103,7 +103,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   };
 
   const handleSubmitComment = async () => {
-    if (!comment.trim() || !currentUserId) return;
+    if (!(comment.trim() && currentUserId)) {
+      return;
+    }
 
     await addCommentMutation.mutateAsync({
       content: comment.trim(),

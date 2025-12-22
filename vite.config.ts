@@ -1,37 +1,39 @@
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import { devtools } from "@tanstack/devtools-vite";
+import { nitroV2Plugin } from "@tanstack/nitro-v2-vite-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import { nitroV2Plugin } from "@tanstack/nitro-v2-vite-plugin";
-import { devtools } from "@tanstack/devtools-vite";
-import tailwindcss from "@tailwindcss/vite";
-import { viteStaticCopy } from 'vite-plugin-static-copy'
-import path from 'node:path'
+import { defineConfig } from "vite";
+import { viteStaticCopy } from "vite-plugin-static-copy";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
   plugins: [
     tailwindcss(),
     tsconfigPaths(),
     tanstackStart(),
     // { customViteReactPlugin: true }
     devtools(),
-    nitroV2Plugin(/*
+    nitroV2Plugin(
+      /*
       { target: 'node-server' }
-      */),
+      */
+    ),
     viteReact(),
     viteStaticCopy({
       targets: [
         {
+          dest: "",
           src: path.resolve(
             import.meta.dirname,
-            'node_modules/mediainfo.js/dist/MediaInfoModule.wasm'
+            "node_modules/mediainfo.js/dist/MediaInfoModule.wasm",
           ),
-          dest: '',
         },
       ],
     }),
   ],
+  server: {
+    port: 3000,
+  },
 });

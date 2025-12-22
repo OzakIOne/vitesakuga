@@ -45,6 +45,7 @@ const profileSchema = z.object({
 
 function RouteComponent() {
   const { user } = Route.useRouteContext() as MiddlewareUser;
+  console.log("user:", user);
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const router = useRouter();
@@ -139,9 +140,9 @@ function RouteComponent() {
   };
 
   return (
-    <Box className="h-screen  flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-lg  rounded-xl shadow-lg border p-10 space-y-10">
-        <div className="p-6 mb-8">
+    <Box className="flex h-screen flex-col items-center justify-center p-6">
+      <div className="w-full max-w-lg space-y-10 rounded-xl border p-10 shadow-lg">
+        <div className="mb-8 p-6">
           <div className="flex items-center gap-6">
             <AvatarGroup>
               <Avatar.Root size="2xl">
@@ -149,7 +150,7 @@ function RouteComponent() {
                 <Avatar.Image className="rounded-full" src={user.image || ""} />
               </Avatar.Root>
             </AvatarGroup>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <Heading size="lg">{user.name}</Heading>
               <Text>{user.email}</Text>
               <Text>
@@ -160,7 +161,7 @@ function RouteComponent() {
         </div>
 
         {serverError && (
-          <div className="bg-red-50 border border-red-200 px-6 py-4 rounded-lg mb-8">
+          <div className="mb-8 rounded-lg border border-red-200 bg-red-50 px-6 py-4">
             <Text fontWeight="medium" mb={1}>
               Error
             </Text>
@@ -187,7 +188,7 @@ function RouteComponent() {
                       <Field.Label>Display Name</Field.Label>
                       <InputGroup startElement={<LuUser />}>
                         <Input
-                          className="w-full h-12"
+                          className="h-12 w-full"
                           onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="Enter your display name"
                           value={field.state.value}
@@ -205,7 +206,7 @@ function RouteComponent() {
                       <Field.Label>Profile Picture URL</Field.Label>
                       <InputGroup startElement={<LuImage />}>
                         <Input
-                          className="w-full h-12"
+                          className="h-12 w-full"
                           onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="https://example.com/avatar.jpg"
                           type="url"
@@ -215,7 +216,7 @@ function RouteComponent() {
                     </Field.Root>
                     {!field.state.meta.errors &&
                       field.state.value !== user?.image && (
-                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="mt-4 rounded-lg bg-gray-50 p-4">
                           <Text fontWeight="medium" mb={3}>
                             Preview:
                           </Text>
@@ -249,7 +250,7 @@ function RouteComponent() {
             </form>
           </div>
 
-          <div className="pt-10 border-t">
+          <div className="border-t pt-10">
             <form
               className="space-y-4"
               onSubmit={(e) => {
@@ -262,7 +263,7 @@ function RouteComponent() {
                   <Field.Root>
                     <Field.Label>Current Password</Field.Label>
                     <PasswordInput
-                      className="w-full h-12"
+                      className="h-12 w-full"
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Enter current password"
                       type="password"
@@ -277,7 +278,7 @@ function RouteComponent() {
                   <Field.Root>
                     <Field.Label>New Password</Field.Label>
                     <PasswordInput
-                      className="w-full h-12"
+                      className="h-12 w-full"
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Enter new password"
                       type="password"

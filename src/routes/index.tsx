@@ -21,7 +21,7 @@ function Home() {
       minH="calc(100vh - 4rem)"
       p={4}
     >
-      <Heading className="text-2xl font-bold mb-4">ViteSakuga</Heading>
+      <Heading className="mb-4 font-bold text-2xl">ViteSakuga</Heading>
       <SearchBox placeholder="One piece..." showTitle={false} />
       <Suspense fallback={<Box mt={4}>Loading popular tags...</Box>}>
         <Box maxW="md" mt={4} w={"1/12"}>

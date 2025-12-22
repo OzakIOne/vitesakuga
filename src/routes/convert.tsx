@@ -69,7 +69,7 @@ function RouteComponent() {
   };
 
   const handleConvert = async () => {
-    if (!file || !output) {
+    if (!(file && output)) {
       setError("Please select a file and output format.");
       return;
     }

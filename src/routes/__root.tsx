@@ -76,7 +76,7 @@ export const Route = createRootRouteWithContext<{
         name: "viewport",
       },
       ...seo({
-        description: `Sakugabooru clone made with tanstack.`,
+        description: "Sakugabooru clone made with tanstack.",
         title: "Vitesakuga",
       }),
     ],

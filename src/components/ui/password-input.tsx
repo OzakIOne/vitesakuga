@@ -58,7 +58,7 @@ export const PasswordInput = React.forwardRef<
   } = props;
 
   const [visible, setVisible] = useControllableState({
-    defaultValue: defaultVisible || false,
+    defaultValue: defaultVisible,
     onChange: onVisibleChange,
     value: visibleProp,
   });
@@ -106,7 +106,7 @@ const VisibilityTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  },
+  }
 );
 
 interface PasswordStrengthMeterProps extends StackProps {

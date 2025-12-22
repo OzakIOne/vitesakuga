@@ -23,7 +23,9 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(
       ...rest
     } = props;
 
-    if (disabled) return children;
+    if (disabled) {
+      return children;
+    }
 
     return (
       <ChakraTooltip.Root {...rest}>
@@ -42,5 +44,5 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(
         </Portal>
       </ChakraTooltip.Root>
     );
-  },
+  }
 );

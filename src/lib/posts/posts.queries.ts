@@ -13,7 +13,7 @@ export const postsKeys = {
 } as const;
 
 // Centralized queryOptions factories for posts feature
-export const postsQueries = {
+const postsQueries = {
   byTag: (tagName: string) =>
     infiniteQueryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes
