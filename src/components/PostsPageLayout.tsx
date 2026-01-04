@@ -1,7 +1,20 @@
-import { Badge, Box, Grid, GridItem, Heading, VStack, Wrap } from "@chakra-ui/react";
+import {
+  Badge,
+  Box,
+  Button,
+  DataList,
+  Grid,
+  GridItem,
+  Heading,
+  Popover,
+  Portal,
+  Text,
+  VStack,
+  Wrap,
+} from "@chakra-ui/react";
 import type { RegisteredRouter } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import type { PostsSearchParams } from "src/lib/posts/posts.schema";
+import { type ReactNode } from "react";
+import type { PostsSearchParams, VideoMetadata } from "src/lib/posts/posts.schema";
 import { type PopularTag, PopularTagsSection } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
@@ -17,6 +30,7 @@ export type PostsPageLayoutProps = {
   dateRange: PostsSearchParams["dateRange"];
   children: ReactNode;
   fromRoute: RegisteredRoutes;
+  videoMetadata?: VideoMetadata;
 };
 
 export function PostsPageLayout({
@@ -27,6 +41,7 @@ export function PostsPageLayout({
   dateRange,
   children,
   fromRoute,
+  videoMetadata,
 }: PostsPageLayoutProps) {
   return (
     <Box p={4} w="full">
@@ -64,6 +79,46 @@ export function PostsPageLayout({
               </Heading>
               <PostFilters dateRange={dateRange} fromRoute={fromRoute} sortBy={sortBy} />
             </Box>
+
+            {videoMetadata && (
+              <Box border="1px" borderRadius="md" p={4} shadow="md">
+                <Heading mb={3} size="sm">
+                  Video Metadata
+                </Heading>
+                <VStack align="stretch" fontSize="xs" gap={1}>
+                  <DataList.Root orientation="horizontal">
+                    {Object.entries(videoMetadata).map(([key, value]) => (
+                      <DataList.Item key={key}>
+                        <DataList.ItemLabel>{key}</DataList.ItemLabel>
+                        <DataList.ItemValue>
+                          {key === "Encoded_Library_Settings" ? (
+                            <Popover.Root>
+                              <Popover.Trigger asChild>
+                                <Button size="xs" variant="outline">
+                                  View Settings
+                                </Button>
+                              </Popover.Trigger>
+                              <Portal>
+                                <Popover.Positioner>
+                                  <Popover.Content>
+                                    <Popover.Arrow />
+                                    <Popover.Body>
+                                      <Text>{value}</Text>
+                                    </Popover.Body>
+                                  </Popover.Content>
+                                </Popover.Positioner>
+                              </Portal>
+                            </Popover.Root>
+                          ) : (
+                            value
+                          )}
+                        </DataList.ItemValue>
+                      </DataList.Item>
+                    ))}
+                  </DataList.Root>
+                </VStack>
+              </Box>
+            )}
           </VStack>
         </GridItem>
 

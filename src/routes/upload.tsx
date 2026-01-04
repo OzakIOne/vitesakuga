@@ -1,18 +1,36 @@
-import { Box, Button, Field, FileUpload, Icon, Input, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Field,
+  FileUpload,
+  Grid,
+  Icon,
+  Image,
+  Input,
+  Text,
+} from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, useBlocker, useNavigate, useRouteContext } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useBlocker,
+  useNavigate,
+  useRouteContext,
+} from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { MediaInfo, MediaInfoResult } from "mediainfo.js";
 import mediaInfoFactory from "mediainfo.js";
 import { useEffect, useRef, useState } from "react";
-import { LuUpload } from "react-icons/lu";
+import { LuCamera, LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import { type MiddlewareUser, authMiddleware } from "src/lib/auth/auth.middleware";
+import {
+  type MiddlewareUser,
+  authMiddleware,
+} from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import {
@@ -21,6 +39,11 @@ import {
   VideoMetadataSchema,
 } from "src/lib/posts/posts.schema";
 import { buildFormData, makeReadChunk } from "src/lib/posts/posts.utils";
+
+type GeneratedThumbnail = {
+  url: string;
+  file: File;
+};
 
 export const Route = createFileRoute("/upload")({
   component: RouteComponent,
@@ -35,6 +58,8 @@ function RouteComponent() {
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate({ from: "/posts" });
   const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
+  const frameRateRef = useRef<number | null>(null);
+  const videoRef = useRef<any>(null);
 
   const uploadPostMutation = useMutation({
     mutationFn: (data: FormData) => uploadPost({ data }),
@@ -60,92 +85,124 @@ function RouteComponent() {
     },
   });
 
-  const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [thumbnails, setThumbnails] = useState<GeneratedThumbnail[]>([]);
+  const [selectedThumbnailIndex, setSelectedThumbnailIndex] =
+    useState<number>(0);
 
-  const captureThumbnail = async () => {
-    const video = document.querySelector("video");
-    if (!video) return;
+  const generateThumbnailsAtTimestamps = async (
+    videoFile: File,
+    timestamps: number[],
+  ): Promise<GeneratedThumbnail[]> => {
+    const { Input, ALL_FORMATS, BlobSource, CanvasSink } =
+      await import("mediabunny");
+    const input = new Input({
+      formats: ALL_FORMATS,
+      source: new BlobSource(videoFile),
+    });
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const videoTrack = await input.getPrimaryVideoTrack();
+    if (!videoTrack) throw new Error("No video track found");
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const sink = new CanvasSink(videoTrack, { width: 640 });
+    const results: GeneratedThumbnail[] = [];
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    for await (const result of sink.canvasesAtTimestamps(timestamps)) {
+      const blob = await new Promise<Blob | null>(async (resolve) => {
+        if ("convertToBlob" in result.canvas) {
+          const b = await (result.canvas as OffscreenCanvas).convertToBlob({
+            type: "image/jpeg",
+            quality: 0.8,
+          });
+          resolve(b);
+        } else {
+          (result.canvas as HTMLCanvasElement).toBlob(
+            (b) => resolve(b),
+            "image/jpeg",
+            0.8,
+          );
+        }
+      });
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.8),
-    );
-    if (!blob) return;
-
-    const file = new File([blob], "thumbnail.jpg", { type: "image/jpeg" });
-
-    const previewUrl = URL.createObjectURL(blob);
-    setThumbnail(previewUrl);
-
-    form.setFieldValue("thumbnail", file);
+      if (blob) {
+        const file = new File(
+          [blob],
+          `thumbnail-${results.length}-${Date.now()}.jpg`,
+          {
+            type: "image/jpeg",
+          },
+        );
+        results.push({
+          url: URL.createObjectURL(blob),
+          file,
+        });
+      }
+    }
+    return results;
   };
 
-  useBlocker({
-    enableBeforeUnload: true,
-    shouldBlockFn: () => {
-      if (!form.state.isDirty) return false;
-
-      const shouldLeave = confirm("You have unsubmitted changes. Do you want to leave?");
-      return !shouldLeave;
-    },
-  });
-
-  const generateDefaultThumbnail = async (videoFile: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement("video");
-      video.src = URL.createObjectURL(videoFile);
-      video.crossOrigin = "anonymous";
-
-      const drawFrame = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Failed to get canvas context"));
-          return;
-        }
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Failed to generate thumbnail"));
-              return;
-            }
-
-            const file = new File([blob], "thumbnail.jpg", {
-              type: "image/jpeg",
-            });
-            resolve(file);
-            URL.revokeObjectURL(video.src);
-          },
-          "image/jpeg",
-          0.8,
-        );
-      };
-
-      video.onloadedmetadata = () => {
-        video.currentTime = 0;
-      };
-
-      video.onseeked = () => {
-        drawFrame();
-      };
-
-      video.onerror = () => {
-        reject(new Error("Failed to load video"));
-      };
+  const generateAutomaticThumbnails = async (videoFile: File) => {
+    const { Input, ALL_FORMATS, BlobSource } = await import("mediabunny");
+    const input = new Input({
+      formats: ALL_FORMATS,
+      source: new BlobSource(videoFile),
     });
+
+    const videoTrack = await input.getPrimaryVideoTrack();
+    if (!videoTrack) throw new Error("No video track found");
+
+    const startTimestamp = await videoTrack.getFirstTimestamp();
+    const endTimestamp = await videoTrack.computeDuration();
+
+    // Pick 5 timestamps
+    const timestamps = [0.1, 0.3, 0.5, 0.7, 0.9].map(
+      (t) => startTimestamp + t * (endTimestamp - startTimestamp),
+    );
+
+    return generateThumbnailsAtTimestamps(videoFile, timestamps);
+  };
+
+  const handleCapture = async () => {
+    const videoFile = form.getFieldValue("video");
+    const player = videoRef.current;
+    if (!videoFile || !player || !player.media) {
+      toaster.create({
+        description: "Could not determine the current time from the player.",
+        duration: 3000,
+        title: "Capture failed",
+        type: "error",
+      });
+      return;
+    }
+
+    const time = player.media.currentTime;
+
+    try {
+      const generated = await generateThumbnailsAtTimestamps(videoFile, [time]);
+      if (generated.length > 0) {
+        setThumbnails((prev) => {
+          const newThumbs = [...prev, ...generated];
+          setSelectedThumbnailIndex(newThumbs.length - 1);
+          return newThumbs;
+        });
+
+        form.setFieldValue("thumbnail", generated[0].file);
+
+        toaster.create({
+          description: "Thumbnail captured successfully.",
+          duration: 3000,
+          title: "Captured",
+          type: "success",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to capture thumbnail:", error);
+      toaster.create({
+        description: "There was an error capturing the frame.",
+        duration: 3000,
+        title: "Capture failed",
+        type: "error",
+      });
+    }
   };
 
   const handleSubmit = async (values: FileUploadData): Promise<void> => {
@@ -168,6 +225,24 @@ function RouteComponent() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      thumbnails.forEach((t) => URL.revokeObjectURL(t.url));
+    };
+  }, [thumbnails]);
+
+  useBlocker({
+    enableBeforeUnload: true,
+    shouldBlockFn: () => {
+      if (!form.state.isDirty) return false;
+
+      const shouldLeave = confirm(
+        "You have unsubmitted changes. Do you want to leave?",
+      );
+      return !shouldLeave;
+    },
+  });
 
   // TODO fix those fucking types
   const form = useForm({
@@ -213,7 +288,9 @@ function RouteComponent() {
       >
         <Box mb={6}>
           <form.Field name="title">
-            {(field) => <FormTextWrapper field={field} isRequired label="Title" />}
+            {(field) => (
+              <FormTextWrapper field={field} isRequired label="Title" />
+            )}
           </form.Field>
         </Box>
 
@@ -285,7 +362,9 @@ function RouteComponent() {
                 )}
                 {field.state.value && (
                   <Box bg="blue.50" borderRadius="md" mt={2} p={2}>
-                    <Text fontSize="sm">Selected Post ID: {field.state.value}</Text>
+                    <Text fontSize="sm">
+                      Selected Post ID: {field.state.value}
+                    </Text>
                     <Button
                       mt={1}
                       onClick={() => {
@@ -342,22 +421,30 @@ function RouteComponent() {
                             const videoTrack = datajson.media?.track.find(
                               (el) => el["@type"] === "Video",
                             );
-                            const parsedData = VideoMetadataSchema.parse(videoTrack);
+                            const parsedData =
+                              VideoMetadataSchema.parse(videoTrack);
+                            frameRateRef.current = parsedData.FrameRate;
                             form.setFieldValue("videoMetadata", parsedData);
                           })
                           .catch((error: unknown) => {
                             console.error(error);
                           });
-                        // Auto-generate thumbnail from first frame
+                        // Auto-generate thumbnails
                         try {
-                          const defaultThumbnail = await generateDefaultThumbnail(file);
-                          form.setFieldValue("thumbnail", defaultThumbnail);
-                          const thumbnailPreview = URL.createObjectURL(defaultThumbnail);
-                          setThumbnail(thumbnailPreview);
+                          const generated =
+                            await generateAutomaticThumbnails(file);
+                          setThumbnails(generated);
+                          if (generated.length > 0) {
+                            setSelectedThumbnailIndex(0);
+                            form.setFieldValue("thumbnail", generated[0].file);
+                          }
                         } catch (error) {
-                          console.error("Failed to auto-generate thumbnail:", error);
+                          console.error(
+                            "Failed to generate thumbnails:",
+                            error,
+                          );
                           toaster.create({
-                            description: "Please generate a thumbnail manually.",
+                            description: "Please try re-uploading the video.",
                             duration: 3000,
                             title: "Thumbnail generation failed",
                             type: "error",
@@ -366,6 +453,7 @@ function RouteComponent() {
                         return;
                       }
                       setVideoPreviewUrl(null);
+                      setThumbnails([]);
                     }}
                   >
                     <FileUpload.HiddenInput />
@@ -384,28 +472,61 @@ function RouteComponent() {
                   </FileUpload.Root>
                   {videoFilePreview && (
                     <>
-                      <Video bypass url={videoFilePreview} />
+                      <Video
+                        bypass
+                        frameRate={frameRateRef.current ?? undefined}
+                        ref={videoRef}
+                        url={videoFilePreview}
+                      />
 
-                      <Button mt={3} onClick={captureThumbnail}>
-                        Generate Thumbnail from Current Frame
-                      </Button>
-
-                      {thumbnail && (
-                        <Box mt={3}>
-                          <Text mb={1}>Thumbnail Preview:</Text>
-                          <img
-                            alt="Video thumbnail"
-                            src={thumbnail}
-                            style={{
-                              border: "1px solid #ddd",
-                              borderRadius: "8px",
-                              width: "100%",
-                            }}
-                          />
+                      {thumbnails.length > 0 && (
+                        <Box mt={4}>
+                          <Box
+                            alignItems="center"
+                            display="flex"
+                            justifyContent="space-between"
+                            mb={2}
+                          >
+                            <Text fontWeight="bold">Select Thumbnail:</Text>
+                            <Button
+                              onClick={handleCapture}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <LuCamera style={{ marginRight: "8px" }} />
+                              Capture Current Frame
+                            </Button>
+                          </Box>
+                          <Grid gap={2} templateColumns="repeat(5, 1fr)">
+                            {thumbnails.map((thumb, index) => (
+                              <Box
+                                border="4px solid"
+                                borderColor={
+                                  selectedThumbnailIndex === index
+                                    ? "blue.500"
+                                    : "transparent"
+                                }
+                                borderRadius="md"
+                                cursor="pointer"
+                                key={thumb.url}
+                                onClick={() => {
+                                  setSelectedThumbnailIndex(index);
+                                  form.setFieldValue("thumbnail", thumb.file);
+                                }}
+                                overflow="hidden"
+                                transition="border-color 0.2s"
+                              >
+                                <Image
+                                  alt={`Thumbnail ${index + 1}`}
+                                  src={thumb.url}
+                                />
+                              </Box>
+                            ))}
+                          </Grid>
                         </Box>
                       )}
                     </>
-                  )}{" "}
+                  )}
                 </Field.Root>
                 <FieldInfo field={field} />
               </>
@@ -414,7 +535,11 @@ function RouteComponent() {
         </Box>
 
         <form.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting, state.isPristine]}
+          selector={(state) => [
+            state.canSubmit,
+            state.isSubmitting,
+            state.isPristine,
+          ]}
         >
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button

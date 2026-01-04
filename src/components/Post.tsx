@@ -23,11 +23,7 @@ export function Post({
 
   return (
     <>
-      {post.videoKey && (
-        <div className="w-lg">
-          <Video bypass={false} url={post.videoKey} />
-        </div>
-      )}
+      {post.videoKey && <Video bypass={false} url={post.videoKey} />}
       {post.title && <Heading as="h3">{post.title}</Heading>}
       {post.content && <Text mb={4}>{post.content}</Text>}
 
@@ -39,7 +35,7 @@ export function Post({
           <Stack direction="row" flexWrap="wrap" gap={2}>
             {tags.map((tag) => (
               <Link key={tag.id} params={{ tag: tag.name }} to="/posts/tags/$tag">
-                <Badge borderRadius="full" colorScheme="blue" key={tag.id} px={2} py={1}>
+                <Badge borderRadius="full" colorPalette="blue" key={tag.id} px={2} py={1} size="lg">
                   {tag.name}
                 </Badge>
               </Link>

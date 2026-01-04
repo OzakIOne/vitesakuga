@@ -17,6 +17,7 @@ import type * as React from "react";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { NotFound } from "src/components/NotFound";
 import { Provider } from "src/components/ui/provider";
+import { ColorModeButton } from "src/components/ui/color-mode";
 import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
@@ -177,6 +178,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               </Link>
             </>
           )}
+          <ColorModeButton />
         </Center>
         <Box pt={16}>{children}</Box>
         <Toaster />

@@ -8,19 +8,30 @@ import {
   Icon,
   Link,
   Portal,
+  Progress,
   Select,
   Text,
   createListCollection,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LuUpload } from "react-icons/lu";
-
+const {
+  Input,
+  ALL_FORMATS,
+  Output,
+  Mp4OutputFormat,
+  WebMOutputFormat,
+  MkvOutputFormat,
+  BufferTarget,
+  Conversion,
+  BlobSource,
+} = await import("mediabunny");
 type OutputFormat = {
   label: string;
-  container: "mp4" | "webm";
-  videoCodec: "h264" | "vp9";
-  audioCodec: "aac" | "opus";
+  container: "mp4" | "webm" | "mkv";
+  videoCodec?: "avc" | "vp9";
+  audioCodec?: "aac" | "opus";
 };
 
 const SUPPORTED_OUTPUTS: OutputFormat[] = [
@@ -28,13 +39,17 @@ const SUPPORTED_OUTPUTS: OutputFormat[] = [
     audioCodec: "aac",
     container: "mp4",
     label: "MP4 (H.264/AAC)",
-    videoCodec: "h264",
+    videoCodec: "avc",
   },
   {
     audioCodec: "opus",
     container: "webm",
     label: "WebM (VP9/Opus)",
     videoCodec: "vp9",
+  },
+  {
+    container: "mkv",
+    label: "Matroska (Remux/Copy)",
   },
 ];
 
@@ -47,12 +62,14 @@ const outputFormats = createListCollection({
 
 export const Route = createFileRoute("/convert")({
   component: RouteComponent,
+  ssr: false,
 });
 
 function RouteComponent() {
   const [file, setFile] = useState<File | null>(null);
   const [output, setOutput] = useState<(typeof SUPPORTED_OUTPUTS)[0] | undefined>();
   const [isConverting, setIsConverting] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [convertedName, setConvertedName] = useState<string>("");
@@ -72,31 +89,68 @@ function RouteComponent() {
       return;
     }
     setIsConverting(true);
+    setProgress(0);
     setError(null);
     setDownloadUrl(null);
     setConvertedName("");
     try {
-      // Dynamically import to avoid SSR issues
-      const { convertMedia } = await import("@remotion/webcodecs");
-      const result = await convertMedia({
-        audioCodec: output.audioCodec,
-        container: output.container,
-        src: file,
-        videoCodec: output.videoCodec,
+      const input = new Input({
+        formats: ALL_FORMATS,
+        source: new BlobSource(file),
       });
-      const blob = await result.save();
+
+      let outputFormat;
+      if (output.container === "mp4") outputFormat = new Mp4OutputFormat();
+      else if (output.container === "webm") outputFormat = new WebMOutputFormat();
+      else outputFormat = new MkvOutputFormat();
+
+      const target = new BufferTarget();
+
+      const mediabunnyOutput = new Output({
+        format: outputFormat,
+        target: target,
+      });
+
+      const conversion = await Conversion.init({
+        input,
+        output: mediabunnyOutput,
+        video: output.videoCodec ? { codec: output.videoCodec } : undefined,
+        audio: output.audioCodec ? { codec: output.audioCodec } : undefined,
+      });
+
+      if (!conversion.isValid) {
+        setError(
+          "Conversion is invalid: " + conversion.discardedTracks.map((t) => t.reason).join(", "),
+        );
+        return;
+      }
+
+      conversion.onProgress = (p) => {
+        setProgress(p * 100);
+      };
+
+      await conversion.execute();
+
+      const buffer = target.buffer;
+      if (!buffer) {
+        throw new Error("Conversion failed to produce output");
+      }
+
+      const blob = new Blob([buffer], { type: `video/${output.container}` });
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
       const ext = output.container;
       const base = file.name.replace(/\.[^.]+$/, "");
       setConvertedName(`${base}-converted.${ext}`);
+    } catch (err: any) {
+      setError(err.message || "An error occurred during conversion.");
     } finally {
       setIsConverting(false);
     }
   };
 
   // Clean up object URLs
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     };
@@ -111,8 +165,8 @@ function RouteComponent() {
         <Text mb={4}>
           Convert your video or audio file to another format directly in your browser using
           WebCodecs. Powered by{" "}
-          <Link color="blue.500" href="https://www.remotion.dev/docs/webcodecs/convert-a-video">
-            Remotion WebCodecs
+          <Link color="blue.500" href="https://mediabunny.dev">
+            Mediabunny
           </Link>
           .
         </Text>
@@ -184,11 +238,22 @@ function RouteComponent() {
           disabled={!file || isConverting}
           loading={isConverting}
           loadingText="Converting"
-          mb={4}
+          mb={2}
           onClick={handleConvert}
         >
           Convert
         </Button>
+
+        {isConverting && (
+          <Box mb={4}>
+            <Text mb={1}>Progress: {Math.round(progress)}%</Text>
+            <Progress.Root striped value={progress}>
+              <Progress.Track>
+                <Progress.Range />
+              </Progress.Track>
+            </Progress.Root>
+          </Box>
+        )}
 
         {error && (
           <Alert.Root mb={4} status="error">
@@ -239,11 +304,11 @@ function RouteComponent() {
           </Alert.Root>
         )}
 
-        <Text color="gray.600" fontSize="sm">
+        <Text fontSize="sm">
           Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac, aac, m3u8
         </Text>
-        <Text color="gray.600" fontSize="sm">
-          Supported output: MP4 (H.264/AAC), WebM (VP9/Opus)
+        <Text fontSize="sm">
+          Supported output: MP4 (H.264/AAC), WebM (VP9/Opus), Matroska (Remux)
         </Text>
       </Box>
     </Container>

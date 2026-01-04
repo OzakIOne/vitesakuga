@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "node_modules/drizzle-orm";
 import { createInsertSchema, user } from "./auth.schema";
+import type { VideoMetadata } from "../../posts/posts.schema";
 
 export const tags = pgTable("tags", {
   createdAt: timestamp().defaultNow().notNull(),
@@ -47,7 +48,7 @@ export const posts = pgTable("posts", {
     .references(() => user.id)
     .notNull(),
   videoKey: text().notNull(),
-  videoMetadata: json().notNull(),
+  videoMetadata: json().$type<string>().notNull(),
 });
 
 export const postTagsRelations = relations(postTags, ({ one }) => ({

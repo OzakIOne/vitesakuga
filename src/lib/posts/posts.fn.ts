@@ -209,7 +209,7 @@ export const fetchPostDetail = createServerFn()
         source: postWithUser.source,
         title: postWithUser.title,
         videoKey: postWithUser.videoKey,
-        videoMetadata: postWithUser.videoMetadata,
+        videoMetadata: JSON.parse(postWithUser.videoMetadata),
       },
       relatedPost,
       tags,
@@ -218,7 +218,7 @@ export const fetchPostDetail = createServerFn()
         image: postWithUser.userImage,
         name: postWithUser.userName,
       },
-    } as any;
+    };
   });
 
 export const uploadPost = createServerFn({ method: "POST" })
@@ -278,7 +278,7 @@ export const uploadPost = createServerFn({ method: "POST" })
         title,
         userId,
         videoKey,
-        videoMetadata: videoMetadata as any, // Cast videoMetadata to any
+        videoMetadata: JSON.stringify(videoMetadata),
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -313,7 +313,7 @@ export const uploadPost = createServerFn({ method: "POST" })
       }
     }
 
-    return newPost as any;
+    return newPost;
   });
 
 // TODO see how this handle partial errors, like if something broke does it create an inconsistent state?
@@ -395,7 +395,7 @@ export const updatePost = createServerFn({ method: "POST" })
       await kysely.deleteFrom("post_tags").where("postId", "=", postId).execute();
     }
 
-    return updatedPost as any;
+    return updatedPost;
   });
 
 export const getPostsByTag = createServerFn()

@@ -23,7 +23,7 @@ export const Route = createFileRoute("/posts/$postId")({
   },
 });
 
-function PostContentComponent() {
+function PostComponent() {
   const { postId } = Route.useParams();
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
@@ -59,6 +59,7 @@ function PostContentComponent() {
           popularTags={[]}
           searchQuery={undefined}
           sortBy="newest"
+          videoMetadata={post.videoMetadata}
         >
           <Suspense
             fallback={
@@ -82,8 +83,4 @@ function PostContentComponent() {
       )}
     </Box>
   );
-}
-
-function PostComponent() {
-  return <PostContentComponent />;
 }
