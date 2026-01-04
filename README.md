@@ -2,18 +2,21 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] split upload and convert into components and utils
+- [ ] better style Video component
 - [ ] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
-- [x] try pulumi to setup project bucket and domain name from scratch with typescript
 - [ ] add dompurify with z.transform to schemas
-- [x] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
 - [ ] cleanup post schemas and server fn
-- [x] Store list scroll position and loaded data state in the URL, so when a user shares the URL, it restores the exact position in the infinite list (like pagination)
 - [ ] prevent the sidebar from blinking of rerender / Suspense somehow
-- [x] in the searchbox add the feature that is in the taginput component with tag suggestion to allow for easier tag search
-- [x] add <Suspense> for suspenseQueries
 - [ ] ask neo how to better handle currentUserId /src/routes/posts/$postId.tsx `const currentUserId = context.user?.id;`
 - [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
+- [ ] better ui
+- [x] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
+- [x] try pulumi to setup project bucket and domain name from scratch with typescript
+- [x] Store list scroll position and loaded data state in the URL, so when a user shares the URL, it restores the exact position in the infinite list (like pagination)
+- [x] in the searchbox add the feature that is in the taginput component with tag suggestion to allow for easier tag search
+- [x] add <Suspense> for suspenseQueries
 - [x] fix upload failing if user doesnt generate a thumbnail
 - [x] virtualize posts of other pages than /posts so /user/id /tags/tag and make component of rendered list to avoid code duplication
 - [x] fix virtualize .window error
@@ -33,16 +36,15 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [x] add comments to posts
 - [x] modify posts
 - [x] add preview image to post
-- [ ] better ui
 - [x] scroll restoration from post to back to posts list (only works in prod build not dev)
 
 ## Secondary
 
-- [x] add tags to posts
 - [ ] add search filters
 - [ ] ? add post ranking
-- [x] use kyselyfy from drizzle to cleanup database types
 - [ ] ffprobe information `ffprobe -v quiet -print_format json -show_format -show_streams /path/video.mp4`
+- [x] use kyselyfy from drizzle to cleanup database types
+- [x] add tags to posts
 
 ## Dev
 

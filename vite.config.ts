@@ -15,9 +15,7 @@ export default defineConfig({
     }),
     tanstackStart(),
     devtools(),
-    nitro({
-      preset: "bun",
-    }),
+    nitro(),
     viteReact(),
     viteStaticCopy({
       targets: [
