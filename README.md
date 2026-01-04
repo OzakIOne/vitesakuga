@@ -4,7 +4,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
 - [ ] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
-- [ ] try pulumni to setup project bucket and domain name from scratch with typescript
+- [x] try pulumi to setup project bucket and domain name from scratch with typescript
 - [ ] add dompurify with z.transform to schemas
 - [x] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
 - [ ] cleanup post schemas and server fn
@@ -43,3 +43,47 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] ? add post ranking
 - [x] use kyselyfy from drizzle to cleanup database types
 - [ ] ffprobe information `ffprobe -v quiet -print_format json -show_format -show_streams /path/video.mp4`
+
+## Dev
+
+```bash
+git clone https://github.com/ozaki/vitesakuga
+cd vitesakuga
+bun i
+bun dev
+```
+
+## Infrastructure Setup
+
+This project uses **Pulumi** to automate the creation of Cloudflare R2 buckets.
+
+### 1. Prerequisites
+
+- A [Cloudflare Account](https://dash.cloudflare.com/)
+- [Pulumi CLI](https://www.pulumi.com/docs/get-started/install/) installed
+- Cloudflare **Account ID** (found on your dashboard)
+- Cloudflare **API Token** with `R2 Edit` permissions
+
+### 2. Deployment
+Navigate to the `infra` directory and configure your credentials:
+
+```bash
+cd infra
+
+# Set your Cloudflare details
+pulumi config set cloudflare:accountId YOUR_ACCOUNT_ID
+pulumi config set cloudflare:apiToken YOUR_API_TOKEN --secret
+
+# Deploy the resources
+pulumi up
+```
+
+### 3. Sync to Environment
+After a successful deployment, run the sync script in the root directory to update your `.env` file:
+
+```bash
+./sync-infra.sh
+```
+
+> **Note:** You will still need to manually generate an **S3 API Token** from the Cloudflare R2 dashboard to get the `CLOUDFLARE_ACCESS_KEY` and `CLOUDFLARE_SECRET_KEY` required in your `.env`.
+
