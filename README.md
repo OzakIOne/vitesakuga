@@ -2,10 +2,11 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
 - [ ] try pulumni to setup project bucket and domain name from scratch with typescript
 - [ ] add dompurify with z.transform to schemas
-- [ ] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
+- [x] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
 - [ ] cleanup post schemas and server fn
 - [x] Store list scroll position and loaded data state in the URL, so when a user shares the URL, it restores the exact position in the infinite list (like pagination)
 - [ ] prevent the sidebar from blinking of rerender / Suspense somehow
