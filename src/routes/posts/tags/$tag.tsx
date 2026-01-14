@@ -28,7 +28,7 @@ function RouteComponent() {
   const navigate = Route.useNavigate();
   const pageSize = 30;
 
-  const { data } = useSuspenseQuery(postsQueryByTag(tag, page, pageSize));
+  const { data } = useSuspenseQuery(postsQueryByTag({ page, pageSize, tag }));
 
   const posts = data.data;
   const popularTags = data.meta.popularTags;

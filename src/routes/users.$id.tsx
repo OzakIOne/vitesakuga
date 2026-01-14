@@ -29,7 +29,7 @@ function UserContent() {
   const pageSize = 30;
 
   const { data } = useSuspenseQuery(
-    userQueryOptions(id, tags ?? [], q ?? "", page, pageSize),
+    userQueryOptions({ page, pageSize, q, tags, userId: id }),
   );
 
   const posts = data.data;

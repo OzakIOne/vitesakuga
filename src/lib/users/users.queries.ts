@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 import { fetchUserPosts, fetchUsers } from "./users.fn";
 
 export const usersKeys = {
@@ -12,13 +12,19 @@ export const usersKeys = {
 // Centralized queryOptions factories for users feature
 const usersQueries = {
   // Single user detail with posts - using infinite pagination
-  detail: (
-    userId: string,
-    tags: string[] = [],
-    q: string = "",
-    page: number,
-    pageSize: number,
-  ) =>
+  detail: ({
+    userId,
+    tags,
+    q,
+    page,
+    pageSize,
+  }: {
+    userId: string;
+    tags: string[];
+    q: string;
+    page: number;
+    pageSize: number;
+  }) =>
     queryOptions({
       gcTime: 10 * 60 * 1000, // 10 minutes
       queryFn: async () => {
@@ -50,12 +56,18 @@ export const usersQueryOptions = () => {
   return usersQueries.listUsers();
 };
 
-export const userQueryOptions = (
-  userId: string,
-  tags: string[],
-  q: string,
-  page: number,
-  pageSize: number,
-) => {
-  return usersQueries.detail(userId, tags, q, page - 1, pageSize);
+export const userQueryOptions = ({
+  userId,
+  tags,
+  q,
+  page,
+  pageSize,
+}: {
+  userId: string;
+  tags: string[];
+  q: string;
+  page: number;
+  pageSize: number;
+}) => {
+  return usersQueries.detail({ page: page - 1, pageSize, q, tags, userId });
 };

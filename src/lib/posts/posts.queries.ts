@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 import { fetchPostDetail, getPostsByTag, searchPosts } from "./posts.fn";
 import type { PostsSearchParams } from "./posts.schema";
 
@@ -14,7 +14,15 @@ export const postsKeys = {
 
 // Centralized queryOptions factories for posts feature
 const postsQueries = {
-  byTag: (tagName: string, page: number, pageSize: number) =>
+  byTag: ({
+    tag,
+    page,
+    pageSize,
+  }: {
+    tag: string;
+    page: number;
+    pageSize: number;
+  }) =>
     queryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes
       queryFn: () => {
@@ -22,11 +30,11 @@ const postsQueries = {
           data: {
             page,
             pageSize,
-            tag: tagName,
+            tag,
           },
         });
       },
-      queryKey: [...postsKeys.byTag(tagName), page, pageSize],
+      queryKey: [...postsKeys.byTag(tag), page, pageSize],
       staleTime: 60 * 1000, // 1 minute
     }),
   // Single post detail
@@ -47,7 +55,15 @@ const postsQueries = {
     dateRange: string,
     initialPage: number,
     pageSize: number,
-  ) => postsQueries.search("", [], sortBy, dateRange, initialPage, pageSize),
+  ) =>
+    postsQueries.search({
+      dateRange,
+      page: initialPage,
+      pageSize,
+      q: "",
+      sortBy,
+      tags: [],
+    }),
 
   // Search posts with infinite scrolling
   search: ({
@@ -137,10 +153,14 @@ export const postQueryDetail = (postId: number) => {
   return postsQueries.detail(postId);
 };
 
-export const postsQueryByTag = (
-  tagName: string,
-  page: number,
-  pageSize: number,
-) => {
-  return postsQueries.byTag(tagName, page - 1, pageSize);
+export const postsQueryByTag = ({
+  tag,
+  page,
+  pageSize,
+}: {
+  tag: string;
+  page: number;
+  pageSize: number;
+}) => {
+  return postsQueries.byTag({ page: page - 1, pageSize, tag });
 };
