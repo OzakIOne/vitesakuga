@@ -8,9 +8,11 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import DOMPurify from "isomorphic-dompurify";
 import { relations } from "node_modules/drizzle-orm";
-import { createInsertSchema, user } from "./auth.schema";
+import { z } from "zod";
 import type { VideoMetadata } from "../../posts/posts.schema";
+import { createInsertSchema, user } from "./auth.schema";
 
 export const tags = pgTable("tags", {
   createdAt: timestamp().defaultNow().notNull(),
@@ -86,4 +88,6 @@ export const comments = pgTable("comments", {
     .notNull(),
 });
 
-export const commentInsertSchema = createInsertSchema(comments);
+export const commentInsertSchema = createInsertSchema(comments, {
+  content: z.string().transform((val) => DOMPurify.sanitize(val)),
+});

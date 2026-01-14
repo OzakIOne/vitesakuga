@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Container,
+  createListCollection,
   FileUpload,
   Heading,
   Icon,
@@ -11,11 +12,12 @@ import {
   Progress,
   Select,
   Text,
-  createListCollection,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { LuUpload } from "react-icons/lu";
+
 const {
   Input,
   ALL_FORMATS,
@@ -115,10 +117,10 @@ function RouteComponent() {
       });
 
       const conversion = await Conversion.init({
+        audio: output.audioCodec ? { codec: output.audioCodec } : undefined,
         input,
         output: mediabunnyOutput,
         video: output.videoCodec ? { codec: output.videoCodec } : undefined,
-        audio: output.audioCodec ? { codec: output.audioCodec } : undefined,
       });
 
       if (!conversion.isValid) {

@@ -20,7 +20,7 @@ export const Pagination = ({
   const showLast = rightRange < totalPages;
 
   return (
-    <HStack justify="center" gap={2} mt={8} mb={8}>
+    <HStack gap={2} justify="center" mb={8} mt={8}>
       <IconButton
         aria-label="Previous page"
         disabled={currentPage <= 1}
@@ -33,9 +33,9 @@ export const Pagination = ({
       {showFirst && (
         <>
           <Button
+            colorPalette={currentPage === 1 ? "blue" : "gray"}
             onClick={() => onPageChange(1)}
             variant={currentPage === 1 ? "solid" : "ghost"}
-            colorPalette={currentPage === 1 ? "blue" : "gray"}
           >
             1
           </Button>
@@ -48,10 +48,10 @@ export const Pagination = ({
         (_, i) => leftRange + i,
       ).map((page) => (
         <Button
+          colorPalette={currentPage === page ? "blue" : "gray"}
           key={page}
           onClick={() => onPageChange(page)}
           variant={currentPage === page ? "solid" : "ghost"}
-          colorPalette={currentPage === page ? "blue" : "gray"}
         >
           {page}
         </Button>
@@ -61,9 +61,9 @@ export const Pagination = ({
         <>
           {rightRange < totalPages - 1 && <Text>...</Text>}
           <Button
+            colorPalette={currentPage === totalPages ? "blue" : "gray"}
             onClick={() => onPageChange(totalPages)}
             variant={currentPage === totalPages ? "solid" : "ghost"}
-            colorPalette={currentPage === totalPages ? "blue" : "gray"}
           >
             {totalPages}
           </Button>

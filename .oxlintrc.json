@@ -1,5 +1,10 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "ultracite/oxlint/core",
+    "ultracite/oxlint/react",
+    "ultracite/oxlint/remix"
+  ],
   "plugins": [
     "react",
     "react-perf",
@@ -12,10 +17,5 @@
   "rules": {
     "jsx-a11y/media-has-caption": "off",
     "sort-imports": "error"
-  },
-  "extends": [
-    "ultracite/oxlint/core",
-    "ultracite/oxlint/react",
-    "ultracite/oxlint/remix"
-  ]
+  }
 }

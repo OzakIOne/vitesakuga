@@ -1,9 +1,9 @@
-import * as schema from "../db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { envServer } from "src/lib/env/server";
 import { db } from "../db/pool";
+import * as schema from "../db/schema";
 
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,

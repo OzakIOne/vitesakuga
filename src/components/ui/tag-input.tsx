@@ -2,10 +2,10 @@ import {
   Badge,
   Box,
   Combobox,
+  createListCollection,
   Icon,
   Portal,
   Wrap,
-  createListCollection,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";

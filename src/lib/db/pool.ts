@@ -1,8 +1,8 @@
-import * as schema from "./schema";
-import { Pool, neon } from "@neondatabase/serverless";
+import { neon, Pool } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { envServer } from "../env/server";
+import * as schema from "./schema";
 
 let pool: Pool | null = null;
 

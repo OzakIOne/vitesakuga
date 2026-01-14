@@ -5,19 +5,19 @@ import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
+  createRootRouteWithContext,
   HeadContent,
   Link,
   Outlet,
   Scripts,
-  createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type * as React from "react";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { NotFound } from "src/components/NotFound";
-import { Provider } from "src/components/ui/provider";
 import { ColorModeButton } from "src/components/ui/color-mode";
+import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";

@@ -1,4 +1,4 @@
-import { Box, HStack, Heading, Image, Text, VStack } from "@chakra-ui/react";
+import { Box, Heading, HStack, Image, Text, VStack } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import type { DbSchemaSelect } from "src/lib/db/schema";

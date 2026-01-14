@@ -1,23 +1,4 @@
 {
-  "name": "vitesakuga",
-  "private": true,
-  "type": "module",
-  "sideEffects": false,
-  "scripts": {
-    "build": "vite build",
-    "db": "drizzle-kit",
-    "dcd": "docker compose down",
-    "dcu": "docker compose up -d",
-    "dev": "vite dev ",
-    "format": "oxfmt --write .",
-    "format:check": "oxfmt --check .",
-    "knip": "knip",
-    "lint": "oxlint . --type-aware --type-check --fix-dangerously",
-    "lint:check": "oxlint . --type-aware --type-check",
-    "serve": "vite preview",
-    "start": "node run .output/server/index.mjs",
-    "tz": "taze major -a -f"
-  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.968.0",
     "@chakra-ui/react": "^3.31.0",
@@ -43,6 +24,7 @@
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
+    "isomorphic-dompurify": "^2.35.0",
     "kysely": "^0.28.9",
     "lodash-es": "^4.17.22",
     "media-chrome": "^4.17.2",
@@ -81,7 +63,27 @@
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^6.0.4"
   },
+  "name": "vitesakuga",
+  "private": true,
+  "scripts": {
+    "biome": "biome check --write",
+    "build": "vite build",
+    "db": "drizzle-kit",
+    "dcd": "docker compose down",
+    "dcu": "docker compose up -d",
+    "dev": "vite dev ",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "knip": "knip",
+    "lint": "oxlint . --type-aware --type-check --fix-dangerously",
+    "lint:check": "oxlint . --type-aware --type-check",
+    "serve": "vite preview",
+    "start": "node run .output/server/index.mjs",
+    "tz": "taze major -a -f"
+  },
+  "sideEffects": false,
   "trustedDependencies": [
     "@parcel/watcher"
-  ]
+  ],
+  "type": "module"
 }

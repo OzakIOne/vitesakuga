@@ -12,8 +12,8 @@ import {
   IconButton,
   Input,
   InputGroup,
-  Stack,
   mergeRefs,
+  Stack,
   useControllableState,
 } from "@chakra-ui/react";
 import * as React from "react";
@@ -39,7 +39,8 @@ export interface PasswordVisibilityProps {
 }
 
 export interface PasswordInputProps
-  extends InputProps, PasswordVisibilityProps {
+  extends InputProps,
+    PasswordVisibilityProps {
   rootProps?: GroupProps;
 }
 

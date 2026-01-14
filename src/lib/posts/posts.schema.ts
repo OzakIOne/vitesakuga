@@ -1,3 +1,4 @@
+import DOMPurify from "isomorphic-dompurify";
 import z from "zod";
 
 export const VideoMetadataSchema = z.object({
@@ -26,13 +27,19 @@ const TagSchema = z.object({
 });
 
 export const FormFileUploadSchema = z.object({
-  content: z.string().min(3, "You must have a length of at least 3"),
+  content: z
+    .string()
+    .min(3, "You must have a length of at least 3")
+    .transform((val) => DOMPurify.sanitize(val)),
   relatedPostId: z.number().or(z.undefined()),
   source: z.url().or(z.literal("")).or(z.undefined()),
   tags: z.array(TagSchema),
-  title: z.string().min(3, "You must have a length of at least 3"),
-  userId: z.string(),
   thumbnail: z.instanceof(File),
+  title: z
+    .string()
+    .min(3, "You must have a length of at least 3")
+    .transform((val) => DOMPurify.sanitize(val)),
+  userId: z.string(),
   video: z.instanceof(File),
   videoMetadata: VideoMetadataSchema,
 });
@@ -41,12 +48,18 @@ export type FileUploadData = z.infer<typeof FormFileUploadSchema>;
 
 // Schema for updating a post
 export const updatePostInputSchema = z.object({
-  content: z.string().min(3, "You must have a length of at least 3"),
+  content: z
+    .string()
+    .min(3, "You must have a length of at least 3")
+    .transform((val) => DOMPurify.sanitize(val)),
   postId: z.number(),
   relatedPostId: z.number().or(z.undefined()),
   source: z.url().or(z.literal("")).or(z.undefined()),
   tags: z.array(TagSchema),
-  title: z.string().min(3, "You must have a length of at least 3"),
+  title: z
+    .string()
+    .min(3, "You must have a length of at least 3")
+    .transform((val) => DOMPurify.sanitize(val)),
 });
 
 export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;

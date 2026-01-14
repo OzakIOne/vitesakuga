@@ -28,8 +28,8 @@ import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
 import {
-  type MiddlewareUser,
   authMiddleware,
+  type MiddlewareUser,
 } from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
@@ -93,8 +93,9 @@ function RouteComponent() {
     videoFile: File,
     timestamps: number[],
   ): Promise<GeneratedThumbnail[]> => {
-    const { Input, ALL_FORMATS, BlobSource, CanvasSink } =
-      await import("mediabunny");
+    const { Input, ALL_FORMATS, BlobSource, CanvasSink } = await import(
+      "mediabunny"
+    );
     const input = new Input({
       formats: ALL_FORMATS,
       source: new BlobSource(videoFile),
@@ -110,8 +111,8 @@ function RouteComponent() {
       const blob = await new Promise<Blob | null>(async (resolve) => {
         if ("convertToBlob" in result.canvas) {
           const b = await (result.canvas as OffscreenCanvas).convertToBlob({
-            type: "image/jpeg",
             quality: 0.8,
+            type: "image/jpeg",
           });
           resolve(b);
         } else {
@@ -132,8 +133,8 @@ function RouteComponent() {
           },
         );
         results.push({
-          url: URL.createObjectURL(blob),
           file,
+          url: URL.createObjectURL(blob),
         });
       }
     }

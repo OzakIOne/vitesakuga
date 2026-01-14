@@ -13,7 +13,7 @@ import {
   Wrap,
 } from "@chakra-ui/react";
 import type { RegisteredRouter } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type {
   PostsSearchParams,
   VideoMetadata,

@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as cloudflare from "@pulumi/cloudflare";
+import * as pulumi from "@pulumi/pulumi";
 
 const config = new pulumi.Config();
 // We'll try to get the accountId from config, or fallback to an environment variable
