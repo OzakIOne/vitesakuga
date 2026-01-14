@@ -6,7 +6,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] better style Video component
 - [ ] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
-- [ ] add dompurify with z.transform to schemas
+- [x] add dompurify with z.transform to schemas
 - [ ] cleanup post schemas and server fn
 - [ ] prevent the sidebar from blinking of rerender / Suspense somehow
 - [ ] ask neo how to better handle currentUserId /src/routes/posts/$postId.tsx `const currentUserId = context.user?.id;`

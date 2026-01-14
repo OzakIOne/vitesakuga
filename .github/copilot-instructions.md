@@ -6,22 +6,23 @@ applyTo: "**"
 
 ## Project Overview
 
-ViteSakuga is a fullstack web app using TanStack Start, TanStack Router, Better Auth, Kysely, TanStack Form, Zod, and ChakraUI. The project follows a client-first, type-safe architecture with full-stack capabilities.
+ViteSakuga is a fullstack web app using React 19, TanStack Start, TanStack Router, Better Auth, Kysely, Drizzle ORM, TanStack Form, Zod, Tailwind CSS v4, and Chakra UI v3. The project follows a client-first, type-safe architecture with full-stack capabilities.
 
 ## Key Patterns & Conventions
 
 ### Core Technologies & Libraries
 
-- **React**: UI library for building user interfaces
-- **TypeScript**: Type-safe programming language
-- **Vite**: Next-generation frontend build tooling
-- **TanStack Router**: Type-safe routing solution
-- **TanStack Query**: Data fetching and state management
-- **TanStack Form**: Form handling and validation
-- **TanStack Start**: Full-stack React framework integration
-- **Better Auth**: Authentication solution
-- **TailwindCSS**: Utility-first CSS framework
-- **PostgreSQL**: Primary database
+- **React**: React 19 UI library.
+- **TypeScript**: Type-safe programming language.
+- **Vite**: Next-generation frontend build tooling.
+- **TanStack Router**: Type-safe routing solution.
+- **TanStack Query**: Data fetching and state management.
+- **TanStack Form**: Form handling and validation.
+- **TanStack Start**: Full-stack React framework integration.
+- **Better Auth**: Authentication solution.
+- **TailwindCSS**: Tailwind CSS v4 utility-first CSS framework.
+- **Chakra UI**: Chakra UI v3 component library.
+- **PostgreSQL**: Primary database (Neon for production and local postgres with docker for development).
 - **Drizzle ORM**: Type-safe SQL toolkit
 - **Kysely**: Type-safe SQL query builder
 
