@@ -21,10 +21,7 @@ export default defineConfig({
       targets: [
         {
           dest: "",
-          src: Bun.resolveSync(
-            "node_modules/mediainfo.js/dist/MediaInfoModule.wasm",
-            import.meta.dirname,
-          ),
+          src: "node_modules/mediainfo.js/dist/MediaInfoModule.wasm",
         },
       ],
     }),

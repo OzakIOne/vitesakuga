@@ -40,9 +40,9 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
 ## Secondary
 
-- [ ] add search filters
 - [ ] ? add post ranking
-- [ ] ffprobe information `ffprobe -v quiet -print_format json -show_format -show_streams /path/video.mp4`
+- [x] add search filters
+- [x] mediainfo
 - [x] use kyselyfy from drizzle to cleanup database types
 - [x] add tags to posts
 

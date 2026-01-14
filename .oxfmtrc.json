@@ -3,12 +3,10 @@
   "ignorePatterns": [
     "routeTree.gen.ts",
     "drizzle/"
-    // "*.json", // TODO remove when oxfmt 0.19+ is not broken any more /oven-sh/bun/issues/25658  oxc-project/oxc/pull/17302
-    // "*.md",
-    // "*.yml",
-    // "*.css",
-    // "*.webmanifest",
   ],
   "useTabs": false,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "experimentalSortPackageJson": {
+    "sortScripts": true
+  }
 }
