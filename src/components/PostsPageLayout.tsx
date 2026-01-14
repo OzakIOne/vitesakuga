@@ -46,6 +46,7 @@ export function PostsPageLayout({
   fromRoute,
   videoMetadata,
 }: PostsPageLayoutProps) {
+  const isPostDetail = fromRoute === "/posts/$postId";
   return (
     <Box p={4} w="full">
       <Grid gap={6} templateColumns={{ base: "1fr", lg: "1fr 3fr" }} w="full">
@@ -79,16 +80,18 @@ export function PostsPageLayout({
               </Box>
             )}
 
-            <Box border="1px" borderRadius="md" p={4} shadow="md">
-              <Heading mb={3} size="sm">
-                Filters
-              </Heading>
-              <PostFilters
-                dateRange={dateRange}
-                fromRoute={fromRoute}
-                sortBy={sortBy}
-              />
-            </Box>
+            {!isPostDetail && (
+              <Box border="1px" borderRadius="md" p={4} shadow="md">
+                <Heading mb={3} size="sm">
+                  Filters
+                </Heading>
+                <PostFilters
+                  dateRange={dateRange}
+                  fromRoute={fromRoute}
+                  sortBy={sortBy}
+                />
+              </Box>
+            )}
 
             {videoMetadata && (
               <Box border="1px" borderRadius="md" p={4} shadow="md">

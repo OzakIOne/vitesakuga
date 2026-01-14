@@ -50,14 +50,21 @@ const postsQueries = {
   ) => postsQueries.search("", [], sortBy, dateRange, initialPage, pageSize),
 
   // Search posts with infinite scrolling
-  search: (
-    q: string,
-    tags: string[],
-    sortBy: string,
-    dateRange: string,
-    page: number,
-    pageSize: number,
-  ) =>
+  search: ({
+    q,
+    tags,
+    sortBy,
+    dateRange,
+    page,
+    pageSize,
+  }: {
+    q: string;
+    tags: string[];
+    sortBy: string;
+    dateRange: string;
+    page: number;
+    pageSize: number;
+  }) =>
     queryOptions({
       gcTime: 5 * 60 * 1000,
       queryFn: () => {
@@ -101,15 +108,29 @@ const postsQueries = {
 // Backward compatibility exports
 // Renamed to match behavior, though keeping export for now might break consumers expecting infinite query options.
 // But `index.tsx` is the consumer calling this, so I will update `index.tsx` to call `postsQueryOptions`.
-export const postsQueryOptions = (
-  q: PostsSearchParams["q"],
-  tags: PostsSearchParams["tags"],
-  sortBy: PostsSearchParams["sortBy"],
-  dateRange: PostsSearchParams["dateRange"],
-  page: number,
-  pageSize: number,
-) => {
-  return postsQueries.search(q, tags, sortBy, dateRange, page - 1, pageSize);
+export const postsQueryOptions = ({
+  q,
+  tags,
+  dateRange,
+  page,
+  pageSize,
+  sortBy,
+}: {
+  q: PostsSearchParams["q"];
+  tags: PostsSearchParams["tags"];
+  sortBy: PostsSearchParams["sortBy"];
+  dateRange: PostsSearchParams["dateRange"];
+  page: number;
+  pageSize: number;
+}) => {
+  return postsQueries.search({
+    dateRange,
+    page: page - 1,
+    pageSize,
+    q,
+    sortBy,
+    tags,
+  });
 };
 
 export const postQueryDetail = (postId: number) => {

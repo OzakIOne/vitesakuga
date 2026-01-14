@@ -12,6 +12,7 @@ import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postQueryDetail } from "src/lib/posts/posts.queries";
+import { postsSearchSchema } from "src/lib/posts/posts.schema";
 import z from "zod";
 
 export const Route = createFileRoute("/posts/$postId")({
@@ -25,10 +26,12 @@ export const Route = createFileRoute("/posts/$postId")({
       postId: z.coerce.number().parse(params.postId),
     }),
   },
+  validateSearch: postsSearchSchema,
 });
 
 function PostComponent() {
   const { postId } = Route.useParams();
+  const { dateRange, q, sortBy, tags } = Route.useSearch();
   const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
 
@@ -58,11 +61,12 @@ function PostComponent() {
         />
       ) : (
         <PostsPageLayout
-          dateRange="all"
+          dateRange={dateRange}
           fromRoute="/posts/$postId"
           popularTags={[]}
-          searchQuery={undefined}
-          sortBy="newest"
+          searchQuery={q}
+          selectedTags={tags}
+          sortBy={sortBy}
           videoMetadata={post.videoMetadata}
         >
           <Suspense

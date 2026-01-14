@@ -2,24 +2,22 @@ import { Box, Heading, HStack, Image, Text, VStack } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import type { DbSchemaSelect } from "src/lib/db/schema";
+import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 
 type PostListProps = {
   post: DbSchemaSelect["posts"];
-  q?: string;
-  pageSize?: number;
+  searchParams?: PostsSearchParams;
 };
 
-function PostCardComponent({ post, q, pageSize }: PostListProps) {
+function PostCardComponent({ post, searchParams }: PostListProps) {
   const BaseURL = encodeURI(
     "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
   );
+
   return (
     <Link
       params={{ postId: post.id }}
-      search={{
-        q,
-        size: pageSize,
-      }}
+      search={searchParams}
       to="/posts/$postId"
     >
       <VStack cursor="pointer" gap={2} h="full">

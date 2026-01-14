@@ -24,12 +24,16 @@ export const Route = createFileRoute("/posts/")({
 });
 
 function PostsContent() {
-  const { q, tags, sortBy, dateRange, page } = Route.useSearch();
+  const searchParams = Route.useSearch();
+  const { q, tags, sortBy, dateRange, page } = searchParams;
   const pageSize = 30; // Requested size 30
   const navigate = Route.useNavigate();
 
   const { data } = useSuspenseQuery(
-    postsQueryOptions(q, tags ?? [], sortBy, dateRange, page, pageSize),
+    postsQueryOptions({
+      ...searchParams,
+      pageSize,
+    }),
   );
 
   const posts = data.data;
@@ -92,7 +96,7 @@ function PostsContent() {
                 >
                   {posts.map((post) => (
                     <Box key={post.id}>
-                      <PostCard post={post} />
+                      <PostCard post={post} searchParams={searchParams} />
                     </Box>
                   ))}
                 </SimpleGrid>
