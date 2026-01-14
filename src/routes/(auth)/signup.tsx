@@ -192,7 +192,9 @@ function SignupForm() {
               }}
             </form.Field>
 
-            <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
               {([canSubmit, isSubmitting]) => (
                 <Button className="btn" disabled={!canSubmit} type="submit">
                   {isSubmitting ? "Signing up..." : "Sign up"}

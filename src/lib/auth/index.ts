@@ -1,11 +1,18 @@
+import * as schema from "../db/schema";
 import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { envServer } from "src/lib/env/server";
-import { getPoolSingleton } from "../db/pool";
+import { db } from "../db/pool";
 
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,
-  database: getPoolSingleton(),
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      ...schema,
+    },
+  }),
 
   // https://www.better-auth.com/docs/concepts/oauth
   // socialProviders: {

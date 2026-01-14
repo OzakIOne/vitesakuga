@@ -14,13 +14,20 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import * as React from "react";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
-import { type MiddlewareUser, authMiddleware } from "src/lib/auth/auth.middleware";
+import {
+  type MiddlewareUser,
+  authMiddleware,
+} from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import z from "zod";
 
@@ -146,7 +153,9 @@ function RouteComponent() {
             <div className="min-w-0 flex-1">
               <Heading size="lg">{user.name}</Heading>
               <Text>{user.email}</Text>
-              <Text>Member since: {new Date(user.createdAt).toLocaleDateString()}</Text>
+              <Text>
+                Member since: {new Date(user.createdAt).toLocaleDateString()}
+              </Text>
             </div>
           </div>
         </div>
@@ -205,19 +214,20 @@ function RouteComponent() {
                         />
                       </InputGroup>
                     </Field.Root>
-                    {!field.state.meta.errors && field.state.value !== user?.image && (
-                      <div className="mt-4 rounded-lg bg-gray-50 p-4">
-                        <Text fontWeight="medium" mb={3}>
-                          Preview:
-                        </Text>
-                        <AvatarGroup>
-                          <Avatar.Root size="2xl">
-                            <Avatar.Fallback />
-                            <Avatar.Image src={field.state.value} />
-                          </Avatar.Root>
-                        </AvatarGroup>
-                      </div>
-                    )}
+                    {!field.state.meta.errors &&
+                      field.state.value !== user?.image && (
+                        <div className="mt-4 rounded-lg bg-gray-50 p-4">
+                          <Text fontWeight="medium" mb={3}>
+                            Preview:
+                          </Text>
+                          <AvatarGroup>
+                            <Avatar.Root size="2xl">
+                              <Avatar.Fallback />
+                              <Avatar.Image src={field.state.value} />
+                            </Avatar.Root>
+                          </AvatarGroup>
+                        </div>
+                      )}
                     <FieldInfo field={field} />
                   </div>
                 )}
@@ -226,7 +236,12 @@ function RouteComponent() {
               <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
                 {([isSubmitting]) => (
                   <Center>
-                    <Button disabled={isSubmitting} fontWeight="medium" marginTop="4" type="submit">
+                    <Button
+                      disabled={isSubmitting}
+                      fontWeight="medium"
+                      marginTop="4"
+                      type="submit"
+                    >
                       {isSubmitting ? "Saving..." : "Save Profile Changes"}
                     </Button>
                   </Center>
@@ -274,7 +289,12 @@ function RouteComponent() {
               </passwordForm.Field>
 
               <Center>
-                <Button colorPalette="orange" fontWeight="medium" margin="4" type="submit">
+                <Button
+                  colorPalette="orange"
+                  fontWeight="medium"
+                  margin="4"
+                  type="submit"
+                >
                   Update Password
                 </Button>
               </Center>
@@ -296,7 +316,8 @@ function RouteComponent() {
                   </Dialog.Header>
                   <Dialog.Body>
                     <p>
-                      This action cannot be undone and all your data will be permanently removed.
+                      This action cannot be undone and all your data will be
+                      permanently removed.
                     </p>
                   </Dialog.Body>
                   <Dialog.Footer>

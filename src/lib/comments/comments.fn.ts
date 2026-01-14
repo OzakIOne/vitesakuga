@@ -72,7 +72,9 @@ export const deleteComment = createServerFn({ method: "POST" })
     });
 
     if (!session?.user) {
-      throw new Error("Unauthorized: You must be logged in to delete a comment");
+      throw new Error(
+        "Unauthorized: You must be logged in to delete a comment",
+      );
     }
 
     // Verify that the comment belongs to the current user

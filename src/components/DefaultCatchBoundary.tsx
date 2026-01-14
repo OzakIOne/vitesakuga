@@ -1,6 +1,12 @@
 import { Button } from "@chakra-ui/react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
-import { ErrorComponent, Link, rootRouteId, useMatch, useRouter } from "@tanstack/react-router";
+import {
+  ErrorComponent,
+  Link,
+  rootRouteId,
+  useMatch,
+  useRouter,
+} from "@tanstack/react-router";
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter();

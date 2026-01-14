@@ -67,7 +67,9 @@ export const Route = createFileRoute("/convert")({
 
 function RouteComponent() {
   const [file, setFile] = useState<File | null>(null);
-  const [output, setOutput] = useState<(typeof SUPPORTED_OUTPUTS)[0] | undefined>();
+  const [output, setOutput] = useState<
+    (typeof SUPPORTED_OUTPUTS)[0] | undefined
+  >();
   const [isConverting, setIsConverting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +103,8 @@ function RouteComponent() {
 
       let outputFormat;
       if (output.container === "mp4") outputFormat = new Mp4OutputFormat();
-      else if (output.container === "webm") outputFormat = new WebMOutputFormat();
+      else if (output.container === "webm")
+        outputFormat = new WebMOutputFormat();
       else outputFormat = new MkvOutputFormat();
 
       const target = new BufferTarget();
@@ -120,7 +123,8 @@ function RouteComponent() {
 
       if (!conversion.isValid) {
         setError(
-          "Conversion is invalid: " + conversion.discardedTracks.map((t) => t.reason).join(", "),
+          "Conversion is invalid: " +
+            conversion.discardedTracks.map((t) => t.reason).join(", "),
         );
         return;
       }
@@ -163,8 +167,8 @@ function RouteComponent() {
           Video/Audio Converter
         </Heading>
         <Text mb={4}>
-          Convert your video or audio file to another format directly in your browser using
-          WebCodecs. Powered by{" "}
+          Convert your video or audio file to another format directly in your
+          browser using WebCodecs. Powered by{" "}
           <Link color="blue.500" href="https://mediabunny.dev">
             Mediabunny
           </Link>
@@ -199,7 +203,9 @@ function RouteComponent() {
               collection={outputFormats}
               disabled={isConverting}
               onSelect={(details) => {
-                const o = SUPPORTED_OUTPUTS.find((opt) => opt.label === details.value);
+                const o = SUPPORTED_OUTPUTS.find(
+                  (opt) => opt.label === details.value,
+                );
                 if (o) setOutput(o);
               }}
               size="md"
@@ -305,7 +311,8 @@ function RouteComponent() {
         )}
 
         <Text fontSize="sm">
-          Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac, aac, m3u8
+          Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac,
+          aac, m3u8
         </Text>
         <Text fontSize="sm">
           Supported output: MP4 (H.264/AAC), WebM (VP9/Opus), Matroska (Remux)

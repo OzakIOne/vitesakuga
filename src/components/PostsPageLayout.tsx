@@ -14,7 +14,10 @@ import {
 } from "@chakra-ui/react";
 import type { RegisteredRouter } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import type { PostsSearchParams, VideoMetadata } from "src/lib/posts/posts.schema";
+import type {
+  PostsSearchParams,
+  VideoMetadata,
+} from "src/lib/posts/posts.schema";
 import { type PopularTag, PopularTagsSection } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
@@ -49,7 +52,10 @@ export function PostsPageLayout({
         <GridItem>
           <VStack align="stretch" gap={4}>
             <Box border="1px" borderRadius="md" p={4} shadow="md">
-              <SearchBox defaultTags={selectedTags} defaultValue={searchQuery} />
+              <SearchBox
+                defaultTags={selectedTags}
+                defaultValue={searchQuery}
+              />
             </Box>
 
             {selectedTags.length > 0 && (
@@ -77,7 +83,11 @@ export function PostsPageLayout({
               <Heading mb={3} size="sm">
                 Filters
               </Heading>
-              <PostFilters dateRange={dateRange} fromRoute={fromRoute} sortBy={sortBy} />
+              <PostFilters
+                dateRange={dateRange}
+                fromRoute={fromRoute}
+                sortBy={sortBy}
+              />
             </Box>
 
             {videoMetadata && (

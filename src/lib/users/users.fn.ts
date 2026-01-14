@@ -9,7 +9,9 @@ export const fetchUsers = createServerFn().handler(async () => {
   const data = await kysely.selectFrom("user").selectAll().execute();
   const parsed = z.array(userSelectSchema).safeParse(data);
   if (!parsed.success) {
-    throw new Error(`There was an error processing the search results ${parsed.error}`);
+    throw new Error(
+      `There was an error processing the search results ${parsed.error}`,
+    );
   }
 
   return parsed.data;
@@ -32,10 +34,15 @@ export const fetchUserPosts = createServerFn()
     }
 
     // Fetch user's posts with pagination
-    let query = kysely.selectFrom("posts").selectAll().where("userId", "=", userId);
+    let query = kysely
+      .selectFrom("posts")
+      .selectAll()
+      .where("userId", "=", userId);
 
     if (q) {
-      query = query.where((eb) => eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`));
+      query = query.where((eb) =>
+        eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
+      );
     }
 
     if (tags.length > 0) {
@@ -48,7 +55,9 @@ export const fetchUserPosts = createServerFn()
     }
 
     // Get total count for pagination metadata
-    const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
+    const countQuery = query
+      .clearSelect()
+      .select((eb) => eb.fn.countAll().as("count"));
     const countResult = await countQuery.executeTakeFirst();
     const totalCount = Number(countResult?.count ?? 0);
 
@@ -72,7 +81,11 @@ export const fetchUserPosts = createServerFn()
       .innerJoin("post_tags", "tags.id", "post_tags.tagId")
       .innerJoin("posts", "posts.id", "post_tags.postId")
       .where("posts.userId", "=", userId)
-      .select(["tags.id", "tags.name", kysely.fn.count("post_tags.postId").as("postCount")])
+      .select([
+        "tags.id",
+        "tags.name",
+        kysely.fn.count("post_tags.postId").as("postCount"),
+      ])
       .groupBy(["tags.id", "tags.name"])
       .orderBy("postCount", "desc")
       .limit(10)

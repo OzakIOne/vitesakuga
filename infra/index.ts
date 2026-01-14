@@ -6,13 +6,15 @@ const config = new pulumi.Config();
 const accountId = config.get("accountId") || process.env.CLOUDFLARE_ACCOUNT_ID;
 
 if (!accountId) {
-    throw new Error("Cloudflare Account ID is required. Set it via 'pulumi config set cloudflare:accountId <id>'");
+  throw new Error(
+    "Cloudflare Account ID is required. Set it via 'pulumi config set cloudflare:accountId <id>'",
+  );
 }
 
 // Create an R2 bucket
 const bucket = new cloudflare.R2Bucket("sakuga-bucket", {
-    accountId: accountId,
-    name: "vitesakuga-media", // This will be the name of the bucket
+  accountId: accountId,
+  name: "vitesakuga-media", // This will be the name of the bucket
 });
 
 // Output the bucket name and account ID for the .env file

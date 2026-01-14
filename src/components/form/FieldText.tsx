@@ -1,4 +1,10 @@
-import { Field, Input, type InputProps, Textarea, type TextareaProps } from "@chakra-ui/react";
+import {
+  Field,
+  Input,
+  type InputProps,
+  Textarea,
+  type TextareaProps,
+} from "@chakra-ui/react";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { FieldInfo } from "./FieldInfo";
 

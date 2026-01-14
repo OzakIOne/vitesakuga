@@ -111,6 +111,7 @@ pnpm db migrate
 - **Forms**: Use TanStack Form with Zod schemas
 
 ## Additional Resources
+
 - **TanStack**: For comprehensive Tanstack guidance and best practices, see the official TanStack llms.txt file: https://tanstack.com/llms.txt every page has its markdown version just add .md to the url
 - **ChakraUI**: For comprehensive ChakraUI guidance and best practices, see the official ChakraUI llms.txt file: https://chakra-ui.com/llms.txt
 - **Drizzle**: For comprehensive Drizzle guidance and best practices, see the official Drizzle llms.txt file: https://orm.drizzle.team/llms.txt

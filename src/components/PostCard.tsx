@@ -10,7 +10,9 @@ type PostListProps = {
 };
 
 function PostCardComponent({ post, q, pageSize }: PostListProps) {
-  const BaseURL = encodeURI("https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/");
+  const BaseURL = encodeURI(
+    "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
+  );
   return (
     <Link
       params={{ postId: post.id }}

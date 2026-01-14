@@ -67,6 +67,7 @@ This project uses **Pulumi** to automate the creation of Cloudflare R2 buckets.
 - Cloudflare **API Token** with `R2 Edit` permissions
 
 ### 2. Deployment
+
 Navigate to the `infra` directory and configure your credentials:
 
 ```bash
@@ -81,6 +82,7 @@ pulumi up
 ```
 
 ### 3. Sync to Environment
+
 After a successful deployment, run the sync script in the root directory to update your `.env` file:
 
 ```bash
@@ -88,4 +90,3 @@ After a successful deployment, run the sync script in the root directory to upda
 ```
 
 > **Note:** You will still need to manually generate an **S3 API Token** from the Cloudflare R2 dashboard to get the `CLOUDFLARE_ACCESS_KEY` and `CLOUDFLARE_SECRET_KEY` required in your `.env`.
-

@@ -28,7 +28,9 @@ function UserContent() {
   const navigate = Route.useNavigate();
   const pageSize = 30;
 
-  const { data } = useSuspenseQuery(userQueryOptions(id, tags ?? [], q ?? "", page, pageSize));
+  const { data } = useSuspenseQuery(
+    userQueryOptions(id, tags ?? [], q ?? "", page, pageSize),
+  );
 
   const posts = data.data;
   const popularTags = data.meta.popularTags;
@@ -75,7 +77,11 @@ function UserContent() {
             </Box>
           ) : (
             <>
-              <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4} mb={8}>
+              <SimpleGrid
+                columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }}
+                gap={4}
+                mb={8}
+              >
                 {posts.map((post) => (
                   <Box key={post.id}>
                     <PostCard post={post} />

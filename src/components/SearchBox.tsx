@@ -47,12 +47,17 @@ export function SearchBox({
   const filteredTags = useMemo(() => {
     return allTags
       .filter((tag) => !tags.includes(tag.name))
-      .filter((tag) => tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()))
+      .filter((tag) =>
+        tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()),
+      )
       .map((tag) => tag.name);
   }, [allTags, tagSearchValue, tags]);
 
   // ? usememo useful?
-  const collection = useMemo(() => createListCollection({ items: filteredTags }), [filteredTags]);
+  const collection = useMemo(
+    () => createListCollection({ items: filteredTags }),
+    [filteredTags],
+  );
 
   const handleAddTag = (details: Combobox.ValueChangeDetails) => {
     const newValues = details.value;
@@ -126,7 +131,14 @@ export function SearchBox({
           {tags.length > 0 && (
             <Wrap gap="2" mb={2}>
               {tags.map((tag) => (
-                <Badge alignItems="center" display="flex" gap={1} key={tag} px={2} py={1}>
+                <Badge
+                  alignItems="center"
+                  display="flex"
+                  gap={1}
+                  key={tag}
+                  px={2}
+                  py={1}
+                >
                   {tag}
                   <Icon
                     _hover={{ color: "red.500" }}
@@ -143,7 +155,9 @@ export function SearchBox({
             closeOnSelect
             collection={collection}
             multiple
-            onInputValueChange={(details) => setTagSearchValue(details.inputValue)}
+            onInputValueChange={(details) =>
+              setTagSearchValue(details.inputValue)
+            }
             onValueChange={handleAddTag}
             value={tags}
           >

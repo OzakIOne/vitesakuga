@@ -7,7 +7,11 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) => {
+export const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) => {
   const siblings = 1;
   const leftRange = Math.max(1, currentPage - siblings);
   const rightRange = Math.min(totalPages, currentPage + siblings);
@@ -39,7 +43,10 @@ export const Pagination = ({ currentPage, totalPages, onPageChange }: Pagination
         </>
       )}
 
-      {Array.from({ length: rightRange - leftRange + 1 }, (_, i) => leftRange + i).map((page) => (
+      {Array.from(
+        { length: rightRange - leftRange + 1 },
+        (_, i) => leftRange + i,
+      ).map((page) => (
         <Button
           key={page}
           onClick={() => onPageChange(page)}

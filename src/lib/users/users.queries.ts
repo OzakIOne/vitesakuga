@@ -12,7 +12,13 @@ export const usersKeys = {
 // Centralized queryOptions factories for users feature
 const usersQueries = {
   // Single user detail with posts - using infinite pagination
-  detail: (userId: string, tags: string[] = [], q: string = "", page: number, pageSize: number) =>
+  detail: (
+    userId: string,
+    tags: string[] = [],
+    q: string = "",
+    page: number,
+    pageSize: number,
+  ) =>
     queryOptions({
       gcTime: 10 * 60 * 1000, // 10 minutes
       queryFn: async () => {

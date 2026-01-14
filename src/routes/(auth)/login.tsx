@@ -70,12 +70,16 @@ function LoginForm() {
             </Field.Root>
 
             <Button className="btn" disabled={isLoading} type="submit">
-              {isLoading && <span className="loading loading-spinner loading-lg" />}
+              {isLoading && (
+                <span className="loading loading-spinner loading-lg" />
+              )}
               {isLoading ? "Logging in..." : "Login"}
             </Button>
           </div>
           {errorMessage && (
-            <span className="text-center text-destructive text-sm">{errorMessage}</span>
+            <span className="text-center text-destructive text-sm">
+              {errorMessage}
+            </span>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Button

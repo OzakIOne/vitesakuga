@@ -1,4 +1,12 @@
-import { Badge, Box, Combobox, Icon, Portal, Wrap, createListCollection } from "@chakra-ui/react";
+import {
+  Badge,
+  Box,
+  Combobox,
+  Icon,
+  Portal,
+  Wrap,
+  createListCollection,
+} from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
@@ -24,13 +32,17 @@ export function TagInput({ value, onChange }: TagInputProps) {
     const selectedNames = value.map((tag) => tag.name);
     return allTags
       .filter((tag) => !selectedNames.includes(tag.name))
-      .filter((tag) => tag.name.toLowerCase().includes(searchValue.toLowerCase()));
+      .filter((tag) =>
+        tag.name.toLowerCase().includes(searchValue.toLowerCase()),
+      );
   }, [allTags, searchValue, value]);
 
   // Check if we should show "Create new tag" option
   const showCreateOption = useMemo(() => {
     if (!searchValue.trim()) return false;
-    const exactMatch = allTags.some((tag) => tag.name.toLowerCase() === searchValue.toLowerCase());
+    const exactMatch = allTags.some(
+      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase(),
+    );
     return !exactMatch;
   }, [searchValue, allTags]);
 
@@ -84,7 +96,14 @@ export function TagInput({ value, onChange }: TagInputProps) {
         {value.length > 0 && (
           <Wrap gap="2" mb={2}>
             {value.map((tag) => (
-              <Badge alignItems="center" display="flex" gap={1} key={tag.name} px={2} py={1}>
+              <Badge
+                alignItems="center"
+                display="flex"
+                gap={1}
+                key={tag.name}
+                px={2}
+                py={1}
+              >
                 {tag.name}
                 <Icon
                   _hover={{ color: "red.500" }}

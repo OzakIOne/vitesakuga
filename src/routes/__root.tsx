@@ -107,7 +107,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <Center gap={2} left={0} position="absolute" py={2} right={0} top={0} zIndex={10}>
+        <Center
+          gap={2}
+          left={0}
+          position="absolute"
+          py={2}
+          right={0}
+          top={0}
+          zIndex={10}
+        >
           <Link
             activeOptions={{ exact: true }}
             activeProps={{

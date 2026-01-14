@@ -34,7 +34,11 @@ export const searchPosts = createServerFn()
     // Search filter
     if (q) {
       query = query.where((eb) =>
-        eb("posts.title", "ilike", `%${q}%`).or("posts.content", "ilike", `%${q}%`),
+        eb("posts.title", "ilike", `%${q}%`).or(
+          "posts.content",
+          "ilike",
+          `%${q}%`,
+        ),
       );
     }
 
@@ -68,20 +72,27 @@ export const searchPosts = createServerFn()
     }
 
     // Get total count for pagination metadata
-    const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
+    const countQuery = query
+      .clearSelect()
+      .select((eb) => eb.fn.countAll().as("count"));
 
     const countResult = await countQuery.executeTakeFirst();
     const totalCount = Number(countResult?.count ?? 0);
 
     // Sort
-    query = query.orderBy("posts.createdAt", sortBy === "oldest" ? "asc" : "desc");
+    query = query.orderBy(
+      "posts.createdAt",
+      sortBy === "oldest" ? "asc" : "desc",
+    );
 
     // Apply offset and limit
     const items = await query.offset(offset).limit(pageSize).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
-      throw new Error(`Error processing search results: ${parsed.error.message}`);
+      throw new Error(
+        `Error processing search results: ${parsed.error.message}`,
+      );
     }
 
     const posts = parsed.data;
@@ -96,7 +107,11 @@ export const searchPosts = createServerFn()
 
     if (q) {
       popularTagsQuery = popularTagsQuery.where((eb) =>
-        eb("posts.title", "ilike", `%${q}%`).or("posts.content", "ilike", `%${q}%`),
+        eb("posts.title", "ilike", `%${q}%`).or(
+          "posts.content",
+          "ilike",
+          `%${q}%`,
+        ),
       );
     }
 
@@ -116,11 +131,19 @@ export const searchPosts = createServerFn()
           break;
       }
 
-      popularTagsQuery = popularTagsQuery.where("posts.createdAt", ">=", startDate);
+      popularTagsQuery = popularTagsQuery.where(
+        "posts.createdAt",
+        ">=",
+        startDate,
+      );
     }
 
     const popularTagsResult = await popularTagsQuery
-      .select(["tags.id", "tags.name", kysely.fn.count("post_tags.postId").as("postCount")])
+      .select([
+        "tags.id",
+        "tags.name",
+        kysely.fn.count("post_tags.postId").as("postCount"),
+      ])
       .groupBy(["tags.id", "tags.name"])
       .orderBy("postCount", "desc")
       .limit(10)
@@ -209,7 +232,7 @@ export const fetchPostDetail = createServerFn()
         source: postWithUser.source,
         title: postWithUser.title,
         videoKey: postWithUser.videoKey,
-        videoMetadata: JSON.parse(postWithUser.videoMetadata),
+        videoMetadata: postWithUser.videoMetadata,
       },
       relatedPost,
       tags,
@@ -227,13 +250,24 @@ export const uploadPost = createServerFn({ method: "POST" })
     const normalized = {
       ...raw,
       tags: raw.tags ? JSON.parse(raw.tags as string) : [],
-      videoMetadata: raw.videoMetadata ? JSON.parse(raw.videoMetadata as string) : undefined,
+      videoMetadata: raw.videoMetadata
+        ? JSON.parse(raw.videoMetadata as string)
+        : undefined,
     };
     return FormFileUploadSchema.parse(normalized);
   })
   .handler(async ({ data }) => {
-    const { video, thumbnail, title, content, userId, source, relatedPostId, tags, videoMetadata } =
-      data;
+    const {
+      video,
+      thumbnail,
+      title,
+      content,
+      userId,
+      source,
+      relatedPostId,
+      tags,
+      videoMetadata,
+    } = data;
 
     const ext = video.name.split(".").pop()!;
 
@@ -295,7 +329,9 @@ export const uploadPost = createServerFn({ method: "POST" })
           const newTag = await kysely
             .insertInto("tags")
             .values({ name: tag.name })
-            .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
+            .onConflict((oc) =>
+              oc.column("name").doUpdateSet({ name: tag.name }),
+            )
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
@@ -365,7 +401,10 @@ export const updatePost = createServerFn({ method: "POST" })
     // Handle tags update - delete existing and recreate
     if (tags && tags.length > 0) {
       // Delete existing post tags
-      await kysely.deleteFrom("post_tags").where("postId", "=", postId).execute();
+      await kysely
+        .deleteFrom("post_tags")
+        .where("postId", "=", postId)
+        .execute();
 
       // Process each tag - create new ones and collect all tag IDs
       const allTagIds: number[] = [];
@@ -376,7 +415,9 @@ export const updatePost = createServerFn({ method: "POST" })
           const newTag = await kysely
             .insertInto("tags")
             .values({ name: tag.name })
-            .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
+            .onConflict((oc) =>
+              oc.column("name").doUpdateSet({ name: tag.name }),
+            )
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
@@ -392,7 +433,10 @@ export const updatePost = createServerFn({ method: "POST" })
       }
     } else {
       // Delete all tags if no tags provided
-      await kysely.deleteFrom("post_tags").where("postId", "=", postId).execute();
+      await kysely
+        .deleteFrom("post_tags")
+        .where("postId", "=", postId)
+        .execute();
     }
 
     return updatedPost;
@@ -421,7 +465,9 @@ export const getPostsByTag = createServerFn()
       .selectAll("posts");
 
     // Get total count for pagination metadata
-    const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
+    const countQuery = query
+      .clearSelect()
+      .select((eb) => eb.fn.countAll().as("count"));
     const countResult = await countQuery.executeTakeFirst();
     const totalCount = Number(countResult?.count ?? 0);
 
@@ -453,7 +499,11 @@ export const getPostsByTag = createServerFn()
           .where("tags.name", "=", tagName)
           .select("posts.id"),
       )
-      .select(["tags.id", "tags.name", kysely.fn.count("post_tags.postId").as("postCount")])
+      .select([
+        "tags.id",
+        "tags.name",
+        kysely.fn.count("post_tags.postId").as("postCount"),
+      ])
       .groupBy(["tags.id", "tags.name"])
       .orderBy("postCount", "desc")
       .limit(10)

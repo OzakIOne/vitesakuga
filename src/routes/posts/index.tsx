@@ -1,4 +1,12 @@
-import { Box, GridItem, SimpleGrid, Spinner, Stack, Text, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  GridItem,
+  SimpleGrid,
+  Spinner,
+  Stack,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, useCallback } from "react";
@@ -78,7 +86,10 @@ function PostsContent() {
               </Box>
             ) : (
               <>
-                <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4}>
+                <SimpleGrid
+                  columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }}
+                  gap={4}
+                >
                   {posts.map((post) => (
                     <Box key={post.id}>
                       <PostCard post={post} />

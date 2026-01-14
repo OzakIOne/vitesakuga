@@ -10,11 +10,18 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
 import { addComment, deleteComment } from "src/lib/comments/comments.fn";
-import { commentsKeys, commentsQueryGetComments } from "src/lib/comments/comments.queries";
+import {
+  commentsKeys,
+  commentsQueryGetComments,
+} from "src/lib/comments/comments.queries";
 import { toaster } from "./ui/toaster";
 
 type CommentsProps = {
@@ -24,18 +31,24 @@ type CommentsProps = {
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const [comment, setComment] = useState("");
-  const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(null);
+  const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
+    null,
+  );
   const queryClient = useQueryClient();
 
   const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
 
   const addCommentMutation = useMutation({
-    mutationFn: (newComment: { postId: number; content: string; userId: string }) =>
-      addComment({ data: newComment }),
+    mutationFn: (newComment: {
+      postId: number;
+      content: string;
+      userId: string;
+    }) => addComment({ data: newComment }),
     onError: (error) => {
       toaster.create({
         closable: true,
-        description: error instanceof Error ? error.message : "Failed to add comment",
+        description:
+          error instanceof Error ? error.message : "Failed to add comment",
         duration: 5000,
         title: "Error adding comment",
         type: "error",
@@ -55,11 +68,13 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   });
 
   const deleteCommentMutation = useMutation({
-    mutationFn: (data: { commentId: number; postId: number }) => deleteComment({ data }),
+    mutationFn: (data: { commentId: number; postId: number }) =>
+      deleteComment({ data }),
     onError: (error) => {
       toaster.create({
         closable: true,
-        description: error instanceof Error ? error.message : "Failed to delete comment",
+        description:
+          error instanceof Error ? error.message : "Failed to delete comment",
         duration: 5000,
         title: "Error deleting comment",
         type: "error",
@@ -181,7 +196,10 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
                 <Dialog.Title>Delete Comment?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <p>Are you sure you want to delete this comment? This action cannot be undone.</p>
+                <p>
+                  Are you sure you want to delete this comment? This action
+                  cannot be undone.
+                </p>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.ActionTrigger asChild>

@@ -42,8 +42,12 @@ const postsQueries = {
       staleTime: 60 * 1000, // 1 minute
     }),
   // List all posts with infinite scrolling
-  list: (sortBy: string, dateRange: string, initialPage: number, pageSize: number) =>
-    postsQueries.search("", [], sortBy, dateRange, initialPage, pageSize),
+  list: (
+    sortBy: string,
+    dateRange: string,
+    initialPage: number,
+    pageSize: number,
+  ) => postsQueries.search("", [], sortBy, dateRange, initialPage, pageSize),
 
   // Search posts with infinite scrolling
   search: (
@@ -85,7 +89,11 @@ const postsQueries = {
           },
         });
       },
-      queryKey: [...postsKeys.search(q, tags, sortBy, dateRange), page, pageSize],
+      queryKey: [
+        ...postsKeys.search(q, tags, sortBy, dateRange),
+        page,
+        pageSize,
+      ],
       staleTime: 60 * 1000,
     }),
 };
@@ -108,6 +116,10 @@ export const postQueryDetail = (postId: number) => {
   return postsQueries.detail(postId);
 };
 
-export const postsQueryByTag = (tagName: string, page: number, pageSize: number) => {
+export const postsQueryByTag = (
+  tagName: string,
+  page: number,
+  pageSize: number,
+) => {
   return postsQueries.byTag(tagName, page - 1, pageSize);
 };

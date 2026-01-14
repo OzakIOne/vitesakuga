@@ -8,6 +8,13 @@
       "when": 1766354352744,
       "tag": "0000_even_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767628470416,
+      "tag": "0001_slow_wendigo",
+      "breakpoints": true
     }
   ]
 }
