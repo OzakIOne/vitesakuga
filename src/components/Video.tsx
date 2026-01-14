@@ -3,17 +3,18 @@ import {
   MediaController,
   MediaFullscreenButton,
   MediaMuteButton,
-  MediaPipButton,
   MediaPlayButton,
-  MediaPlaybackRateButton,
   MediaSeekBackwardButton,
   MediaSeekForwardButton,
   MediaTimeDisplay,
   MediaTimeRange,
   MediaVolumeRange,
 } from "media-chrome/react";
+import {
+  MediaPlaybackRateMenu,
+  MediaPlaybackRateMenuButton,
+} from "media-chrome/react/menu";
 import React from "react";
-import ReactPlayer from "react-player";
 
 const BaseURL = encodeURI(
   "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
@@ -27,25 +28,33 @@ type VideoProps = {
 
 export const Video = React.forwardRef<any, VideoProps>(
   ({ url, bypass, frameRate }, ref) => {
+    const uuid = React.useId();
+    const controllerId = `controller-${uuid}`;
+    const menuId = `menu-${uuid}`;
+    const buttonId = `button-${uuid}`;
+
     return (
-      <MediaController
-        ref={ref}
-        style={{
-          aspectRatio: "16/9",
-          width: "100%",
-        }}
-      >
-        <ReactPlayer
-          crossOrigin="anonymous"
-          playsInline
-          slot="media"
-          src={bypass ? url : BaseURL + url}
-          style={{
-            height: "100%",
-            width: "100%",
-          }}
-        />
-        <MediaControlBar>
+      <div className="flex w-full flex-col">
+        <MediaController id={controllerId} ref={ref}>
+          <video
+            muted
+            slot="media"
+            src={bypass ? url : BaseURL + url}
+            style={{
+              height: "100%",
+              width: "100%",
+            }}
+            suppressHydrationWarning
+          />
+          <MediaPlaybackRateMenu
+            anchor={buttonId}
+            hidden
+            id={menuId}
+            rates={[0.25, 0.5, 0.75, 1]}
+          />
+        </MediaController>
+        {/* @ts-expect-error - mediacontroller attribute is not typed in the react wrapper */}
+        <MediaControlBar mediacontroller={controllerId}>
           <MediaPlayButton />
           <MediaSeekBackwardButton
             seekOffset={frameRate ? 1 / frameRate : 0.04}
@@ -70,11 +79,10 @@ export const Video = React.forwardRef<any, VideoProps>(
 
           <MediaMuteButton />
           <MediaVolumeRange />
-          <MediaPlaybackRateButton rates={[0.25, 0.5, 0.75, 1]} />
+          <MediaPlaybackRateMenuButton id={buttonId} invokeTarget={menuId} />
           <MediaFullscreenButton />
-          {/* <MediaPipButton /> */}
         </MediaControlBar>
-      </MediaController>
+      </div>
     );
   },
 );
