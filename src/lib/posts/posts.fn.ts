@@ -434,15 +434,7 @@ export const updatePost = createServerFn({ method: "POST" })
   });
 
 export const getPostsByTag = createServerFn()
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        page: z.number().min(0).default(0),
-        tag: z.string(),
-      })
-      .strict()
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => postByTagSchema.parse(input))
   .handler(async ({ data }) => {
     const { tag: tagName, page } = data;
     const offset = page * PAGE_SIZE;

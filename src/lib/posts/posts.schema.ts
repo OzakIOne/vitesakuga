@@ -82,3 +82,12 @@ export const searchPostsBaseSchema = z
   .strict();
 
 export type PostsSearchParams = z.infer<typeof searchPostsBaseSchema>;
+
+export const postByTagSchema = z
+  .object({
+    page: z.number().min(0).default(0),
+    tag: z.string(),
+  })
+  .strict();
+
+export type PostByTagParams = z.infer<typeof postByTagSchema>;
