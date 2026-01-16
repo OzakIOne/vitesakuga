@@ -1,6 +1,13 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/router.tsx", "src/routeTree.gen.ts"],
-  "ignore": ["**/*.d.ts", "**/types/**"],
-  "project": ["src/**/*.{js,ts,tsx}"]
+  "entry": [
+    "src/router.tsx"
+  ],
+  "ignore": [
+    "**/*.d.ts",
+    "**/types/**"
+  ],
+  "project": [
+    "src/**/*.{js,ts,tsx}"
+  ]
 }
