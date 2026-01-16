@@ -167,7 +167,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 onClick={async () => {
                   await authClient.signOut();
                   await queryClient.invalidateQueries({
-                    queryKey: usersKeys.user,
+                    queryKey: usersKeys.userInfo,
                   });
                   await router.invalidate();
                 }}

@@ -52,8 +52,8 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 ```bash
 git clone https://github.com/ozaki/vitesakuga
 cd vitesakuga
-bun i
-bun dev
+pnpm i
+pnpm dev
 ```
 
 ## Infrastructure Setup

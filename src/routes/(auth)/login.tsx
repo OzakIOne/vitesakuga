@@ -43,7 +43,7 @@ function LoginForm() {
           setIsLoading(false);
         },
         onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: usersKeys.user });
+          await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
           navigate({ to: redirectUrl });
         },
       },

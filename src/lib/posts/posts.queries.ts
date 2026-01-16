@@ -8,33 +8,24 @@ export const postsKeys = {
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
   list: (sortBy?: string, dateRange?: string) =>
     [...postsKeys.all, "list", { dateRange, sortBy }] as const,
-  search: (q: string, tags: string[], sortBy?: string, dateRange?: string) =>
-    [...postsKeys.all, "search", q, { dateRange, sortBy, tags }] as const,
+  search: ({ dateRange, page, sortBy, q, tags }: PostsSearchParams) =>
+    [...postsKeys.all, "search", dateRange, page, sortBy, q, tags] as const,
 } as const;
 
 // Centralized queryOptions factories for posts feature
 const postsQueries = {
-  byTag: ({
-    tag,
-    page,
-    pageSize,
-  }: {
-    tag: string;
-    page: number;
-    pageSize: number;
-  }) =>
+  byTag: ({ tag, page }: { tag: string; page: number }) =>
     queryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes
       queryFn: () => {
         return getPostsByTag({
           data: {
             page,
-            pageSize,
             tag,
           },
         });
       },
-      queryKey: [...postsKeys.byTag(tag), page, pageSize],
+      queryKey: [...postsKeys.byTag(tag), page],
       staleTime: 60 * 1000, // 1 minute
     }),
   // Single post detail
@@ -49,118 +40,29 @@ const postsQueries = {
       queryKey: postsKeys.detail(postId),
       staleTime: 60 * 1000, // 1 minute
     }),
-  // List all posts with infinite scrolling
-  list: (
-    sortBy: string,
-    dateRange: string,
-    initialPage: number,
-    pageSize: number,
-  ) =>
-    postsQueries.search({
-      dateRange,
-      page: initialPage,
-      pageSize,
-      q: "",
-      sortBy,
-      tags: [],
-    }),
 
   // Search posts with infinite scrolling
-  search: ({
-    q,
-    tags,
-    sortBy,
-    dateRange,
-    page,
-    pageSize,
-  }: {
-    q: string;
-    tags: string[];
-    sortBy: string;
-    dateRange: string;
-    page: number;
-    pageSize: number;
-  }) =>
+  search: (params: PostsSearchParams) =>
     queryOptions({
       gcTime: 5 * 60 * 1000,
       queryFn: () => {
         return searchPosts({
-          data: {
-            dateRange,
-            page, // 1-based page from UI, or 0-based?
-            // The server function now expects `page: number` (0-based per earlier plan for API, but UI usually 1-based).
-            // Wait, my server implementation used `const offset = page * pageSize;`
-            // So if I pass page=0, offset=0. If page=1, offset=30.
-            // If the UI is 1-based (page=1), I should pass page-1 to server if server expects 0-based index.
-            // Let's check `posts.fn.ts`.
-            // `const { page, pageSize } = data; const offset = page * pageSize;`
-            // Yes, so server expects 0-based page index.
-            // If UI uses 1-based, I should subtract 1 here.
-            // However, the `posts/index.tsx` probably handles the page number.
-            // Let's decided: `posts.queries.ts` takes the "raw" value from the route?
-            // The route usually has `page: 1` as default.
-            // So if route has page=1, query should pass page=0 to server.
-            // ERROR: I previously decided `page` in server schema is 0-based.
-            // But `postsSearchSchema` in `posts.schema.ts` (for the ROUTE) has `page: z.number().int().min(1).optional().default(1)`.
-            // So the route has 1-based page.
-            // So here in queryOptions, I should convert.
-            // `page: page - 1`
-            pageSize,
-            q,
-            sortBy,
-            tags,
-          },
+          data: params,
         });
       },
-      queryKey: [
-        ...postsKeys.search(q, tags, sortBy, dateRange),
-        page,
-        pageSize,
-      ],
+      queryKey: postsKeys.search(params),
       staleTime: 60 * 1000,
     }),
 };
 
-// Backward compatibility exports
-// Renamed to match behavior, though keeping export for now might break consumers expecting infinite query options.
-// But `index.tsx` is the consumer calling this, so I will update `index.tsx` to call `postsQueryOptions`.
-export const postsQueryOptions = ({
-  q,
-  tags,
-  dateRange,
-  page,
-  pageSize,
-  sortBy,
-}: {
-  q: PostsSearchParams["q"];
-  tags: PostsSearchParams["tags"];
-  sortBy: PostsSearchParams["sortBy"];
-  dateRange: PostsSearchParams["dateRange"];
-  page: number;
-  pageSize: number;
-}) => {
-  return postsQueries.search({
-    dateRange,
-    page: page - 1,
-    pageSize,
-    q,
-    sortBy,
-    tags,
-  });
+export const postsQueryOptions = (params: PostsSearchParams) => {
+  return postsQueries.search(params);
 };
 
 export const postQueryDetail = (postId: number) => {
   return postsQueries.detail(postId);
 };
 
-export const postsQueryByTag = ({
-  tag,
-  page,
-  pageSize,
-}: {
-  tag: string;
-  page: number;
-  pageSize: number;
-}) => {
-  return postsQueries.byTag({ page: page - 1, pageSize, tag });
+export const postsQueryByTag = (params: { tag: string; page: number }) => {
+  return postsQueries.byTag(params);
 };

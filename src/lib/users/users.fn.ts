@@ -17,11 +17,13 @@ export const fetchUsers = createServerFn().handler(async () => {
   return parsed.data;
 });
 
+const PAGE_SIZE = 30;
+
 export const fetchUserPosts = createServerFn()
   .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))
   .handler(async ({ data }) => {
-    const { userId, tags, q, page, pageSize } = data;
-    const offset = page * pageSize;
+    const { userId, tags, q, page } = data;
+    const offset = page * PAGE_SIZE;
 
     const userInfo = await kysely
       .selectFrom("user")
@@ -64,7 +66,7 @@ export const fetchUserPosts = createServerFn()
     query = query.orderBy("id", "desc");
 
     // Apply offset and limit
-    const items = await query.offset(offset).limit(pageSize).execute();
+    const items = await query.offset(offset).limit(PAGE_SIZE).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
@@ -72,7 +74,7 @@ export const fetchUserPosts = createServerFn()
     }
 
     const posts = parsed.data;
-    const hasMore = offset + pageSize < totalCount;
+    const hasMore = offset + PAGE_SIZE < totalCount;
     const hasPrevious = offset > 0;
 
     // Calculate popular tags for this user's posts
@@ -91,7 +93,7 @@ export const fetchUserPosts = createServerFn()
       .limit(10)
       .execute();
 
-    const totalPages = Math.ceil(totalCount / pageSize);
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
     const currentPage = page + 1;
 
     return {
@@ -101,7 +103,7 @@ export const fetchUserPosts = createServerFn()
           currentPage,
           hasMore,
           hasPrevious,
-          limit: pageSize,
+          limit: PAGE_SIZE,
           offset,
           total: totalCount,
           totalPages,

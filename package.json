@@ -61,7 +61,8 @@
     "typescript": "^5.9.3",
     "ultracite": "7.0.11",
     "vite": "^7.3.1",
-    "vite-tsconfig-paths": "^6.0.4"
+    "vite-tsconfig-paths": "^6.0.4",
+    "vitest": "^4.0.17"
   },
   "name": "vitesakuga",
   "private": true,
@@ -79,6 +80,7 @@
     "lint:check": "oxlint . --type-aware --type-check",
     "serve": "vite preview",
     "start": "node run .output/server/index.mjs",
+    "test": "vitest -w",
     "tz": "taze major -a -f"
   },
   "sideEffects": false,

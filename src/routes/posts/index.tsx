@@ -15,26 +15,20 @@ import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { envClient } from "src/lib/env/client";
 import { postsQueryOptions } from "src/lib/posts/posts.queries";
-import { postsSearchSchema } from "src/lib/posts/posts.schema";
+import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 
 export const Route = createFileRoute("/posts/")({
   component: PostsContent,
   ssr: "data-only",
-  validateSearch: postsSearchSchema,
+  validateSearch: searchPostsBaseSchema,
 });
 
 function PostsContent() {
   const searchParams = Route.useSearch();
   const { q, tags, sortBy, dateRange, page } = searchParams;
-  const pageSize = 30; // Requested size 30
   const navigate = Route.useNavigate();
 
-  const { data } = useSuspenseQuery(
-    postsQueryOptions({
-      ...searchParams,
-      pageSize,
-    }),
-  );
+  const { data } = useSuspenseQuery(postsQueryOptions(searchParams));
 
   const posts = data.data;
   const { totalPages } = data.meta.pagination;

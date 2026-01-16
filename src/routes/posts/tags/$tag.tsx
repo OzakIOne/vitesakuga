@@ -13,22 +13,21 @@ import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postsQueryByTag } from "src/lib/posts/posts.queries";
-import { postsSearchSchema } from "src/lib/posts/posts.schema";
+import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
   // fix initial window is not defined error
   ssr: "data-only",
-  validateSearch: postsSearchSchema,
+  validateSearch: searchPostsBaseSchema,
 });
 
 function RouteComponent() {
   const { tag } = Route.useParams();
   const { sortBy, dateRange, page } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const pageSize = 30;
 
-  const { data } = useSuspenseQuery(postsQueryByTag({ page, pageSize, tag }));
+  const { data } = useSuspenseQuery(postsQueryByTag({ page, tag }));
 
   const posts = data.data;
   const popularTags = data.meta.popularTags;

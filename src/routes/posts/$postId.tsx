@@ -12,7 +12,7 @@ import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { postQueryDetail } from "src/lib/posts/posts.queries";
-import { postsSearchSchema } from "src/lib/posts/posts.schema";
+import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import z from "zod";
 
 export const Route = createFileRoute("/posts/$postId")({
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/posts/$postId")({
       postId: z.coerce.number().parse(params.postId),
     }),
   },
-  validateSearch: postsSearchSchema,
+  validateSearch: searchPostsBaseSchema,
 });
 
 function PostComponent() {

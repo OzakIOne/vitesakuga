@@ -8,7 +8,7 @@ import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
-import { postsSearchSchema } from "src/lib/posts/posts.schema";
+import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { userQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
@@ -19,17 +19,16 @@ export const Route = createFileRoute("/users/$id")({
   },
   // fix initial window is not defined error
   ssr: "data-only",
-  validateSearch: postsSearchSchema,
+  validateSearch: searchPostsBaseSchema,
 });
 
 function UserContent() {
   const { id } = Route.useParams();
   const { sortBy, dateRange, tags, q, page } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const pageSize = 30;
 
   const { data } = useSuspenseQuery(
-    userQueryOptions({ page, pageSize, q, tags, userId: id }),
+    userQueryOptions({ page, q, tags, userId: id }),
   );
 
   const posts = data.data;

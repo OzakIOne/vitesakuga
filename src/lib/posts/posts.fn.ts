@@ -9,10 +9,12 @@ import { auth } from "../auth";
 import { envServer } from "../env/server";
 import {
   FormFileUploadSchema,
-  searchPostsServerSchema,
+  searchPostsBaseSchema,
   updatePostInputSchema,
 } from "./posts.schema";
 import { mapPopularTags } from "./posts.utils";
+
+const PAGE_SIZE = 30;
 
 const cfclient = new S3Client({
   credentials: {
@@ -24,10 +26,10 @@ const cfclient = new S3Client({
 });
 
 export const searchPosts = createServerFn()
-  .inputValidator((input: unknown) => searchPostsServerSchema.parse(input))
+  .inputValidator((input: unknown) => searchPostsBaseSchema.parse(input))
   .handler(async ({ data }) => {
-    const { q, tags, page, pageSize, sortBy, dateRange } = data;
-    const offset = page * pageSize;
+    const { q, tags, page, sortBy, dateRange } = data;
+    const offset = page * PAGE_SIZE;
     console.log("Query for page", page);
     let query = kysely.selectFrom("posts").selectAll("posts");
 
@@ -86,7 +88,7 @@ export const searchPosts = createServerFn()
     );
 
     // Apply offset and limit
-    const items = await query.offset(offset).limit(pageSize).execute();
+    const items = await query.offset(offset).limit(PAGE_SIZE).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
@@ -96,7 +98,7 @@ export const searchPosts = createServerFn()
     }
 
     const posts = parsed.data;
-    const hasMore = offset + pageSize < totalCount;
+    const hasMore = offset + PAGE_SIZE < totalCount;
     const hasPrevious = offset > 0;
 
     // Calculate popular tags for posts matching the search query
@@ -149,18 +151,7 @@ export const searchPosts = createServerFn()
       .limit(10)
       .execute();
 
-    const totalPages = Math.ceil(totalCount / pageSize);
-    // currentPage in response can be 1-based for frontend convenience if desired,
-    // but let's keep it consistent with input (0-based) or return both.
-    // Standard practice often returns the requested page.
-    // The previous implementation returned `Math.floor(offset / size) + 1` (1-based).
-    // Let's stick to returning 1-based current page to be friendly to UI, or matches legacy behavior?
-    // User requested "page=0 is 0-30", so input is 0-based.
-    // Let's return the 0-based page to match input, OR return 1-based for UI display.
-    // I'll return `page` (0-based) as `pageIndex` and `page + 1` as `currentPage` to be safe/explicit?
-    // Actually the previous return was:
-    // currentPage: Math.floor(offset / size) + 1;
-    // Let's keep `currentPage` as 1-based for UI.
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
     const currentPage = page + 1;
 
     return {
@@ -170,7 +161,7 @@ export const searchPosts = createServerFn()
           currentPage,
           hasMore,
           hasPrevious,
-          limit: pageSize,
+          limit: PAGE_SIZE,
           offset,
           total: totalCount,
           totalPages,
@@ -447,14 +438,14 @@ export const getPostsByTag = createServerFn()
     z
       .object({
         page: z.number().min(0).default(0),
-        pageSize: z.number().min(1).max(100).default(20),
         tag: z.string(),
       })
+      .strict()
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { tag: tagName, page, pageSize } = data;
-    const offset = page * pageSize;
+    const { tag: tagName, page } = data;
+    const offset = page * PAGE_SIZE;
 
     // Fetch posts for the specific tag with pagination
     let query = kysely
@@ -475,7 +466,7 @@ export const getPostsByTag = createServerFn()
     query = query.orderBy("posts.createdAt", "desc");
 
     // Apply offset and limit
-    const items = await query.offset(offset).limit(pageSize).execute();
+    const items = await query.offset(offset).limit(PAGE_SIZE).execute();
 
     const parsed = z.array(postsSelectSchema).safeParse(items);
     if (!parsed.success) {
@@ -483,7 +474,7 @@ export const getPostsByTag = createServerFn()
     }
 
     const posts = parsed.data;
-    const hasMore = offset + pageSize < totalCount;
+    const hasMore = offset + PAGE_SIZE < totalCount;
     const hasPrevious = offset > 0;
 
     // Calculate popular tags for posts that share the same tag
@@ -509,7 +500,7 @@ export const getPostsByTag = createServerFn()
       .limit(10)
       .execute();
 
-    const totalPages = Math.ceil(totalCount / pageSize);
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
     const currentPage = page + 1;
 
     return {
@@ -519,7 +510,7 @@ export const getPostsByTag = createServerFn()
           currentPage,
           hasMore,
           hasPrevious,
-          limit: pageSize,
+          limit: PAGE_SIZE,
           offset,
           total: totalCount,
           totalPages,
