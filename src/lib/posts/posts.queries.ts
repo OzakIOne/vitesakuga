@@ -7,8 +7,8 @@ export const postsKeys = {
   byTag: ({ page, tag }: PostByTagParams) =>
     [...postsKeys.all, "byTag", page, tag] as const,
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
-  search: ({ dateRange, page, sortBy, q, tags }: PostsSearchParams) =>
-    [...postsKeys.all, "search", dateRange, page, sortBy, q, tags] as const,
+  search: (params: PostsSearchParams) =>
+    [...postsKeys.all, "search", params] as const,
 } as const;
 
 // Centralized queryOptions factories for posts feature

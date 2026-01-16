@@ -17,7 +17,6 @@ import {
   useNavigate,
   useRouteContext,
 } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import type { MediaInfo, MediaInfoResult } from "mediainfo.js";
 import mediaInfoFactory from "mediainfo.js";
 import { useEffect, useRef, useState } from "react";

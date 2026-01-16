@@ -45,7 +45,11 @@ export const FormFileUploadSchema = z
       .min(3, "You must have a length of at least 3")
       .transform((val) => DOMPurify.sanitize(val)),
     userId: z.string(),
-    video: z.instanceof(File),
+    video: z
+      .instanceof(File)
+      .refine((file) => /\.(mp4|avi|mov|wmv|flv|mkv)$/i.test(file.name), {
+        message: "Only video files are allowed",
+      }),
     videoMetadata: VideoMetadataSchema,
   })
   .strict();

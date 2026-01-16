@@ -80,3 +80,20 @@ export function mapPopularTags(
     postCount: Number(r.postCount),
   }));
 }
+
+const ALLOWED_VIDEO_EXTENSIONS = [
+  "ogm",
+  "wmv",
+  "mpg",
+  "webm",
+  "ogv",
+  "mov",
+  "asx",
+  "mpeg",
+  "mp4",
+  "m4v",
+  "avi",
+  "mkv",
+] as const;
+
+export type AllowedVideoExtension = (typeof ALLOWED_VIDEO_EXTENSIONS)[number];

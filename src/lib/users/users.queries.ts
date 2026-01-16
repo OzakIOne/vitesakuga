@@ -4,14 +4,7 @@ import type { FetchUserInput } from "./users.schema";
 
 export const usersKeys = {
   all: ["users"] as const,
-  detail: ({ userId, tags, q, page }: FetchUserInput) => [
-    ...usersKeys.all,
-    "detail",
-    userId,
-    q,
-    tags,
-    page,
-  ],
+  detail: (params: FetchUserInput) => [...usersKeys.all, "detail", params],
   list: () => [...usersKeys.all, "list"] as const,
   userInfo: ["userInfo"] as const,
 } as const;

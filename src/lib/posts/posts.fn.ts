@@ -9,10 +9,15 @@ import { auth } from "../auth";
 import { envServer } from "../env/server";
 import {
   FormFileUploadSchema,
+  postByTagSchema,
   searchPostsBaseSchema,
   updatePostInputSchema,
 } from "./posts.schema";
-import { mapPopularTags } from "./posts.utils";
+import {
+  type AllowedVideoExtension,
+  assertAllowedVideoFile,
+  mapPopularTags,
+} from "./posts.utils";
 
 const PAGE_SIZE = 30;
 
@@ -260,13 +265,14 @@ export const uploadPost = createServerFn({ method: "POST" })
       videoMetadata,
     } = data;
 
-    const ext = video.name.split(".").pop()!;
+    const videoExt = video.name.split(".").pop() as AllowedVideoExtension;
 
-    const videoKey = `videos/${userId}/${randomUUID()}.${ext}`;
-    const thumbnailKey = `thumbnails/${userId}/${videoKey
-      .split("/")
-      .pop()!
-      .replace(new RegExp(`\\.${ext}$`), ".jpg")}`;
+    const videoExtName = `${videoExt}`;
+    const videoBaseName = `${randomUUID()}`;
+    const videoKey = `videos/${userId}/${videoBaseName}.${videoExtName}`;
+
+    const thumbnailBaseName = `${videoBaseName}`;
+    const thumbnailKey = `thumbnails/${userId}/${thumbnailBaseName}.jpg`;
 
     const videoCommand = new PutObjectCommand({
       Body: Buffer.from(await video.arrayBuffer()),
