@@ -209,6 +209,7 @@ function SignupForm() {
               <svg
                 className="h-6 w-6 shrink-0 stroke-current"
                 fill="none"
+                role="graphics-symbol"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >

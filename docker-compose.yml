@@ -1,15 +1,15 @@
 services:
-  postgres:
-    container_name: postgres
-    image: postgres:17
-    ports:
-      - "5432:5432"
-    env_file:
-      - .env
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - my_network
+  # postgres:
+  #   container_name: postgres
+  #   image: postgres:18
+  #   ports:
+  #     - "5432:5432"
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   networks:
+  #     - my_network
 
   # drizzle-gate:
   #   image: ghcr.io/drizzle-team/gateway:latest
@@ -25,10 +25,21 @@ services:
   #   networks:
   #     - my_network
 
+  rustfs-alpha:
+    image: rustfs/rustfs:alpha
+    container_name: rustfs-alpha
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs-alpha:/data
+    restart: unless-stopped
+
 networks:
   my_network:
     driver: bridge
 
 volumes:
-  pgdata:
+  rustfs-alpha:
+  # pgdata:
   # drizzle:

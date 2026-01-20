@@ -2,34 +2,7 @@
 applyTo: "**"
 ---
 
-# ViteSakuga Project Instructions
-
-## Project Overview
-
-ViteSakuga is a fullstack web app using React 19, TanStack Start, TanStack Router, Better Auth, Kysely, Drizzle ORM, TanStack Form, Zod, Tailwind CSS v4, and Chakra UI v3. The project follows a client-first, type-safe architecture with full-stack capabilities.
-
 ## Key Patterns & Conventions
-
-### Core Technologies & Libraries
-
-- **React**: React 19 UI library.
-- **TypeScript**: Type-safe programming language.
-- **Vite**: Next-generation frontend build tooling.
-- **TanStack Router**: Type-safe routing solution.
-- **TanStack Query**: Data fetching and state management.
-- **TanStack Form**: Form handling and validation.
-- **TanStack Start**: Full-stack React framework integration.
-- **Better Auth**: Authentication solution.
-- **TailwindCSS**: Tailwind CSS v4 utility-first CSS framework.
-- **Chakra UI**: Chakra UI v3 component library.
-- **PostgreSQL**: Primary database (Neon for production and local postgres with docker for development).
-- **Drizzle ORM**: Type-safe SQL toolkit
-- **Kysely**: Type-safe SQL query builder
-
-### Authentication
-
-- Uses **Better Auth**
-- Server config in `src/auth/index.ts`
 
 ### Server Functions
 
@@ -62,60 +35,13 @@ ViteSakuga is a fullstack web app using React 19, TanStack Start, TanStack Route
 - Provides immediate feedback on validation errors
 - Handles form submission with loading states
 
-## Project Structure
+## Detailed Guidelines
 
-### Source Directory Layout
+For more specific guidelines, refer to the following documents:
 
-```
-src/
-├── components/         # Reusable React components
-├── db/                # Database schema and configuration
-├── routes/            # Application routes and pages
-├── styles/            # Global styles and theme configuration
-└── utils/            # Utility functions and helpers
-```
-
-### Database
-
-- PostgreSQL database with **Drizzle ORM** schemas and **Kysely** type-safe SQL query client.
-- **Kysely** client used for type-safe SQL queries in `src/lib/db/kysely.ts`
-- **Drizzle** Schemas used for kysely client in `src/lib/db/schemas/`
-- Generate a migration file after every schema change: `pnpm db generate`
-- Apply migrations with `pnpm db migrate` to test if they work correctly.
-
-### Available Scripts
-
-```bash
-# Generate migrations
-pnpm db generate
-
-# Push schema changes
-pnpm db push
-
-# Apply migrations
-pnpm db migrate
-```
-
-## File Structure Conventions
-
-- `src/routes/` - Tanstack Router file-based router structure.
-- `src/lib/posts/posts.fn.ts` - Server functions for posts feature.
-- `src/lib/posts/posts.schema.ts` - Schemas for forms and server functions.
-
-## When Adding Features
-
-- **New routes**: Add to `src/routes/` with `createFileRoute()` pattern
-- **Auth changes**: Modify `better-auth` config in `src/lib/auth` and update `src/routes/_app/route.tsx` beforeLoad for client.
-- **Data fetching**: Use loaders for critical data, TanStack Query for non-blocking data
-- **Styling**: Use ChakraUI and Tailwind CSS in `src/components/`
-- **Database**: Use Kysely in `src/lib/db/kysely` for type-safe queries, and
-- **Forms**: Use TanStack Form with Zod schemas
-
-## Additional Resources
-
-- **TanStack**: For comprehensive Tanstack guidance and best practices, see the official TanStack llms.txt file: https://tanstack.com/llms.txt every page has its markdown version just add .md to the url
-- **ChakraUI**: For comprehensive ChakraUI guidance and best practices, see the official ChakraUI llms.txt file: https://chakra-ui.com/llms.txt
-- **Drizzle**: For comprehensive Drizzle guidance and best practices, see the official Drizzle llms.txt file: https://orm.drizzle.team/llms.txt
-- **Zod**: For comprehensive Zod guidance and best practices, see the official Zod llms.txt file: https://zod.dev/llms.txt
-- **Kysely**: For comprehensive Kysely guidance and best practices, see the official Kysely llms.txt file: https://kysely.dev/llms.txt
-- **Mediabunny**: For comprehensive Mediabunny guidance and best practices, see the official Mediabunny llms.txt file: https://mediabunny.dev/llms.txt
+*   [TypeScript & React Conventions](../docs/typescript-react-conventions.md)
+*   [Server Functions & API Design](../docs/server-functions-api.md)
+*   [Database Conventions (Drizzle ORM & Kysely)](../docs/database-conventions.md)
+*   [Project Structure & File Conventions](../docs/project-structure.md)
+*   [Feature Implementation Guidelines](../docs/feature-implementation-guidelines.md)
+*   [Additional Resources](../docs/additional-resources.md)

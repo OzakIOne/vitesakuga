@@ -2,6 +2,7 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] dockploy ??
 - [ ] split upload and convert into components and utils
 - [ ] better style Video (fix tailwind class not working)
 - [ ] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search

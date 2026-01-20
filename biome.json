@@ -10,7 +10,13 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!src/routeTree.gen.ts", "!src/vite-env.d.ts"]
+    "includes": [
+      "**",
+      "!src/routeTree.gen.ts",
+      "!src/vite-env.d.ts",
+      "!src/db/drizzle",
+      "!drizzle/"
+    ]
   },
   "formatter": {
     "enabled": true,

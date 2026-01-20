@@ -9,6 +9,9 @@ const schema = z.object({
   DATABASE_URL: z.url(),
   GITHUB_CLIENT_ID: z.string(),
   GITHUB_CLIENT_SECRET: z.string(),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   POSTGRES_DB: z.string(),
   POSTGRES_HOST: z.string(),
   POSTGRES_PASSWORD: z.string(),

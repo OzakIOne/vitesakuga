@@ -1,35 +1,35 @@
 import { neon, Pool } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { envServer } from "../env/server";
 import * as schema from "./schema";
 
-let pool: Pool | null = null;
+let neonPool: Pool | null = null;
 
 /**
- * Singleton for the TCP Connection Pool.
- * Used by Kysely and Better Auth.
- * @neondatabase/serverless Pool is a drop-in replacement for pg.Pool
- * and works with both local Postgres and Neon.
+ * Singleton for Neon Serverless Pool (Neon HTTP Development/Production)
+ * Used by Drizzle in Neon environments
  */
-export const getPoolSingleton = () => {
-  if (pool) return pool;
+export const getNeonPoolSingleton = (): Pool => {
+  if (neonPool) return neonPool;
 
-  pool = new Pool({
+  neonPool = new Pool({
     connectionString: envServer.DATABASE_URL,
   });
 
-  pool.on("error", (err: Error) => {
-    console.error("Unexpected error on idle client", err);
+  neonPool.on("error", (err: Error) => {
+    console.error("Unexpected error on Neon client", err);
   });
-  return pool;
+
+  return neonPool;
 };
 
+export const db = drizzleNeon({ client: neon(envServer.DATABASE_URL), schema });
+
 /**
- * The Drizzle instance.
- * Switches between HTTP (Neon) in production and TCP (pg) in development.
+ * Get the appropriate Kysely pool
+ * - Local: postgres-js pool (getTcpPoolSingleton)
+ * - Neon: Neon serverless pool (getNeonPoolSingleton)
  */
-export const db =
-  envServer.NODE_ENV === "production"
-    ? drizzleNeon({ client: neon(envServer.DATABASE_URL), schema })
-    : drizzlePg({ client: getPoolSingleton(), schema });
+export const getKyselyPool = () => {
+  return getNeonPoolSingleton();
+};

@@ -1,6 +1,6 @@
 import type { Kyselify } from "drizzle-orm/kysely";
 import { Kysely, PostgresDialect } from "kysely";
-import { getPoolSingleton } from "./pool";
+import { getKyselyPool } from "./pool";
 import type * as authschema from "./schema/auth.schema";
 import type * as sakugaschema from "./schema/sakuga.schema";
 
@@ -30,6 +30,6 @@ type DB = KyselyDB<DrizzleSchema>;
 
 export const kysely = new Kysely<DB>({
   dialect: new PostgresDialect({
-    pool: getPoolSingleton(),
+    pool: getKyselyPool(),
   }),
 });

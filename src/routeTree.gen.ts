@@ -22,6 +22,7 @@ import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as PostsTagsTagRouteImport } from './routes/posts/tags/$tag'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiVideoStreamIdRouteImport } from './routes/api/video/stream.$id'
 
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
@@ -87,6 +88,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVideoStreamIdRoute = ApiVideoStreamIdRouteImport.update({
+  id: '/api/video/stream/$id',
+  path: '/api/video/stream/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
+  '/api/video/stream/$id': typeof ApiVideoStreamIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
+  '/api/video/stream/$id': typeof ApiVideoStreamIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/users/': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
+  '/api/video/stream/$id': typeof ApiVideoStreamIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/auth/$'
     | '/posts/tags/$tag'
+    | '/api/video/stream/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/auth/$'
     | '/posts/tags/$tag'
+    | '/api/video/stream/$id'
   id:
     | '__root__'
     | '/'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/users/'
     | '/api/auth/$'
     | '/posts/tags/$tag'
+    | '/api/video/stream/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   UsersIndexRoute: typeof UsersIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   PostsTagsTagRoute: typeof PostsTagsTagRoute
+  ApiVideoStreamIdRoute: typeof ApiVideoStreamIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/video/stream/$id': {
+      id: '/api/video/stream/$id'
+      path: '/api/video/stream/$id'
+      fullPath: '/api/video/stream/$id'
+      preLoaderRoute: typeof ApiVideoStreamIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -314,6 +334,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersIndexRoute: UsersIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   PostsTagsTagRoute: PostsTagsTagRoute,
+  ApiVideoStreamIdRoute: ApiVideoStreamIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -148,7 +148,7 @@ function RouteComponent() {
       const ext = output.container;
       const base = file.name.replace(/\.[^.]+$/, "");
       setConvertedName(`${base}-converted.${ext}`);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || "An error occurred during conversion.");
     } finally {
       setIsConverting(false);

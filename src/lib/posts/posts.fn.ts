@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { randomUUID } from "crypto";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
@@ -13,11 +13,7 @@ import {
   searchPostsBaseSchema,
   updatePostInputSchema,
 } from "./posts.schema";
-import {
-  type AllowedVideoExtension,
-  assertAllowedVideoFile,
-  mapPopularTags,
-} from "./posts.utils";
+import { type AllowedVideoExtension, mapPopularTags } from "./posts.utils";
 
 const PAGE_SIZE = 30;
 

@@ -58,7 +58,7 @@ function RouteComponent() {
   const navigate = useNavigate({ from: "/posts" });
   const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
   const frameRateRef = useRef<number | null>(null);
-  const videoRef = useRef<any>(null);
+  const videoRef = useRef(null);
 
   const uploadPostMutation = useMutation({
     mutationFn: (data: FormData) => uploadPost({ data }),
@@ -71,7 +71,7 @@ function RouteComponent() {
         type: "error",
       });
     },
-    onSuccess: (newPost: any) => {
+    onSuccess: (newPost) => {
       form.reset();
       queryClient.invalidateQueries({ queryKey: postsKeys.all });
       navigate({ to: `/posts/${newPost.id}` });
@@ -92,9 +92,8 @@ function RouteComponent() {
     videoFile: File,
     timestamps: number[],
   ): Promise<GeneratedThumbnail[]> => {
-    const { Input, ALL_FORMATS, BlobSource, CanvasSink } = await import(
-      "mediabunny"
-    );
+    const { Input, ALL_FORMATS, BlobSource, CanvasSink } =
+      await import("mediabunny");
     const input = new Input({
       formats: ALL_FORMATS,
       source: new BlobSource(videoFile),
@@ -107,9 +106,10 @@ function RouteComponent() {
     const results: GeneratedThumbnail[] = [];
 
     for await (const result of sink.canvasesAtTimestamps(timestamps)) {
-      const blob = await new Promise<Blob | null>(async (resolve) => {
+      if (!result) continue;
+      const blob = await new Promise<Blob | null>((resolve) => {
         if ("convertToBlob" in result.canvas) {
-          const b = await (result.canvas as OffscreenCanvas).convertToBlob({
+          const b = (result.canvas as OffscreenCanvas).convertToBlob({
             quality: 0.8,
             type: "image/jpeg",
           });
@@ -228,7 +228,9 @@ function RouteComponent() {
 
   useEffect(() => {
     return () => {
-      thumbnails.forEach((t) => URL.revokeObjectURL(t.url));
+      thumbnails.forEach((t) => {
+        URL.revokeObjectURL(t.url);
+      });
     };
   }, [thumbnails]);
 
@@ -255,7 +257,7 @@ function RouteComponent() {
       title: "",
       userId: user.id,
       video: undefined as unknown as File,
-      videoMetadata: {} as any,
+      videoMetadata: {},
     } as FileUploadData,
     onSubmit: async ({ value }) => {
       await handleSubmit(value);
