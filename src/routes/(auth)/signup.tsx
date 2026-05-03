@@ -42,8 +42,8 @@ function SignupForm() {
       name: "",
       password: "",
     },
-    onSubmit: ({ value }) => {
-      authClient.signUp.email(
+    onSubmit: async ({ value }) => {
+      await authClient.signUp.email(
         {
           callbackURL: redirectUrl,
           email: value.email,
@@ -59,7 +59,7 @@ function SignupForm() {
             await queryClient.invalidateQueries({
               queryKey: usersKeys.userInfo,
             });
-            navigate({ to: redirectUrl });
+            await navigate({ to: redirectUrl });
           },
         },
       );
@@ -80,29 +80,26 @@ function SignupForm() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
             <form.Field name="name">
-              {(field) => {
-                // Avoid hasty abstractions. Render props are great!
-                return (
-                  <>
-                    <Field.Root required>
-                      <Field.Label>
-                        Name <Field.RequiredIndicator />
-                      </Field.Label>
-                      <Input
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value);
-                        }}
-                        placeholder="John doe"
-                        value={field.state.value}
-                      />
-                    </Field.Root>
-                    <FieldInfo field={field} />
-                  </>
-                );
-              }}
+              {(field) => (
+                <>
+                  <Field.Root required>
+                    <Field.Label>
+                      Name <Field.RequiredIndicator />
+                    </Field.Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value);
+                      }}
+                      placeholder="John doe"
+                      value={field.state.value}
+                    />
+                  </Field.Root>
+                  <FieldInfo field={field} />
+                </>
+              )}
             </form.Field>
 
             <form.Field
@@ -110,56 +107,50 @@ function SignupForm() {
               // TODO onChangeAsync => validateEmailUnique
               // TODO onChangeDebounceMs={500}
             >
-              {(field) => {
-                // Avoid hasty abstractions. Render props are great!
-                return (
-                  <>
-                    <Field.Root required>
-                      <Field.Label>
-                        Email <Field.RequiredIndicator />
-                      </Field.Label>
-                      <Input
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value);
-                        }}
-                        placeholder="hello@example.com"
-                        value={field.state.value}
-                      />
-                    </Field.Root>
+              {(field) => (
+                <>
+                  <Field.Root required>
+                    <Field.Label>
+                      Email <Field.RequiredIndicator />
+                    </Field.Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value);
+                      }}
+                      placeholder="hello@example.com"
+                      value={field.state.value}
+                    />
+                  </Field.Root>
 
-                    <FieldInfo field={field} />
-                  </>
-                );
-              }}
+                  <FieldInfo field={field} />
+                </>
+              )}
             </form.Field>
 
             <form.Field name="password">
-              {(field) => {
-                // Avoid hasty abstractions. Render props are great!
-                return (
-                  <>
-                    <Field.Root required>
-                      <Field.Label>
-                        Password <Field.RequiredIndicator />
-                      </Field.Label>
-                      <PasswordInput
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value);
-                        }}
-                        type="password"
-                        value={field.state.value}
-                      />
-                    </Field.Root>
-                    <FieldInfo field={field} />
-                  </>
-                );
-              }}
+              {(field) => (
+                <>
+                  <Field.Root required>
+                    <Field.Label>
+                      Password <Field.RequiredIndicator />
+                    </Field.Label>
+                    <PasswordInput
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value);
+                      }}
+                      type="password"
+                      value={field.state.value}
+                    />
+                  </Field.Root>
+                  <FieldInfo field={field} />
+                </>
+              )}
             </form.Field>
 
             <form.Field
@@ -168,30 +159,27 @@ function SignupForm() {
                 onChangeListenTo: ["password"], // Ensure this field listens to changes in the password field
               }}
             >
-              {(field) => {
-                // Avoid hasty abstractions. Render props are great!
-                return (
-                  <>
-                    <Field.Root required>
-                      <Field.Label>
-                        Confirm password <Field.RequiredIndicator />
-                      </Field.Label>
-                      <PasswordInput
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value);
-                        }}
-                        type="password"
-                        value={field.state.value}
-                      />
-                    </Field.Root>
-                    <FieldInfo field={field} />
-                    <FieldInfo field={field} />
-                  </>
-                );
-              }}
+              {(field) => (
+                <>
+                  <Field.Root required>
+                    <Field.Label>
+                      Confirm password <Field.RequiredIndicator />
+                    </Field.Label>
+                    <PasswordInput
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value);
+                      }}
+                      type="password"
+                      value={field.state.value}
+                    />
+                  </Field.Root>
+                  <FieldInfo field={field} />
+                  <FieldInfo field={field} />
+                </>
+              )}
             </form.Field>
 
             <form.Subscribe
@@ -227,7 +215,7 @@ function SignupForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Button
               disabled={isLoading}
-              onClick={() =>
+              onClick={async () =>
                 authClient.signIn.social(
                   {
                     callbackURL: redirectUrl,
@@ -252,7 +240,7 @@ function SignupForm() {
             </Button>
             <Button
               disabled={isLoading}
-              onClick={() =>
+              onClick={async () =>
                 authClient.signIn.social(
                   {
                     callbackURL: redirectUrl,

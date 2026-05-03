@@ -27,8 +27,8 @@ export function PostEditForm({
   const editForm = useForm({
     defaultValues: {
       content: post.content,
-      relatedPostId: post.relatedPostId || undefined,
-      source: post.source || undefined,
+      relatedPostId: post.relatedPostId ?? undefined,
+      source: post.source ?? undefined,
       tags: initialTags,
       title: post.title,
     },
@@ -41,8 +41,8 @@ export function PostEditForm({
       await updatePostMutation.mutateAsync({
         content: value.content,
         postId: post.id,
-        relatedPostId: value.relatedPostId || undefined,
-        source: value.source || undefined,
+        relatedPostId: value.relatedPostId ?? undefined,
+        source: value.source ?? undefined,
         tags: value.tags,
         title: value.title,
       });
@@ -69,7 +69,9 @@ export function PostEditForm({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: postsKeys.detail(postId) });
+      void queryClient.invalidateQueries({
+        queryKey: postsKeys.detail(postId),
+      });
       toaster.create({
         closable: true,
         description: "Your post has been successfully updated.",
@@ -96,14 +98,14 @@ export function PostEditForm({
   });
 
   return (
-    <Box borderRadius={"md"} mb={4} padding={"4"} shadow={"md"}>
+    <Box borderRadius="md" mb={4} padding="4" shadow="md">
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Edit Post
       </Text>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          editForm.handleSubmit();
+          void editForm.handleSubmit();
         }}
       >
         <editForm.Field name="title">

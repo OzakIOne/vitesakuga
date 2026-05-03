@@ -16,11 +16,10 @@ const postsQueries = {
   byTag: (params: PostByTagParams) =>
     queryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes
-      queryFn: () => {
-        return getPostsByTag({
+      queryFn: async () =>
+        getPostsByTag({
           data: params,
-        });
-      },
+        }),
       queryKey: postsKeys.byTag(params),
       staleTime: 60 * 1000, // 1 minute
     }),
@@ -28,11 +27,10 @@ const postsQueries = {
   detail: (postId: number) =>
     queryOptions({
       gcTime: 5 * 60 * 1000, // 5 minutes
-      queryFn: () => {
-        return fetchPostDetail({
+      queryFn: async () =>
+        fetchPostDetail({
           data: postId,
-        });
-      },
+        }),
       queryKey: postsKeys.detail(postId),
       staleTime: 60 * 1000, // 1 minute
     }),
@@ -41,24 +39,19 @@ const postsQueries = {
   search: (params: PostsSearchParams) =>
     queryOptions({
       gcTime: 5 * 60 * 1000,
-      queryFn: () => {
-        return searchPosts({
+      queryFn: async () =>
+        searchPosts({
           data: params,
-        });
-      },
+        }),
       queryKey: postsKeys.search(params),
       staleTime: 60 * 1000,
     }),
 };
 
-export const postsQueryOptions = (params: PostsSearchParams) => {
-  return postsQueries.search(params);
-};
+export const postsQueryOptions = (params: PostsSearchParams) =>
+  postsQueries.search(params);
 
-export const postQueryDetail = (postId: number) => {
-  return postsQueries.detail(postId);
-};
+export const postQueryDetail = (postId: number) => postsQueries.detail(postId);
 
-export const postsQueryByTag = (params: PostByTagParams) => {
-  return postsQueries.byTag(params);
-};
+export const postsQueryByTag = (params: PostByTagParams) =>
+  postsQueries.byTag(params);

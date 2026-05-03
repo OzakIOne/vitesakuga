@@ -24,10 +24,8 @@ import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
-import {
-  authMiddleware,
-  type MiddlewareUser,
-} from "src/lib/auth/auth.middleware";
+import { authMiddleware } from "src/lib/auth/auth.middleware";
+import type { MiddlewareUser } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import z from "zod";
 
@@ -44,7 +42,7 @@ const profileSchema = z.object({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext() as MiddlewareUser;
+  const { user } = Route.useRouteContext();
   console.log("user:", user);
 
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -69,10 +67,10 @@ function RouteComponent() {
           title: "Profile updated",
           type: "success",
         });
-      } catch (err) {
+      } catch (error) {
         toaster.create({
           closable: true,
-          description: err,
+          description: error,
           duration: 5000,
           title: "Error updating profile",
           type: "error",
@@ -105,10 +103,10 @@ function RouteComponent() {
           title: "Password updated",
           type: "success",
         });
-      } catch (err) {
+      } catch (error) {
         toaster.create({
           closable: true,
-          description: err,
+          description: error,
           duration: 5000,
           title: "Error changing password",
           type: "error",
@@ -127,11 +125,11 @@ function RouteComponent() {
         title: "Account deleted",
         type: "success",
       });
-      navigate({ to: "/" });
-    } catch (err) {
+      void navigate({ to: "/" });
+    } catch (error) {
       toaster.create({
         closable: true,
-        description: err,
+        description: error,
         duration: 5000,
         title: "Error deleting account",
         type: "error",
@@ -147,7 +145,7 @@ function RouteComponent() {
             <AvatarGroup>
               <Avatar.Root size="2xl">
                 <Avatar.Fallback />
-                <Avatar.Image className="rounded-full" src={user.image || ""} />
+                <Avatar.Image className="rounded-full" src={user.image ?? ""} />
               </Avatar.Root>
             </AvatarGroup>
             <div className="min-w-0 flex-1">
@@ -178,7 +176,7 @@ function RouteComponent() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                profileForm.handleSubmit();
+                void profileForm.handleSubmit();
               }}
             >
               <profileForm.Field name="name">
@@ -189,7 +187,9 @@ function RouteComponent() {
                       <InputGroup startElement={<LuUser />}>
                         <Input
                           className="h-12 w-full"
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value);
+                          }}
                           placeholder="Enter your display name"
                           value={field.state.value}
                         />
@@ -207,7 +207,9 @@ function RouteComponent() {
                       <InputGroup startElement={<LuImage />}>
                         <Input
                           className="h-12 w-full"
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value);
+                          }}
                           placeholder="https://example.com/avatar.jpg"
                           type="url"
                           value={field.state.value}
@@ -255,7 +257,7 @@ function RouteComponent() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                passwordForm.handleSubmit();
+                void passwordForm.handleSubmit();
               }}
             >
               <passwordForm.Field name="currentPassword">
@@ -264,7 +266,9 @@ function RouteComponent() {
                     <Field.Label>Current Password</Field.Label>
                     <PasswordInput
                       className="h-12 w-full"
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value);
+                      }}
                       placeholder="Enter current password"
                       type="password"
                       value={field.state.value}
@@ -279,7 +283,9 @@ function RouteComponent() {
                     <Field.Label>New Password</Field.Label>
                     <PasswordInput
                       className="h-12 w-full"
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value);
+                      }}
                       placeholder="Enter new password"
                       type="password"
                       value={field.state.value}

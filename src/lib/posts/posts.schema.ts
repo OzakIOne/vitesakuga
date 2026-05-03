@@ -8,7 +8,6 @@ export const VideoMetadataSchema = z
     ChromaSubsampling: z.string(),
     CodecID: z.string(),
     ColorSpace: z.string(),
-    colour_primaries: z.string(),
     DisplayAspectRatio: z.string(),
     Duration: z.coerce.number(),
     Encoded_Library_Name: z.string(),
@@ -18,8 +17,9 @@ export const VideoMetadataSchema = z
     FrameRate: z.coerce.number(),
     Height: z.coerce.number(),
     Width: z.coerce.number(),
+    colour_primaries: z.string(),
   })
-  .strict();
+  .optional();
 
 export type VideoMetadata = z.infer<typeof VideoMetadataSchema>;
 

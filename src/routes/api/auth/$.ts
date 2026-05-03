@@ -4,12 +4,8 @@ import { auth } from "src/lib/auth";
 export const Route = createFileRoute("/api/auth/$")({
   server: {
     handlers: {
-      GET: ({ request }) => {
-        return auth.handler(request);
-      },
-      POST: ({ request }) => {
-        return auth.handler(request);
-      },
+      GET: async ({ request }) => auth.handler(request),
+      POST: async ({ request }) => auth.handler(request),
     },
   },
 });

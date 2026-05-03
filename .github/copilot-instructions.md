@@ -39,9 +39,9 @@ applyTo: "**"
 
 For more specific guidelines, refer to the following documents:
 
-*   [TypeScript & React Conventions](../docs/typescript-react-conventions.md)
-*   [Server Functions & API Design](../docs/server-functions-api.md)
-*   [Database Conventions (Drizzle ORM & Kysely)](../docs/database-conventions.md)
-*   [Project Structure & File Conventions](../docs/project-structure.md)
-*   [Feature Implementation Guidelines](../docs/feature-implementation-guidelines.md)
-*   [Additional Resources](../docs/additional-resources.md)
+- [TypeScript & React Conventions](../docs/typescript-react-conventions.md)
+- [Server Functions & API Design](../docs/server-functions-api.md)
+- [Database Conventions (Drizzle ORM & Kysely)](../docs/database-conventions.md)
+- [Project Structure & File Conventions](../docs/project-structure.md)
+- [Feature Implementation Guidelines](../docs/feature-implementation-guidelines.md)
+- [Additional Resources](../docs/additional-resources.md)

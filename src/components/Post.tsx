@@ -27,7 +27,7 @@ export function Post({
       {post.title && <Heading as="h3">{post.title}</Heading>}
       {post.content && <Text mb={4}>{post.content}</Text>}
 
-      {tags && tags.length > 0 && (
+      {tags.length > 0 && (
         <Box mb={4}>
           <Text fontWeight="bold" mb={2}>
             Tags:

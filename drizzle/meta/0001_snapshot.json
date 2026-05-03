@@ -6,9 +6,9 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "37a874cf-00e5-405d-a1c5-9fc1944eb0b7",
+  "id": "d42d7cb0-b216-4db9-b93f-5e31554e7ace",
   "policies": {},
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "prevId": "37a874cf-00e5-405d-a1c5-9fc1944eb0b7",
   "roles": {},
   "schemas": {},
   "sequences": {},
@@ -288,7 +288,7 @@
           "name": "videoMetadata",
           "notNull": true,
           "primaryKey": false,
-          "type": "text"
+          "type": "json"
         }
       },
       "compositePrimaryKeys": {},

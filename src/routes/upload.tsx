@@ -26,17 +26,15 @@ import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import {
-  authMiddleware,
-  type MiddlewareUser,
-} from "src/lib/auth/auth.middleware";
+import { authMiddleware } from "src/lib/auth/auth.middleware";
+import type { MiddlewareUser } from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import {
-  type FileUploadData,
   FormFileUploadSchema,
   VideoMetadataSchema,
 } from "src/lib/posts/posts.schema";
+import type { FileUploadData } from "src/lib/posts/posts.schema";
 import { buildFormData, makeReadChunk } from "src/lib/posts/posts.utils";
 
 type GeneratedThumbnail = {
@@ -52,7 +50,7 @@ export const Route = createFileRoute("/upload")({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext() as MiddlewareUser;
+  const { user } = Route.useRouteContext();
   const { queryClient } = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate({ from: "/posts" });
@@ -61,7 +59,7 @@ function RouteComponent() {
   const videoRef = useRef(null);
 
   const uploadPostMutation = useMutation({
-    mutationFn: (data: FormData) => uploadPost({ data }),
+    mutationFn: async (data: FormData) => uploadPost({ data }),
     onError: (error) => {
       console.error("Upload failed:", error);
       toaster.create({
@@ -73,8 +71,8 @@ function RouteComponent() {
     },
     onSuccess: (newPost) => {
       form.reset();
-      queryClient.invalidateQueries({ queryKey: postsKeys.all });
-      navigate({ to: `/posts/${newPost.id}` });
+      void queryClient.invalidateQueries({ queryKey: postsKeys.all });
+      void navigate({ to: `/posts/${newPost.id}` });
       toaster.create({
         description: "Your post has been uploaded successfully.",
         duration: 5000,
@@ -100,23 +98,29 @@ function RouteComponent() {
     });
 
     const videoTrack = await input.getPrimaryVideoTrack();
-    if (!videoTrack) throw new Error("No video track found");
+    if (!videoTrack) {
+      throw new Error("No video track found");
+    }
 
     const sink = new CanvasSink(videoTrack, { width: 640 });
     const results: GeneratedThumbnail[] = [];
 
     for await (const result of sink.canvasesAtTimestamps(timestamps)) {
-      if (!result) continue;
+      if (!result) {
+        continue;
+      }
       const blob = await new Promise<Blob | null>((resolve) => {
         if ("convertToBlob" in result.canvas) {
-          const b = (result.canvas as OffscreenCanvas).convertToBlob({
+          const b = result.canvas.convertToBlob({
             quality: 0.8,
             type: "image/jpeg",
           });
           resolve(b);
         } else {
-          (result.canvas as HTMLCanvasElement).toBlob(
-            (b) => resolve(b),
+          result.canvas.toBlob(
+            (b) => {
+              resolve(b);
+            },
             "image/jpeg",
             0.8,
           );
@@ -148,7 +152,9 @@ function RouteComponent() {
     });
 
     const videoTrack = await input.getPrimaryVideoTrack();
-    if (!videoTrack) throw new Error("No video track found");
+    if (!videoTrack) {
+      throw new Error("No video track found");
+    }
 
     const startTimestamp = await videoTrack.getFirstTimestamp();
     const endTimestamp = await videoTrack.computeDuration();
@@ -212,7 +218,7 @@ function RouteComponent() {
   };
 
   useEffect(() => {
-    mediaInfoFactory({
+    void mediaInfoFactory({
       format: "JSON",
       locateFile: () => "/MediaInfoModule.wasm",
     }).then((mi) => {
@@ -226,18 +232,21 @@ function RouteComponent() {
     };
   }, []);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       thumbnails.forEach((t) => {
         URL.revokeObjectURL(t.url);
       });
-    };
-  }, [thumbnails]);
+    },
+    [thumbnails],
+  );
 
   useBlocker({
     enableBeforeUnload: true,
     shouldBlockFn: () => {
-      if (!form.state.isDirty) return false;
+      if (!form.state.isDirty) {
+        return false;
+      }
 
       const shouldLeave = confirm(
         "You have unsubmitted changes. Do you want to leave?",
@@ -270,7 +279,7 @@ function RouteComponent() {
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({
     enabled: relatedPostSearch.length > 2,
-    queryFn: () =>
+    queryFn: async () =>
       searchPosts({
         data: {
           page: { size: 5 },
@@ -285,7 +294,7 @@ function RouteComponent() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          form.handleSubmit();
+          void form.handleSubmit();
         }}
       >
         <Box mb={6}>
@@ -328,7 +337,9 @@ function RouteComponent() {
               <Field.Root>
                 <Field.Label>Related Post</Field.Label>
                 <Input
-                  onChange={(e) => setRelatedPostSearch(e.target.value)}
+                  onChange={(e) => {
+                    setRelatedPostSearch(e.target.value);
+                  }}
                   placeholder="Search for related posts..."
                   value={relatedPostSearch}
                 />
@@ -356,7 +367,7 @@ function RouteComponent() {
                       >
                         <Text fontWeight="medium">{post.title}</Text>
                         <Text color="gray.600" fontSize="sm">
-                          {post.content.substring(0, 60)}...
+                          {post.content.slice(0, 60)}...
                         </Text>
                       </Box>
                     ))}
@@ -370,7 +381,7 @@ function RouteComponent() {
                     <Button
                       mt={1}
                       onClick={() => {
-                        field.handleChange(undefined);
+                        field.handleChange();
                         setRelatedPostSearch("");
                       }}
                       size="sm"
@@ -390,7 +401,9 @@ function RouteComponent() {
               <Field.Root>
                 <Field.Label>Tags</Field.Label>
                 <TagInput
-                  onChange={(newTags) => field.handleChange(newTags)}
+                  onChange={(newTags) => {
+                    field.handleChange(newTags);
+                  }}
                   value={field.state.value}
                 />
               </Field.Root>

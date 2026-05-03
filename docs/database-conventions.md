@@ -5,13 +5,17 @@ This document outlines the conventions and best practices for database interacti
 ---
 
 ## Location
-*   Database schemas and configuration in `src/db/`.
+
+- Database schemas and configuration in `src/db/`.
 
 ## Kysely Client
-*   Type-safe SQL queries via `src/lib/db/kysely.ts`.
+
+- Type-safe SQL queries via `src/lib/db/kysely.ts`.
 
 ## Drizzle Schemas
-*   Used for Kysely client, located in `src/lib/db/schemas/`.
+
+- Used for Kysely client, located in `src/lib/db/schemas/`.
 
 ## Migrations
-*   Follow Drizzle Kit migration workflow (`pnpm db generate`, `pnpm db push`, `pnpm db migrate`).
+
+- Follow Drizzle Kit migration workflow (`pnpm db generate`, `pnpm db push`, `pnpm db migrate`).

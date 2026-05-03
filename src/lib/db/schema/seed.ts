@@ -27,5 +27,5 @@ async function main() {
 }
 
 if (process.env.SEED_DB === "true") {
-  main();
+  void main();
 }

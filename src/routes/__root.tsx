@@ -2,14 +2,15 @@ import { Box, Button, Center } from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
-import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
-  createRootRouteWithContext,
   HeadContent,
   Link,
   Outlet,
   Scripts,
+  createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
@@ -31,20 +32,18 @@ export const Route = createRootRouteWithContext<{
 }>()({
   beforeLoad: async ({ context }) => {
     const user = await context.queryClient.fetchQuery({
-      queryFn: ({ signal }) => getUserSession({ signal }),
+      queryFn: async ({ signal }) => getUserSession({ signal }),
       queryKey: ["user"],
       staleTime: 60 * 60 * 1000,
     }); // we're using react-query for caching, see router.tsx
     return { user };
   },
   component: RootComponent,
-  errorComponent: (props) => {
-    return (
-      <RootDocument>
-        <DefaultCatchBoundary {...props} />
-      </RootDocument>
-    );
-  },
+  errorComponent: (props) => (
+    <RootDocument>
+      <DefaultCatchBoundary {...props} />
+    </RootDocument>
+  ),
   head: () => ({
     links: [
       { href: appCss, rel: "stylesheet" },
@@ -70,7 +69,7 @@ export const Route = createRootRouteWithContext<{
     ],
     meta: [
       {
-        charSet: "utf-8",
+        charSet: "utf8",
       },
       {
         content: "width=device-width, initial-scale=1",
@@ -84,16 +83,6 @@ export const Route = createRootRouteWithContext<{
   }),
   notFoundComponent: () => <NotFound />,
 });
-
-function RootComponent() {
-  return (
-    <Provider>
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
-    </Provider>
-  );
-}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const ctx = Route.useRouteContext();
@@ -164,12 +153,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 Account
               </Link>{" "}
               <Button
-                onClick={async () => {
-                  await authClient.signOut();
-                  await queryClient.invalidateQueries({
-                    queryKey: usersKeys.userInfo,
-                  });
-                  await router.invalidate();
+                onClick={() => {
+                  void (async () => {
+                    await authClient.signOut();
+                    await queryClient.invalidateQueries({
+                      queryKey: usersKeys.userInfo,
+                    });
+                    await router.invalidate();
+                  })();
                 }}
                 size="xs"
               >
@@ -213,5 +204,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function RootComponent() {
+  return (
+    <Provider>
+      <RootDocument>
+        <Outlet />
+      </RootDocument>
+    </Provider>
   );
 }

@@ -15,11 +15,10 @@ const usersQueries = {
   detail: (params: FetchUserInput) =>
     queryOptions({
       gcTime: 10 * 60 * 1000, // 10 minutes
-      queryFn: async () => {
-        return fetchUserPosts({
+      queryFn: async () =>
+        fetchUserPosts({
           data: params,
-        });
-      },
+        }),
       queryKey: usersKeys.detail(params),
       staleTime: 5 * 60 * 1000, // 5 minutes
     }),
@@ -32,10 +31,7 @@ const usersQueries = {
     }),
 };
 
-export const usersQueryOptions = () => {
-  return usersQueries.listUsers();
-};
+export const usersQueryOptions = () => usersQueries.listUsers();
 
-export const userQueryOptions = (params: FetchUserInput) => {
-  return usersQueries.detail(params);
-};
+export const userQueryOptions = (params: FetchUserInput) =>
+  usersQueries.detail(params);

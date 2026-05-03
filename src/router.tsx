@@ -8,6 +8,11 @@ import { routeTree } from "./routeTree.gen";
 export function getRouter() {
   const queryClient = new QueryClient();
 
+  console.log("Running in", {
+    mode: import.meta.env.MODE,
+    url: import.meta.env.VITE_BASE_URL,
+  });
+
   const router = createTanStackRouter({
     context: {
       queryClient,
@@ -32,6 +37,7 @@ export function getRouter() {
 }
 
 declare module "@tanstack/react-router" {
+  // oxlint-disable-next-line typescript/consistent-type-definitions
   interface Register {
     router: ReturnType<typeof getRouter>;
   }

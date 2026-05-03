@@ -7,7 +7,7 @@ import { ThemeProvider, useTheme } from "next-themes";
 import * as React from "react";
 import { LuMonitor, LuMoon, LuSun } from "react-icons/lu";
 
-export interface ColorModeProviderProps extends ThemeProviderProps {}
+export type ColorModeProviderProps = {} & ThemeProviderProps;
 
 export function ColorModeProvider(props: ColorModeProviderProps) {
   return (
@@ -17,19 +17,23 @@ export function ColorModeProvider(props: ColorModeProviderProps) {
 
 export type ColorMode = "light" | "dark";
 
-export interface UseColorModeReturn {
+export type UseColorModeReturn = {
   colorMode: ColorMode;
   setColorMode: (colorMode: ColorMode) => void;
   toggleColorMode: () => void;
-}
+};
 
 export function useColorMode(): UseColorModeReturn {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const colorMode = resolvedTheme as ColorMode;
   const toggleColorMode = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
+    if (theme === "light") {
+      setTheme("dark");
+    } else if (theme === "dark") {
+      setTheme("system");
+    } else {
+      setTheme("light");
+    }
   };
   return {
     colorMode,
@@ -45,11 +49,13 @@ export function useColorModeValue<T>(light: T, dark: T) {
 
 export function ColorModeIcon() {
   const { theme } = useTheme();
-  if (theme === "system") return <LuMonitor />;
+  if (theme === "system") {
+    return <LuMonitor />;
+  }
   return theme === "dark" ? <LuMoon /> : <LuSun />;
 }
 
-interface ColorModeButtonProps extends Omit<IconButtonProps, "aria-label"> {}
+type ColorModeButtonProps = {} & Omit<IconButtonProps, "aria-label">;
 
 export const ColorModeButton = React.forwardRef<
   HTMLButtonElement,

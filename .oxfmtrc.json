@@ -4,6 +4,5 @@
     "sortScripts": true
   },
   "ignorePatterns": ["routeTree.gen.ts", "drizzle/"],
-  "trailingComma": "all",
-  "useTabs": false
+  "trailingComma": "all"
 }

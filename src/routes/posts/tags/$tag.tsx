@@ -30,11 +30,11 @@ function RouteComponent() {
   const { data } = useSuspenseQuery(postsQueryByTag({ page, tag }));
 
   const posts = data.data;
-  const popularTags = data.meta.popularTags;
+  const { popularTags } = data.meta;
   const { totalPages } = data.meta.pagination;
 
   const handlePageChange = (newPage: number) => {
-    navigate({
+    void navigate({
       search: (prev) => ({ ...prev, page: newPage }),
     });
     window.scrollTo({ behavior: "smooth", top: 0 });

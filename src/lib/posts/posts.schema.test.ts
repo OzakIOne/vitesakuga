@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
 import { searchPostsBaseSchema, updatePostInputSchema } from "./posts.schema";
 
-describe("searchPostsBaseSchema", () => {
+describe(searchPostsBaseSchema, () => {
   it("should use default values for empty input", () => {
     const result = searchPostsBaseSchema.parse({});
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       dateRange: "all",
       page: 0,
       q: "",
@@ -22,7 +21,7 @@ describe("searchPostsBaseSchema", () => {
       tags: ["anime", "action"],
     };
     const result = searchPostsBaseSchema.parse(input);
-    expect(result).toEqual(input);
+    expect(result).toStrictEqual(input);
   });
 
   it("should throw on invalid page number (< 0)", () => {
@@ -47,7 +46,7 @@ describe("searchPostsBaseSchema", () => {
   });
 });
 
-describe("updatePostInputSchema", () => {
+describe(updatePostInputSchema, () => {
   const defaultValues = {
     content: "qwe",
     postId: 1,
@@ -72,7 +71,7 @@ describe("updatePostInputSchema", () => {
       title: "title",
     };
     const result = updatePostInputSchema.parse(input);
-    expect(result).toEqual(input);
+    expect(result).toStrictEqual(input);
   });
 
   it("should throw on invalid postId (< 0)", () => {

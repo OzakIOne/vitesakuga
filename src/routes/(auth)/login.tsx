@@ -20,18 +20,22 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLoading) return;
+    if (isLoading) {
+      return;
+    }
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    if (!(email && password)) return;
+    if (!(email && password)) {
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage("");
 
-    authClient.signIn.email(
+    await authClient.signIn.email(
       {
         callbackURL: redirectUrl,
         email,
@@ -44,7 +48,7 @@ function LoginForm() {
         },
         onSuccess: async () => {
           await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-          navigate({ to: redirectUrl });
+          await navigate({ to: redirectUrl });
         },
       },
     );
@@ -85,7 +89,7 @@ function LoginForm() {
             <Button
               className="btn"
               disabled={isLoading}
-              onClick={() =>
+              onClick={async () =>
                 authClient.signIn.social(
                   {
                     callbackURL: redirectUrl,
@@ -110,7 +114,7 @@ function LoginForm() {
             </Button>
             <Button
               disabled={isLoading}
-              onClick={() =>
+              onClick={async () =>
                 authClient.signIn.social(
                   {
                     callbackURL: redirectUrl,

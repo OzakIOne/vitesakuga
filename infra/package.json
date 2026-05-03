@@ -1,4 +1,6 @@
 {
+  "name": "vitesakuga-infra",
+  "main": "index.ts",
   "dependencies": {
     "@pulumi/cloudflare": "^6.12.0",
     "@pulumi/pulumi": "^3.113.0"
@@ -6,7 +8,5 @@
   "devDependencies": {
     "@types/node": "^18",
     "typescript": "^5.0.0"
-  },
-  "main": "index.ts",
-  "name": "vitesakuga-infra"
+  }
 }

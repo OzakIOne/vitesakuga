@@ -1,11 +1,11 @@
 import { Button, HStack, IconButton, Text } from "@chakra-ui/react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
-interface PaginationProps {
+type PaginationProps = {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-}
+};
 
 export const Pagination = ({
   currentPage,
@@ -24,7 +24,9 @@ export const Pagination = ({
       <IconButton
         aria-label="Previous page"
         disabled={currentPage <= 1}
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={() => {
+          onPageChange(currentPage - 1);
+        }}
         variant="ghost"
       >
         <FiChevronLeft />
@@ -34,7 +36,9 @@ export const Pagination = ({
         <>
           <Button
             colorPalette={currentPage === 1 ? "blue" : "gray"}
-            onClick={() => onPageChange(1)}
+            onClick={() => {
+              onPageChange(1);
+            }}
             variant={currentPage === 1 ? "solid" : "ghost"}
           >
             1
@@ -50,7 +54,9 @@ export const Pagination = ({
         <Button
           colorPalette={currentPage === page ? "blue" : "gray"}
           key={page}
-          onClick={() => onPageChange(page)}
+          onClick={() => {
+            onPageChange(page);
+          }}
           variant={currentPage === page ? "solid" : "ghost"}
         >
           {page}
@@ -62,7 +68,9 @@ export const Pagination = ({
           {rightRange < totalPages - 1 && <Text>...</Text>}
           <Button
             colorPalette={currentPage === totalPages ? "blue" : "gray"}
-            onClick={() => onPageChange(totalPages)}
+            onClick={() => {
+              onPageChange(totalPages);
+            }}
             variant={currentPage === totalPages ? "solid" : "ghost"}
           >
             {totalPages}
@@ -73,7 +81,9 @@ export const Pagination = ({
       <IconButton
         aria-label="Next page"
         disabled={currentPage >= totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={() => {
+          onPageChange(currentPage + 1);
+        }}
         variant="ghost"
       >
         <FiChevronRight />

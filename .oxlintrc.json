@@ -1,21 +1,21 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": [
-    "ultracite/oxlint/core",
-    "ultracite/oxlint/react",
-    "ultracite/oxlint/remix"
-  ],
-  "plugins": [
-    "react",
-    "react-perf",
-    "jsx-a11y",
-    "promise",
-    "node",
-    "typescript",
-    "import"
-  ],
+  "plugins": ["react", "react-perf", "jsx-a11y", "promise", "node", "typescript", "import"],
+  "ignorePatterns": ["*.test.*"],
   "rules": {
     "jsx-a11y/media-has-caption": "off",
-    "sort-imports": "error"
+    "sort-imports": "error",
+    "unicorn/filename-case": "off",
+    "no-void": "off",
+    "require-await": "off", // typescript one is better https://oxc.rs/docs/guide/usage/linter/rules/eslint/require-await.html
+    "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "max-statements": "off", // toggle back later
+    "typescript/strict-boolean-expressions": "off"
+  },
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
   }
 }

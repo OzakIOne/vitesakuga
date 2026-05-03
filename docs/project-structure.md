@@ -17,9 +17,10 @@ src/
 
 ## File Structure Conventions
 
-*   `src/routes/` - Tanstack Router file-based router structure.
-*   `src/lib/posts/posts.fn.ts` - Server functions for posts feature.
-*   `src/lib/posts/posts.schema.ts` - Schemas for forms and server functions.
+- `src/routes/` - Tanstack Router file-based router structure.
+- `src/lib/posts/posts.fn.ts` - Server functions for posts feature.
+- `src/lib/posts/posts.schema.ts` - Schemas for forms and server functions.
 
 ## Authentication
-*   Server config in `src/lib/auth/index.ts`.
+
+- Server config in `src/lib/auth/index.ts`.

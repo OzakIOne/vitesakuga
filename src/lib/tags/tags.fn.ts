@@ -2,9 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { kysely } from "src/lib/db/kysely";
 import { mapPopularTags } from "../posts/posts.utils";
 
-export const getAllTags = createServerFn().handler(async () => {
-  return await kysely.selectFrom("tags").select(["id", "name"]).execute();
-});
+export const getAllTags = createServerFn().handler(async () =>
+  kysely.selectFrom("tags").select(["id", "name"]).execute(),
+);
 
 export const getAllPopularTags = createServerFn().handler(async () => {
   const popularTagsResult = await kysely

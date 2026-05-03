@@ -12,7 +12,9 @@ export function buildFormData<T extends Record<string, any>>(values: T) {
   const formData = new FormData();
 
   Object.entries(values).forEach(([key, value]) => {
-    if (value == null) return;
+    if (value === null) {
+      return;
+    }
 
     if (value instanceof File) {
       formData.append(key, value);

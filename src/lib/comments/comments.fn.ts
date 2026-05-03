@@ -37,7 +37,7 @@ export const addComment = createServerFn()
   .handler(async ({ data }) => {
     const { postId, content, userId } = data;
 
-    return await kysely
+    return kysely
       .insertInto("comments")
       .values({
         content,

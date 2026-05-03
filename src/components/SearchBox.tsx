@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Combobox,
-  createListCollection,
   Field,
   Group,
   Heading,
@@ -11,6 +10,7 @@ import {
   Input,
   Portal,
   Wrap,
+  createListCollection,
 } from "@chakra-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useQuery } from "@tanstack/react-query";
@@ -44,14 +44,16 @@ export function SearchBox({
 
   // Filter tags based on search and exclude already selected tags
   // ? usememo useful?
-  const filteredTags = useMemo(() => {
-    return allTags
-      .filter((tag) => !tags.includes(tag.name))
-      .filter((tag) =>
-        tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()),
-      )
-      .map((tag) => tag.name);
-  }, [allTags, tagSearchValue, tags]);
+  const filteredTags = useMemo(
+    () =>
+      allTags
+        .filter((tag) => !tags.includes(tag.name))
+        .filter((tag) =>
+          tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()),
+        )
+        .map((tag) => tag.name),
+    [allTags, tagSearchValue, tags],
+  );
 
   // ? usememo useful?
   const collection = useMemo(
@@ -77,7 +79,7 @@ export function SearchBox({
   };
 
   const handleNavigate = () => {
-    navigate({
+    void navigate({
       search: {
         q: search,
         tags,
@@ -86,10 +88,15 @@ export function SearchBox({
     });
   };
 
-  const setDebouncedQuery = useDebouncer(() => handleNavigate(), {
-    enabled: () => search.length > 2,
-    wait: 500,
-  });
+  const setDebouncedQuery = useDebouncer(
+    () => {
+      handleNavigate();
+    },
+    {
+      enabled: () => search.length > 2,
+      wait: 500,
+    },
+  );
 
   return (
     <Box w="auto">
@@ -127,7 +134,7 @@ export function SearchBox({
       </Group>
       <Field.Root>
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
-        <Box w={"full"}>
+        <Box w="full">
           {tags.length > 0 && (
             <Wrap gap="2" mb={2}>
               {tags.map((tag) => (
@@ -143,7 +150,9 @@ export function SearchBox({
                   <Icon
                     _hover={{ color: "red.500" }}
                     cursor="pointer"
-                    onClick={() => handleRemoveTag(tag)}
+                    onClick={() => {
+                      handleRemoveTag(tag);
+                    }}
                   >
                     <LuX />
                   </Icon>
@@ -155,9 +164,9 @@ export function SearchBox({
             closeOnSelect
             collection={collection}
             multiple
-            onInputValueChange={(details) =>
-              setTagSearchValue(details.inputValue)
-            }
+            onInputValueChange={(details) => {
+              setTagSearchValue(details.inputValue);
+            }}
             onValueChange={handleAddTag}
             value={tags}
           >

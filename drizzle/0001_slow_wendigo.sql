@@ -1,0 +1,1 @@
+ALTER TABLE "posts" ALTER COLUMN "videoMetadata" SET DATA TYPE json;

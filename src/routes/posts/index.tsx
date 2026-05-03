@@ -35,7 +35,7 @@ function PostsContent() {
 
   const handlePageChange = useCallback(
     (newPage: number) => {
-      navigate({
+      void navigate({
         search: (prev) => ({ ...prev, page: newPage }),
       });
       window.scrollTo({ behavior: "smooth", top: 0 });

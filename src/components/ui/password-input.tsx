@@ -12,14 +12,14 @@ import {
   IconButton,
   Input,
   InputGroup,
-  mergeRefs,
   Stack,
+  mergeRefs,
   useControllableState,
 } from "@chakra-ui/react";
 import * as React from "react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
 
-export interface PasswordVisibilityProps {
+export type PasswordVisibilityProps = {
   /**
    * The default visibility state of the password input.
    */
@@ -36,12 +36,12 @@ export interface PasswordVisibilityProps {
    * Custom icons for the visibility toggle button.
    */
   visibilityIcon?: { on: React.ReactNode; off: React.ReactNode };
-}
+};
 
-export interface PasswordInputProps
-  extends InputProps, PasswordVisibilityProps {
+export type PasswordInputProps = {
   rootProps?: GroupProps;
-}
+} & InputProps &
+  PasswordVisibilityProps;
 
 export const PasswordInput = React.forwardRef<
   HTMLInputElement,
@@ -70,8 +70,12 @@ export const PasswordInput = React.forwardRef<
         <VisibilityTrigger
           disabled={rest.disabled}
           onPointerDown={(e) => {
-            if (rest.disabled) return;
-            if (e.button !== 0) return;
+            if (rest.disabled) {
+              return;
+            }
+            if (e.button !== 0) {
+              return;
+            }
             e.preventDefault();
             setVisible(!visible);
           }}
@@ -108,10 +112,10 @@ const VisibilityTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
   },
 );
 
-interface PasswordStrengthMeterProps extends StackProps {
+type PasswordStrengthMeterProps = {
   max?: number;
   value: number;
-}
+} & StackProps;
 
 export const PasswordStrengthMeter = React.forwardRef<
   HTMLDivElement,
@@ -148,11 +152,17 @@ export const PasswordStrengthMeter = React.forwardRef<
 
 function getColorPalette(percent: number) {
   switch (true) {
-    case percent < 33:
+    case percent < 33: {
       return { colorPalette: "red", label: "Low" };
-    case percent < 66:
+    }
+    case percent < 66: {
       return { colorPalette: "orange", label: "Medium" };
-    default:
+    }
+    case true: {
+      throw new Error("Not implemented yet: true case");
+    }
+    default: {
       return { colorPalette: "green", label: "High" };
+    }
   }
 }

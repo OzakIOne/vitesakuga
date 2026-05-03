@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@aws-sdk/node-http-handler";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import https from "node:https";
 import { kysely } from "src/lib/db/kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
 import { auth } from "../auth";
+import { envClient } from "../env/client";
 import { envServer } from "../env/server";
 import {
   FormFileUploadSchema,
@@ -13,18 +16,10 @@ import {
   searchPostsBaseSchema,
   updatePostInputSchema,
 } from "./posts.schema";
-import { type AllowedVideoExtension, mapPopularTags } from "./posts.utils";
+import { mapPopularTags } from "./posts.utils";
+import type { AllowedVideoExtension } from "./posts.utils";
 
 const PAGE_SIZE = 30;
-
-const cfclient = new S3Client({
-  credentials: {
-    accessKeyId: envServer.CLOUDFLARE_ACCESS_KEY,
-    secretAccessKey: envServer.CLOUDFLARE_SECRET_KEY,
-  },
-  endpoint: envServer.CLOUDFLARE_R2,
-  region: "auto",
-});
 
 export const searchPosts = createServerFn()
   .inputValidator((input: unknown) => searchPostsBaseSchema.parse(input))
@@ -60,15 +55,18 @@ export const searchPosts = createServerFn()
       let startDate: Date;
 
       switch (dateRange) {
-        case "today":
+        case "today": {
           startDate = new Date(now.setHours(0, 0, 0, 0));
           break;
-        case "week":
+        }
+        case "week": {
           startDate = new Date(now.setDate(now.getDate() - 7));
           break;
-        case "month":
+        }
+        case "month": {
           startDate = new Date(now.setMonth(now.getMonth() - 1));
           break;
+        }
       }
 
       query = query.where("posts.createdAt", ">=", startDate);
@@ -123,15 +121,18 @@ export const searchPosts = createServerFn()
       let startDate: Date;
 
       switch (dateRange) {
-        case "today":
+        case "today": {
           startDate = new Date(now.setHours(0, 0, 0, 0));
           break;
-        case "week":
+        }
+        case "week": {
           startDate = new Date(now.setDate(now.getDate() - 7));
           break;
-        case "month":
+        }
+        case "month": {
           startDate = new Date(now.setMonth(now.getMonth() - 1));
           break;
+        }
       }
 
       popularTagsQuery = popularTagsQuery.where(
@@ -241,9 +242,9 @@ export const uploadPost = createServerFn({ method: "POST" })
     const raw = Object.fromEntries(data.entries());
     const normalized = {
       ...raw,
-      tags: raw.tags ? JSON.parse(raw.tags as string) : [],
+      tags: raw.tags ? JSON.parse(raw.tags) : [],
       videoMetadata: raw.videoMetadata
-        ? JSON.parse(raw.videoMetadata as string)
+        ? JSON.parse(raw.videoMetadata)
         : undefined,
     };
     return FormFileUploadSchema.parse(normalized);
@@ -261,14 +262,12 @@ export const uploadPost = createServerFn({ method: "POST" })
       videoMetadata,
     } = data;
 
-    const videoExt = video.name.split(".").pop() as AllowedVideoExtension;
+    const videoExtName = video.name.split(".").pop() as AllowedVideoExtension;
 
-    const videoExtName = `${videoExt}`;
-    const videoBaseName = `${randomUUID()}`;
+    const videoBaseName = randomUUID();
     const videoKey = `videos/${userId}/${videoBaseName}.${videoExtName}`;
 
-    const thumbnailBaseName = `${videoBaseName}`;
-    const thumbnailKey = `thumbnails/${userId}/${thumbnailBaseName}.jpg`;
+    const thumbnailKey = `thumbnails/${userId}/${videoBaseName}.jpg`;
 
     const videoCommand = new PutObjectCommand({
       Body: Buffer.from(await video.arrayBuffer()),
@@ -282,6 +281,15 @@ export const uploadPost = createServerFn({ method: "POST" })
       Bucket: envServer.CLOUDFLARE_BUCKET,
       ContentType: thumbnail.type,
       Key: thumbnailKey,
+    });
+
+    const cfclient = new S3Client({
+      credentials: {
+        accessKeyId: envServer.CLOUDFLARE_ACCESS_KEY,
+        secretAccessKey: envServer.CLOUDFLARE_SECRET_KEY,
+      },
+      endpoint: envServer.CLOUDFLARE_R2,
+      region: "auto",
     });
 
     const videocmd = await cfclient.send(videoCommand);
@@ -414,7 +422,9 @@ export const updatePost = createServerFn({ method: "POST" })
             .returning("id")
             .executeTakeFirstOrThrow();
           allTagIds.push(newTag.id);
-        } else allTagIds.push(tag.id);
+        } else {
+          allTagIds.push(tag.id);
+        }
       }
 
       // Link post to new tags

@@ -3,7 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 
 const config = new pulumi.Config();
 // We'll try to get the accountId from config, or fallback to an environment variable
-const accountId = config.get("accountId") || process.env.CLOUDFLARE_ACCOUNT_ID;
+const accountId = config.get("accountId") ?? process.env.CLOUDFLARE_ACCOUNT_ID;
 
 if (!accountId) {
   throw new Error(

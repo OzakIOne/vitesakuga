@@ -1,10 +1,5 @@
-import {
-  Field,
-  Input,
-  type InputProps,
-  Textarea,
-  type TextareaProps,
-} from "@chakra-ui/react";
+import { Field, Input, Textarea } from "@chakra-ui/react";
+import type { InputProps, TextareaProps } from "@chakra-ui/react";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { FieldInfo } from "./FieldInfo";
 
@@ -36,7 +31,9 @@ export function FormTextWrapper({
             id={field.name}
             name={field.name}
             onBlur={field.handleBlur}
-            onChange={(e) => field.handleChange(e.target.value)}
+            onChange={(e) => {
+              field.handleChange(e.target.value);
+            }}
             value={field.state.value}
             {...inputProps}
           />
@@ -45,7 +42,9 @@ export function FormTextWrapper({
             id={field.name}
             name={field.name}
             onBlur={field.handleBlur}
-            onChange={(e) => field.handleChange(e.target.value)}
+            onChange={(e) => {
+              field.handleChange(e.target.value);
+            }}
             value={field.state.value}
             {...inputProps}
           />

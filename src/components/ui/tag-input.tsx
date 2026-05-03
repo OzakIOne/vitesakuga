@@ -2,10 +2,10 @@ import {
   Badge,
   Box,
   Combobox,
-  createListCollection,
   Icon,
   Portal,
   Wrap,
+  createListCollection,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -17,10 +17,10 @@ type Tag = {
   name: string;
 };
 
-interface TagInputProps {
+type TagInputProps = {
   value: Tag[];
   onChange: (tags: Tag[]) => void;
-}
+};
 
 export function TagInput({ value, onChange }: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
@@ -29,9 +29,9 @@ export function TagInput({ value, onChange }: TagInputProps) {
 
   // Filter tags based on search and exclude already selected tags
   const filteredTags = useMemo(() => {
-    const selectedNames = value.map((tag) => tag.name);
+    const selectedNames = new Set(value.map((tag) => tag.name));
     return allTags
-      .filter((tag) => !selectedNames.includes(tag.name))
+      .filter((tag) => !selectedNames.has(tag.name))
       .filter((tag) =>
         tag.name.toLowerCase().includes(searchValue.toLowerCase()),
       );
@@ -39,7 +39,9 @@ export function TagInput({ value, onChange }: TagInputProps) {
 
   // Check if we should show "Create new tag" option
   const showCreateOption = useMemo(() => {
-    if (!searchValue.trim()) return false;
+    if (!searchValue.trim()) {
+      return false;
+    }
     const exactMatch = allTags.some(
       (tag) => tag.name.toLowerCase() === searchValue.toLowerCase(),
     );
@@ -59,9 +61,11 @@ export function TagInput({ value, onChange }: TagInputProps) {
 
   const handleValueChange = (details: Combobox.ValueChangeDetails) => {
     const newValues = details.value;
-    const addedValue = newValues[newValues.length - 1];
+    const addedValue = newValues.at(-1);
 
-    if (!addedValue) return;
+    if (!addedValue) {
+      return;
+    }
 
     // Check if it's a create action
     if (addedValue.startsWith("Create: ")) {
@@ -88,7 +92,9 @@ export function TagInput({ value, onChange }: TagInputProps) {
         closeOnSelect
         collection={collection}
         multiple
-        onInputValueChange={(details) => setSearchValue(details.inputValue)}
+        onInputValueChange={(details) => {
+          setSearchValue(details.inputValue);
+        }}
         onValueChange={handleValueChange}
         value={value.map((tag) => tag.name)}
         width="full"

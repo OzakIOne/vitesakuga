@@ -22,6 +22,5 @@ const commentsQueries = {
 };
 
 // Backward compatibility export
-export const commentsQueryGetComments = (postId: number) => {
-  return commentsQueries.getComments(postId);
-};
+export const commentsQueryGetComments = (postId: number) =>
+  commentsQueries.getComments(postId);

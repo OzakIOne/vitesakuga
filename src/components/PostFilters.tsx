@@ -25,7 +25,7 @@ export function PostFilters({
           <Badge
             borderRadius="md"
             cursor="pointer"
-            onClick={() =>
+            onClick={async () =>
               navigate({ search: (prev) => ({ ...prev, sortBy: "newest" }) })
             }
             px={2}
@@ -37,7 +37,7 @@ export function PostFilters({
           <Badge
             borderRadius="md"
             cursor="pointer"
-            onClick={() =>
+            onClick={async () =>
               navigate({ search: (prev) => ({ ...prev, sortBy: "oldest" }) })
             }
             px={2}
@@ -56,7 +56,7 @@ export function PostFilters({
           <Badge
             borderRadius="md"
             cursor="pointer"
-            onClick={() =>
+            onClick={async () =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "all" }) })
             }
             px={2}
@@ -68,7 +68,7 @@ export function PostFilters({
           <Badge
             borderRadius="md"
             cursor="pointer"
-            onClick={() =>
+            onClick={async () =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "today" }) })
             }
             px={2}
@@ -80,9 +80,9 @@ export function PostFilters({
           <Badge
             borderRadius="md"
             cursor="pointer"
-            onClick={() =>
-              navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) })
-            }
+            onClick={async () => {
+              navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) });
+            }}
             px={2}
             py={1}
             variant={dateRange === "week" ? "solid" : "outline"}
@@ -92,7 +92,7 @@ export function PostFilters({
           <Badge
             borderRadius="md"
             cursor="pointer"
-            onClick={() =>
+            onClick={async () =>
               navigate({ search: (prev) => ({ ...prev, dateRange: "month" }) })
             }
             px={2}

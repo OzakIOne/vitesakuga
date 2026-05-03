@@ -22,9 +22,9 @@ export type MiddlewareUser = {
   user: NonNullable<Awaited<ReturnType<typeof getUserInternal>>>;
 };
 
-export const getUserSession = createServerFn().handler(async () => {
-  return await getUserInternal();
-});
+export const getUserSession = createServerFn().handler(async () =>
+  getUserInternal(),
+);
 
 export const authMiddleware = createMiddleware().server(async ({ next }) => {
   const user = await getUserInternal();

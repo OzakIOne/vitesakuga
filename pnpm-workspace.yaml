@@ -1,3 +1,10 @@
 onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - "@prisma/engines"
   - core-js
   - esbuild
+  - lefthook
+  - msgpackr-extract
+  - prisma
+  - sharp
+  - workerd

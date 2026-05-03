@@ -14,9 +14,7 @@ import { userQueryOptions } from "src/lib/users/users.queries";
 export const Route = createFileRoute("/users/$id")({
   component: UserLayoutComponent,
   errorComponent: UserErrorComponent,
-  notFoundComponent: () => {
-    return <NotFound>User not found</NotFound>;
-  },
+  notFoundComponent: () => <NotFound>User not found</NotFound>,
   // fix initial window is not defined error
   ssr: "data-only",
   validateSearch: searchPostsBaseSchema,
@@ -32,11 +30,11 @@ function UserContent() {
   );
 
   const posts = data.data;
-  const popularTags = data.meta.popularTags;
+  const { popularTags } = data.meta;
   const { totalPages } = data.meta.pagination;
 
   const handlePageChange = (newPage: number) => {
-    navigate({
+    void navigate({
       search: (prev) => ({ ...prev, page: newPage }),
     });
     window.scrollTo({ behavior: "smooth", top: 0 });

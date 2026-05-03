@@ -18,9 +18,7 @@ import z from "zod";
 export const Route = createFileRoute("/posts/$postId")({
   component: PostComponent,
   errorComponent: PostErrorComponent,
-  notFoundComponent: () => {
-    return <NotFound>Post not found</NotFound>;
-  },
+  notFoundComponent: () => <NotFound>Post not found</NotFound>,
   params: {
     parse: (params) => ({
       postId: z.coerce.number().parse(params.postId),
@@ -46,8 +44,12 @@ function PostComponent() {
 
   const handleBack = () =>
     window.history.length > 1 ? window.history.back() : navigate({ to: ".." });
-  const handleEditClick = () => setIsEditMode(true);
-  const handleCancelEdit = () => setIsEditMode(false);
+  const handleEditClick = () => {
+    setIsEditMode(true);
+  };
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+  };
 
   return (
     <Box p={4}>
@@ -55,7 +57,9 @@ function PostComponent() {
         <PostEditForm
           initialTags={initialTags}
           onCancel={handleCancelEdit}
-          onSuccess={() => setIsEditMode(false)}
+          onSuccess={() => {
+            setIsEditMode(false);
+          }}
           post={post}
           postId={postId}
         />

@@ -24,7 +24,7 @@ function Home() {
       <Heading className="mb-4 font-bold text-2xl">ViteSakuga</Heading>
       <SearchBox placeholder="One piece..." showTitle={false} />
       <Suspense fallback={<Box mt={4}>Loading popular tags...</Box>}>
-        <Box maxW="md" mt={4} w={"1/12"}>
+        <Box maxW="md" mt={4} w="1/12">
           <PopularTagsSection tags={popularTags.data} />
         </Box>
       </Suspense>

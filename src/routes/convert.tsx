@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Container,
-  createListCollection,
   FileUpload,
   Heading,
   Icon,
@@ -12,6 +11,7 @@ import {
   Progress,
   Select,
   Text,
+  createListCollection,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
@@ -81,7 +81,7 @@ function RouteComponent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     setDownloadUrl(null);
-    const files = e.target.files;
+    const { files } = e.target;
     if (files && files.length > 0) {
       setFile(files[0]);
     }
@@ -104,10 +104,13 @@ function RouteComponent() {
       });
 
       let outputFormat;
-      if (output.container === "mp4") outputFormat = new Mp4OutputFormat();
-      else if (output.container === "webm")
+      if (output.container === "mp4") {
+        outputFormat = new Mp4OutputFormat();
+      } else if (output.container === "webm") {
         outputFormat = new WebMOutputFormat();
-      else outputFormat = new MkvOutputFormat();
+      } else {
+        outputFormat = new MkvOutputFormat();
+      }
 
       const target = new BufferTarget();
 
@@ -137,7 +140,7 @@ function RouteComponent() {
 
       await conversion.execute();
 
-      const buffer = target.buffer;
+      const { buffer } = target;
       if (!buffer) {
         throw new Error("Conversion failed to produce output");
       }
@@ -148,19 +151,22 @@ function RouteComponent() {
       const ext = output.container;
       const base = file.name.replace(/\.[^.]+$/, "");
       setConvertedName(`${base}-converted.${ext}`);
-    } catch (err) {
-      setError(err.message || "An error occurred during conversion.");
+    } catch (error) {
+      setError(error.message ?? "An error occurred during conversion.");
     } finally {
       setIsConverting(false);
     }
   };
 
   // Clean up object URLs
-  useEffect(() => {
-    return () => {
-      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    };
-  }, [downloadUrl]);
+  useEffect(
+    () => () => {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+    },
+    [downloadUrl],
+  );
 
   return (
     <Container maxW="xl" py={8}>
@@ -208,7 +214,9 @@ function RouteComponent() {
                 const o = SUPPORTED_OUTPUTS.find(
                   (opt) => opt.label === details.value,
                 );
-                if (o) setOutput(o);
+                if (o) {
+                  setOutput(o);
+                }
               }}
               size="md"
               value={output ? [output.label] : []}

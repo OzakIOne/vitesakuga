@@ -25,10 +25,6 @@ const tagsQueries = {
 };
 
 // Backward compatibility export
-export const tagsQueryGetTags = () => {
-  return tagsQueries.getTags();
-};
+export const tagsQueryGetTags = () => tagsQueries.getTags();
 
-export const tagsQueryGetPopularTags = () => {
-  return tagsQueries.getPopularTags();
-};
+export const tagsQueryGetPopularTags = () => tagsQueries.getPopularTags();

@@ -39,7 +39,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
 
   const addCommentMutation = useMutation({
-    mutationFn: (newComment: {
+    mutationFn: async (newComment: {
       postId: number;
       content: string;
       userId: string;
@@ -55,7 +55,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
+      void queryClient.invalidateQueries({
+        queryKey: commentsKeys.post(postId),
+      });
       toaster.create({
         closable: true,
         description: "Your comment has been successfully posted.",
@@ -68,7 +70,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   });
 
   const deleteCommentMutation = useMutation({
-    mutationFn: (data: { commentId: number; postId: number }) =>
+    mutationFn: async (data: { commentId: number; postId: number }) =>
       deleteComment({ data }),
     onError: (error) => {
       toaster.create({
@@ -81,7 +83,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
+      void queryClient.invalidateQueries({
+        queryKey: commentsKeys.post(postId),
+      });
       toaster.create({
         closable: true,
         description: "Your comment has been successfully deleted.",
@@ -115,7 +119,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   };
 
   return (
-    <Box borderRadius={"md"} padding={"4"} shadow={"md"}>
+    <Box borderRadius="md" padding="4" shadow="md">
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Comments
       </Text>
@@ -125,7 +129,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
           <>
             <Textarea
               mb={2}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(e) => {
+                setComment(e.target.value);
+              }}
               placeholder="Write a comment..."
               value={comment}
             />
@@ -172,7 +178,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
                 flexShrink={0}
                 loading={deleteCommentMutation.isPending}
                 ms={2}
-                onClick={() => setCommentIdToDelete(comment.id)}
+                onClick={() => {
+                  setCommentIdToDelete(comment.id);
+                }}
                 size="sm"
                 variant="ghost"
               >
@@ -184,7 +192,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       </Box>
 
       <Dialog.Root
-        onOpenChange={() => setCommentIdToDelete(null)}
+        onOpenChange={() => {
+          setCommentIdToDelete(null);
+        }}
         open={commentIdToDelete !== null}
         role="alertdialog"
       >
