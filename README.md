@@ -15,7 +15,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
 - [ ] better ui
 - [x] convert.tsx [mediabunny](https://mediabunny.dev) instead of old lib
-- [x] try pulumi to setup project bucket and domain name from scratch with typescript
+- [x] try alchemy to setup project bucket and domain name from scratch with typescript
 - [x] Store list scroll position and loaded data state in the URL, so when a user shares the URL, it restores the exact position in the infinite list (like pagination)
 - [x] in the searchbox add the feature that is in the taginput component with tag suggestion to allow for easier tag search
 - [x] add <Suspense> for suspenseQueries
@@ -59,36 +59,37 @@ pnpm dev
 
 ## Infrastructure Setup
 
-This project uses **Pulumi** to automate the creation of Cloudflare R2 buckets.
+This project uses **Alchemy** to automate the creation of Cloudflare R2 buckets.
 
 ### 1. Prerequisites
 
 - A [Cloudflare Account](https://dash.cloudflare.com/)
-- [Pulumi CLI](https://www.pulumi.com/docs/get-started/install/) installed
+- [Node.js](https://nodejs.org/) installed
 - Cloudflare **Account ID** (found on your dashboard)
 - Cloudflare **API Token** with `R2 Edit` permissions
 
-### 2. Deployment
+### 2. Deploy the Bucket
 
-Navigate to the `infra` directory and configure your credentials:
+Set your Account ID and deploy from the project root:
 
 ```bash
-cd infra
+# Authenticate with Cloudflare
+npx alchemy login
 
-# Set your Cloudflare details
-pulumi config set cloudflare:accountId YOUR_ACCOUNT_ID
-pulumi config set cloudflare:apiToken YOUR_API_TOKEN --secret
+# Set your Cloudflare Account ID
+export CLOUDFLARE_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
 # Deploy the resources
-pulumi up
+pnpm run infra:deploy
 ```
 
 ### 3. Sync to Environment
 
-After a successful deployment, run the sync script in the root directory to update your `.env` file:
+Follow the console output from the deploy script to manually update your `.env` file with the newly created bucket name and your account ID.
 
-```bash
-./sync-infra.sh
+You also need to manually add the **S3 API Token** from the Cloudflare R2 dashboard to your `.env` file to set `CLOUDFLARE_ACCESS_KEY` and `CLOUDFLARE_SECRET_KEY`:
+
+```env
+CLOUDFLARE_ACCESS_KEY="your-access-key"
+CLOUDFLARE_SECRET_KEY="your-secret-key"
 ```
-
-> **Note:** You will still need to manually generate an **S3 API Token** from the Cloudflare R2 dashboard to get the `CLOUDFLARE_ACCESS_KEY` and `CLOUDFLARE_SECRET_KEY` required in your `.env`.
