@@ -1,3 +1,4 @@
+import { useHotkeys } from "@tanstack/react-hotkeys";
 import {
   MediaControlBar,
   MediaController,
@@ -14,7 +15,7 @@ import {
   MediaPlaybackRateMenu,
   MediaPlaybackRateMenuButton,
 } from "media-chrome/react/menu";
-import React from "react";
+import React, { useRef } from "react";
 
 const BaseURL = encodeURI(
   "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
@@ -32,12 +33,41 @@ export const Video = React.forwardRef<any, VideoProps>(
     const controllerId = `controller-${uuid}`;
     const menuId = `menu-${uuid}`;
     const buttonId = `button-${uuid}`;
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    const seekOffset = frameRate ? 1 / frameRate : 0.04;
+
+    useHotkeys(
+      [
+        {
+          callback: () => {
+            const video = videoRef.current;
+            if (video)
+              video.currentTime = Math.max(0, video.currentTime - seekOffset);
+          },
+          hotkey: ",",
+        },
+        {
+          callback: () => {
+            const video = videoRef.current;
+            if (video)
+              video.currentTime = Math.min(
+                video.duration,
+                video.currentTime + seekOffset,
+              );
+          },
+          hotkey: ".",
+        },
+      ],
+      { conflictBehavior: "allow" },
+    );
 
     return (
       <div className="flex w-full flex-col">
         <MediaController id={controllerId} ref={ref}>
           <video
             muted
+            ref={videoRef}
             slot="media"
             src={bypass ? url : BaseURL + url}
             style={{

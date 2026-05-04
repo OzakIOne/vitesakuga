@@ -1,7 +1,7 @@
-import { Effect } from "effect";
 import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { Effect } from "effect";
 import { auth } from "src/lib/auth";
 
 export const getUserSession = createServerFn().handler(async () => {
@@ -24,8 +24,7 @@ export const requireAuth = createServerFn().handler(() =>
             headers: getRequestHeaders(),
             query: { disableCookieCache: true },
           }),
-        catch: (error) =>
-          new Error(`Session check failed: ${String(error)}`),
+        catch: (error) => new Error(`Session check failed: ${String(error)}`),
       });
 
       if (!session?.user) {

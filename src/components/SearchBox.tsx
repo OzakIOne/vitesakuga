@@ -107,6 +107,7 @@ export function SearchBox({
       )}
       <Group attached mb={4} w="full">
         <Input
+          id="search-input"
           onChange={(e) => {
             const newValue = e.target.value;
             setSearch(newValue);

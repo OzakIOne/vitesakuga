@@ -37,6 +37,7 @@
     "@tanstack/react-devtools": "^0.10.2",
     "@tanstack/react-form": "^1.29.1",
     "@tanstack/react-form-devtools": "^0.2.22",
+    "@tanstack/react-hotkeys": "^0.10.0",
     "@tanstack/react-pacer": "^0.22.0",
     "@tanstack/react-pacer-devtools": "0.7.0",
     "@tanstack/react-query": "^5.100.9",
@@ -45,6 +46,7 @@
     "@tanstack/react-router-devtools": "^1.166.13",
     "@tanstack/react-router-ssr-query": "^1.166.12",
     "@tanstack/react-start": "^1.167.62",
+    "@xstate/react": "^6.1.0",
     "better-auth": "1.6.9",
     "date-fns": "^4.1.0",
     "drizzle-kit": "^0.31.10",
@@ -67,6 +69,7 @@
     "react-icons": "^5.6.0",
     "taze": "^19.11.0",
     "vite-plugin-static-copy": "^4.1.0",
+    "xstate": "^5.31.0",
     "zod": "^4.4.2"
   },
   "devDependencies": {

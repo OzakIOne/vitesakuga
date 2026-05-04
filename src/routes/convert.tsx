@@ -14,46 +14,17 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useActorRef, useSelector } from "@xstate/react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { LuUpload } from "react-icons/lu";
+import type { AnyActorRef } from "xstate";
 
-const {
-  Input,
-  ALL_FORMATS,
-  Output,
-  Mp4OutputFormat,
-  WebMOutputFormat,
-  MkvOutputFormat,
-  BufferTarget,
-  Conversion,
-  BlobSource,
-} = await import("mediabunny");
-type OutputFormat = {
-  label: string;
-  container: "mp4" | "webm" | "mkv";
-  videoCodec?: "avc" | "vp9";
-  audioCodec?: "aac" | "opus";
-};
-
-const SUPPORTED_OUTPUTS: OutputFormat[] = [
-  {
-    audioCodec: "aac",
-    container: "mp4",
-    label: "MP4 (H.264/AAC)",
-    videoCodec: "avc",
-  },
-  {
-    audioCodec: "opus",
-    container: "webm",
-    label: "WebM (VP9/Opus)",
-    videoCodec: "vp9",
-  },
-  {
-    container: "mkv",
-    label: "Matroska (Remux/Copy)",
-  },
-];
+import {
+  SUPPORTED_OUTPUTS,
+  convertMachine,
+  isPassthroughCompatible,
+} from "./convert.machine";
 
 const outputFormats = createListCollection({
   items: SUPPORTED_OUTPUTS.map((format) => ({
@@ -67,94 +38,83 @@ export const Route = createFileRoute("/convert")({
   ssr: false,
 });
 
+type ActorLike = Pick<AnyActorRef, "getSnapshot" | "subscribe">;
+
+function ConversionProgress({ actor }: { actor: ActorLike }) {
+  const progress = useSelector(actor, (s) => s.context.progress as number);
+  const isConverting = useSelector(
+    actor,
+    (s) => s.matches("converting") as boolean,
+  );
+
+  if (!isConverting) return null;
+
+  return (
+    <Box mb={4}>
+      <Text mb={1}>Progress: {Math.round(progress)}%</Text>
+      <Progress.Root striped value={progress}>
+        <Progress.Track>
+          <Progress.Range />
+        </Progress.Track>
+      </Progress.Root>
+    </Box>
+  );
+}
+
 function RouteComponent() {
-  const [file, setFile] = useState<File | null>(null);
-  const [output, setOutput] = useState<
-    (typeof SUPPORTED_OUTPUTS)[0] | undefined
-  >();
-  const [isConverting, setIsConverting] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [convertedName, setConvertedName] = useState<string>("");
+  const actorRef = useActorRef(convertMachine);
+
+  const file = useSelector(actorRef, (s) => s.context.file);
+  const output = useSelector(actorRef, (s) => s.context.output);
+  const error = useSelector(actorRef, (s) => s.context.error);
+  const downloadUrl = useSelector(actorRef, (s) => s.context.downloadUrl);
+  const convertedName = useSelector(actorRef, (s) => s.context.convertedName);
+  const inputVideoCodec = useSelector(
+    actorRef,
+    (s) => s.context.inputVideoCodec,
+  );
+  const isConverting = useSelector(actorRef, (s) => s.matches("converting"));
+  const isSuccess = useSelector(actorRef, (s) => s.matches("success"));
+
+  const probeFile = useCallback(
+    async (f: File) => {
+      try {
+        const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
+        const input = new Input({
+          formats: ALL_FORMATS,
+          source: new BlobSource(f),
+        });
+        const [videoTrack, audioTrack] = await Promise.all([
+          input.getPrimaryVideoTrack(),
+          input.getPrimaryAudioTrack(),
+        ]);
+        const [videoConfig, audioConfig] = await Promise.all([
+          videoTrack?.getDecoderConfig(),
+          audioTrack?.getDecoderConfig(),
+        ]);
+        actorRef.send({
+          type: "file.probed",
+          videoCodec: videoConfig?.codec ?? null,
+          audioCodec: audioConfig?.codec ?? null,
+        });
+        input.dispose();
+      } catch {
+        actorRef.send({
+          type: "file.probed",
+          videoCodec: null,
+          audioCodec: null,
+        });
+      }
+    },
+    [actorRef],
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null);
-    setDownloadUrl(null);
     const { files } = e.target;
     if (files && files.length > 0) {
-      setFile(files[0]);
-    }
-  };
-
-  const handleConvert = async () => {
-    if (!(file && output)) {
-      setError("Please select a file and output format.");
-      return;
-    }
-    setIsConverting(true);
-    setProgress(0);
-    setError(null);
-    setDownloadUrl(null);
-    setConvertedName("");
-    try {
-      const input = new Input({
-        formats: ALL_FORMATS,
-        source: new BlobSource(file),
-      });
-
-      let outputFormat;
-      if (output.container === "mp4") {
-        outputFormat = new Mp4OutputFormat();
-      } else if (output.container === "webm") {
-        outputFormat = new WebMOutputFormat();
-      } else {
-        outputFormat = new MkvOutputFormat();
-      }
-
-      const target = new BufferTarget();
-
-      const mediabunnyOutput = new Output({
-        format: outputFormat,
-        target: target,
-      });
-
-      const conversion = await Conversion.init({
-        audio: output.audioCodec ? { codec: output.audioCodec } : undefined,
-        input,
-        output: mediabunnyOutput,
-        video: output.videoCodec ? { codec: output.videoCodec } : undefined,
-      });
-
-      if (!conversion.isValid) {
-        setError(
-          "Conversion is invalid: " +
-            conversion.discardedTracks.map((t) => t.reason).join(", "),
-        );
-        return;
-      }
-
-      conversion.onProgress = (p) => {
-        setProgress(p * 100);
-      };
-
-      await conversion.execute();
-
-      const { buffer } = target;
-      if (!buffer) {
-        throw new Error("Conversion failed to produce output");
-      }
-
-      const blob = new Blob([buffer], { type: `video/${output.container}` });
-      const url = URL.createObjectURL(blob);
-      setDownloadUrl(url);
-      const ext = output.container;
-      const base = file.name.replace(/\.[^.]+$/, "");
-      setConvertedName(`${base}-converted.${ext}`);
-    } catch (error) {
-      setError(error.message ?? "An error occurred during conversion.");
-    } finally {
-      setIsConverting(false);
+      const selected = files[0];
+      actorRef.send({ type: "file.selected", file: selected });
+      void probeFile(selected);
     }
   };
 
@@ -215,7 +175,7 @@ function RouteComponent() {
                   (opt) => opt.label === details.value,
                 );
                 if (o) {
-                  setOutput(o);
+                  actorRef.send({ type: "output.selected", output: o });
                 }
               }}
               size="md"
@@ -234,14 +194,30 @@ function RouteComponent() {
               <Portal>
                 <Select.Positioner>
                   <Select.Content>
-                    {SUPPORTED_OUTPUTS.map((format) => (
-                      <Select.Item
-                        item={{ label: format.label, value: format.label }}
-                        key={format.label}
-                      >
-                        {format.label}
-                      </Select.Item>
-                    ))}
+                    {SUPPORTED_OUTPUTS.map((format) => {
+                      const compatible = isPassthroughCompatible(
+                        format,
+                        inputVideoCodec,
+                      );
+                      return (
+                        <Select.Item
+                          item={{
+                            label: format.label,
+                            value: format.label,
+                            disabled: !compatible,
+                          }}
+                          key={format.label}
+                        >
+                          {format.label}
+                          {!compatible && format.videoCodec === undefined && (
+                            <Text as="span" color="fg.subtle">
+                              {" "}
+                              — codec incompatible
+                            </Text>
+                          )}
+                        </Select.Item>
+                      );
+                    })}
                   </Select.Content>
                 </Select.Positioner>
               </Portal>
@@ -251,37 +227,39 @@ function RouteComponent() {
 
         <Button
           colorScheme="blue"
-          disabled={!file || isConverting}
+          disabled={!file || !output || isConverting}
           loading={isConverting}
           loadingText="Converting"
           mb={2}
-          onClick={handleConvert}
+          onClick={() => actorRef.send({ type: "convert" })}
         >
           Convert
         </Button>
 
-        {isConverting && (
-          <Box mb={4}>
-            <Text mb={1}>Progress: {Math.round(progress)}%</Text>
-            <Progress.Root striped value={progress}>
-              <Progress.Track>
-                <Progress.Range />
-              </Progress.Track>
-            </Progress.Root>
-          </Box>
-        )}
+        <ConversionProgress actor={actorRef} />
 
         {error && (
           <Alert.Root mb={4} status="error">
             <Alert.Content>
               <Alert.Indicator />
               <Alert.Title>Error</Alert.Title>
-              <Alert.Description>{error}</Alert.Description>
+              <Alert.Description>
+                {error}
+                <Button
+                  colorScheme="gray"
+                  mt={2}
+                  onClick={() => actorRef.send({ type: "reset" })}
+                  size="sm"
+                  variant="outline"
+                >
+                  Clear
+                </Button>
+              </Alert.Description>
             </Alert.Content>
           </Alert.Root>
         )}
 
-        {downloadUrl && (
+        {downloadUrl && isSuccess && (
           <Alert.Root mb={4} status="success">
             <Alert.Content>
               <Alert.Indicator />
@@ -293,28 +271,37 @@ function RouteComponent() {
                     Download
                   </a>
                 </Button>
-                {downloadUrl &&
-                  (output?.container === "mp4" ? (
-                    <video
-                      controls
-                      src={downloadUrl}
-                      style={{
-                        borderRadius: "0.5rem",
-                        marginTop: "1rem",
-                        maxHeight: "256px",
-                        width: "100%",
-                      }}
-                    />
-                  ) : (
-                    <audio
-                      controls
-                      src={downloadUrl}
-                      style={{
-                        marginTop: "1rem",
-                        width: "100%",
-                      }}
-                    />
-                  ))}
+                <Button
+                  colorScheme="gray"
+                  ml={2}
+                  mt={2}
+                  onClick={() => actorRef.send({ type: "reset" })}
+                  size="sm"
+                  variant="outline"
+                >
+                  Convert Another
+                </Button>
+                {output?.container === "mp4" ? (
+                  <video
+                    controls
+                    src={downloadUrl}
+                    style={{
+                      borderRadius: "0.5rem",
+                      marginTop: "1rem",
+                      maxHeight: "256px",
+                      width: "100%",
+                    }}
+                  />
+                ) : (
+                  <audio
+                    controls
+                    src={downloadUrl}
+                    style={{
+                      marginTop: "1rem",
+                      width: "100%",
+                    }}
+                  />
+                )}
               </Alert.Description>
             </Alert.Content>
           </Alert.Root>
@@ -325,7 +312,9 @@ function RouteComponent() {
           aac, m3u8
         </Text>
         <Text fontSize="sm">
-          Supported output: MP4 (H.264/AAC), WebM (VP9/Opus), Matroska (Remux)
+          Transcode: MP4 (H.264/AAC), WebM (VP9/Opus). Passthrough (no quality
+          loss): MP4, WebM, MKV — copies codecs if compatible with target
+          container.
         </Text>
       </Box>
     </Container>

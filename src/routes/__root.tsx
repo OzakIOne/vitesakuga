@@ -1,6 +1,7 @@
 import { Box, Button, Center } from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
+import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
 import { useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type * as React from "react";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
+import { GlobalShortcuts } from "src/components/GlobalShortcuts";
 import { NotFound } from "src/components/NotFound";
 import { ColorModeButton } from "src/components/ui/color-mode";
 import { Provider } from "src/components/ui/provider";
@@ -211,9 +213,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <Provider>
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
+      <HotkeysProvider>
+        <GlobalShortcuts />
+        <RootDocument>
+          <Outlet />
+        </RootDocument>
+      </HotkeysProvider>
     </Provider>
   );
 }
