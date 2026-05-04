@@ -24,15 +24,16 @@ import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
-import { authMiddleware } from "src/lib/auth/auth.middleware";
+import { requireAuth } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import z from "zod";
 
 export const Route = createFileRoute("/account")({
-  component: RouteComponent,
-  server: {
-    middleware: [authMiddleware],
+  beforeLoad: async () => {
+    const user = await requireAuth();
+    return { user };
   },
+  component: RouteComponent,
 });
 
 const profileSchema = z.object({
@@ -42,7 +43,6 @@ const profileSchema = z.object({
 
 function RouteComponent() {
   const { user } = Route.useRouteContext();
-  console.log("user:", user);
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const router = useRouter();
@@ -51,7 +51,7 @@ function RouteComponent() {
 
   const profileForm = useForm({
     defaultValues: {
-      image: user.image,
+      image: user.image ?? "",
       name: user.name,
     },
     onSubmit: async ({ value }) => {
@@ -216,7 +216,7 @@ function RouteComponent() {
                       </InputGroup>
                     </Field.Root>
                     {!field.state.meta.errors &&
-                      field.state.value !== user?.image && (
+                      field.state.value !== user.image && (
                         <div className="mt-4 rounded-lg bg-gray-50 p-4">
                           <Text fontWeight="medium" mb={3}>
                             Preview:

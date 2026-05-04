@@ -1,10 +1,10 @@
+import { Effect } from "effect";
 import { redirect } from "@tanstack/react-router";
-import { createMiddleware, createServerFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { auth } from "src/lib/auth";
 
-// Internal helper - only called on server
-const getUserInternal = async () => {
+export const getUserSession = createServerFn().handler(async () => {
   const session = await auth.api.getSession({
     headers: getRequestHeaders(),
     query: {
@@ -12,32 +12,27 @@ const getUserInternal = async () => {
     },
   });
 
-  if (session?.user) {
-    return session.user;
-  }
-  return null;
-};
-
-export type MiddlewareUser = {
-  user: NonNullable<Awaited<ReturnType<typeof getUserInternal>>>;
-};
-
-export const getUserSession = createServerFn().handler(async () =>
-  getUserInternal(),
-);
-
-export const authMiddleware = createMiddleware().server(async ({ next }) => {
-  const user = await getUserInternal();
-
-  console.log("authMiddleware user:", user);
-
-  if (!user) {
-    throw redirect({ to: "/login" });
-  }
-
-  return next({
-    context: {
-      user,
-    },
-  });
+  return session?.user ?? null;
 });
+
+export const requireAuth = createServerFn().handler(() =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const session = yield* Effect.tryPromise({
+        try: () =>
+          auth.api.getSession({
+            headers: getRequestHeaders(),
+            query: { disableCookieCache: true },
+          }),
+        catch: (error) =>
+          new Error(`Session check failed: ${String(error)}`),
+      });
+
+      if (!session?.user) {
+        throw redirect({ to: "/login" });
+      }
+
+      return session.user;
+    }),
+  ),
+);

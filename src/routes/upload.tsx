@@ -26,14 +26,14 @@ import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import { authMiddleware } from "src/lib/auth/auth.middleware";
+import { requireAuth } from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import {
   FormFileUploadSchema,
   VideoMetadataSchema,
 } from "src/lib/posts/posts.schema";
-import type { FileUploadData } from "src/lib/posts/posts.schema";
+import type { FileUploadData, VideoMetadata } from "src/lib/posts/posts.schema";
 import { buildFormData, makeReadChunk } from "src/lib/posts/posts.utils";
 
 type GeneratedThumbnail = {
@@ -42,20 +42,21 @@ type GeneratedThumbnail = {
 };
 
 export const Route = createFileRoute("/upload")({
-  component: RouteComponent,
-  server: {
-    middleware: [authMiddleware],
+  beforeLoad: async () => {
+    const user = await requireAuth();
+    return { user };
   },
+  component: RouteComponent,
 });
 
 function RouteComponent() {
   const { user } = Route.useRouteContext();
   const { queryClient } = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
-  const navigate = useNavigate({ from: "/posts" });
+  const navigate = useNavigate();
   const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
   const frameRateRef = useRef<number | null>(null);
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
 
   const uploadPostMutation = useMutation({
     mutationFn: async (data: FormData) => uploadPost({ data }),
@@ -254,24 +255,23 @@ function RouteComponent() {
     },
   });
 
-  // TODO fix those fucking types
   const form = useForm({
     defaultValues: {
       content: "",
-      relatedPostId: undefined,
-      source: "",
-      tags: [],
+      relatedPostId: undefined as number | undefined,
+      source: undefined as string | undefined,
+      tags: [] as { id?: number; name: string }[],
       thumbnail: undefined as unknown as File,
       title: "",
-      userId: user.id,
+      userId: user?.id ?? "",
       video: undefined as unknown as File,
-      videoMetadata: {},
-    } as FileUploadData,
+      videoMetadata: undefined as VideoMetadata,
+    },
     onSubmit: async ({ value }) => {
       await handleSubmit(value);
     },
     validators: {
-      onSubmit: FormFileUploadSchema,
+      onSubmit: ({ value }) => FormFileUploadSchema.safeParse(value),
     },
   });
 
@@ -281,11 +281,18 @@ function RouteComponent() {
     queryFn: async () =>
       searchPosts({
         data: {
-          page: { size: 5 },
+          page: 0,
           q: relatedPostSearch,
+          tags: [] as string[],
         },
       }),
-    queryKey: postsKeys.search(relatedPostSearch, []),
+    queryKey: postsKeys.search({
+      dateRange: "all",
+      page: 0,
+      q: relatedPostSearch,
+      sortBy: "newest",
+      tags: [],
+    }),
   });
 
   return (
@@ -380,7 +387,7 @@ function RouteComponent() {
                     <Button
                       mt={1}
                       onClick={() => {
-                        field.handleChange();
+                        field.handleChange(undefined);
                         setRelatedPostSearch("");
                       }}
                       size="sm"
@@ -437,7 +444,8 @@ function RouteComponent() {
                             );
                             const parsedData =
                               VideoMetadataSchema.parse(videoTrack);
-                            frameRateRef.current = parsedData.FrameRate;
+                            frameRateRef.current =
+                              parsedData?.FrameRate ?? null;
                             form.setFieldValue("videoMetadata", parsedData);
                           })
                           .catch((error: unknown) => {
