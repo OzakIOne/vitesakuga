@@ -1,53 +1,101 @@
 import { createServerFn } from "@tanstack/react-start";
+import { Effect } from "effect";
 import { kysely } from "src/lib/db/kysely";
 import { z } from "zod";
+import { Debug, withMinimumLogLevel } from "../effect/logger";
 import { commentInsertSchema } from "../db/schema";
 import { commentSchema } from "./comments.schema";
 
 export const fetchComments = createServerFn()
   .inputValidator((input: unknown) => z.number().parse(input))
-  .handler(async ({ data: postId }) => {
-    // Fetch comments for the post along with user info
-    const comments = await kysely
-      .selectFrom("comments")
-      .innerJoin("user", "user.id", "comments.userId")
-      .where("comments.postId", "=", postId)
-      .orderBy("comments.createdAt", "desc")
-      .select([
-        "comments.id",
-        "comments.content",
-        "comments.createdAt",
-        "comments.userId",
-        "comments.postId",
-        "user.name as userName",
-        "user.image as userImage",
-      ])
-      .execute();
+  .handler(({ data: postId }) =>
+    Effect.runPromise(
+      Effect.fn("fetchComments")(
+        function* () {
+          yield* Effect.logDebug(
+            `Fetching comments for post ${postId}...`,
+          );
+          const comments = yield* Effect.tryPromise({
+            try: () =>
+              kysely
+                .selectFrom("comments")
+                .innerJoin("user", "user.id", "comments.userId")
+                .where("comments.postId", "=", postId)
+                .orderBy("comments.createdAt", "desc")
+                .select([
+                  "comments.id",
+                  "comments.content",
+                  "comments.createdAt",
+                  "comments.userId",
+                  "comments.postId",
+                  "user.name as userName",
+                  "user.image as userImage",
+                ])
+                .execute(),
+            catch: (error) =>
+              new Error(`Failed to fetch comments: ${String(error)}`),
+          });
 
-    const parsed = z.array(commentSchema).safeParse(comments);
-    if (!parsed.success) {
-      throw new Error(`Error fetching comments: ${parsed.error.message}`);
-    }
+          yield* Effect.logDebug(
+            `Parsing ${comments.length} comments...`,
+          );
+          const parsed = yield* Effect.try({
+            try: () => z.array(commentSchema).parse(comments),
+            catch: (error) =>
+              new Error(`Error processing comments: ${String(error)}`),
+          });
 
-    return parsed.data;
-  });
+          yield* Effect.logInfo(
+            `Fetched ${parsed.length} comments for post ${postId}.`,
+          );
+          return parsed;
+        },
+        Effect.provide(withMinimumLogLevel(Debug)),
+      )(),
+    ),
+  );
 
 export const addComment = createServerFn()
   .inputValidator((input: unknown) => commentInsertSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { postId, content, userId } = data;
+  .handler(({ data }) =>
+    Effect.runPromise(
+      Effect.fn("addComment")(
+        function* () {
+          yield* Effect.logDebug(
+            `Adding comment to post ${data.postId} by user ${data.userId}...`,
+          );
 
-    return kysely
-      .insertInto("comments")
-      .values({
-        content,
-        createdAt: new Date(),
-        postId,
-        userId,
-      })
-      .returning(["id", "postId", "content", "userId", "createdAt"])
-      .executeTakeFirstOrThrow();
-  });
+          const comment = yield* Effect.tryPromise({
+            try: () =>
+              kysely
+                .insertInto("comments")
+                .values({
+                  content: data.content,
+                  createdAt: new Date(),
+                  postId: data.postId,
+                  userId: data.userId,
+                })
+                .returning([
+                  "id",
+                  "postId",
+                  "content",
+                  "userId",
+                  "createdAt",
+                ])
+                .executeTakeFirstOrThrow(),
+            catch: (error) =>
+              new Error(`Failed to add comment: ${String(error)}`),
+          });
+
+          yield* Effect.logInfo(
+            `Comment ${comment.id} added to post ${data.postId}.`,
+          );
+          return comment;
+        },
+        Effect.provide(withMinimumLogLevel(Debug)),
+      )(),
+    ),
+  );
 
 export const deleteComment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -57,43 +105,85 @@ export const deleteComment = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
-    const { commentId } = data;
+  .handler(({ data }) =>
+    Effect.runPromise(
+      Effect.fn("deleteComment")(
+        function* () {
+          const { commentId } = data;
+          yield* Effect.logDebug(`Deleting comment ${commentId}...`);
 
-    // Get the current user's session
-    const { auth: betterAuth } = await import("src/lib/auth");
-    const { getRequestHeaders } = await import("@tanstack/react-start/server");
+          const session = yield* Effect.tryPromise({
+            try: async () => {
+              const { auth: betterAuth } = await import("src/lib/auth");
+              const { getRequestHeaders } = await import(
+                "@tanstack/react-start/server"
+              );
 
-    const session = await betterAuth.api.getSession({
-      headers: getRequestHeaders(),
-      query: {
-        disableCookieCache: true,
-      },
-    });
+              return betterAuth.api.getSession({
+                headers: getRequestHeaders(),
+                query: {
+                  disableCookieCache: true,
+                },
+              });
+            },
+            catch: (error) =>
+              new Error(`Failed to get session: ${String(error)}`),
+          });
 
-    if (!session?.user) {
-      throw new Error(
-        "Unauthorized: You must be logged in to delete a comment",
-      );
-    }
+          if (!session?.user) {
+            return yield* Effect.fail(
+              new Error(
+                "Unauthorized: You must be logged in to delete a comment",
+              ),
+            );
+          }
 
-    // Verify that the comment belongs to the current user
-    const comment = await kysely
-      .selectFrom("comments")
-      .select(["id", "userId"])
-      .where("id", "=", commentId)
-      .executeTakeFirst();
+          const comment = yield* Effect.tryPromise({
+            try: () =>
+              kysely
+                .selectFrom("comments")
+                .select(["id", "userId"])
+                .where("id", "=", commentId)
+                .executeTakeFirst(),
+            catch: (error) =>
+              new Error(
+                `Failed to find comment ${commentId}: ${String(error)}`,
+              ),
+          });
 
-    if (!comment) {
-      throw new Error(`Comment ${commentId} not found`);
-    }
+          if (!comment) {
+            return yield* Effect.fail(
+              new Error(`Comment ${commentId} not found`),
+            );
+          }
 
-    if (comment.userId !== session.user.id) {
-      throw new Error("Forbidden: You can only delete your own comments");
-    }
+          if (comment.userId !== session.user.id) {
+            return yield* Effect.fail(
+              new Error(
+                "Forbidden: You can only delete your own comments",
+              ),
+            );
+          }
 
-    // Delete the comment
-    await kysely.deleteFrom("comments").where("id", "=", commentId).execute();
+          yield* Effect.logDebug(
+            `Deleting comment ${commentId} from database...`,
+          );
+          yield* Effect.tryPromise({
+            try: () =>
+              kysely
+                .deleteFrom("comments")
+                .where("id", "=", commentId)
+                .execute(),
+            catch: (error) =>
+              new Error(
+                `Failed to delete comment ${commentId}: ${String(error)}`,
+              ),
+          });
 
-    return { success: true };
-  });
+          yield* Effect.logInfo(`Comment ${commentId} deleted.`);
+          return { success: true };
+        },
+        Effect.provide(withMinimumLogLevel(Debug)),
+      )(),
+    ),
+  );

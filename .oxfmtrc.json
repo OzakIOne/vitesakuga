@@ -1,8 +1,0 @@
-{
-  "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "experimentalSortPackageJson": {
-    "sortScripts": true
-  },
-  "ignorePatterns": ["routeTree.gen.ts", "drizzle/"],
-  "trailingComma": "all"
-}

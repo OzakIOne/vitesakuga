@@ -1,26 +1,32 @@
-import { z } from "zod";
+import { Config, ConfigProvider, Effect } from "effect";
 
 /**
  * - Development: .env (Neon dev + Cloudflare R2 Dev)
  * - Production: .env.production (Neon prod + Cloudflare R2 Prod)
  */
-const schema = z.object({
-  BETTER_AUTH_SECRET: z.string().min(32, "Must be at least 32 characters"),
-  CLOUDFLARE_ACCESS_KEY: z.string(),
-  CLOUDFLARE_BUCKET: z.string(),
-  CLOUDFLARE_R2: z.url(),
-  CLOUDFLARE_R2_PUBLIC_URL: z.url().optional(),
-  CLOUDFLARE_SECRET_KEY: z.string(),
-  DATABASE_URL: z.url(),
-  GITHUB_CLIENT_ID: z.string(),
-  GITHUB_CLIENT_SECRET: z.string(),
-  NODE_ENV: z.enum(["development", "production"]),
-  // POSTGRES_DB: z.string().optional(),
-  // POSTGRES_HOST: z.string().optional(),
-  // POSTGRES_PASSWORD: z.string().optional(),
-  // POSTGRES_USER: z.string().optional(),
-  VITE_BASE_URL: z.url(),
+const config = Config.all({
+  BETTER_AUTH_SECRET: Config.string("BETTER_AUTH_SECRET"),
+  CLOUDFLARE_ACCESS_KEY: Config.string("CLOUDFLARE_ACCESS_KEY"),
+  CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
+  CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
+  CLOUDFLARE_R2_PUBLIC_URL: Config.option(Config.string("CLOUDFLARE_R2_PUBLIC_URL")),
+  CLOUDFLARE_SECRET_KEY: Config.string("CLOUDFLARE_SECRET_KEY"),
+  DATABASE_URL: Config.string("DATABASE_URL"),
+  GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
+  GITHUB_CLIENT_SECRET: Config.string("GITHUB_CLIENT_SECRET"),
+  NODE_ENV: Config.string("NODE_ENV"),
+  VITE_BASE_URL: Config.string("VITE_BASE_URL"),
 });
 
-// console.log("process.:", process.env);
-export const envServer = schema.parse(process.env);
+const provider = ConfigProvider.fromUnknown(process.env);
+
+const raw = Effect.runSync(config.parse(provider));
+
+if (raw.BETTER_AUTH_SECRET.length < 32) {
+  throw new Error("BETTER_AUTH_SECRET must be at least 32 characters");
+}
+if (!["development", "production"].includes(raw.NODE_ENV)) {
+  throw new Error('NODE_ENV must be "development" or "production"');
+}
+
+export const envServer = raw;
