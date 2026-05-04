@@ -1,5 +1,6 @@
 import { Badge, Box, Stack, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
+
 import type { PostsPageLayoutProps } from "./PostsPageLayout";
 
 type PostFiltersProps = {

@@ -81,7 +81,7 @@ function LoginForm() {
             </Button>
           </div>
           {errorMessage && (
-            <span className="text-center text-destructive text-sm">
+            <span className="text-destructive text-center text-sm">
               {errorMessage}
             </span>
           )}

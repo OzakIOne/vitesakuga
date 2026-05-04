@@ -18,6 +18,7 @@ import type {
   PostsSearchParams,
   VideoMetadata,
 } from "src/lib/posts/posts.schema";
+
 import { PopularTagsSection } from "./PopularTagsSection";
 import type { PopularTag } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";

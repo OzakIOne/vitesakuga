@@ -25,7 +25,6 @@ import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
 import { authMiddleware } from "src/lib/auth/auth.middleware";
-import type { MiddlewareUser } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import z from "zod";
 

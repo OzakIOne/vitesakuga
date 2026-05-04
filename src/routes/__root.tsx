@@ -23,8 +23,9 @@ import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import { usersKeys } from "src/lib/users/users.queries";
-import appCss from "src/styles/app.css?url";
 import { seo } from "src/utils/seo";
+
+import appCss from "src/styles/app.css?url";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;

@@ -9,7 +9,7 @@ export function NotFound({ children }: { children?: any }) {
       </div>
       <p className="flex flex-wrap items-center gap-2">
         <Button
-          className="rounded bg-emerald-500 px-2 py-1 font-black text-sm text-white uppercase"
+          className="rounded bg-emerald-500 px-2 py-1 text-sm font-black text-white uppercase"
           onClick={() => {
             window.history.back();
           }}
@@ -17,7 +17,7 @@ export function NotFound({ children }: { children?: any }) {
           Go back
         </Button>
         <Link
-          className="rounded bg-cyan-600 px-2 py-1 font-black text-sm text-white uppercase"
+          className="rounded bg-cyan-600 px-2 py-1 text-sm font-black text-white uppercase"
           to="/"
         >
           Start Over

@@ -17,13 +17,10 @@ export const fetchUsers = createServerFn().handler(() =>
         yield* Effect.logDebug("Fetching all users from database...");
         const data = yield* Effect.tryPromise({
           try: () => kysely.selectFrom("user").selectAll().execute(),
-          catch: (error) =>
-            new Error(`Database error: ${String(error)}`),
+          catch: (error) => new Error(`Database error: ${String(error)}`),
         });
 
-        yield* Effect.logDebug(
-          `Fetched ${data.length} users. Parsing...`,
-        );
+        yield* Effect.logDebug(`Fetched ${data.length} users. Parsing...`);
         const parsed = yield* Effect.try({
           try: () => z.array(userSelectSchema).parse(data),
           catch: (error) =>
@@ -32,9 +29,7 @@ export const fetchUsers = createServerFn().handler(() =>
             ),
         });
 
-        yield* Effect.logInfo(
-          "Successfully fetched and parsed all users.",
-        );
+        yield* Effect.logInfo("Successfully fetched and parsed all users.");
         return parsed;
       },
       Effect.provide(withMinimumLogLevel(Debug)),
@@ -56,9 +51,7 @@ export const fetchUserPosts = createServerFn()
           );
           if (q) yield* Effect.logDebug(`Search query: "${q}"`);
           if (tags.length > 0)
-            yield* Effect.logDebug(
-              `Tags filter: [${tags.join(", ")}]`,
-            );
+            yield* Effect.logDebug(`Tags filter: [${tags.join(", ")}]`);
 
           yield* Effect.logDebug("Looking up user info...");
           const userInfo = yield* Effect.tryPromise({
@@ -69,9 +62,7 @@ export const fetchUserPosts = createServerFn()
                 .where("id", "=", userId)
                 .executeTakeFirstOrThrow(),
             catch: (error) =>
-              new Error(
-                `User ${userId} not found: ${String(error)}`,
-              ),
+              new Error(`User ${userId} not found: ${String(error)}`),
           });
 
           yield* Effect.logDebug("Building query...");
@@ -82,21 +73,13 @@ export const fetchUserPosts = createServerFn()
 
           if (q) {
             query = query.where((eb) =>
-              eb("title", "ilike", `%${q}%`).or(
-                "content",
-                "ilike",
-                `%${q}%`,
-              ),
+              eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
             );
           }
 
           if (tags.length > 0) {
             query = query
-              .innerJoin(
-                "post_tags",
-                "post_tags.postId",
-                "posts.id",
-              )
+              .innerJoin("post_tags", "post_tags.postId", "posts.id")
               .innerJoin("tags", "tags.id", "post_tags.tagId")
               .where("tags.name", "in", tags)
               .selectAll("posts")
@@ -120,21 +103,16 @@ export const fetchUserPosts = createServerFn()
 
           yield* Effect.logDebug("Fetching paginated posts...");
           const items = yield* Effect.tryPromise({
-            try: () =>
-              query.offset(offset).limit(PAGE_SIZE).execute(),
+            try: () => query.offset(offset).limit(PAGE_SIZE).execute(),
             catch: (error) =>
               new Error(`Failed to fetch posts: ${String(error)}`),
           });
 
-          yield* Effect.logDebug(
-            `Fetched ${items.length} items. Parsing...`,
-          );
+          yield* Effect.logDebug(`Fetched ${items.length} items. Parsing...`);
           const posts = yield* Effect.try({
             try: () => z.array(postsSelectSchema).parse(items),
             catch: (error) =>
-              new Error(
-                `Error processing user posts: ${String(error)}`,
-              ),
+              new Error(`Error processing user posts: ${String(error)}`),
           });
 
           const hasMore = offset + PAGE_SIZE < totalCount;
@@ -145,32 +123,20 @@ export const fetchUserPosts = createServerFn()
             try: () =>
               kysely
                 .selectFrom("tags")
-                .innerJoin(
-                  "post_tags",
-                  "tags.id",
-                  "post_tags.tagId",
-                )
-                .innerJoin(
-                  "posts",
-                  "posts.id",
-                  "post_tags.postId",
-                )
+                .innerJoin("post_tags", "tags.id", "post_tags.tagId")
+                .innerJoin("posts", "posts.id", "post_tags.postId")
                 .where("posts.userId", "=", userId)
                 .select([
                   "tags.id",
                   "tags.name",
-                  kysely.fn
-                    .count("post_tags.postId")
-                    .as("postCount"),
+                  kysely.fn.count("post_tags.postId").as("postCount"),
                 ])
                 .groupBy(["tags.id", "tags.name"])
                 .orderBy("postCount", "desc")
                 .limit(10)
                 .execute(),
             catch: (error) =>
-              new Error(
-                `Failed to fetch popular tags: ${String(error)}`,
-              ),
+              new Error(`Failed to fetch popular tags: ${String(error)}`),
           });
 
           const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -192,9 +158,7 @@ export const fetchUserPosts = createServerFn()
                 total: totalCount,
                 totalPages,
               },
-              popularTags: mapPopularTags(
-                popularTagsResult as any,
-              ),
+              popularTags: mapPopularTags(popularTagsResult as any),
             },
             user: userInfo,
           };

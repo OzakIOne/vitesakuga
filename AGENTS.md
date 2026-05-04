@@ -1,6 +1,6 @@
 # AGENT GUIDELINES FOR ViteSakuga
 
-ViteSakuga is a fullstack web application built with React 19, TanStack Start, TanStack Router, Better Auth, Kysely, Drizzle ORM, TanStack Form, Zod, Tailwind CSS v4, and Chakra UI v3, emphasizing a client-first, type-safe architecture with full-stack capabilities.
+ViteSakuga is a fullstack web application built with React 19, TanStack Start, TanStack Router, Better Auth, Kysely, Drizzle ORM, TanStack Form, Zod, Tailwind CSS v4, Chakra UI v3, and Effect V4 emphasizing a client-first, type-safe architecture with full-stack capabilities.
 
 ---
 
@@ -12,15 +12,17 @@ All commands are executed using `pnpm`.
 
 ### General Commands
 
-- **Install Dependencies**: `pnpm install`
-- **Development Server**: `pnpm dev` (starts `vite dev` on port 3000)
-- **Production Build**: `pnpm build` (runs `vite build`)
-- **Start Production Server**: `pnpm start` (runs `node run .output/server/index.mjs`)
-- **Preview Production Build**: `pnpm server` (runs `vite preview`)
-
-### Linting and Formatting
-
-- **Biome Check**: `pnpm biome` (runs `biome check --write`)
+- build: vite build
+- db: drizzle-kit
+- dev: vite dev --mode development
+- devprod: vite dev --mode production
+- format: oxfmt --write .
+- formatcheck: oxfmt --check .
+- lint: oxlint . --fix
+- lintcheck: oxlint .
+- server: vite preview
+- start: node run .output/server/index.mjs
+- test: vitest -w
 
 ### Testing
 
@@ -65,18 +67,6 @@ The original Copilot instructions from `.github/copilot-instructions.md` are als
 
 - Make the plan extremely concise. Sacrifice grammar for the sake of concision.
 - At the end of each plan, give me a list of unresolved questions to answer, if any.
-
-# Ultracite Code Standards
-
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
-
-## Quick Reference
-
-- **Format code**: `pnpm dlx ultracite fix`
-- **Check for issues**: `pnpm dlx ultracite check`
-- **Diagnose setup**: `pnpm dlx ultracite doctor`
-
-Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
 
 ---
 
@@ -155,19 +145,9 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ### Framework-Specific Guidance
 
-**Next.js:**
-
-- Use Next.js `<Image>` component for images
-- Use `next/head` or App Router metadata API for head elements
-- Use Server Components for async data fetching instead of async Client Components
-
 **React 19+:**
 
 - Use ref as a prop instead of `React.forwardRef`
-
-**Solid/Svelte/Vue/Qwik:**
-
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
 
 ---
 

@@ -55,7 +55,7 @@ function PostsContent() {
       )}
       <PostsPageLayout
         dateRange={dateRange}
-        fromRoute="/posts"
+        fromRoute="/posts/"
         popularTags={data.meta.popularTags}
         searchQuery={q}
         selectedTags={tags}

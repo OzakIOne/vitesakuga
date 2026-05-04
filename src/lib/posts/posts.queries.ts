@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+
 import { fetchPostDetail, getPostsByTag, searchPosts } from "./posts.fn";
 import type { PostByTagParams, PostsSearchParams } from "./posts.schema";
 

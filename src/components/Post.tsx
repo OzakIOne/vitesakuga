@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Heading, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import type { fetchPostDetail } from "src/lib/posts/posts.fn";
+
 import { User } from "./User";
 import { Video } from "./Video";
 

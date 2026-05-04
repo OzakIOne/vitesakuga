@@ -2,8 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { Effect } from "effect";
 import { kysely } from "src/lib/db/kysely";
 import { z } from "zod";
-import { Debug, withMinimumLogLevel } from "../effect/logger";
+
 import { commentInsertSchema } from "../db/schema";
+import { Debug, withMinimumLogLevel } from "../effect/logger";
 import { commentSchema } from "./comments.schema";
 
 export const fetchComments = createServerFn()
@@ -12,9 +13,7 @@ export const fetchComments = createServerFn()
     Effect.runPromise(
       Effect.fn("fetchComments")(
         function* () {
-          yield* Effect.logDebug(
-            `Fetching comments for post ${postId}...`,
-          );
+          yield* Effect.logDebug(`Fetching comments for post ${postId}...`);
           const comments = yield* Effect.tryPromise({
             try: () =>
               kysely
@@ -36,9 +35,7 @@ export const fetchComments = createServerFn()
               new Error(`Failed to fetch comments: ${String(error)}`),
           });
 
-          yield* Effect.logDebug(
-            `Parsing ${comments.length} comments...`,
-          );
+          yield* Effect.logDebug(`Parsing ${comments.length} comments...`);
           const parsed = yield* Effect.try({
             try: () => z.array(commentSchema).parse(comments),
             catch: (error) =>
@@ -75,13 +72,7 @@ export const addComment = createServerFn()
                   postId: data.postId,
                   userId: data.userId,
                 })
-                .returning([
-                  "id",
-                  "postId",
-                  "content",
-                  "userId",
-                  "createdAt",
-                ])
+                .returning(["id", "postId", "content", "userId", "createdAt"])
                 .executeTakeFirstOrThrow(),
             catch: (error) =>
               new Error(`Failed to add comment: ${String(error)}`),
@@ -115,9 +106,8 @@ export const deleteComment = createServerFn({ method: "POST" })
           const session = yield* Effect.tryPromise({
             try: async () => {
               const { auth: betterAuth } = await import("src/lib/auth");
-              const { getRequestHeaders } = await import(
-                "@tanstack/react-start/server"
-              );
+              const { getRequestHeaders } =
+                await import("@tanstack/react-start/server");
 
               return betterAuth.api.getSession({
                 headers: getRequestHeaders(),
@@ -159,9 +149,7 @@ export const deleteComment = createServerFn({ method: "POST" })
 
           if (comment.userId !== session.user.id) {
             return yield* Effect.fail(
-              new Error(
-                "Forbidden: You can only delete your own comments",
-              ),
+              new Error("Forbidden: You can only delete your own comments"),
             );
           }
 

@@ -11,6 +11,7 @@ import {
 import DOMPurify from "isomorphic-dompurify";
 import { relations } from "node_modules/drizzle-orm";
 import { z } from "zod";
+
 import { createInsertSchema, user } from "./auth.schema";
 
 export const tags = pgTable("tags", {

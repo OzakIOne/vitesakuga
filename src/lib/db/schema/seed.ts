@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { seed } from "drizzle-seed";
 import { envServer } from "src/lib/env/server";
+
 import { posts } from "./sakuga.schema";
 
 async function main() {
