@@ -10,20 +10,11 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
-import { addComment, deleteComment } from "src/lib/comments/comments.fn";
-import {
-  commentsKeys,
-  commentsQueryGetComments,
-} from "src/lib/comments/comments.queries";
-
-import { toaster } from "./ui/toaster";
+import { useAddComment, useDeleteComment } from "src/lib/comments/comments.hooks";
+import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
 
 type CommentsProps = {
   postId: number;
@@ -35,87 +26,27 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
     null,
   );
-  const queryClient = useQueryClient();
 
   const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
 
-  const addCommentMutation = useMutation({
-    mutationFn: async (newComment: {
-      postId: number;
-      content: string;
-      userId: string;
-    }) => addComment({ data: newComment }),
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to add comment",
-        duration: 5000,
-        title: "Error adding comment",
-        type: "error",
-      });
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: commentsKeys.post(postId),
-      });
-      toaster.create({
-        closable: true,
-        description: "Your comment has been successfully posted.",
-        duration: 3000,
-        title: "Comment added",
-        type: "success",
-      });
-      setComment("");
-    },
-  });
+  const addCommentMutation = useAddComment(postId, currentUserId ?? "");
+  const deleteCommentMutation = useDeleteComment(postId);
 
-  const deleteCommentMutation = useMutation({
-    mutationFn: async (data: { commentId: number; postId: number }) =>
-      deleteComment({ data }),
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to delete comment",
-        duration: 5000,
-        title: "Error deleting comment",
-        type: "error",
-      });
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: commentsKeys.post(postId),
-      });
-      toaster.create({
-        closable: true,
-        description: "Your comment has been successfully deleted.",
-        duration: 3000,
-        title: "Comment deleted",
-        type: "success",
-      });
-    },
-  });
-
-  const handleDeleteComment = async () => {
+  const handleDeleteComment = () => {
     if (commentIdToDelete !== null) {
-      await deleteCommentMutation.mutateAsync({
-        commentId: commentIdToDelete,
-        postId,
-      });
-      setCommentIdToDelete(null);
+      deleteCommentMutation.mutate(
+        { commentId: commentIdToDelete },
+        { onSuccess: () => setCommentIdToDelete(null) },
+      );
     }
   };
 
-  const handleSubmitComment = async () => {
+  const handleSubmitComment = () => {
     if (!(comment.trim() && currentUserId)) {
       return;
     }
-
-    await addCommentMutation.mutateAsync({
-      content: comment.trim(),
-      postId,
-      userId: currentUserId,
+    addCommentMutation.mutate(comment.trim(), {
+      onSuccess: () => setComment(""),
     });
   };
 

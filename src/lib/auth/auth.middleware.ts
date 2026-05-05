@@ -4,34 +4,50 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { Effect } from "effect";
 import { auth } from "src/lib/auth";
 
-export const getUserSession = createServerFn().handler(async () => {
-  const session = await auth.api.getSession({
-    headers: getRequestHeaders(),
-    query: {
-      disableCookieCache: true,
-    },
-  });
+import { Debug, withMinimumLogLevel } from "../effect/logger";
 
-  return session?.user ?? null;
-});
+export const getUserSession = createServerFn().handler(() =>
+  Effect.runPromise(
+    Effect.fn("getUserSession")(
+      function* () {
+        const session = yield* Effect.tryPromise({
+          try: () =>
+            auth.api.getSession({
+              headers: getRequestHeaders(),
+              query: { disableCookieCache: true },
+            }),
+          catch: (error) =>
+            new Error(`Session check failed: ${String(error)}`),
+        });
+
+        return session?.user ?? null;
+      },
+      Effect.provide(withMinimumLogLevel(Debug)),
+    )(),
+  ),
+);
 
 export const requireAuth = createServerFn().handler(() =>
   Effect.runPromise(
-    Effect.gen(function* () {
-      const session = yield* Effect.tryPromise({
-        try: () =>
-          auth.api.getSession({
-            headers: getRequestHeaders(),
-            query: { disableCookieCache: true },
-          }),
-        catch: (error) => new Error(`Session check failed: ${String(error)}`),
-      });
+    Effect.fn("requireAuth")(
+      function* () {
+        const session = yield* Effect.tryPromise({
+          try: () =>
+            auth.api.getSession({
+              headers: getRequestHeaders(),
+              query: { disableCookieCache: true },
+            }),
+          catch: (error) =>
+            new Error(`Session check failed: ${String(error)}`),
+        });
 
-      if (!session?.user) {
-        throw redirect({ to: "/login" });
-      }
+        if (!session?.user) {
+          throw redirect({ to: "/login" });
+        }
 
-      return session.user;
-    }),
+        return session.user;
+      },
+      Effect.provide(withMinimumLogLevel(Debug)),
+    )(),
   ),
 );

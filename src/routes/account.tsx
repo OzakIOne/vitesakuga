@@ -14,19 +14,17 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import {
-  createFileRoute,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
-import * as React from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
-import { toaster } from "src/components/ui/toaster";
+import {
+  useChangePassword,
+  useDeleteAccount,
+  useUpdateProfile,
+} from "src/lib/auth/auth.hooks";
+import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 import { requireAuth } from "src/lib/auth/auth.middleware";
-import authClient from "src/lib/auth/client";
-import z from "zod";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: async () => {
@@ -36,18 +34,11 @@ export const Route = createFileRoute("/account")({
   component: RouteComponent,
 });
 
-const profileSchema = z.object({
-  image: z.url().or(z.literal("")),
-  name: z.string(),
-});
-
 function RouteComponent() {
   const { user } = Route.useRouteContext();
-
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const router = useRouter();
-
-  const navigate = useNavigate();
+  const updateProfileMutation = useUpdateProfile();
+  const changePasswordMutation = useChangePassword();
+  const deleteAccountMutation = useDeleteAccount();
 
   const profileForm = useForm({
     defaultValues: {
@@ -55,26 +46,7 @@ function RouteComponent() {
       name: user.name,
     },
     onSubmit: async ({ value }) => {
-      setServerError(null);
-      try {
-        await authClient.updateUser(value);
-        await router.invalidate();
-        toaster.create({
-          closable: true,
-          description: "Your profile has been successfully updated.",
-          duration: 3000,
-          title: "Profile updated",
-          type: "success",
-        });
-      } catch (error) {
-        toaster.create({
-          closable: true,
-          description: error,
-          duration: 5000,
-          title: "Error updating profile",
-          type: "error",
-        });
-      }
+      updateProfileMutation.mutate(value);
     },
     validators: {
       onChange: profileSchema,
@@ -87,54 +59,14 @@ function RouteComponent() {
       newPassword: "",
     },
     onSubmit: async ({ value, formApi }) => {
-      setServerError(null);
-      try {
-        await authClient.changePassword({
-          currentPassword: value.currentPassword,
-          newPassword: value.newPassword,
-          revokeOtherSessions: true,
-        });
-        formApi.reset();
-        toaster.create({
-          closable: true,
-          description: "Your password has been successfully changed.",
-          duration: 3000,
-          title: "Password updated",
-          type: "success",
-        });
-      } catch (error) {
-        toaster.create({
-          closable: true,
-          description: error,
-          duration: 5000,
-          title: "Error changing password",
-          type: "error",
-        });
-      }
+      changePasswordMutation.mutate(value, {
+        onSuccess: () => formApi.reset(),
+      });
+    },
+    validators: {
+      onChange: passwordSchema,
     },
   });
-
-  const handleDeleteUser = async () => {
-    try {
-      await authClient.deleteUser();
-      toaster.create({
-        closable: true,
-        description: "Your account has been successfully deleted.",
-        duration: 3000,
-        title: "Account deleted",
-        type: "success",
-      });
-      void navigate({ to: "/" });
-    } catch (error) {
-      toaster.create({
-        closable: true,
-        description: error,
-        duration: 5000,
-        title: "Error deleting account",
-        type: "error",
-      });
-    }
-  };
 
   return (
     <Box className="flex h-screen flex-col items-center justify-center p-6">
@@ -156,15 +88,6 @@ function RouteComponent() {
             </div>
           </div>
         </div>
-
-        {serverError && (
-          <div className="mb-8 rounded-lg border border-red-200 bg-red-50 px-6 py-4">
-            <Text fontWeight="medium" mb={1}>
-              Error
-            </Text>
-            <Text>{serverError}</Text>
-          </div>
-        )}
 
         <div className="space-y-8">
           <div>
@@ -234,7 +157,9 @@ function RouteComponent() {
                 )}
               </profileForm.Field>
 
-              <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
+              <profileForm.Subscribe
+                selector={(state) => [state.isSubmitting]}
+              >
                 {([isSubmitting]) => (
                   <Center>
                     <Button
@@ -329,7 +254,10 @@ function RouteComponent() {
                     <Dialog.ActionTrigger asChild>
                       <Button variant="outline">Cancel</Button>
                     </Dialog.ActionTrigger>
-                    <Button colorPalette="red" onClick={handleDeleteUser}>
+                    <Button
+                      colorPalette="red"
+                      onClick={() => deleteAccountMutation.mutate()}
+                    >
                       Confirm account deletion
                     </Button>
                   </Dialog.Footer>

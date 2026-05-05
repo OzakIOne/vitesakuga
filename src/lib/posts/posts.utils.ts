@@ -1,37 +1,7 @@
 import { isAfter, startOfDay, subMonths, subWeeks } from "date-fns";
 import { orderBy } from "lodash-es";
-import type { ReadChunkFunc } from "mediainfo.js";
 
 import type { PostsSearchParams } from "./posts.schema";
-
-export function makeReadChunk(file: File): ReadChunkFunc {
-  return async (chunkSize: number, offset: number) =>
-    new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
-}
-
-export function buildFormData<T extends Record<string, any>>(values: T) {
-  const formData = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    if (value === null) {
-      return;
-    }
-
-    if (value instanceof File) {
-      formData.append(key, value);
-      return;
-    }
-
-    if (Array.isArray(value) || typeof value === "object") {
-      formData.append(key, JSON.stringify(value));
-      return;
-    }
-
-    formData.append(key, String(value));
-  });
-
-  return formData;
-}
 
 function filterPostsByDateRange<T extends { createdAt: string | Date }>(
   posts: T[],

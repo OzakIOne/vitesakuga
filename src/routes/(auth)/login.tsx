@@ -1,12 +1,10 @@
 import { Button, Field, Input } from "@chakra-ui/react";
-import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { PasswordInput } from "src/components/ui/password-input";
-import authClient from "src/lib/auth/client";
-import { usersKeys } from "src/lib/users/users.queries";
+import { useLogin, useSocialLogin } from "src/lib/auth/auth.hooks";
 
 export const Route = createFileRoute("/(auth)/login")({
   component: LoginForm,
@@ -14,44 +12,37 @@ export const Route = createFileRoute("/(auth)/login")({
 
 function LoginForm() {
   const { redirectUrl } = Route.useRouteContext();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const loginMutation = useLogin(redirectUrl);
+  const socialLogin = useSocialLogin(redirectUrl);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [socialLoading, setSocialLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isLoading) {
-      return;
-    }
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     if (!(email && password)) {
       return;
     }
-
-    setIsLoading(true);
-    setErrorMessage("");
-
-    await authClient.signIn.email(
+    setServerError("");
+    loginMutation.mutate(
+      { email, password },
       {
-        callbackURL: redirectUrl,
-        email,
-        password,
-      },
-      {
-        onError: (ctx) => {
-          setErrorMessage(ctx.error.message);
-          setIsLoading(false);
-        },
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-          await navigate({ to: redirectUrl });
-        },
+        onError: (error) => setServerError(error.message),
       },
     );
+  };
+
+  const handleSocialLogin = async (provider: "github" | "google") => {
+    setSocialLoading(true);
+    setServerError("");
+    try {
+      await socialLogin(provider);
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   return (
@@ -73,65 +64,27 @@ function LoginForm() {
               <PasswordInput id="password" name="password" type="password" />
             </Field.Root>
 
-            <Button className="btn" disabled={isLoading} type="submit">
-              {isLoading && (
-                <span className="loading loading-spinner loading-lg" />
-              )}
-              {isLoading ? "Logging in..." : "Login"}
+            <Button disabled={loginMutation.isPending} type="submit">
+              {loginMutation.isPending ? "Logging in..." : "Login"}
             </Button>
           </div>
-          {errorMessage && (
+          {serverError && (
             <span className="text-destructive text-center text-sm">
-              {errorMessage}
+              {serverError}
             </span>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Button
-              className="btn"
-              disabled={isLoading}
-              onClick={async () =>
-                authClient.signIn.social(
-                  {
-                    callbackURL: redirectUrl,
-                    provider: "github",
-                  },
-                  {
-                    onError: (ctx) => {
-                      setIsLoading(false);
-                      setErrorMessage(ctx.error.message);
-                    },
-                    onRequest: () => {
-                      setIsLoading(true);
-                      setErrorMessage("");
-                    },
-                  },
-                )
-              }
+              disabled={socialLoading}
+              onClick={() => void handleSocialLogin("github")}
               type="button"
             >
               <IoLogoGithub />
               Login with GitHub
             </Button>
             <Button
-              disabled={isLoading}
-              onClick={async () =>
-                authClient.signIn.social(
-                  {
-                    callbackURL: redirectUrl,
-                    provider: "google",
-                  },
-                  {
-                    onError: (ctx) => {
-                      setIsLoading(false);
-                      setErrorMessage(ctx.error.message);
-                    },
-                    onRequest: () => {
-                      setIsLoading(true);
-                      setErrorMessage("");
-                    },
-                  },
-                )
-              }
+              disabled={socialLoading}
+              onClick={() => void handleSocialLogin("google")}
               type="button"
             >
               <FcGoogle />
