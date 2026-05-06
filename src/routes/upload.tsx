@@ -29,9 +29,7 @@ import { Video } from "src/components/Video";
 import { requireAuth } from "src/lib/auth/auth.middleware";
 import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
-import {
-  FormFileUploadSchema,
-} from "src/lib/posts/posts.schema";
+import { FormFileUploadSchema } from "src/lib/posts/posts.schema";
 import type { FileUploadData, VideoMetadata } from "src/lib/posts/posts.schema";
 import {
   analyzeVideo,
@@ -184,7 +182,14 @@ function RouteComponent() {
       await handleSubmit(value);
     },
     validators: {
-      onSubmit: FormFileUploadSchema,
+      // fix typing lint issue
+      onSubmit: ({ value }) => {
+        const result = FormFileUploadSchema.safeParse(value);
+        if (!result.success) {
+          return result.error.issues.map((i) => i.message).join(", ");
+        }
+        return undefined;
+      },
     },
   });
 
@@ -345,16 +350,34 @@ function RouteComponent() {
                         const previewURL = URL.createObjectURL(file);
                         setVideoPreviewUrl(previewURL);
 
+                        if (mediaInfoRef.current) {
+                          void analyzeVideo(file, mediaInfoRef.current)
+                            .then((parsedData) => {
+                              frameRateRef.current =
+                                parsedData?.FrameRate ?? null;
+                              form.setFieldValue("videoMetadata", parsedData);
+                            })
+                            .catch((error: unknown) => {
+                              console.error(
+                                "MediaInfo analysis failed:",
+                                error,
+                              );
+                              toaster.create({
+                                description:
+                                  "Could not extract video metadata.",
+                                duration: 3000,
+                                title: "MediaInfo failed",
+                                type: "warning",
+                              });
+                            });
+                        }
+
                         try {
-                          const generated =
-                            await generateAutoThumbnails(file);
+                          const generated = await generateAutoThumbnails(file);
                           setThumbnails(generated);
                           if (generated.length > 0) {
                             setSelectedThumbnailIndex(0);
-                            form.setFieldValue(
-                              "thumbnail",
-                              generated[0].file,
-                            );
+                            form.setFieldValue("thumbnail", generated[0].file);
                           }
                         } catch (error) {
                           console.error(
@@ -362,27 +385,11 @@ function RouteComponent() {
                             error,
                           );
                           toaster.create({
-                            description:
-                              "Please try re-uploading the video.",
+                            description: "Please try re-uploading the video.",
                             duration: 3000,
                             title: "Thumbnail generation failed",
                             type: "error",
                           });
-                        }
-
-                        if (mediaInfoRef.current) {
-                          try {
-                            const parsedData = await analyzeVideo(
-                              file,
-                              mediaInfoRef.current,
-                            );
-                            console.log("videoMetadata:", parsedData);
-                            frameRateRef.current =
-                              parsedData?.FrameRate ?? null;
-                            form.setFieldValue("videoMetadata", parsedData);
-                          } catch (error) {
-                            console.error("analyzeVideo failed:", error);
-                          }
                         }
                         return;
                       }
@@ -419,17 +426,13 @@ function RouteComponent() {
                           justifyContent="space-between"
                           mb={2}
                         >
-                          <Text fontWeight="bold">
-                            Select Thumbnail:
-                          </Text>
+                          <Text fontWeight="bold">Select Thumbnail:</Text>
                           <Button
                             onClick={handleCapture}
                             size="sm"
                             variant="outline"
                           >
-                            <LuCamera
-                              style={{ marginRight: "8px" }}
-                            />
+                            <LuCamera style={{ marginRight: "8px" }} />
                             Capture Current Frame
                           </Button>
                         </Box>
@@ -448,10 +451,7 @@ function RouteComponent() {
                                 key={thumb.url}
                                 onClick={() => {
                                   setSelectedThumbnailIndex(index);
-                                  form.setFieldValue(
-                                    "thumbnail",
-                                    thumb.file,
-                                  );
+                                  form.setFieldValue("thumbnail", thumb.file);
                                 }}
                                 overflow="hidden"
                                 transition="border-color 0.2s"
@@ -463,12 +463,6 @@ function RouteComponent() {
                               </Box>
                             ))}
                           </Grid>
-                        )}
-                        {thumbnails.length === 0 && (
-                          <Text color="gray.500" fontSize="sm">
-                            No thumbnails yet. Play the video and use "Capture
-                            Current Frame" to create one.
-                          </Text>
                         )}
                       </Box>
                     </>

@@ -23,8 +23,8 @@ import {
   useDeleteAccount,
   useUpdateProfile,
 } from "src/lib/auth/auth.hooks";
-import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 import { requireAuth } from "src/lib/auth/auth.middleware";
+import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: async () => {
@@ -157,9 +157,7 @@ function RouteComponent() {
                 )}
               </profileForm.Field>
 
-              <profileForm.Subscribe
-                selector={(state) => [state.isSubmitting]}
-              >
+              <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
                 {([isSubmitting]) => (
                   <Center>
                     <Button

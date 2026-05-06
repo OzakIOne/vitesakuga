@@ -27,7 +27,9 @@ export function PostFilters({
             borderRadius="md"
             cursor="pointer"
             onClick={async () =>
-              navigate({ search: (prev) => ({ ...prev, sortBy: "newest" }) })
+              void navigate({
+                search: (prev) => ({ ...prev, sortBy: "newest" }),
+              })
             }
             px={2}
             py={1}
@@ -82,7 +84,9 @@ export function PostFilters({
             borderRadius="md"
             cursor="pointer"
             onClick={async () => {
-              navigate({ search: (prev) => ({ ...prev, dateRange: "week" }) });
+              void navigate({
+                search: (prev) => ({ ...prev, dateRange: "week" }),
+              });
             }}
             px={2}
             py={1}

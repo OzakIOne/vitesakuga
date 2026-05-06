@@ -22,7 +22,9 @@ export function useLogin(redirectUrl: string) {
         { email, password, callbackURL: redirectUrl },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
+            await queryClient.invalidateQueries({
+              queryKey: usersKeys.userInfo,
+            });
             await navigate({ to: redirectUrl });
           },
         },
@@ -48,7 +50,9 @@ export function useSignUp(redirectUrl: string) {
         { name, email, password, callbackURL: redirectUrl },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
+            await queryClient.invalidateQueries({
+              queryKey: usersKeys.userInfo,
+            });
             await navigate({ to: redirectUrl });
           },
         },
@@ -156,7 +160,9 @@ export function useSocialLogin(redirectUrl: string) {
         { provider, callbackURL: redirectUrl },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
+            await queryClient.invalidateQueries({
+              queryKey: usersKeys.userInfo,
+            });
             await navigate({ to: redirectUrl });
           },
         },

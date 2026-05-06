@@ -16,6 +16,7 @@ import {
   postByTagSchema,
   searchPostsBaseSchema,
   updatePostInputSchema,
+  VideoMetadataSchema,
 } from "./posts.schema";
 import { mapPopularTags } from "./posts.utils";
 import type { AllowedVideoExtension } from "./posts.utils";
@@ -160,9 +161,7 @@ export const searchPosts = createServerFn()
                 .limit(10)
                 .execute(),
             catch: (error) =>
-              new Error(
-                `Failed to fetch popular tags: ${String(error)}`,
-              ),
+              new Error(`Failed to fetch popular tags: ${String(error)}`),
           });
 
           const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -249,9 +248,7 @@ export const fetchPostDetail = createServerFn()
                     .where("id", "=", postWithUser.relatedPostId as number)
                     .executeTakeFirst(),
                 catch: (error) =>
-                  new Error(
-                    `Failed to fetch related post: ${String(error)}`,
-                  ),
+                  new Error(`Failed to fetch related post: ${String(error)}`),
               })
             : null;
 
@@ -266,7 +263,9 @@ export const fetchPostDetail = createServerFn()
               source: postWithUser.source,
               title: postWithUser.title,
               videoKey: postWithUser.videoKey,
-              videoMetadata: postWithUser.videoMetadata,
+              videoMetadata: VideoMetadataSchema.parse(
+                JSON.parse(postWithUser.videoMetadata),
+              ),
             },
             relatedPost,
             tags,
@@ -314,7 +313,9 @@ export const uploadPost = createServerFn({ method: "POST" })
 
           yield* Effect.logDebug("Starting file upload...");
 
-          const videoExtName = video.name.split(".").pop() as AllowedVideoExtension;
+          const videoExtName = video.name
+            .split(".")
+            .pop() as AllowedVideoExtension;
           const videoBaseName = randomUUID();
           const videoKey = `videos/${userId}/${videoBaseName}.${videoExtName}`;
           const thumbnailKey = `thumbnails/${userId}/${videoBaseName}.jpg`;
@@ -437,9 +438,7 @@ export const uploadPost = createServerFn({ method: "POST" })
                     .values(allTagIds.map((tagId) => ({ postId, tagId })))
                     .execute(),
                 catch: (error) =>
-                  new Error(
-                    `Failed to link tags to post: ${String(error)}`,
-                  ),
+                  new Error(`Failed to link tags to post: ${String(error)}`),
               });
             }
           }
@@ -471,9 +470,7 @@ export const updatePost = createServerFn({ method: "POST" })
 
           if (!session?.user) {
             return yield* Effect.fail(
-              new Error(
-                "Unauthorized: You must be logged in to update a post",
-              ),
+              new Error("Unauthorized: You must be logged in to update a post"),
             );
           }
 
@@ -487,15 +484,11 @@ export const updatePost = createServerFn({ method: "POST" })
                 .where("id", "=", postId)
                 .executeTakeFirst(),
             catch: (error) =>
-              new Error(
-                `Failed to find post ${postId}: ${String(error)}`,
-              ),
+              new Error(`Failed to find post ${postId}: ${String(error)}`),
           });
 
           if (!post) {
-            return yield* Effect.fail(
-              new Error(`Post ${postId} not found`),
-            );
+            return yield* Effect.fail(new Error(`Post ${postId} not found`));
           }
 
           if (post.userId !== session.user.id) {
@@ -519,9 +512,7 @@ export const updatePost = createServerFn({ method: "POST" })
                 .returningAll()
                 .executeTakeFirstOrThrow(),
             catch: (error) =>
-              new Error(
-                `Failed to update post ${postId}: ${String(error)}`,
-              ),
+              new Error(`Failed to update post ${postId}: ${String(error)}`),
           });
 
           if (tags && tags.length > 0) {
@@ -532,9 +523,7 @@ export const updatePost = createServerFn({ method: "POST" })
                   .where("postId", "=", postId)
                   .execute(),
               catch: (error) =>
-                new Error(
-                  `Failed to clear existing tags: ${String(error)}`,
-                ),
+                new Error(`Failed to clear existing tags: ${String(error)}`),
             });
 
             const allTagIds: number[] = [];
@@ -552,9 +541,7 @@ export const updatePost = createServerFn({ method: "POST" })
                       .returning("id")
                       .executeTakeFirstOrThrow(),
                   catch: (error) =>
-                    new Error(
-                      `Failed to create tag: ${String(error)}`,
-                    ),
+                    new Error(`Failed to create tag: ${String(error)}`),
                 });
                 allTagIds.push(newTag.id);
               } else {
@@ -570,9 +557,7 @@ export const updatePost = createServerFn({ method: "POST" })
                     .values(allTagIds.map((tagId) => ({ postId, tagId })))
                     .execute(),
                 catch: (error) =>
-                  new Error(
-                    `Failed to link tags: ${String(error)}`,
-                  ),
+                  new Error(`Failed to link tags: ${String(error)}`),
               });
             }
           } else {
@@ -583,9 +568,7 @@ export const updatePost = createServerFn({ method: "POST" })
                   .where("postId", "=", postId)
                   .execute(),
               catch: (error) =>
-                new Error(
-                  `Failed to clear tags: ${String(error)}`,
-                ),
+                new Error(`Failed to clear tags: ${String(error)}`),
             });
           }
 
@@ -636,9 +619,7 @@ export const getPostsByTag = createServerFn()
           const parsed = yield* Effect.try({
             try: () => z.array(postsSelectSchema).parse(items),
             catch: (error) =>
-              new Error(
-                `Error processing posts by tag: ${String(error)}`,
-              ),
+              new Error(`Error processing posts by tag: ${String(error)}`),
           });
 
           const posts = parsed;
@@ -669,9 +650,7 @@ export const getPostsByTag = createServerFn()
                 .limit(10)
                 .execute(),
             catch: (error) =>
-              new Error(
-                `Failed to fetch popular tags: ${String(error)}`,
-              ),
+              new Error(`Failed to fetch popular tags: ${String(error)}`),
           });
 
           const totalPages = Math.ceil(totalCount / PAGE_SIZE);

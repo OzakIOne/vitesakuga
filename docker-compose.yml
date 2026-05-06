@@ -25,6 +25,14 @@ services:
   #   networks:
   #     - my_network
 
+  lightpanda:
+    container_name: lightpanda
+    image: lightpanda/browser:nightly
+    ports:
+      - "127.0.0.1:9223:9222"
+    networks:
+      - my_network
+
 networks:
   my_network:
     driver: bridge

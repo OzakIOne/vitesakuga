@@ -5,19 +5,19 @@ export const VideoMetadataSchema = z
   .object({
     BitDepth: z.coerce.number(),
     BitRate: z.coerce.number(),
-    ChromaSubsampling: z.string(),
-    CodecID: z.string(),
-    ColorSpace: z.string(),
-    DisplayAspectRatio: z.string(),
+    ChromaSubsampling: z.string().or(z.undefined()).catch(undefined),
+    CodecID: z.string().or(z.undefined()).catch(undefined),
+    ColorSpace: z.string().or(z.undefined()).catch(undefined),
+    DisplayAspectRatio: z.string().or(z.undefined()).catch(undefined),
     Duration: z.coerce.number(),
-    Encoded_Library_Name: z.string(),
-    Encoded_Library_Settings: z.string(),
-    Format_Profile: z.string(),
+    Encoded_Library_Name: z.string().or(z.undefined()).catch(undefined),
+    Encoded_Library_Settings: z.string().or(z.undefined()).catch(undefined),
+    Format_Profile: z.string().or(z.undefined()).catch(undefined),
     FrameCount: z.coerce.number(),
     FrameRate: z.coerce.number(),
     Height: z.coerce.number(),
     Width: z.coerce.number(),
-    colour_primaries: z.string(),
+    colour_primaries: z.string().or(z.undefined()).catch(undefined),
   })
   .optional();
 

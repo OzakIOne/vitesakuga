@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toaster } from "src/components/ui/toaster";
+
 import { addComment, deleteComment } from "./comments.fn";
 import { commentsKeys } from "./comments.queries";
 
@@ -20,7 +21,9 @@ export function useAddComment(postId: number, userId: string) {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
+      void queryClient.invalidateQueries({
+        queryKey: commentsKeys.post(postId),
+      });
       toaster.create({
         closable: true,
         description: "Your comment has been successfully posted.",
@@ -36,8 +39,7 @@ export function useDeleteComment(postId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { commentId: number }) =>
-      deleteComment({ data }),
+    mutationFn: async (data: { commentId: number }) => deleteComment({ data }),
     onError: (error) => {
       toaster.create({
         closable: true,
@@ -49,7 +51,9 @@ export function useDeleteComment(postId: number) {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: commentsKeys.post(postId) });
+      void queryClient.invalidateQueries({
+        queryKey: commentsKeys.post(postId),
+      });
       toaster.create({
         closable: true,
         description: "Your comment has been successfully deleted.",

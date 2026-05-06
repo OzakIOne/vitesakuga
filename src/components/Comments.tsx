@@ -13,7 +13,10 @@ import {
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
-import { useAddComment, useDeleteComment } from "src/lib/comments/comments.hooks";
+import {
+  useAddComment,
+  useDeleteComment,
+} from "src/lib/comments/comments.hooks";
 import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
 
 type CommentsProps = {

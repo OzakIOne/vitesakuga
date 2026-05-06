@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildFormData, makeReadChunk } from "./upload.processor";
+
 import type { FileUploadData } from "../posts/posts.schema";
+import { buildFormData, makeReadChunk } from "./upload.processor";
 
 const file = new File(["v"], "v.mp4", { type: "video/mp4" });
 const thumb = new File(["t"], "t.jpg", { type: "image/jpeg" });

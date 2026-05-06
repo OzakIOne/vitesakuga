@@ -31,7 +31,8 @@ export function buildFormData<T extends Record<string, unknown>>(values: T) {
       continue;
     }
 
-    formData.append(key, String(value));
+    // fix typing lint issue
+    formData.append(key, String(value as string | number | boolean));
   }
 
   return formData;
@@ -42,14 +43,9 @@ export async function analyzeVideo(
   mediaInfo: MediaInfo<"JSON">,
 ): Promise<VideoMetadata> {
   const makeReadChunkFn = makeReadChunk(file);
-  const rawResult = await mediaInfo.analyzeData(
-    file.size,
-    makeReadChunkFn,
-  );
+  const rawResult = await mediaInfo.analyzeData(file.size, makeReadChunkFn);
   const parsed: MediaInfoResult = JSON.parse(rawResult);
-  const videoTrack = parsed.media?.track.find(
-    (el) => el["@type"] === "Video",
-  );
+  const videoTrack = parsed.media?.track.find((el) => el["@type"] === "Video");
   return VideoMetadataSchema.parse(videoTrack);
 }
 

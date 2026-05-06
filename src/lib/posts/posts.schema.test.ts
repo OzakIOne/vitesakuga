@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { searchPostsBaseSchema, updatePostInputSchema } from "./posts.schema";
 
 describe(searchPostsBaseSchema, () => {

@@ -200,6 +200,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             },
             {
               name: "TanStack Pacer",
+              // @ts-expect-error idk
               render: <PacerDevtoolsPanel />,
             },
           ]}

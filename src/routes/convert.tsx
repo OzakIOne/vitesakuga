@@ -24,7 +24,7 @@ import {
   SUPPORTED_OUTPUTS,
   convertMachine,
   isPassthroughCompatible,
-} from "./convert.machine";
+} from "./-convert.machine";
 
 const outputFormats = createListCollection({
   items: SUPPORTED_OUTPUTS.map((format) => ({
