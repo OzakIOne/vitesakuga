@@ -8,6 +8,12 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 **Never use npm. Always use pnpm.** All commands (install, add, run, exec, dlx, etc.) must be executed using `pnpm`. npm is forbidden in this project.
 
+## Local Effect Source
+
+The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for reference.
+Use this to explore APIs, find usage examples, and understand implementation
+details when the documentation isn't enough.
+
 ## Build, Lint, and Test Commands
 
 ### General Commands
@@ -46,8 +52,6 @@ The project uses `vitest` for testing.
 - **Functional Programming**: Favor pure functions and immutability where appropriate.
 - **Error Handling**: Server functions should generally throw errors, allowing callers to handle them. Use `try-catch` blocks sparingly in server functions.
 
----
-
 ## Detailed Guidelines
 
 For more specific guidelines, refer to the following documents:
@@ -67,8 +71,6 @@ The original Copilot instructions from `.github/copilot-instructions.md` are als
 
 - Make the plan extremely concise. Sacrifice grammar for the sake of concision.
 - At the end of each plan, give me a list of unresolved questions to answer, if any.
-
----
 
 ## Core Principles
 
@@ -149,8 +151,6 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 - Use ref as a prop instead of `React.forwardRef`
 
----
-
 ## Testing
 
 - Write assertions inside `it()` or `test()` blocks
@@ -168,8 +168,6 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 4. **Edge cases** - Handle boundary conditions and error states
 5. **User experience** - Accessibility, performance, and usability considerations
 6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
-
----
 
 Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `pnpm dlx ultracite fix` before committing to ensure compliance.
 

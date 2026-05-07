@@ -6,17 +6,31 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "module": "ESNext",
+    "module": "preserve",
+    "moduleDetection": "force",
     "moduleResolution": "Bundler",
     "noEmit": true,
     "paths": {
       "*": ["./*"]
     },
     "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noImplicitOverride": true,
+
+    "rewriteRelativeImportExtensions ": true,
     "skipLibCheck": true,
+    "incremental": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["vite/client", "@cloudflare/workers-types"]
+    "types": ["vite/client", "@cloudflare/workers-types"],
+    "plugins": [{ "name": "effect/language-service" }]
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }
