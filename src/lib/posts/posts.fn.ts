@@ -264,7 +264,7 @@ export const fetchPostDetail = createServerFn()
               title: postWithUser.title,
               videoKey: postWithUser.videoKey,
               videoMetadata: VideoMetadataSchema.parse(
-                JSON.parse(postWithUser.videoMetadata),
+                postWithUser.videoMetadata,
               ),
             },
             relatedPost,

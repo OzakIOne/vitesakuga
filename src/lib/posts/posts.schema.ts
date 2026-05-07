@@ -5,19 +5,19 @@ export const VideoMetadataSchema = z
   .object({
     BitDepth: z.coerce.number(),
     BitRate: z.coerce.number(),
-    ChromaSubsampling: z.string().or(z.undefined()).catch(undefined),
-    CodecID: z.string().or(z.undefined()).catch(undefined),
-    ColorSpace: z.string().or(z.undefined()).catch(undefined),
-    DisplayAspectRatio: z.string().or(z.undefined()).catch(undefined),
+    ChromaSubsampling: z.string().or(z.undefined()),
+    CodecID: z.string().or(z.undefined()),
+    ColorSpace: z.string().or(z.undefined()),
+    DisplayAspectRatio: z.string().or(z.undefined()),
     Duration: z.coerce.number(),
-    Encoded_Library_Name: z.string().or(z.undefined()).catch(undefined),
-    Encoded_Library_Settings: z.string().or(z.undefined()).catch(undefined),
-    Format_Profile: z.string().or(z.undefined()).catch(undefined),
+    Encoded_Library_Name: z.string().or(z.undefined()),
+    Encoded_Library_Settings: z.string().or(z.undefined()),
+    Format_Profile: z.string().or(z.undefined()),
     FrameCount: z.coerce.number(),
     FrameRate: z.coerce.number(),
     Height: z.coerce.number(),
     Width: z.coerce.number(),
-    colour_primaries: z.string().or(z.undefined()).catch(undefined),
+    colour_primaries: z.string().or(z.undefined()),
   })
   .optional();
 

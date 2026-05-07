@@ -37,17 +37,12 @@ export default defineConfig({
     devtools(),
     nitro(),
     viteReact(),
-    // viteStaticCopy({
-    //   targets: [
-    //     {
-    //       dest: "",
-    //       src: "node_modules/mediainfo.js/dist/MediaInfoModule.wasm",
-    //     },
-    //   ],
-    // }),
   ],
   resolve: {
     tsconfigPaths: true,
+  },
+  optimizeDeps: {
+    include: ["use-sync-external-store"],
   },
   server: {
     port: 3000,

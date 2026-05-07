@@ -1,10 +1,16 @@
-onlyBuiltDependencies:
-  - "@parcel/watcher"
-  - "@prisma/engines"
-  - core-js
-  - esbuild
-  - lefthook
-  - msgpackr-extract
-  - prisma
-  - sharp
-  - workerd
+blockExoticSubdeps: true
+
+minimumReleaseAge: 1440
+
+trustPolicy: no-downgrade
+
+allowBuilds:
+  "@parcel/watcher": true
+  "@prisma/engines": true
+  core-js: true
+  esbuild: true
+  lefthook: true
+  msgpackr-extract: true
+  prisma: true
+  sharp: true
+  workerd: true

@@ -2,6 +2,10 @@
 applyTo: "**"
 ---
 
+## Package Manager
+
+**Never use npm. Always use pnpm.** All commands (install, add, run, exec, dlx, etc.) must use `pnpm`. npm is forbidden.
+
 ## Key Patterns & Conventions
 
 ### Server Functions

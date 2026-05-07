@@ -35,7 +35,7 @@ export type PostsPageLayoutProps = {
   dateRange: PostsSearchParams["dateRange"];
   children: ReactNode;
   fromRoute: RegisteredRoutes;
-  videoMetadata?: VideoMetadata;
+  videoMetadata: VideoMetadata;
 };
 
 export function PostsPageLayout({
@@ -49,6 +49,7 @@ export function PostsPageLayout({
   videoMetadata,
 }: PostsPageLayoutProps) {
   const isPostDetail = fromRoute === "/posts/$postId";
+
   return (
     <Box p={4} w="full">
       <Grid gap={6} templateColumns={{ base: "1fr", lg: "1fr 3fr" }} w="full">

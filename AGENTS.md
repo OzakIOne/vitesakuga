@@ -6,7 +6,7 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 ## Package Manager
 
-All commands are executed using `pnpm`.
+**Never use npm. Always use pnpm.** All commands (install, add, run, exec, dlx, etc.) must be executed using `pnpm`. npm is forbidden in this project.
 
 ## Build, Lint, and Test Commands
 
