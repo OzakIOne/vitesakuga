@@ -1,14 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useContext } from "react";
 import { toaster } from "src/components/ui/toaster";
 import { usersKeys } from "src/lib/users/users.queries";
 
-import authClient from "./client";
+import { AuthClientContext } from "./client-context";
 
 export function useLogin(redirectUrl: string) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const authClient = useContext(AuthClientContext);
 
   return useMutation({
     mutationFn: async ({
@@ -35,6 +36,7 @@ export function useLogin(redirectUrl: string) {
 export function useSignUp(redirectUrl: string) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const authClient = useContext(AuthClientContext);
 
   return useMutation({
     mutationFn: async ({
@@ -62,6 +64,7 @@ export function useSignUp(redirectUrl: string) {
 
 export function useUpdateProfile() {
   const router = useRouter();
+  const authClient = useContext(AuthClientContext);
 
   return useMutation({
     mutationFn: async ({ name, image }: { name: string; image: string }) =>
@@ -89,6 +92,8 @@ export function useUpdateProfile() {
 }
 
 export function useChangePassword() {
+  const authClient = useContext(AuthClientContext);
+
   return useMutation({
     mutationFn: async ({
       currentPassword,
@@ -125,6 +130,7 @@ export function useChangePassword() {
 
 export function useDeleteAccount() {
   const navigate = useNavigate();
+  const authClient = useContext(AuthClientContext);
 
   return useMutation({
     mutationFn: async () => authClient.deleteUser(),
@@ -153,6 +159,7 @@ export function useDeleteAccount() {
 export function useSocialLogin(redirectUrl: string) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const authClient = useContext(AuthClientContext);
 
   const login = useCallback(
     async (provider: "github" | "google") => {
@@ -168,7 +175,7 @@ export function useSocialLogin(redirectUrl: string) {
         },
       );
     },
-    [redirectUrl, queryClient, navigate],
+    [redirectUrl, queryClient, navigate, authClient],
   );
 
   return login;

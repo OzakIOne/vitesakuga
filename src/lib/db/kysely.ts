@@ -18,6 +18,8 @@ type KyselyDB<T extends Record<string, any>> = {
 
 type DB = KyselyDB<DrizzleSchema>;
 
+export type { DB };
+
 // export interface DB {
 //   account: Kyselify<DrizzleSchema["account"]>;
 //   session: Kyselify<DrizzleSchema["session"]>;

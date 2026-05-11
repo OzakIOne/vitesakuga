@@ -5,6 +5,23 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    env: {
+      BASE_URL: "/",
+      BETTER_AUTH_SECRET: "test-secret-with-at-least-32-characters!!",
+      CLOUDFLARE_ACCESS_KEY: "test-access-key",
+      CLOUDFLARE_BUCKET: "test-bucket",
+      CLOUDFLARE_R2: "https://test.r2.cloudflarestorage.com",
+      CLOUDFLARE_SECRET_KEY: "test-secret-key",
+      DATABASE_URL: "postgresql://user:password@localhost:5432/test",
+      DEV: "true",
+      GITHUB_CLIENT_ID: "test-client-id",
+      GITHUB_CLIENT_SECRET: "test-client-secret",
+      MODE: "development",
+      NODE_ENV: "development",
+      PROD: "false",
+      SSR: "false",
+      VITE_BASE_URL: "http://localhost:3000",
+    },
     environment: "node", // Logic-only tests don't need jsdom
     globals: false, // We are using explicit imports
   },

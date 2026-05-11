@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useContext } from "react";
 import { toaster } from "src/components/ui/toaster";
 
-import { addComment, deleteComment } from "./comments.fn";
+import { CommentsFnsContext } from "./comments.fn-context";
 import { commentsKeys } from "./comments.queries";
 
 export function useAddComment(postId: number, userId: string) {
   const queryClient = useQueryClient();
+  const { addComment } = useContext(CommentsFnsContext);
 
   return useMutation({
     mutationFn: async (content: string) =>
@@ -37,6 +39,7 @@ export function useAddComment(postId: number, userId: string) {
 
 export function useDeleteComment(postId: number) {
   const queryClient = useQueryClient();
+  const { deleteComment } = useContext(CommentsFnsContext);
 
   return useMutation({
     mutationFn: async (data: { commentId: number }) => deleteComment({ data }),

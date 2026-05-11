@@ -11,7 +11,7 @@ type LogLevel =
   | "None";
 
 export const withMinimumLogLevel = (level: LogLevel) =>
-  Layer.succeed(References.MinimumLogLevel, level);
+  Layer.succeed(References.MinimumLogLevel)(level);
 
 export const All = "All" as const;
 export const Fatal = "Fatal" as const;

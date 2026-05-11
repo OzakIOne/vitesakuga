@@ -1,0 +1,42 @@
+import { Layer } from "effect";
+
+import { AuthService, RequestHeadersService } from "../auth/context";
+import { makeFromKysely } from "../effect/effect.utils";
+import { withMinimumLogLevel, Debug } from "../effect/logger";
+import { KyselyDB } from "./context";
+
+const LOG_LAYER = withMinimumLogLevel(Debug);
+
+export const makeDBLayer = async () => {
+  const { kysely } = await import("./kysely");
+  return Layer.mergeAll(
+    Layer.succeed(KyselyDB)(makeFromKysely(kysely)),
+    LOG_LAYER,
+  );
+};
+
+export const makeAuthLayer = async () => {
+  const [{ kysely }, { auth }, { getRequestHeaders }] = await Promise.all([
+    import("./kysely"),
+    import("../auth"),
+    import("@tanstack/react-start/server"),
+  ]);
+  return Layer.mergeAll(
+    Layer.succeed(KyselyDB)(makeFromKysely(kysely)),
+    Layer.succeed(AuthService)(auth),
+    Layer.succeed(RequestHeadersService)(() => getRequestHeaders()),
+    LOG_LAYER,
+  );
+};
+
+export const makeMiddlewareLayer = async () => {
+  const [{ auth }, { getRequestHeaders }] = await Promise.all([
+    import("../auth"),
+    import("@tanstack/react-start/server"),
+  ]);
+  return Layer.mergeAll(
+    Layer.succeed(AuthService)(auth),
+    Layer.succeed(RequestHeadersService)(() => getRequestHeaders()),
+    LOG_LAYER,
+  );
+};
