@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import { sanitize } from "../sanitize";
 import z from "zod";
 
 export const VideoMetadataSchema = z
@@ -35,7 +35,7 @@ export const FormFileUploadSchema = z
     content: z
       .string()
       .min(3, "You must have a length of at least 3")
-      .transform((val) => DOMPurify.sanitize(val)),
+      .transform((val) => sanitize(val)),
     relatedPostId: z.number().min(0).or(z.undefined()),
     source: z.url().or(z.literal("")).or(z.undefined()),
     tags: z.array(TagSchema),
@@ -43,7 +43,7 @@ export const FormFileUploadSchema = z
     title: z
       .string()
       .min(3, "You must have a length of at least 3")
-      .transform((val) => DOMPurify.sanitize(val)),
+      .transform((val) => sanitize(val)),
     userId: z.string(),
     video: z
       .instanceof(File)
@@ -61,7 +61,7 @@ export const updatePostInputSchema = z
     content: z
       .string()
       .min(3, "You must have a length of at least 3")
-      .transform((val) => DOMPurify.sanitize(val)),
+      .transform((val) => sanitize(val)),
     postId: z.number().min(0),
     relatedPostId: z.number().min(0).or(z.undefined()),
     source: z.url().or(z.literal("")).or(z.undefined()),
@@ -69,7 +69,7 @@ export const updatePostInputSchema = z
     title: z
       .string()
       .min(3, "You must have a length of at least 3")
-      .transform((val) => DOMPurify.sanitize(val)),
+      .transform((val) => sanitize(val)),
   })
   .strict();
 

@@ -8,6 +8,7 @@ type ViteTypeOptions = {
 
 type ImportMetaEnv = {
   readonly VITE_BASE_URL: string;
+  readonly VITE_CLOUDFLARE_R2_PUBLIC_URL: string;
   // more env variables...
 };
 

@@ -21,7 +21,7 @@
     "neonctl": "neonctl",
     "prepare": "effect-language-service patch",
     "server": "vite preview",
-    "start": "node run .output/server/index.mjs",
+    "start": "node .output/server/index.mjs",
     "test": "vitest -w",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "test:e2e:lightpanda": "CDP_HTTP=http://127.0.0.1:9223 E2E_CONFIG=e2e/playwright.lightpanda.config.ts node e2e/setup-cdp.mjs",

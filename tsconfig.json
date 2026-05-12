@@ -24,7 +24,7 @@
     "noUnusedLocals": true,
     "noImplicitOverride": true,
 
-    "rewriteRelativeImportExtensions ": true,
+    "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
     "incremental": true,
     "strict": true,

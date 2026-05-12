@@ -8,9 +8,10 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import DOMPurify from "isomorphic-dompurify";
 import { relations } from "node_modules/drizzle-orm";
 import { z } from "zod";
+
+import { sanitize } from "../../sanitize";
 
 import { createInsertSchema, user } from "./auth.schema";
 
@@ -89,5 +90,5 @@ export const comments = pgTable("comments", {
 });
 
 export const commentInsertSchema = createInsertSchema(comments, {
-  content: z.string().transform((val) => DOMPurify.sanitize(val)),
+  content: z.string().transform((val) => sanitize(val)),
 });

@@ -16,10 +16,7 @@ import {
   MediaPlaybackRateMenuButton,
 } from "media-chrome/react/menu";
 import React, { useRef } from "react";
-
-const BaseURL = encodeURI(
-  "https://pub-868cc8261ed54a608c02d025c56645a8.r2.dev/",
-);
+import { assetUrl } from "src/lib/assets/url";
 
 type VideoProps = {
   url: string;
@@ -69,7 +66,7 @@ export const Video = React.forwardRef<any, VideoProps>(
             muted
             ref={videoRef}
             slot="media"
-            src={bypass ? url : BaseURL + url}
+            src={bypass ? url : assetUrl(url)}
             style={{
               height: "100%",
               width: "100%",

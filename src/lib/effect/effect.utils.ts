@@ -17,7 +17,7 @@ export class SqlError extends Data.TaggedError("SqlError")<{
   readonly message: string;
 }> {}
 
-interface EffectExecutor {
+type EffectExecutor = {
   executeRaw: <O>(
     query: QueryRaw<O>,
   ) => Effect.Effect<QueryResult<O>, SqlError>;
@@ -34,21 +34,15 @@ interface EffectExecutor {
   executeTakeFirstUnsafe: <O>(query: Query<O>) => Effect.Effect<O, SqlError>;
 }
 
-interface EffectTransition<DB>
-  extends
-    Omit<Transaction<DB>, "transaction" | "startTransaction" | "executeQuery">,
-    EffectExecutor {}
+type EffectTransition<DB> = {} & Omit<Transaction<DB>, "transaction" | "startTransaction" | "executeQuery"> & EffectExecutor
 
-export interface EffectKysely<DB>
-  extends
-    Omit<Kysely<DB>, "transaction" | "startTransaction" | "executeQuery">,
-    EffectExecutor {
+export type EffectKysely<DB> = {
   transaction: () => Omit<TransactionBuilder<DB>, "execute"> & {
     execute: <A, E>(
       f: (trx: EffectTransition<DB>) => Effect.Effect<A, E>,
     ) => Effect.Effect<A, E>;
   };
-}
+} & Omit<Kysely<DB>, "transaction" | "startTransaction" | "executeQuery"> & EffectExecutor
 
 const makeExecutor = <DB>(client: Kysely<DB>): EffectExecutor => ({
   executeRaw: executeRaw(client).bind(client),
@@ -85,11 +79,11 @@ export const makeFromKysely = <DB>(kysely: Kysely<DB>): EffectKysely<DB> => {
   });
 };
 
-interface Executable<O> extends Compilable<O> {
+type Executable<O> = {
   execute: () => Promise<undefined | O[]>;
-}
+} & Compilable<O>
 
-interface ExecutableRaw<O> extends Executable<O>, QueryExecutorProvider {}
+type ExecutableRaw<O> = {} & Executable<O> & QueryExecutorProvider
 
 type Query<O> = Executable<O> | RawBuilder<O>;
 type QueryRaw<O> = ExecutableRaw<O> | RawBuilder<O>;
