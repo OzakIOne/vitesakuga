@@ -106,5 +106,6 @@
     "vite": "^8.0.11",
     "vitest": "^4.1.5",
     "wrangler": "^4.88.0"
-  }
+  },
+  "packageManager": "pnpm@11.1.1"
 }
