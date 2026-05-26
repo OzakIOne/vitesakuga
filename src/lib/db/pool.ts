@@ -1,5 +1,6 @@
 import { Pool, neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { Effect } from "effect";
 
 import { envServer } from "../env/server";
 import * as schema from "./schema";
@@ -20,7 +21,9 @@ export const getNeonPoolSingleton = (): Pool => {
   });
 
   neonPool.on("error", (err: Error) => {
-    console.error("Unexpected error on Neon client", err);
+    Effect.runSync(
+      Effect.logError("Unexpected error on Neon client", err),
+    );
   });
 
   return neonPool;

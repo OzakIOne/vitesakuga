@@ -1,10 +1,11 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthSessionProvider } from "../auth/context";
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
+import { CommentsServiceLive } from "./comments.service";
 import {
   addCommentEffect,
   deleteCommentEffect,
@@ -12,7 +13,7 @@ import {
 } from "./comments.fn";
 
 let db: Kysely<DB>;
-let testLayer: ReturnType<typeof makeTestLayer>;
+let testLayer: Layer.Layer<any, any>;
 let mockGetSession: ReturnType<typeof vi.fn>;
 
 const testUser = {
@@ -28,11 +29,12 @@ beforeEach(async () => {
   mockGetSession = vi.fn();
   const result = await createTestKysely();
   db = result.db;
-  testLayer = makeTestLayer(
+  const baseLayer = makeTestLayer(
     db,
     { api: { getSession: mockGetSession } } as AuthSessionProvider,
     () => new Headers(),
   );
+  testLayer = CommentsServiceLive.pipe(Layer.provideMerge(baseLayer));
 
   await db.insertInto("user").values(testUser).execute();
 
@@ -167,7 +169,7 @@ describe(deleteCommentEffect, () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     await expect(runEffect(deleteCommentEffect({ commentId }))).rejects.toThrow(
-      "Unauthorized",
+      "You must be logged in",
     );
   });
 
@@ -175,7 +177,7 @@ describe(deleteCommentEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-2" } });
 
     await expect(runEffect(deleteCommentEffect({ commentId }))).rejects.toThrow(
-      "Forbidden",
+      "can only delete your own",
     );
   });
 

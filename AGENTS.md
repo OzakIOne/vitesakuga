@@ -11,6 +11,7 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 ## Local Effect Source
 
 The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for reference.
+There is also accountability cloned to `~/.local/share/effect-solutions/accountability` for reference.
 Use this to explore APIs, find usage examples, and understand implementation
 details when the documentation isn't enough.
 

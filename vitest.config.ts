@@ -23,6 +23,7 @@ export default defineConfig({
       VITE_BASE_URL: "http://localhost:3000",
     },
     environment: "node", // Logic-only tests don't need jsdom
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
     globals: false, // We are using explicit imports
   },
 });

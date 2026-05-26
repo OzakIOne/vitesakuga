@@ -5,8 +5,8 @@ import { envServer } from "src/lib/env/server";
 import { posts } from "./sakuga.schema";
 
 async function main() {
-  console.log("Seeding database...");
   const db = drizzle(envServer.DATABASE_URL);
+  process.stdout.write("Seeding database...\n");
   await seed(db, { posts }).refine((funcs) => ({
     posts: {
       columns: {
@@ -25,6 +25,7 @@ async function main() {
       count: 150,
     },
   }));
+  process.stdout.write("Database seeded successfully.\n");
 }
 
 if (process.env.SEED_DB === "true") {

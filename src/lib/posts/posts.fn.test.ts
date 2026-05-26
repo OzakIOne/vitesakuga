@@ -1,10 +1,11 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthSessionProvider } from "../auth/context";
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
+import { PostsServiceLive } from "./posts.service";
 import {
   fetchPostDetailEffect,
   getPostsByTagEffect,
@@ -13,7 +14,7 @@ import {
 } from "./posts.fn";
 
 let db: Kysely<DB>;
-let testLayer: ReturnType<typeof makeTestLayer>;
+let testLayer: Layer.Layer<any, any>;
 let mockGetSession: ReturnType<typeof vi.fn>;
 
 const testUser = {
@@ -27,11 +28,12 @@ beforeEach(async () => {
   mockGetSession = vi.fn();
   const result = await createTestKysely();
   db = result.db;
-  testLayer = makeTestLayer(
+  const baseLayer = makeTestLayer(
     db,
     { api: { getSession: mockGetSession } } as AuthSessionProvider,
     () => new Headers(),
   );
+  testLayer = PostsServiceLive.pipe(Layer.provideMerge(baseLayer));
 
   await db.insertInto("user").values(testUser).execute();
 });
@@ -322,7 +324,7 @@ describe(updatePostEffect, () => {
           tags: [],
         }),
       ),
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("You must be logged in");
   });
 
   it("throws forbidden when user does not own the post", async () => {
@@ -340,7 +342,7 @@ describe(updatePostEffect, () => {
           tags: [],
         }),
       ),
-    ).rejects.toThrow("Forbidden");
+    ).rejects.toThrow("can only update your own");
   });
 
   it("updates post and returns the updated record", async () => {

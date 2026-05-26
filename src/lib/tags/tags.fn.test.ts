@@ -1,18 +1,20 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
+import { TagsServiceLive } from "./tags.service";
 import { getAllTagsEffect, getAllPopularTagsEffect } from "./tags.fn";
 
 let db: Kysely<DB>;
-let testLayer: ReturnType<typeof makeTestLayer>;
+let testLayer: Layer.Layer<any, any>;
 
 beforeEach(async () => {
   const result = await createTestKysely();
   db = result.db;
-  testLayer = makeTestLayer(db, null, () => new Headers());
+  const baseLayer = makeTestLayer(db, null, () => new Headers());
+  testLayer = TagsServiceLive.pipe(Layer.provide(baseLayer));
 });
 
 const runEffect = <T>(effect: Effect.Effect<T>) =>

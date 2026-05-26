@@ -1,8 +1,12 @@
 import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
+
+export class AuthRequiredError extends Data.TaggedError("AuthRequiredError")<{
+  readonly redirectTo: string;
+}> {}
 
 const importFactories = () => import("../db/layer-factories.server");
 
@@ -51,7 +55,9 @@ export const requireAuthEffect = Effect.fn("requireAuth")(function* () {
   });
 
   if (!session?.user) {
-    return yield* Effect.die(redirect({ to: "/login" }));
+    return yield* Effect.fail(
+      new AuthRequiredError({ redirectTo: "/login" }),
+    );
   }
 
   return session.user;
@@ -68,5 +74,12 @@ export const getUserSession = createServerFn().handler(async () => {
 export const requireAuth = createServerFn().handler(async () => {
   const { makeMiddlewareLayer } = await importFactories();
   const layer = await makeMiddlewareLayer();
-  return Effect.runPromise(requireAuthEffect().pipe(Effect.provide(layer)));
+  return Effect.runPromise(
+    requireAuthEffect().pipe(
+      Effect.provide(layer),
+      Effect.catchTag("AuthRequiredError", (error) =>
+        Effect.succeed(redirect({ to: error.redirectTo })),
+      ),
+    ),
+  );
 });

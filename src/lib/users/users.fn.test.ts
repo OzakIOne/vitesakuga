@@ -1,18 +1,20 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
+import { UsersServiceLive } from "./users.service";
 import { fetchUsersEffect, fetchUserPostsEffect } from "./users.fn";
 
 let db: Kysely<DB>;
-let testLayer: ReturnType<typeof makeTestLayer>;
+let testLayer: Layer.Layer<any, any>;
 
 beforeEach(async () => {
   const result = await createTestKysely();
   db = result.db;
-  testLayer = makeTestLayer(db, null, () => new Headers());
+  const baseLayer = makeTestLayer(db, null, () => new Headers());
+  testLayer = UsersServiceLive.pipe(Layer.provide(baseLayer));
 
   await db
     .insertInto("user")

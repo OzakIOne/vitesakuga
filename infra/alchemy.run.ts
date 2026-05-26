@@ -40,4 +40,6 @@ const deploy = Effect.gen(function* () {
   });
 });
 
-Effect.runPromise(deploy).catch(console.error);
+Effect.runPromise(deploy).catch((error) => {
+  throw new Error(`Deployment failed: ${String(error)}`);
+});
