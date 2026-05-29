@@ -1,19 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { z } from "zod";
 
-import { PostsService, PostsServiceLive } from "./posts.service";
+import { createHandler } from "../server-fn.handler";
 import {
   FormFileUploadSchema,
   postByTagSchema,
   searchPostsBaseSchema,
   updatePostInputSchema,
 } from "./posts.schema";
-import { Debug, withMinimumLogLevel } from "../effect/logger";
-
-const LOG_LAYER = withMinimumLogLevel(Debug);
-
-const importFactories = () => import("../db/layer-factories.server");
+import { PostsService, PostsServiceLive } from "./posts.service";
 
 export const searchPostsEffect = Effect.fn("searchPosts")(function* (
   data: z.infer<typeof searchPostsBaseSchema>,
@@ -50,29 +46,13 @@ export const updatePostEffect = Effect.fn("updatePost")(function* (
   return yield* svc.update(data);
 });
 
-// ---- createServerFn wrappers ----
-
 export const searchPosts = createServerFn()
   .inputValidator((input: unknown) => searchPostsBaseSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await importFactories();
-    const dbLayer = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(dbLayer));
-    return Effect.runPromise(
-      searchPostsEffect(data).pipe(Effect.provide(layer)),
-    );
-  });
+  .handler(createHandler(searchPostsEffect, PostsServiceLive));
 
 export const fetchPostDetail = createServerFn()
   .inputValidator((postId: unknown) => z.coerce.number().parse(postId))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await importFactories();
-    const dbLayer = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(dbLayer));
-    return Effect.runPromise(
-      fetchPostDetailEffect(data).pipe(Effect.provide(layer)),
-    );
-  });
+  .handler(createHandler(fetchPostDetailEffect, PostsServiceLive));
 
 export const uploadPost = createServerFn({ method: "POST" })
   .inputValidator((data: FormData) => {
@@ -88,36 +68,12 @@ export const uploadPost = createServerFn({ method: "POST" })
     };
     return FormFileUploadSchema.parse(normalized);
   })
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await importFactories();
-    const dbLayer = await makeDBLayer();
-    const layer = Layer.mergeAll(
-      PostsServiceLive.pipe(Layer.provideMerge(dbLayer)),
-      LOG_LAYER,
-    );
-    return Effect.runPromise(
-      uploadPostEffect(data).pipe(Effect.provide(layer)),
-    );
-  });
+  .handler(createHandler(uploadPostEffect, PostsServiceLive));
 
 export const updatePost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => updatePostInputSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await importFactories();
-    const authLayer = await makeAuthLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(authLayer));
-    return Effect.runPromise(
-      updatePostEffect(data).pipe(Effect.provide(layer)),
-    );
-  });
+  .handler(createHandler(updatePostEffect, PostsServiceLive, "auth"));
 
 export const getPostsByTag = createServerFn()
   .inputValidator((input: unknown) => postByTagSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await importFactories();
-    const dbLayer = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(dbLayer));
-    return Effect.runPromise(
-      getPostsByTagEffect(data).pipe(Effect.provide(layer)),
-    );
-  });
+  .handler(createHandler(getPostsByTagEffect, PostsServiceLive));

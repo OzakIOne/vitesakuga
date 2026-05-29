@@ -2,7 +2,13 @@ import { Context, Effect, Layer } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
 
+import { AuthService, RequestHeadersService } from "../auth/context";
 import { KyselyDB } from "../db/context";
+import {
+  ForbiddenError,
+  PostNotFoundError,
+  UnauthorizedError,
+} from "../errors";
 import {
   FormFileUploadSchema,
   postByTagSchema,
@@ -12,12 +18,6 @@ import {
 } from "./posts.schema";
 import { mapPopularTags } from "./posts.utils";
 import type { AllowedVideoExtension } from "./posts.utils";
-import {
-  ForbiddenError,
-  PostNotFoundError,
-  UnauthorizedError,
-} from "../errors";
-import { AuthService, RequestHeadersService } from "../auth/context";
 
 const PAGE_SIZE = 30;
 
@@ -27,9 +27,7 @@ export class PostsService extends Context.Service<
     readonly search: (
       data: z.infer<typeof searchPostsBaseSchema>,
     ) => Effect.Effect<unknown, Error>;
-    readonly fetchDetail: (
-      postId: number,
-    ) => Effect.Effect<unknown, Error>;
+    readonly fetchDetail: (postId: number) => Effect.Effect<unknown, Error>;
     readonly upload: (
       data: z.infer<typeof FormFileUploadSchema>,
     ) => Effect.Effect<unknown, Error>;
@@ -141,8 +139,7 @@ export const PostsServiceLive = Layer.effect(
         .select((eb) => eb.fn.countAll().as("count"));
       const countResult = yield* Effect.tryPromise({
         try: () => countQuery.executeTakeFirst(),
-        catch: (error) =>
-          new Error(`Failed to count posts: ${String(error)}`),
+        catch: (error) => new Error(`Failed to count posts: ${String(error)}`),
       });
       const totalCount = Number(countResult?.count ?? 0);
 
@@ -153,8 +150,7 @@ export const PostsServiceLive = Layer.effect(
 
       const items = yield* Effect.tryPromise({
         try: () => query.offset(offset).limit(PAGE_SIZE).execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch posts: ${String(error)}`),
+        catch: (error) => new Error(`Failed to fetch posts: ${String(error)}`),
       });
 
       const parsed = yield* Effect.try({
@@ -438,8 +434,7 @@ export const PostsServiceLive = Layer.effect(
             })
             .returningAll()
             .executeTakeFirstOrThrow(),
-        catch: (error) =>
-          new Error(`Failed to create post: ${String(error)}`),
+        catch: (error) => new Error(`Failed to create post: ${String(error)}`),
       });
 
       if (tags.length > 0) {
@@ -467,8 +462,7 @@ export const PostsServiceLive = Layer.effect(
         .select((eb) => eb.fn.countAll().as("count"));
       const countResult = yield* Effect.tryPromise({
         try: () => countQuery.executeTakeFirst(),
-        catch: (error) =>
-          new Error(`Failed to count posts: ${String(error)}`),
+        catch: (error) => new Error(`Failed to count posts: ${String(error)}`),
       });
       const totalCount = Number(countResult?.count ?? 0);
 
@@ -476,8 +470,7 @@ export const PostsServiceLive = Layer.effect(
 
       const items = yield* Effect.tryPromise({
         try: () => query.offset(offset).limit(PAGE_SIZE).execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch posts: ${String(error)}`),
+        catch: (error) => new Error(`Failed to fetch posts: ${String(error)}`),
       });
 
       const parsed = yield* Effect.try({
@@ -548,8 +541,7 @@ export const PostsServiceLive = Layer.effect(
             headers: getHeaders(),
             query: { disableCookieCache: true },
           }),
-        catch: (error) =>
-          new Error(`Failed to get session: ${String(error)}`),
+        catch: (error) => new Error(`Failed to get session: ${String(error)}`),
       });
 
       if (!session?.user) {
@@ -605,10 +597,7 @@ export const PostsServiceLive = Layer.effect(
       if (tags && tags.length > 0) {
         yield* Effect.tryPromise({
           try: () =>
-            db
-              .deleteFrom("post_tags")
-              .where("postId", "=", postId)
-              .execute(),
+            db.deleteFrom("post_tags").where("postId", "=", postId).execute(),
           catch: (error) =>
             new Error(`Failed to clear existing tags: ${String(error)}`),
         });
@@ -616,12 +605,8 @@ export const PostsServiceLive = Layer.effect(
       } else {
         yield* Effect.tryPromise({
           try: () =>
-            db
-              .deleteFrom("post_tags")
-              .where("postId", "=", postId)
-              .execute(),
-          catch: (error) =>
-            new Error(`Failed to clear tags: ${String(error)}`),
+            db.deleteFrom("post_tags").where("postId", "=", postId).execute(),
+          catch: (error) => new Error(`Failed to clear tags: ${String(error)}`),
         });
       }
 

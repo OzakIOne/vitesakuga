@@ -12,7 +12,6 @@ import { relations } from "node_modules/drizzle-orm";
 import { z } from "zod";
 
 import { sanitize } from "../../sanitize";
-
 import { createInsertSchema, user } from "./auth.schema";
 
 export const tags = pgTable("tags", {

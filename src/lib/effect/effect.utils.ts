@@ -32,9 +32,13 @@ type EffectExecutor = {
     query: Query<O>,
   ) => Effect.Effect<O, SqlError | SqlNoFirstResult>;
   executeTakeFirstUnsafe: <O>(query: Query<O>) => Effect.Effect<O, SqlError>;
-}
+};
 
-type EffectTransition<DB> = {} & Omit<Transaction<DB>, "transaction" | "startTransaction" | "executeQuery"> & EffectExecutor
+type EffectTransition<DB> = {} & Omit<
+  Transaction<DB>,
+  "transaction" | "startTransaction" | "executeQuery"
+> &
+  EffectExecutor;
 
 export type EffectKysely<DB> = {
   transaction: () => Omit<TransactionBuilder<DB>, "execute"> & {
@@ -42,7 +46,8 @@ export type EffectKysely<DB> = {
       f: (trx: EffectTransition<DB>) => Effect.Effect<A, E>,
     ) => Effect.Effect<A, E>;
   };
-} & Omit<Kysely<DB>, "transaction" | "startTransaction" | "executeQuery"> & EffectExecutor
+} & Omit<Kysely<DB>, "transaction" | "startTransaction" | "executeQuery"> &
+  EffectExecutor;
 
 const makeExecutor = <DB>(client: Kysely<DB>): EffectExecutor => ({
   executeRaw: executeRaw(client).bind(client),
@@ -81,9 +86,9 @@ export const makeFromKysely = <DB>(kysely: Kysely<DB>): EffectKysely<DB> => {
 
 type Executable<O> = {
   execute: () => Promise<undefined | O[]>;
-} & Compilable<O>
+} & Compilable<O>;
 
-type ExecutableRaw<O> = {} & Executable<O> & QueryExecutorProvider
+type ExecutableRaw<O> = {} & Executable<O> & QueryExecutorProvider;
 
 type Query<O> = Executable<O> | RawBuilder<O>;
 type QueryRaw<O> = ExecutableRaw<O> | RawBuilder<O>;

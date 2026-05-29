@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
-import { TagsServiceLive } from "./tags.service";
 import { getAllTagsEffect, getAllPopularTagsEffect } from "./tags.fn";
+import { TagsServiceLive } from "./tags.service";
 
 let db: Kysely<DB>;
 let testLayer: Layer.Layer<any, any>;

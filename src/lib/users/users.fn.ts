@@ -1,11 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import z from "zod";
 
-import { UsersService, UsersServiceLive } from "../users/users.service";
+import { createHandler, resolveEffectLayer } from "../server-fn.handler";
 import { fetchUserInputSchema } from "../users/users.schema";
-
-const importFactories = () => import("../db/layer-factories.server");
+import { UsersService, UsersServiceLive } from "../users/users.service";
 
 export const fetchUsersEffect = Effect.fn("fetchUsers")(function* () {
   const svc = yield* UsersService;
@@ -19,22 +18,13 @@ export const fetchUserPostsEffect = Effect.fn("fetchUserPosts")(function* (
   return yield* svc.userPosts(data);
 });
 
-// ---- createServerFn wrappers ----
-
 export const fetchUsers = createServerFn().handler(async () => {
-  const { makeDBLayer } = await importFactories();
-  const dbLayer = await makeDBLayer();
-  const layer = UsersServiceLive.pipe(Layer.provideMerge(dbLayer));
-  return Effect.runPromise(fetchUsersEffect().pipe(Effect.provide(layer)));
+  const layer = await resolveEffectLayer(UsersServiceLive);
+  return Effect.runPromise(
+    fetchUsersEffect().pipe(Effect.provide(layer)) as Effect.Effect<any, Error>,
+  );
 });
 
 export const fetchUserPosts = createServerFn()
   .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await importFactories();
-    const dbLayer = await makeDBLayer();
-    const layer = UsersServiceLive.pipe(Layer.provideMerge(dbLayer));
-    return Effect.runPromise(
-      fetchUserPostsEffect(data).pipe(Effect.provide(layer)),
-    );
-  });
+  .handler(createHandler(fetchUserPostsEffect, UsersServiceLive));

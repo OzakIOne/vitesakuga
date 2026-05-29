@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
-import { UsersServiceLive } from "./users.service";
 import { fetchUsersEffect, fetchUserPostsEffect } from "./users.fn";
+import { UsersServiceLive } from "./users.service";
 
 let db: Kysely<DB>;
 let testLayer: Layer.Layer<any, any>;

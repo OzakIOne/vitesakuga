@@ -21,9 +21,7 @@ export const getNeonPoolSingleton = (): Pool => {
   });
 
   neonPool.on("error", (err: Error) => {
-    Effect.runSync(
-      Effect.logError("Unexpected error on Neon client", err),
-    );
+    Effect.runSync(Effect.logError("Unexpected error on Neon client", err));
   });
 
   return neonPool;

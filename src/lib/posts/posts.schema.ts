@@ -1,5 +1,6 @@
-import { sanitize } from "../sanitize";
 import z from "zod";
+
+import { sanitize } from "../sanitize";
 
 export const VideoMetadataSchema = z
   .object({

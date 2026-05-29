@@ -5,7 +5,9 @@ import {
   deleteComment as _deleteComment,
 } from "./comments.fn";
 
-export const CommentsFnsContext = createContext({
+export const defaultCommentsFns = {
   addComment: _addComment,
   deleteComment: _deleteComment,
-});
+};
+
+export const CommentsFnsContext = createContext(defaultCommentsFns);

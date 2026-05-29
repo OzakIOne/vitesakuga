@@ -3,12 +3,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { Data, Effect } from "effect";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
+import { resolveMiddlewareLayer } from "../server-fn.handler";
 
 export class AuthRequiredError extends Data.TaggedError("AuthRequiredError")<{
   readonly redirectTo: string;
 }> {}
-
-const importFactories = () => import("../db/layer-factories.server");
 
 export const getUserSessionEffect = Effect.fn("getUserSession")(function* () {
   const authSvc = yield* AuthService;
@@ -55,25 +54,24 @@ export const requireAuthEffect = Effect.fn("requireAuth")(function* () {
   });
 
   if (!session?.user) {
-    return yield* Effect.fail(
-      new AuthRequiredError({ redirectTo: "/login" }),
-    );
+    return yield* Effect.fail(new AuthRequiredError({ redirectTo: "/login" }));
   }
 
   return session.user;
 });
 
-// ---- createServerFn wrappers ----
-
 export const getUserSession = createServerFn().handler(async () => {
-  const { makeMiddlewareLayer } = await importFactories();
-  const layer = await makeMiddlewareLayer();
-  return Effect.runPromise(getUserSessionEffect().pipe(Effect.provide(layer)));
+  const layer = await resolveMiddlewareLayer();
+  return Effect.runPromise(
+    getUserSessionEffect().pipe(Effect.provide(layer)) as Effect.Effect<
+      any,
+      Error
+    >,
+  );
 });
 
 export const requireAuth = createServerFn().handler(async () => {
-  const { makeMiddlewareLayer } = await importFactories();
-  const layer = await makeMiddlewareLayer();
+  const layer = await resolveMiddlewareLayer();
   return Effect.runPromise(
     requireAuthEffect().pipe(
       Effect.provide(layer),

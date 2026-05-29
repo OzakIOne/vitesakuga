@@ -1,5 +1,5 @@
-import { createActor } from "xstate";
 import { describe, expect, it } from "vitest";
+import { createActor } from "xstate";
 
 import {
   convertMachine,
@@ -114,7 +114,11 @@ describe("convertMachine", () => {
     it("clears output, codecs, and errors on new file selection", () => {
       const actor = createConvertActor();
       actor.start();
-      actor.send({ type: "file.probed", videoCodec: "avc1", audioCodec: "aac" });
+      actor.send({
+        type: "file.probed",
+        videoCodec: "avc1",
+        audioCodec: "aac",
+      });
       actor.send({ type: "output.selected", output: mp4Transcode });
       actor.send({ type: "file.selected", file: dummyFile });
 
@@ -132,7 +136,11 @@ describe("convertMachine", () => {
       const actor = createConvertActor();
       actor.start();
       actor.send({ type: "file.selected", file: dummyFile });
-      actor.send({ type: "file.probed", videoCodec: "avc1", audioCodec: "aac" });
+      actor.send({
+        type: "file.probed",
+        videoCodec: "avc1",
+        audioCodec: "aac",
+      });
 
       expect(actor.getSnapshot().value).toBe("ready");
       expect(actor.getSnapshot().context.inputVideoCodec).toBe("avc1");
@@ -307,7 +315,10 @@ describe("convertMachine", () => {
         downloadUrl: "blob://test",
         convertedName: "test-converted.mp4",
       });
-      actor.send({ type: "file.selected", file: new File(["new"], "new.mp4", { type: "video/mp4" }) });
+      actor.send({
+        type: "file.selected",
+        file: new File(["new"], "new.mp4", { type: "video/mp4" }),
+      });
 
       expect(actor.getSnapshot().value).toBe("ready");
       expect(actor.getSnapshot().context.downloadUrl).toBeNull();
@@ -325,7 +336,10 @@ describe("convertMachine", () => {
         type: "conversion.error",
         message: "fail",
       });
-      actor.send({ type: "file.selected", file: new File(["new"], "new.mp4", { type: "video/mp4" }) });
+      actor.send({
+        type: "file.selected",
+        file: new File(["new"], "new.mp4", { type: "video/mp4" }),
+      });
 
       expect(actor.getSnapshot().value).toBe("ready");
       expect(actor.getSnapshot().context.error).toBeNull();

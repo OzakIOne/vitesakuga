@@ -24,6 +24,11 @@ import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
+import { AuthClientContext } from "src/lib/auth/client-context";
+import {
+  CommentsFnsContext,
+  defaultCommentsFns,
+} from "src/lib/comments/comments.fn-context";
 import { usersKeys } from "src/lib/users/users.queries";
 import { seo } from "src/utils/seo";
 
@@ -216,9 +221,13 @@ function RootComponent() {
     <Provider>
       <HotkeysProvider>
         <GlobalShortcuts />
-        <RootDocument>
-          <Outlet />
-        </RootDocument>
+        <AuthClientContext.Provider value={authClient}>
+          <CommentsFnsContext.Provider value={defaultCommentsFns}>
+            <RootDocument>
+              <Outlet />
+            </RootDocument>
+          </CommentsFnsContext.Provider>
+        </AuthClientContext.Provider>
       </HotkeysProvider>
     </Provider>
   );

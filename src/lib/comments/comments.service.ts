@@ -4,12 +4,12 @@ import { z } from "zod";
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema } from "../db/schema";
-import { commentSchema } from "./comments.schema";
 import {
   CommentNotFoundError,
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
+import { commentSchema } from "./comments.schema";
 
 export class CommentsService extends Context.Service<
   CommentsService,
@@ -77,8 +77,7 @@ export const CommentsServiceLive = Layer.effect(
             })
             .returning(["id", "postId", "content", "userId", "createdAt"])
             .executeTakeFirstOrThrow(),
-        catch: (error) =>
-          new Error(`Failed to add comment: ${String(error)}`),
+        catch: (error) => new Error(`Failed to add comment: ${String(error)}`),
       });
 
       return comment;
@@ -96,8 +95,7 @@ export const CommentsServiceLive = Layer.effect(
             headers: getHeaders(),
             query: { disableCookieCache: true },
           }),
-        catch: (error) =>
-          new Error(`Failed to get session: ${String(error)}`),
+        catch: (error) => new Error(`Failed to get session: ${String(error)}`),
       });
 
       if (!session?.user) {
@@ -116,9 +114,7 @@ export const CommentsServiceLive = Layer.effect(
             .where("id", "=", commentId)
             .executeTakeFirst(),
         catch: (error) =>
-          new Error(
-            `Failed to find comment ${commentId}: ${String(error)}`,
-          ),
+          new Error(`Failed to find comment ${commentId}: ${String(error)}`),
       });
 
       if (!comment) {
@@ -142,9 +138,7 @@ export const CommentsServiceLive = Layer.effect(
         try: () =>
           db.deleteFrom("comments").where("id", "=", commentId).execute(),
         catch: (error) =>
-          new Error(
-            `Failed to delete comment ${commentId}: ${String(error)}`,
-          ),
+          new Error(`Failed to delete comment ${commentId}: ${String(error)}`),
       });
 
       return { success: true };

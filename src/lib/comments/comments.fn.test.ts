@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthSessionProvider } from "../auth/context";
 import type { DB } from "../db/kysely";
 import { createTestKysely, makeTestLayer } from "../db/test-utils";
-import { CommentsServiceLive } from "./comments.service";
 import {
   addCommentEffect,
   deleteCommentEffect,
   fetchCommentsEffect,
 } from "./comments.fn";
+import { CommentsServiceLive } from "./comments.service";
 
 let db: Kysely<DB>;
 let testLayer: Layer.Layer<any, any>;

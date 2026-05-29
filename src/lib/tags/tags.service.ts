@@ -22,8 +22,7 @@ export const TagsServiceLive = Layer.effect(
     const all = Effect.fn("TagsService.all")(function* () {
       const tags = yield* Effect.tryPromise({
         try: () => db.selectFrom("tags").select(["id", "name"]).execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch tags: ${String(error)}`),
+        catch: (error) => new Error(`Failed to fetch tags: ${String(error)}`),
       });
       return tags;
     });

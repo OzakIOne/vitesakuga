@@ -83,8 +83,7 @@ export const UsersServiceLive = Layer.effect(
         .select((eb) => eb.fn.countAll().as("count"));
       const countResult = yield* Effect.tryPromise({
         try: () => countQuery.executeTakeFirst(),
-        catch: (error) =>
-          new Error(`Failed to count posts: ${String(error)}`),
+        catch: (error) => new Error(`Failed to count posts: ${String(error)}`),
       });
       const totalCount = Number(countResult?.count ?? 0);
 
@@ -92,8 +91,7 @@ export const UsersServiceLive = Layer.effect(
 
       const items = yield* Effect.tryPromise({
         try: () => query.offset(offset).limit(PAGE_SIZE).execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch posts: ${String(error)}`),
+        catch: (error) => new Error(`Failed to fetch posts: ${String(error)}`),
       });
 
       const posts = yield* Effect.try({
