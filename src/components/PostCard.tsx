@@ -14,8 +14,8 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
   return (
     <Link
       params={{ postId: post.id }}
-      search={searchParams}
       to="/posts/$postId"
+      {...(searchParams ? { search: searchParams } : {})}
     >
       <VStack cursor="pointer" gap={2} h="full">
         <Box

@@ -144,7 +144,7 @@ describe(addCommentEffect, () => {
           userId: "user-1",
         }),
       ),
-    ).rejects.toThrow("Failed to add comment");
+    ).rejects.toThrow("SqlError");
   });
 });
 

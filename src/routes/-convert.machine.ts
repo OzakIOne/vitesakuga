@@ -172,7 +172,7 @@ export const convertMachine = setup({
                 }
               : undefined;
 
-            const conversion = await Conversion.init({
+            const conversion = await (Conversion.init as any)({
               audio: audioOptions,
               input: mediabunnyInput,
               output: mediabunnyOutput,
@@ -182,12 +182,12 @@ export const convertMachine = setup({
             if (!conversion.isValid) {
               sendBack({
                 type: "conversion.error",
-                message: `Conversion is invalid: ${conversion.discardedTracks.map((t) => t.reason).join(", ")}`,
+                message: `Conversion is invalid: ${(conversion.discardedTracks as Array<{ reason: string }>).map((t) => t.reason).join(", ")}`,
               });
               return;
             }
 
-            conversion.onProgress = (p) =>
+            conversion.onProgress = (p: number) =>
               sendBack({ type: "progress", percent: p * 100 });
 
             await conversion.execute();

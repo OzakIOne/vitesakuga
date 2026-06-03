@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef } from "react";
 
-type PaginationMeta = {
+import { type DbSchemaSelect } from "../db/schema";
+
+export type PaginationMeta = {
   currentPage: number;
   hasMore: boolean;
   hasPrevious: boolean;
@@ -12,14 +14,14 @@ type PaginationMeta = {
   totalPages: number;
 };
 
-type PopularTag = {
+export type PopularTag = {
   id: number;
   name: string;
   postCount: number;
 };
 
-type PostListingData = {
-  data: unknown[];
+export type PostListingData = {
+  data: DbSchemaSelect["posts"][];
   meta: {
     pagination: PaginationMeta;
     popularTags: PopularTag[];

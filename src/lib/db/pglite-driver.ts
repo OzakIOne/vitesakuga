@@ -27,7 +27,7 @@ class PGliteConnection implements DatabaseConnection {
       numAffectedRows:
         result.affectedRows != null ? BigInt(result.affectedRows) : undefined,
       rows: (result.rows as R[]) ?? [],
-    };
+    } as QueryResult<R>;
   }
 
   streamQuery<R>(): AsyncIterableIterator<QueryResult<R>> {

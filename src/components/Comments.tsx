@@ -21,7 +21,7 @@ import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
 
 type CommentsProps = {
   postId: number;
-  currentUserId?: string;
+  currentUserId?: string | undefined;
 };
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
@@ -86,44 +86,52 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       </Box>
 
       <Box>
-        {comments?.map((comment) => (
-          <Box
-            alignItems="flex-start"
-            borderRadius="md"
-            display="flex"
-            justifyContent="space-between"
-            key={comment.id}
-            mb={3}
-            p={3}
-            shadow="sm"
-          >
-            <Box flex="1">
-              <Text color="gray.600" fontSize="sm" mb={1}>
-                {comment.userName || "Anonymous"} •{" "}
-                {comment.createdAt
-                  ? new Date(comment.createdAt).toLocaleDateString()
-                  : "Unknown date"}
-              </Text>
-              <Text>{comment.content}</Text>
+        {comments?.map(
+          (comment: {
+            id: number;
+            userName: string | null;
+            createdAt: Date;
+            content: string;
+            userId: string;
+          }) => (
+            <Box
+              alignItems="flex-start"
+              borderRadius="md"
+              display="flex"
+              justifyContent="space-between"
+              key={comment.id}
+              mb={3}
+              p={3}
+              shadow="sm"
+            >
+              <Box flex="1">
+                <Text color="gray.600" fontSize="sm" mb={1}>
+                  {comment.userName || "Anonymous"} •{" "}
+                  {comment.createdAt
+                    ? new Date(comment.createdAt).toLocaleDateString()
+                    : "Unknown date"}
+                </Text>
+                <Text>{comment.content}</Text>
+              </Box>
+              {currentUserId === comment.userId && (
+                <IconButton
+                  aria-label="Delete comment"
+                  colorScheme="red"
+                  flexShrink={0}
+                  loading={deleteCommentMutation.isPending}
+                  ms={2}
+                  onClick={() => {
+                    setCommentIdToDelete(comment.id);
+                  }}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <LuTrash2 />
+                </IconButton>
+              )}
             </Box>
-            {currentUserId === comment.userId && (
-              <IconButton
-                aria-label="Delete comment"
-                colorScheme="red"
-                flexShrink={0}
-                loading={deleteCommentMutation.isPending}
-                ms={2}
-                onClick={() => {
-                  setCommentIdToDelete(comment.id);
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                <LuTrash2 />
-              </IconButton>
-            )}
-          </Box>
-        ))}
+          ),
+        )}
       </Box>
 
       <Dialog.Root

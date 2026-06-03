@@ -20,11 +20,11 @@ import { LuX } from "react-icons/lu";
 import { tagsQueryGetTags } from "src/lib/tags/tags.queries";
 
 type SearchBoxProps = {
-  defaultValue?: string;
-  defaultTags?: string[];
-  placeholder?: string;
-  showTitle?: boolean;
-  title?: string;
+  defaultValue?: string | undefined;
+  defaultTags?: string[] | undefined;
+  placeholder?: string | undefined;
+  showTitle?: boolean | undefined;
+  title?: string | undefined;
 };
 
 export function SearchBox({
@@ -47,11 +47,11 @@ export function SearchBox({
   const filteredTags = useMemo(
     () =>
       allTags
-        .filter((tag) => !tags.includes(tag.name))
-        .filter((tag) =>
+        .filter((tag: { name: string }) => !tags.includes(tag.name))
+        .filter((tag: { name: string }) =>
           tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()),
         )
-        .map((tag) => tag.name),
+        .map((tag: { name: string }) => tag.name),
     [allTags, tagSearchValue, tags],
   );
 
@@ -183,7 +183,7 @@ export function SearchBox({
                 <Combobox.Content>
                   <Combobox.ItemGroup>
                     {filteredTags.length > 0 ? (
-                      filteredTags.map((item) => (
+                      filteredTags.map((item: string) => (
                         <Combobox.Item item={item} key={item}>
                           {item}
                           <Combobox.ItemIndicator />

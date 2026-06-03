@@ -8,8 +8,8 @@ type PostDetailDisplayProps = {
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
-  currentUserId?: string;
-  onEditClick: () => void;
+  currentUserId?: string | undefined;
+  onEditClick?: (() => void) | undefined;
   onBack: () => void;
 };
 

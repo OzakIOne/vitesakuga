@@ -14,9 +14,16 @@ function UsersContent() {
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {usersQuery.data.map((user) => (
-        <User id={user.id} image={user.image} key={user.id} name={user.name} />
-      ))}
+      {usersQuery.data.map(
+        (user: { id: string; image: string | null; name: string }) => (
+          <User
+            id={user.id}
+            image={user.image}
+            key={user.id}
+            name={user.name}
+          />
+        ),
+      )}
     </div>
   );
 }

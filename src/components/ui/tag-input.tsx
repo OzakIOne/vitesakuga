@@ -31,8 +31,8 @@ export function TagInput({ value, onChange }: TagInputProps) {
   const filteredTags = useMemo(() => {
     const selectedNames = new Set(value.map((tag) => tag.name));
     return allTags
-      .filter((tag) => !selectedNames.has(tag.name))
-      .filter((tag) =>
+      .filter((tag: { name: string }) => !selectedNames.has(tag.name))
+      .filter((tag: { name: string }) =>
         tag.name.toLowerCase().includes(searchValue.toLowerCase()),
       );
   }, [allTags, searchValue, value]);
@@ -43,14 +43,15 @@ export function TagInput({ value, onChange }: TagInputProps) {
       return false;
     }
     const exactMatch = allTags.some(
-      (tag) => tag.name.toLowerCase() === searchValue.toLowerCase(),
+      (tag: { name: string }) =>
+        tag.name.toLowerCase() === searchValue.toLowerCase(),
     );
     return !exactMatch;
   }, [searchValue, allTags]);
 
   // Combine filtered tags with create option
   const items = useMemo(() => {
-    const tagNames = filteredTags.map((tag) => tag.name);
+    const tagNames = filteredTags.map((tag: { name: string }) => tag.name);
     if (showCreateOption) {
       return [...tagNames, `Create: ${searchValue}`];
     }
@@ -73,7 +74,9 @@ export function TagInput({ value, onChange }: TagInputProps) {
       onChange([...value, { name: newTagName }]);
     } else {
       // Find the tag from allTags
-      const selectedTag = allTags.find((tag) => tag.name === addedValue);
+      const selectedTag = allTags.find(
+        (tag: { name: string }) => tag.name === addedValue,
+      );
       if (selectedTag && !value.some((tag) => tag.name === selectedTag.name)) {
         onChange([...value, selectedTag]);
       }
@@ -138,7 +141,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
             <Combobox.Content>
               <Combobox.ItemGroup>
                 {items.length > 0 ? (
-                  items.map((item) => (
+                  items.map((item: string) => (
                     <Combobox.Item item={item} key={item}>
                       {item}
                       <Combobox.ItemIndicator />

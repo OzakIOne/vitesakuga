@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Effect } from "effect";
 
-import { resolveEffectLayer } from "../server-fn.handler";
+import { createHandler } from "../server-fn.handler";
 import { TagsService, TagsServiceLive } from "../tags/tags.service";
 
 export const getAllTagsEffect = Effect.fn("getAllTags")(function* () {
@@ -16,19 +16,10 @@ export const getAllPopularTagsEffect = Effect.fn("getAllPopularTags")(
   },
 );
 
-export const getAllTags = createServerFn().handler(async () => {
-  const layer = await resolveEffectLayer(TagsServiceLive);
-  return Effect.runPromise(
-    getAllTagsEffect().pipe(Effect.provide(layer)) as Effect.Effect<any, Error>,
-  );
-});
+export const getAllTags = createServerFn().handler(
+  createHandler(getAllTagsEffect, TagsServiceLive),
+);
 
-export const getAllPopularTags = createServerFn().handler(async () => {
-  const layer = await resolveEffectLayer(TagsServiceLive);
-  return Effect.runPromise(
-    getAllPopularTagsEffect().pipe(Effect.provide(layer)) as Effect.Effect<
-      any,
-      Error
-    >,
-  );
-});
+export const getAllPopularTags = createServerFn().handler(
+  createHandler(getAllPopularTagsEffect, TagsServiceLive),
+);

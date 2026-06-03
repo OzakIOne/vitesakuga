@@ -9,19 +9,22 @@ export class AuthRequiredError extends Data.TaggedError("AuthRequiredError")<{
   readonly redirectTo: string;
 }> {}
 
-export const getUserSessionEffect = Effect.fn("getUserSession")(function* () {
+export const getSessionEffect = Effect.fn("getSession")(function* () {
   const authSvc = yield* AuthService;
   const getHeaders = yield* RequestHeadersService;
 
-  const session = yield* Effect.tryPromise({
+  return yield* Effect.tryPromise({
     try: () =>
       authSvc.api.getSession({
         headers: getHeaders(),
         query: { disableCookieCache: true },
       }),
-    catch: (error) => new Error(`Session check failed: ${String(error)}`),
+    catch: (error) => new Error(`Failed to get session: ${String(error)}`),
   });
+});
 
+export const getUserSessionEffect = Effect.fn("getUserSession")(function* () {
+  const session = yield* getSessionEffect();
   return session?.user ?? null;
 });
 
@@ -68,16 +71,17 @@ export const getUserSession = createServerFn().handler(async () => {
       Error
     >,
   );
-});
+}) as any;
 
-export const requireAuth = createServerFn().handler(async () => {
+export const requireAuth = (createServerFn() as any).handler(async () => {
   const layer = await resolveMiddlewareLayer();
   return Effect.runPromise(
-    requireAuthEffect().pipe(
+    (requireAuthEffect() as any).pipe(
       Effect.provide(layer),
-      Effect.catchTag("AuthRequiredError", (error) =>
-        Effect.succeed(redirect({ to: error.redirectTo })),
-      ),
+      Effect.catchTags({
+        AuthRequiredError: (error: AuthRequiredError) =>
+          Effect.succeed(redirect({ to: error.redirectTo })),
+      }),
     ),
   );
-});
+}) as any;

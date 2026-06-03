@@ -17,8 +17,8 @@ export function Post({
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   tags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
-  currentUserId?: string;
-  onEditClick?: () => void;
+  currentUserId?: string | undefined;
+  onEditClick?: (() => void) | undefined;
 }) {
   const isOwner = currentUserId === user.id;
 
@@ -34,7 +34,7 @@ export function Post({
             Tags:
           </Text>
           <Stack direction="row" flexWrap="wrap" gap={2}>
-            {tags.map((tag) => (
+            {tags.map((tag: { id?: number; name: string }) => (
               <Link
                 key={tag.id}
                 params={{ tag: tag.name }}

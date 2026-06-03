@@ -6,9 +6,14 @@ import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
+import type { PostListingData } from "src/lib/posts/posts.hooks";
 import { usePostsPage } from "src/lib/posts/posts.hooks";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { userQueryOptions } from "src/lib/users/users.queries";
+
+type UserPostData = PostListingData & {
+  user: { id: string; image: string | null; name: string };
+};
 
 export const Route = createFileRoute("/users/$id")({
   component: UserLayoutComponent,
@@ -24,7 +29,9 @@ function UserContent() {
   const { sortBy, dateRange, tags, q, page } = Route.useSearch();
 
   const { posts, popularTags, totalPages, handlePageChange, data, isFetching } =
-    usePostsPage(userQueryOptions({ page, q, tags, userId: id }));
+    usePostsPage<UserPostData>(
+      userQueryOptions({ page, q, tags, userId: id }),
+    );
 
   return (
     <Box p={4}>

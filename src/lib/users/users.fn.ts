@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { Effect } from "effect";
 import z from "zod";
 
-import { createHandler, resolveEffectLayer } from "../server-fn.handler";
+import { createHandler } from "../server-fn.handler";
 import { fetchUserInputSchema } from "../users/users.schema";
 import { UsersService, UsersServiceLive } from "../users/users.service";
 
@@ -18,12 +18,9 @@ export const fetchUserPostsEffect = Effect.fn("fetchUserPosts")(function* (
   return yield* svc.userPosts(data);
 });
 
-export const fetchUsers = createServerFn().handler(async () => {
-  const layer = await resolveEffectLayer(UsersServiceLive);
-  return Effect.runPromise(
-    fetchUsersEffect().pipe(Effect.provide(layer)) as Effect.Effect<any, Error>,
-  );
-});
+export const fetchUsers = createServerFn().handler(
+  createHandler(fetchUsersEffect, UsersServiceLive),
+);
 
 export const fetchUserPosts = createServerFn()
   .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))

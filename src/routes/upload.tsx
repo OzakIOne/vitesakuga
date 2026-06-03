@@ -40,15 +40,15 @@ import {
 } from "src/lib/upload/upload.processor";
 
 export const Route = createFileRoute("/upload")({
-  beforeLoad: async () => {
+  beforeLoad: async (_ctx) => {
     const user = await requireAuth();
-    return { user };
+    return { user } as any;
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext();
+  const { user } = Route.useRouteContext() as { user: any };
   const { queryClient } = useRouteContext({ from: "/upload" });
   const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -273,24 +273,30 @@ function RouteComponent() {
                     overflowY="auto"
                     p={2}
                   >
-                    {relatedPosts.data.map((post) => (
-                      <Box
-                        _hover={{ bg: "gray.100" }}
-                        borderRadius="sm"
-                        cursor="pointer"
-                        key={post.id}
-                        onClick={() => {
-                          field.handleChange(Number(post.id));
-                          setRelatedPostSearch(post.title);
-                        }}
-                        p={2}
-                      >
-                        <Text fontWeight="medium">{post.title}</Text>
-                        <Text color="gray.600" fontSize="sm">
-                          {post.content.slice(0, 60)}...
-                        </Text>
-                      </Box>
-                    ))}
+                    {relatedPosts.data.map(
+                      (post: {
+                        id: number;
+                        title: string;
+                        content: string;
+                      }) => (
+                        <Box
+                          _hover={{ bg: "gray.100" }}
+                          borderRadius="sm"
+                          cursor="pointer"
+                          key={post.id}
+                          onClick={() => {
+                            field.handleChange(Number(post.id));
+                            setRelatedPostSearch(post.title);
+                          }}
+                          p={2}
+                        >
+                          <Text fontWeight="medium">{post.title}</Text>
+                          <Text color="gray.600" fontSize="sm">
+                            {post.content.slice(0, 60)}...
+                          </Text>
+                        </Box>
+                      ),
+                    )}
                   </Box>
                 )}
                 {field.state.value && (

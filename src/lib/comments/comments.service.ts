@@ -1,7 +1,7 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import { z } from "zod";
 
-import { AuthService, RequestHeadersService } from "../auth/context";
+import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema } from "../db/schema";
 import {
@@ -32,71 +32,50 @@ export const CommentsServiceLive = Layer.effect(
     const fetch = Effect.fn("CommentsService.fetch")(function* (
       postId: number,
     ) {
-      const comments = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .selectFrom("comments")
-            .innerJoin("user", "user.id", "comments.userId")
-            .where("comments.postId", "=", postId)
-            .orderBy("comments.createdAt", "desc")
-            .select([
-              "comments.id",
-              "comments.content",
-              "comments.createdAt",
-              "comments.userId",
-              "comments.postId",
-              "user.name as userName",
-              "user.image as userImage",
-            ])
-            .execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch comments: ${String(error)}`),
-      });
+      const comments = yield* db.execute(
+        db
+          .selectFrom("comments")
+          .innerJoin("user", "user.id", "comments.userId")
+          .where("comments.postId", "=", postId)
+          .orderBy("comments.createdAt", "desc")
+          .select([
+            "comments.id",
+            "comments.content",
+            "comments.createdAt",
+            "comments.userId",
+            "comments.postId",
+            "user.name as userName",
+            "user.image as userImage",
+          ]),
+      );
 
-      const parsed = yield* Effect.try({
+      return yield* Effect.try({
         try: () => z.array(commentSchema).parse(comments),
         catch: (error) =>
           new Error(`Error processing comments: ${String(error)}`),
       });
-
-      return parsed;
     });
 
     const add = Effect.fn("CommentsService.add")(function* (
       data: z.infer<typeof commentInsertSchema>,
     ) {
-      const comment = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insertInto("comments")
-            .values({
-              content: data.content,
-              createdAt: new Date(),
-              postId: data.postId,
-              userId: data.userId,
-            })
-            .returning(["id", "postId", "content", "userId", "createdAt"])
-            .executeTakeFirstOrThrow(),
-        catch: (error) => new Error(`Failed to add comment: ${String(error)}`),
-      });
-
-      return comment;
+      return yield* db.executeTakeFirstOrError(
+        db
+          .insertInto("comments")
+          .values({
+            content: data.content,
+            createdAt: new Date(),
+            postId: data.postId,
+            userId: data.userId,
+          })
+          .returning(["id", "postId", "content", "userId", "createdAt"]),
+      );
     });
 
     const delete_ = Effect.fn("CommentsService.delete_")(function* (
       commentId: number,
     ) {
-      const authSvc = yield* AuthService;
-      const getHeaders = yield* RequestHeadersService;
-
-      const session = yield* Effect.tryPromise({
-        try: () =>
-          authSvc.api.getSession({
-            headers: getHeaders(),
-            query: { disableCookieCache: true },
-          }),
-        catch: (error) => new Error(`Failed to get session: ${String(error)}`),
-      });
+      const session = yield* getSessionEffect();
 
       if (!session?.user) {
         return yield* Effect.fail(
@@ -106,18 +85,14 @@ export const CommentsServiceLive = Layer.effect(
         );
       }
 
-      const comment = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .selectFrom("comments")
-            .select(["id", "userId"])
-            .where("id", "=", commentId)
-            .executeTakeFirst(),
-        catch: (error) =>
-          new Error(`Failed to find comment ${commentId}: ${String(error)}`),
-      });
+      const commentOption = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("comments")
+          .select(["id", "userId"])
+          .where("id", "=", commentId),
+      );
 
-      if (!comment) {
+      if (Option.isNone(commentOption)) {
         return yield* Effect.fail(
           new CommentNotFoundError({
             commentId,
@@ -125,6 +100,8 @@ export const CommentsServiceLive = Layer.effect(
           }),
         );
       }
+
+      const comment = commentOption.value;
 
       if (comment.userId !== session.user.id) {
         return yield* Effect.fail(
@@ -134,16 +111,11 @@ export const CommentsServiceLive = Layer.effect(
         );
       }
 
-      yield* Effect.tryPromise({
-        try: () =>
-          db.deleteFrom("comments").where("id", "=", commentId).execute(),
-        catch: (error) =>
-          new Error(`Failed to delete comment ${commentId}: ${String(error)}`),
-      });
+      yield* db.execute(db.deleteFrom("comments").where("id", "=", commentId));
 
       return { success: true };
     });
 
-    return { fetch, add, delete_ };
+    return { fetch, add, delete_ } as unknown as CommentsService["Service"];
   }),
 );

@@ -1,8 +1,8 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
 
-import { AuthService, RequestHeadersService } from "../auth/context";
+import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
 import {
   ForbiddenError,
@@ -16,7 +16,7 @@ import {
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
-import { mapPopularTags } from "./posts.utils";
+import { mapPopularTags } from "../tags/tags.utils";
 import type { AllowedVideoExtension } from "./posts.utils";
 
 const PAGE_SIZE = 30;
@@ -49,19 +49,15 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
 
   for (const tag of tags) {
     if (tag.id === undefined) {
-      const newTag = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insertInto("tags")
-            .values({ name: tag.name })
-            .onConflict((oc) =>
-              oc.column("name").doUpdateSet({ name: tag.name }),
-            )
-            .returning("id")
-            .executeTakeFirstOrThrow(),
-        catch: (error) =>
-          new Error(`Failed to create tag ${tag.name}: ${String(error)}`),
-      });
+      const newTag = yield* db.executeTakeFirstOrError(
+        db
+          .insertInto("tags")
+          .values({ name: tag.name })
+          .onConflict((oc) =>
+            oc.column("name").doUpdateSet({ name: tag.name }),
+          )
+          .returning("id"),
+      );
       allTagIds.push(newTag.id);
     } else {
       allTagIds.push(tag.id);
@@ -69,15 +65,11 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   }
 
   if (allTagIds.length > 0) {
-    yield* Effect.tryPromise({
-      try: () =>
-        db
-          .insertInto("post_tags")
-          .values(allTagIds.map((tagId) => ({ postId, tagId })))
-          .execute(),
-      catch: (error) =>
-        new Error(`Failed to link tags to post: ${String(error)}`),
-    });
+    yield* db.execute(
+      db
+        .insertInto("post_tags")
+        .values(allTagIds.map((tagId) => ({ postId, tagId }))),
+    );
   }
 });
 
@@ -137,10 +129,7 @@ export const PostsServiceLive = Layer.effect(
       const countQuery = query
         .clearSelect()
         .select((eb) => eb.fn.countAll().as("count"));
-      const countResult = yield* Effect.tryPromise({
-        try: () => countQuery.executeTakeFirst(),
-        catch: (error) => new Error(`Failed to count posts: ${String(error)}`),
-      });
+      const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
       const totalCount = Number(countResult?.count ?? 0);
 
       query = query.orderBy(
@@ -148,10 +137,9 @@ export const PostsServiceLive = Layer.effect(
         sortBy === "oldest" ? "asc" : "desc",
       );
 
-      const items = yield* Effect.tryPromise({
-        try: () => query.offset(offset).limit(PAGE_SIZE).execute(),
-        catch: (error) => new Error(`Failed to fetch posts: ${String(error)}`),
-      });
+      const items = yield* db.execute(
+        query.offset(offset).limit(PAGE_SIZE),
+      );
 
       const parsed = yield* Effect.try({
         try: () => z.array(postsSelectSchema).parse(items),
@@ -201,21 +189,17 @@ export const PostsServiceLive = Layer.effect(
         );
       }
 
-      const popularTagsResult = yield* Effect.tryPromise({
-        try: () =>
-          popularTagsQuery
-            .select([
-              "tags.id",
-              "tags.name",
-              db.fn.count("post_tags.postId").as("postCount"),
-            ])
-            .groupBy(["tags.id", "tags.name"])
-            .orderBy("postCount", "desc")
-            .limit(10)
-            .execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch popular tags: ${String(error)}`),
-      });
+      const popularTagsResult = yield* db.execute(
+        popularTagsQuery
+          .select([
+            "tags.id",
+            "tags.name",
+            db.fn.count("post_tags.postId").as("postCount"),
+          ])
+          .groupBy(["tags.id", "tags.name"])
+          .orderBy("postCount", "desc")
+          .limit(10),
+      );
 
       const totalPages = Math.ceil(totalCount / PAGE_SIZE);
       const currentPage = page + 1;
@@ -240,31 +224,27 @@ export const PostsServiceLive = Layer.effect(
     const fetchDetail = Effect.fn("PostsService.fetchDetail")(function* (
       postId: number,
     ) {
-      const postWithUser = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .selectFrom("posts")
-            .innerJoin("user", "user.id", "posts.userId")
-            .select([
-              "posts.id",
-              "posts.title",
-              "posts.content",
-              "posts.createdAt",
-              "posts.videoKey",
-              "posts.source",
-              "posts.relatedPostId",
-              "posts.videoMetadata",
-              "user.id as userId",
-              "user.name as userName",
-              "user.image as userImage",
-            ])
-            .where("posts.id", "=", postId)
-            .executeTakeFirst(),
-        catch: (error) =>
-          new Error(`Failed to fetch post ${postId}: ${String(error)}`),
-      });
+      const postOption = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("posts")
+          .innerJoin("user", "user.id", "posts.userId")
+          .select([
+            "posts.id",
+            "posts.title",
+            "posts.content",
+            "posts.createdAt",
+            "posts.videoKey",
+            "posts.source",
+            "posts.relatedPostId",
+            "posts.videoMetadata",
+            "user.id as userId",
+            "user.name as userName",
+            "user.image as userImage",
+          ])
+          .where("posts.id", "=", postId),
+      );
 
-      if (!postWithUser) {
+      if (Option.isNone(postOption)) {
         return yield* Effect.fail(
           new PostNotFoundError({
             message: `Post ${postId} not found`,
@@ -273,32 +253,26 @@ export const PostsServiceLive = Layer.effect(
         );
       }
 
-      const tags = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .selectFrom("post_tags")
-            .innerJoin("tags", "tags.id", "post_tags.tagId")
-            .select(["tags.id", "tags.name"])
-            .where("post_tags.postId", "=", postWithUser.id)
-            .execute(),
-        catch: (error) =>
-          new Error(
-            `Failed to fetch tags for post ${postId}: ${String(error)}`,
-          ),
-      });
+      const postWithUser = postOption.value;
 
-      const relatedPost = postWithUser.relatedPostId
-        ? yield* Effect.tryPromise({
-            try: () =>
-              db
-                .selectFrom("posts")
-                .selectAll()
-                .where("id", "=", postWithUser.relatedPostId as number)
-                .executeTakeFirst(),
-            catch: (error) =>
-              new Error(`Failed to fetch related post: ${String(error)}`),
-          })
-        : null;
+      const tags = yield* db.execute(
+        db
+          .selectFrom("post_tags")
+          .innerJoin("tags", "tags.id", "post_tags.tagId")
+          .select(["tags.id", "tags.name"])
+          .where("post_tags.postId", "=", postWithUser.id),
+      );
+
+      const relatedPostOption = postWithUser.relatedPostId
+        ? yield* db.executeTakeFirstOption(
+            db
+              .selectFrom("posts")
+              .selectAll()
+              .where("id", "=", postWithUser.relatedPostId as number),
+          )
+        : Option.none();
+
+      const relatedPost = Option.getOrElse(relatedPostOption, () => null);
 
       return {
         post: {
@@ -418,24 +392,21 @@ export const PostsServiceLive = Layer.effect(
         );
       }
 
-      const newPost = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insertInto("posts")
-            .values({
-              content,
-              relatedPostId,
-              source,
-              thumbnailKey,
-              title,
-              userId,
-              videoKey,
-              videoMetadata: JSON.stringify(videoMetadata ?? {}),
-            })
-            .returningAll()
-            .executeTakeFirstOrThrow(),
-        catch: (error) => new Error(`Failed to create post: ${String(error)}`),
-      });
+      const newPost = yield* db.executeTakeFirstOrError(
+        db
+          .insertInto("posts")
+          .values({
+            content,
+            relatedPostId,
+            source,
+            thumbnailKey,
+            title,
+            userId,
+            videoKey,
+            videoMetadata: JSON.stringify(videoMetadata ?? {}),
+          })
+          .returningAll(),
+      );
 
       if (tags.length > 0) {
         yield* resolveAndLinkTags(db, newPost.id, tags);
@@ -460,18 +431,14 @@ export const PostsServiceLive = Layer.effect(
       const countQuery = query
         .clearSelect()
         .select((eb) => eb.fn.countAll().as("count"));
-      const countResult = yield* Effect.tryPromise({
-        try: () => countQuery.executeTakeFirst(),
-        catch: (error) => new Error(`Failed to count posts: ${String(error)}`),
-      });
+      const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
       const totalCount = Number(countResult?.count ?? 0);
 
       query = query.orderBy("posts.createdAt", "desc");
 
-      const items = yield* Effect.tryPromise({
-        try: () => query.offset(offset).limit(PAGE_SIZE).execute(),
-        catch: (error) => new Error(`Failed to fetch posts: ${String(error)}`),
-      });
+      const items = yield* db.execute(
+        query.offset(offset).limit(PAGE_SIZE),
+      );
 
       const parsed = yield* Effect.try({
         try: () => z.array(postsSelectSchema).parse(items),
@@ -482,32 +449,28 @@ export const PostsServiceLive = Layer.effect(
       const hasMore = offset + PAGE_SIZE < totalCount;
       const hasPrevious = offset > 0;
 
-      const popularTagsResult = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .selectFrom("tags")
-            .innerJoin("post_tags", "tags.id", "post_tags.tagId")
-            .innerJoin("posts", "posts.id", "post_tags.postId")
-            .where("posts.id", "in", (eb) =>
-              eb
-                .selectFrom("posts")
-                .innerJoin("post_tags", "post_tags.postId", "posts.id")
-                .innerJoin("tags", "tags.id", "post_tags.tagId")
-                .where("tags.name", "=", tagName)
-                .select("posts.id"),
-            )
-            .select([
-              "tags.id",
-              "tags.name",
-              db.fn.count("post_tags.postId").as("postCount"),
-            ])
-            .groupBy(["tags.id", "tags.name"])
-            .orderBy("postCount", "desc")
-            .limit(10)
-            .execute(),
-        catch: (error) =>
-          new Error(`Failed to fetch popular tags: ${String(error)}`),
-      });
+      const popularTagsResult = yield* db.execute(
+        db
+          .selectFrom("tags")
+          .innerJoin("post_tags", "tags.id", "post_tags.tagId")
+          .innerJoin("posts", "posts.id", "post_tags.postId")
+          .where("posts.id", "in", (eb) =>
+            eb
+              .selectFrom("posts")
+              .innerJoin("post_tags", "post_tags.postId", "posts.id")
+              .innerJoin("tags", "tags.id", "post_tags.tagId")
+              .where("tags.name", "=", tagName)
+              .select("posts.id"),
+          )
+          .select([
+            "tags.id",
+            "tags.name",
+            db.fn.count("post_tags.postId").as("postCount"),
+          ])
+          .groupBy(["tags.id", "tags.name"])
+          .orderBy("postCount", "desc")
+          .limit(10),
+      );
 
       const totalPages = Math.ceil(totalCount / PAGE_SIZE);
       const currentPage = page + 1;
@@ -532,17 +495,7 @@ export const PostsServiceLive = Layer.effect(
     const update = Effect.fn("PostsService.update")(function* (
       data: z.infer<typeof updatePostInputSchema>,
     ) {
-      const authSvc = yield* AuthService;
-      const getHeaders = yield* RequestHeadersService;
-
-      const session = yield* Effect.tryPromise({
-        try: () =>
-          authSvc.api.getSession({
-            headers: getHeaders(),
-            query: { disableCookieCache: true },
-          }),
-        catch: (error) => new Error(`Failed to get session: ${String(error)}`),
-      });
+      const session = yield* getSessionEffect();
 
       if (!session?.user) {
         return yield* Effect.fail(
@@ -554,18 +507,14 @@ export const PostsServiceLive = Layer.effect(
 
       const { postId, title, content, source, relatedPostId, tags } = data;
 
-      const post = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .selectFrom("posts")
-            .select(["id", "userId"])
-            .where("id", "=", postId)
-            .executeTakeFirst(),
-        catch: (error) =>
-          new Error(`Failed to find post ${postId}: ${String(error)}`),
-      });
+      const postOption = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("posts")
+          .select(["id", "userId"])
+          .where("id", "=", postId),
+      );
 
-      if (!post) {
+      if (Option.isNone(postOption)) {
         return yield* Effect.fail(
           new PostNotFoundError({
             message: `Post ${postId} not found`,
@@ -573,6 +522,8 @@ export const PostsServiceLive = Layer.effect(
           }),
         );
       }
+
+      const post = postOption.value;
 
       if (post.userId !== session.user.id) {
         return yield* Effect.fail(
@@ -582,37 +533,28 @@ export const PostsServiceLive = Layer.effect(
         );
       }
 
-      const updatedPost = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .updateTable("posts")
-            .set({ content, relatedPostId, source, title })
-            .where("id", "=", postId)
-            .returningAll()
-            .executeTakeFirstOrThrow(),
-        catch: (error) =>
-          new Error(`Failed to update post ${postId}: ${String(error)}`),
-      });
+      const updatedPost = yield* db.executeTakeFirstOrError(
+        db
+          .updateTable("posts")
+          .set({ content, relatedPostId, source, title })
+          .where("id", "=", postId)
+          .returningAll(),
+      );
 
       if (tags && tags.length > 0) {
-        yield* Effect.tryPromise({
-          try: () =>
-            db.deleteFrom("post_tags").where("postId", "=", postId).execute(),
-          catch: (error) =>
-            new Error(`Failed to clear existing tags: ${String(error)}`),
-        });
+        yield* db.execute(
+          db.deleteFrom("post_tags").where("postId", "=", postId),
+        );
         yield* resolveAndLinkTags(db, postId, tags);
       } else {
-        yield* Effect.tryPromise({
-          try: () =>
-            db.deleteFrom("post_tags").where("postId", "=", postId).execute(),
-          catch: (error) => new Error(`Failed to clear tags: ${String(error)}`),
-        });
+        yield* db.execute(
+          db.deleteFrom("post_tags").where("postId", "=", postId),
+        );
       }
 
       return updatedPost;
     });
 
-    return { search, fetchDetail, upload, getByTag, update };
+    return { search, fetchDetail, upload, getByTag, update } as unknown as PostsService["Service"];
   }),
 );

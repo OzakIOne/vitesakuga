@@ -20,8 +20,8 @@ import { assetUrl } from "src/lib/assets/url";
 
 type VideoProps = {
   url: string;
-  bypass: boolean;
-  frameRate?: number;
+  bypass: boolean | undefined;
+  frameRate?: number | undefined;
 };
 
 export const Video = React.forwardRef<any, VideoProps>(

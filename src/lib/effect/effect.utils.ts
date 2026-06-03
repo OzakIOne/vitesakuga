@@ -1,4 +1,4 @@
-import { Array, Data, Effect, Option } from "effect";
+import { Data, Effect, Option } from "effect";
 // oxlint-disable no-extra-bind
 import type {
   Compilable,
@@ -115,13 +115,10 @@ const executeSpan = <DB, TQuery extends Query<unknown> | QueryRaw<unknown>>(
   client: Kysely<DB>,
   query: TQuery,
 ) => {
-  // oxlint-disable-next-line typescript/no-explicit-any -- kysely types require any for compile
   const compiled = isRawBuilder(query)
-    ? query.compile(client as any)
+    ? (query as any).compile(client)
     : query.compile();
   return Effect.withSpan(`kysely.execute`, {
-    kind: `client`,
-    captureStackTrace: false,
     attributes: {
       sql: compiled.sql,
     },
@@ -146,7 +143,7 @@ const executeRaw =
 
 const execute =
   <DB>(client: Kysely<DB>) =>
-  <O>(query: Query<O>) =>
+  <O>(query: Query<O>): Effect.Effect<O[], SqlError> =>
     Effect.tryPromise({
       try: () =>
         isRawBuilder(query)
@@ -161,7 +158,7 @@ const execute =
               : `[execute] An error has occurred with the query: ${query.compile(client).sql}`,
         });
       },
-    }).pipe(executeSpan(client, query));
+    }).pipe(executeSpan(client, query)) as Effect.Effect<O[], SqlError>;
 
 const executeTakeFirstOption =
   <DB>(client: Kysely<DB>) =>
@@ -193,10 +190,12 @@ const executeTakeFirstOrError =
   <O>(query: Query<O>) =>
     executeTakeFirstOption(client)(query).pipe(
       Effect.flatMap((result) =>
-        Effect.mapError(result, () => new SqlNoFirstResult()),
+        Option.match(result, {
+          onNone: () => Effect.fail(new SqlNoFirstResult()),
+          onSome: (value) => Effect.succeed(value),
+        }),
       ),
     );
-
 const executeTakeFirstUnsafe =
   <DB>(client: Kysely<DB>) =>
   <O>(query: Query<O>) =>

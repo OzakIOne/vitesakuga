@@ -27,15 +27,15 @@ import { requireAuth } from "src/lib/auth/auth.middleware";
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 
 export const Route = createFileRoute("/account")({
-  beforeLoad: async () => {
+  beforeLoad: async (_ctx) => {
     const user = await requireAuth();
-    return { user };
+    return { user } as any;
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext();
+  const { user } = Route.useRouteContext() as { user: any };
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
   const deleteAccountMutation = useDeleteAccount();

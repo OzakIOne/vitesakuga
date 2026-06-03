@@ -28,14 +28,14 @@ type RegisteredRoutes =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
 
 export type PostsPageLayoutProps = {
-  searchQuery?: string;
-  selectedTags?: string[];
+  searchQuery?: string | undefined;
+  selectedTags?: string[] | undefined;
   popularTags: PopularTag[];
   sortBy: PostsSearchParams["sortBy"];
   dateRange: PostsSearchParams["dateRange"];
   children: ReactNode;
   fromRoute: RegisteredRoutes;
-  videoMetadata: VideoMetadata;
+  videoMetadata?: VideoMetadata | undefined;
 };
 
 export function PostsPageLayout({
