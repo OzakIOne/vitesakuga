@@ -172,7 +172,7 @@ export const convertMachine = setup({
                 }
               : undefined;
 
-            const conversion = await (Conversion.init as any)({
+            const conversion = await Conversion.init({
               audio: audioOptions,
               input: mediabunnyInput,
               output: mediabunnyOutput,

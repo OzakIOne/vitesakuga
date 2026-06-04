@@ -116,7 +116,7 @@ const executeSpan = <DB, TQuery extends Query<unknown> | QueryRaw<unknown>>(
   query: TQuery,
 ) => {
   const compiled = isRawBuilder(query)
-    ? (query as any).compile(client)
+    ? query.compile(client)
     : query.compile();
   return Effect.withSpan(`kysely.execute`, {
     attributes: {

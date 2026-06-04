@@ -71,12 +71,12 @@ export const getUserSession = createServerFn().handler(async () => {
       Error
     >,
   );
-}) as any;
+});
 
-export const requireAuth = (createServerFn() as any).handler(async () => {
+export const requireAuth = createServerFn().handler(async () => {
   const layer = await resolveMiddlewareLayer();
   return Effect.runPromise(
-    (requireAuthEffect() as any).pipe(
+    requireAuthEffect().pipe(
       Effect.provide(layer),
       Effect.catchTags({
         AuthRequiredError: (error: AuthRequiredError) =>
@@ -84,4 +84,4 @@ export const requireAuth = (createServerFn() as any).handler(async () => {
       }),
     ),
   );
-}) as any;
+});

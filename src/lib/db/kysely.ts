@@ -33,6 +33,6 @@ export type { DB };
 
 export const kysely = new Kysely<DB>({
   dialect: new PostgresDialect({
-    pool: getKyselyPool() as any,
+    pool: getKyselyPool(),
   }),
 });

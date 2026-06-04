@@ -42,7 +42,7 @@ import {
 export const Route = createFileRoute("/upload")({
   beforeLoad: async (_ctx) => {
     const user = await requireAuth();
-    return { user } as any;
+    return { user };
   },
   component: RouteComponent,
 });

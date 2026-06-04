@@ -29,7 +29,7 @@ import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 export const Route = createFileRoute("/account")({
   beforeLoad: async (_ctx) => {
     const user = await requireAuth();
-    return { user } as any;
+    return { user };
   },
   component: RouteComponent,
 });
