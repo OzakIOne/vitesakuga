@@ -1,33 +1,33 @@
 import { Effect, Layer } from "effect";
 
-const importFactories = () => import("./db/layer-factories.server");
+import type {
+  makeDBLayer,
+  makeMiddlewareLayer,
+} from "./db/layer-factories.server";
 
-type Mode = "db" | "auth";
-
-export async function resolveEffectLayer(
-  serviceLayer: Layer.Layer<any, never, any>,
-  mode: Mode = "db",
-) {
-  const factory = await importFactories();
-  const base =
-    mode === "auth"
-      ? await factory.makeAuthLayer()
-      : await factory.makeDBLayer();
-  return serviceLayer.pipe(Layer.provideMerge(base));
-}
+type MakeBaseLayer = typeof makeDBLayer;
 
 export async function resolveMiddlewareLayer() {
-  const { makeMiddlewareLayer } = await importFactories();
-  return makeMiddlewareLayer();
+  const factory: { makeMiddlewareLayer: typeof makeMiddlewareLayer } =
+    await import("./db/layer-factories.server");
+  return factory.makeMiddlewareLayer();
 }
 
 export function createHandler<TParams>(
   effect: (params: TParams) => Effect.Effect<any, Error, any>,
   serviceLayer: Layer.Layer<any, never, any>,
-  mode?: Mode,
+  makeBaseLayer?: MakeBaseLayer,
 ) {
   return async ({ data }: { data: TParams }): Promise<any> => {
-    const layer = await resolveEffectLayer(serviceLayer, mode);
+    let base: Layer.Layer<any, never, any>;
+    if (makeBaseLayer) {
+      base = await makeBaseLayer();
+    } else {
+      const factory: { makeDBLayer: typeof makeDBLayer } =
+        await import("./db/layer-factories.server");
+      base = await factory.makeDBLayer();
+    }
+    const layer = serviceLayer.pipe(Layer.provideMerge(base));
     return Effect.runPromise(
       effect(data).pipe(Effect.provide(layer)) as Effect.Effect<any, Error>,
     );

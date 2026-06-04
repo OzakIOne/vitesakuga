@@ -29,9 +29,7 @@ function UserContent() {
   const { sortBy, dateRange, tags, q, page } = Route.useSearch();
 
   const { posts, popularTags, totalPages, handlePageChange, data, isFetching } =
-    usePostsPage<UserPostData>(
-      userQueryOptions({ page, q, tags, userId: id }),
-    );
+    usePostsPage<UserPostData>(userQueryOptions({ page, q, tags, userId: id }));
 
   return (
     <Box p={4}>

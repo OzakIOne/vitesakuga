@@ -1,20 +1,18 @@
-import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
-import { createTestKysely, makeTestLayer } from "../db/test-utils";
-import { fetchUsersEffect, fetchUserPostsEffect } from "./users.fn";
+import { makeServiceTestLayer } from "../db/test-utils";
+import { fetchUsersEffect, fetchUserPostsEffect } from "./users.service";
 import { UsersServiceLive } from "./users.service";
 
 let db: Kysely<DB>;
-let testLayer: Layer.Layer<any, any>;
+let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
 
 beforeEach(async () => {
-  const result = await createTestKysely();
-  db = result.db;
-  const baseLayer = makeTestLayer(db, null, () => new Headers());
-  testLayer = UsersServiceLive.pipe(Layer.provide(baseLayer));
+  const ctx = await makeServiceTestLayer(UsersServiceLive);
+  db = ctx.db;
+  runEffect = ctx.runEffect;
 
   await db
     .insertInto("user")
@@ -25,9 +23,6 @@ beforeEach(async () => {
     .values({ id: "user-2", name: "Bob", email: "bob@test.com" })
     .execute();
 });
-
-const runEffect = <T>(effect: Effect.Effect<T>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(testLayer)));
 
 describe(fetchUsersEffect, () => {
   it("returns all users", async () => {

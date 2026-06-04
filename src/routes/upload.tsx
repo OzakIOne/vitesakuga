@@ -27,10 +27,10 @@ import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
 import { requireAuth } from "src/lib/auth/auth.middleware";
-import { searchPosts, uploadPost } from "src/lib/posts/posts.fn";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormFileUploadSchema } from "src/lib/posts/posts.schema";
 import type { FileUploadData, VideoMetadata } from "src/lib/posts/posts.schema";
+import { searchPosts, uploadPost } from "src/lib/posts/posts.service";
 import {
   analyzeVideo,
   buildFormData,

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { getAllPopularTags, getAllTags } from "./tags.fn";
+import { getAllPopularTags, getAllTags } from "./tags.service";
 
 const tagsKeys = {
   all: ["tags"] as const,

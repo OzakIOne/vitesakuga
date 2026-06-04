@@ -1,19 +1,17 @@
-import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AuthSessionProvider } from "../auth/context";
 import type { DB } from "../db/kysely";
-import { createTestKysely, makeTestLayer } from "../db/test-utils";
+import { makeServiceTestLayer } from "../db/test-utils";
 import {
   addCommentEffect,
   deleteCommentEffect,
   fetchCommentsEffect,
-} from "./comments.fn";
+} from "./comments.service";
 import { CommentsServiceLive } from "./comments.service";
 
 let db: Kysely<DB>;
-let testLayer: Layer.Layer<any, any>;
+let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 
 const testUser = {
@@ -26,15 +24,10 @@ const testUser = {
 let postId: number;
 
 beforeEach(async () => {
-  mockGetSession = vi.fn();
-  const result = await createTestKysely();
-  db = result.db;
-  const baseLayer = makeTestLayer(
-    db,
-    { api: { getSession: mockGetSession } } as AuthSessionProvider,
-    () => new Headers(),
-  );
-  testLayer = CommentsServiceLive.pipe(Layer.provideMerge(baseLayer));
+  const ctx = await makeServiceTestLayer(CommentsServiceLive);
+  db = ctx.db;
+  runEffect = ctx.runEffect;
+  mockGetSession = ctx.mockGetSession;
 
   await db.insertInto("user").values(testUser).execute();
 
@@ -53,9 +46,6 @@ beforeEach(async () => {
 
   postId = post.id;
 });
-
-const runEffect = <T>(effect: Effect.Effect<T>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(testLayer)));
 
 describe(fetchCommentsEffect, () => {
   it("returns empty array when no comments", async () => {

@@ -1,6 +1,8 @@
+import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
+import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "./tags.utils";
 
 export class TagsService extends Context.Service<
@@ -20,9 +22,7 @@ export const TagsServiceLive = Layer.effect(
     const db = yield* KyselyDB;
 
     const all = Effect.fn("TagsService.all")(function* () {
-      return yield* db.execute(
-        db.selectFrom("tags").select(["id", "name"]),
-      );
+      return yield* db.execute(db.selectFrom("tags").select(["id", "name"]));
     });
 
     const popular = Effect.fn("TagsService.popular")(function* () {
@@ -41,4 +41,24 @@ export const TagsServiceLive = Layer.effect(
 
     return { all, popular };
   }),
+);
+
+export const getAllTagsEffect = Effect.fn("getAllTags")(function* () {
+  const svc = yield* TagsService;
+  return yield* svc.all();
+});
+
+export const getAllPopularTagsEffect = Effect.fn("getAllPopularTags")(
+  function* () {
+    const svc = yield* TagsService;
+    return yield* svc.popular();
+  },
+);
+
+export const getAllTags = createServerFn().handler(
+  createHandler(getAllTagsEffect, TagsServiceLive),
+);
+
+export const getAllPopularTags = createServerFn().handler(
+  createHandler(getAllPopularTagsEffect, TagsServiceLive),
 );

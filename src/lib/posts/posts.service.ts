@@ -1,14 +1,19 @@
+import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 import { z } from "zod";
 
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
+import { makeAuthLayer } from "../db/layer-factories.server";
 import {
   ForbiddenError,
   PostNotFoundError,
   UnauthorizedError,
 } from "../errors";
+import { computePagination } from "../pagination/pagination";
+import { createHandler } from "../server-fn.handler";
+import { mapPopularTags } from "../tags/tags.utils";
 import {
   FormFileUploadSchema,
   postByTagSchema,
@@ -16,7 +21,6 @@ import {
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
-import { mapPopularTags } from "../tags/tags.utils";
 import type { AllowedVideoExtension } from "./posts.utils";
 
 const PAGE_SIZE = 30;
@@ -53,9 +57,7 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
         db
           .insertInto("tags")
           .values({ name: tag.name })
-          .onConflict((oc) =>
-            oc.column("name").doUpdateSet({ name: tag.name }),
-          )
+          .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
           .returning("id"),
       );
       allTagIds.push(newTag.id);
@@ -82,7 +84,6 @@ export const PostsServiceLive = Layer.effect(
       data: z.infer<typeof searchPostsBaseSchema>,
     ) {
       const { q, tags, page, sortBy, dateRange } = data;
-      const offset = page * PAGE_SIZE;
 
       let query = db.selectFrom("posts").selectAll("posts");
 
@@ -132,13 +133,18 @@ export const PostsServiceLive = Layer.effect(
       const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
       const totalCount = Number(countResult?.count ?? 0);
 
+      const pagination = computePagination(totalCount, {
+        page,
+        pageSize: PAGE_SIZE,
+      });
+
       query = query.orderBy(
         "posts.createdAt",
         sortBy === "oldest" ? "asc" : "desc",
       );
 
       const items = yield* db.execute(
-        query.offset(offset).limit(PAGE_SIZE),
+        query.offset(pagination.offset).limit(PAGE_SIZE),
       );
 
       const parsed = yield* Effect.try({
@@ -146,9 +152,6 @@ export const PostsServiceLive = Layer.effect(
         catch: (error) =>
           new Error(`Error processing search results: ${String(error)}`),
       });
-
-      const hasMore = offset + PAGE_SIZE < totalCount;
-      const hasPrevious = offset > 0;
 
       let popularTagsQuery = db
         .selectFrom("tags")
@@ -201,21 +204,10 @@ export const PostsServiceLive = Layer.effect(
           .limit(10),
       );
 
-      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-      const currentPage = page + 1;
-
       return {
         data: parsed,
         meta: {
-          pagination: {
-            currentPage,
-            hasMore,
-            hasPrevious,
-            limit: PAGE_SIZE,
-            offset,
-            total: totalCount,
-            totalPages,
-          },
+          pagination,
           popularTags: mapPopularTags(popularTagsResult),
         },
       };
@@ -419,7 +411,6 @@ export const PostsServiceLive = Layer.effect(
       data: z.infer<typeof postByTagSchema>,
     ) {
       const { tag: tagName, page } = data;
-      const offset = page * PAGE_SIZE;
 
       let query = db
         .selectFrom("posts")
@@ -434,10 +425,15 @@ export const PostsServiceLive = Layer.effect(
       const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
       const totalCount = Number(countResult?.count ?? 0);
 
+      const pagination = computePagination(totalCount, {
+        page,
+        pageSize: PAGE_SIZE,
+      });
+
       query = query.orderBy("posts.createdAt", "desc");
 
       const items = yield* db.execute(
-        query.offset(offset).limit(PAGE_SIZE),
+        query.offset(pagination.offset).limit(PAGE_SIZE),
       );
 
       const parsed = yield* Effect.try({
@@ -445,9 +441,6 @@ export const PostsServiceLive = Layer.effect(
         catch: (error) =>
           new Error(`Error processing posts by tag: ${String(error)}`),
       });
-
-      const hasMore = offset + PAGE_SIZE < totalCount;
-      const hasPrevious = offset > 0;
 
       const popularTagsResult = yield* db.execute(
         db
@@ -472,21 +465,10 @@ export const PostsServiceLive = Layer.effect(
           .limit(10),
       );
 
-      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-      const currentPage = page + 1;
-
       return {
         data: parsed,
         meta: {
-          pagination: {
-            currentPage,
-            hasMore,
-            hasPrevious,
-            limit: PAGE_SIZE,
-            offset,
-            total: totalCount,
-            totalPages,
-          },
+          pagination,
           popularTags: mapPopularTags(popularTagsResult),
         },
       };
@@ -555,6 +537,79 @@ export const PostsServiceLive = Layer.effect(
       return updatedPost;
     });
 
-    return { search, fetchDetail, upload, getByTag, update } as unknown as PostsService["Service"];
+    return {
+      search,
+      fetchDetail,
+      upload,
+      getByTag,
+      update,
+    } as unknown as PostsService["Service"];
   }),
 );
+
+export const searchPostsEffect = Effect.fn("searchPosts")(function* (
+  data: z.infer<typeof searchPostsBaseSchema>,
+) {
+  const svc = yield* PostsService;
+  return yield* svc.search(data);
+});
+
+export const fetchPostDetailEffect = Effect.fn("fetchPostDetail")(function* (
+  postId: number,
+) {
+  const svc = yield* PostsService;
+  return yield* svc.fetchDetail(postId);
+});
+
+export const uploadPostEffect = Effect.fn("uploadPost")(function* (
+  data: z.infer<typeof FormFileUploadSchema>,
+) {
+  const svc = yield* PostsService;
+  return yield* svc.upload(data);
+});
+
+export const getPostsByTagEffect = Effect.fn("getPostsByTag")(function* (
+  data: z.infer<typeof postByTagSchema>,
+) {
+  const svc = yield* PostsService;
+  return yield* svc.getByTag(data);
+});
+
+export const updatePostEffect = Effect.fn("updatePost")(function* (
+  data: z.infer<typeof updatePostInputSchema>,
+) {
+  const svc = yield* PostsService;
+  return yield* svc.update(data);
+});
+
+export const searchPosts = createServerFn()
+  .inputValidator((input: unknown) => searchPostsBaseSchema.parse(input))
+  .handler(createHandler(searchPostsEffect, PostsServiceLive));
+
+export const fetchPostDetail = createServerFn()
+  .inputValidator((postId: unknown) => z.coerce.number().parse(postId))
+  .handler(createHandler(fetchPostDetailEffect, PostsServiceLive));
+
+export const uploadPost = createServerFn({ method: "POST" })
+  .inputValidator((data: FormData) => {
+    const raw = Object.fromEntries(data.entries());
+    const normalized = {
+      relatedPostId: undefined,
+      source: undefined,
+      ...raw,
+      tags: raw.tags ? JSON.parse(raw.tags) : [],
+      videoMetadata: raw.videoMetadata
+        ? JSON.parse(raw.videoMetadata)
+        : undefined,
+    };
+    return FormFileUploadSchema.parse(normalized);
+  })
+  .handler(createHandler(uploadPostEffect, PostsServiceLive));
+
+export const updatePost = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => updatePostInputSchema.parse(input))
+  .handler(createHandler(updatePostEffect, PostsServiceLive, makeAuthLayer));
+
+export const getPostsByTag = createServerFn()
+  .inputValidator((input: unknown) => postByTagSchema.parse(input))
+  .handler(createHandler(getPostsByTagEffect, PostsServiceLive));

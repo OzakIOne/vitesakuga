@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { fetchComments } from "./comments.fn";
+import { fetchComments } from "./comments.service";
 
 export const commentsKeys = {
   all: ["comments"] as const,

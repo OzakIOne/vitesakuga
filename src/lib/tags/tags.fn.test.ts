@@ -1,24 +1,19 @@
-import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
-import { createTestKysely, makeTestLayer } from "../db/test-utils";
-import { getAllTagsEffect, getAllPopularTagsEffect } from "./tags.fn";
+import { makeServiceTestLayer } from "../db/test-utils";
+import { getAllTagsEffect, getAllPopularTagsEffect } from "./tags.service";
 import { TagsServiceLive } from "./tags.service";
 
 let db: Kysely<DB>;
-let testLayer: Layer.Layer<any, any>;
+let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
 
 beforeEach(async () => {
-  const result = await createTestKysely();
-  db = result.db;
-  const baseLayer = makeTestLayer(db, null, () => new Headers());
-  testLayer = TagsServiceLive.pipe(Layer.provide(baseLayer));
+  const ctx = await makeServiceTestLayer(TagsServiceLive);
+  db = ctx.db;
+  runEffect = ctx.runEffect;
 });
-
-const runEffect = <T>(effect: Effect.Effect<T>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(testLayer)));
 
 describe(getAllTagsEffect, () => {
   it("returns empty array when no tags", async () => {

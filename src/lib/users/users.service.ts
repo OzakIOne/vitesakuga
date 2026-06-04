@@ -1,8 +1,11 @@
+import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option } from "effect";
 import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
 
 import { KyselyDB } from "../db/context";
+import { computePagination } from "../pagination/pagination";
+import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchUserInputSchema } from "./users.schema";
 
@@ -59,7 +62,6 @@ export const UsersServiceLive = Layer.effect(
       data: z.infer<typeof fetchUserInputSchema>,
     ) {
       const { userId, tags, q, page } = data;
-      const offset = page * PAGE_SIZE;
 
       const userInfoOption = yield* db.executeTakeFirstOption(
         db
@@ -69,9 +71,7 @@ export const UsersServiceLive = Layer.effect(
       );
 
       if (Option.isNone(userInfoOption)) {
-        return yield* Effect.fail(
-          new Error(`User ${userId} not found`),
-        );
+        return yield* Effect.fail(new Error(`User ${userId} not found`));
       }
       const userInfo = userInfoOption.value;
 
@@ -101,10 +101,15 @@ export const UsersServiceLive = Layer.effect(
       const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
       const totalCount = Number(countResult?.count ?? 0);
 
+      const pagination = computePagination(totalCount, {
+        page,
+        pageSize: PAGE_SIZE,
+      });
+
       query = query.orderBy("id", "desc");
 
       const items = yield* db.execute(
-        query.offset(offset).limit(PAGE_SIZE),
+        query.offset(pagination.offset).limit(PAGE_SIZE),
       );
 
       const posts = yield* Effect.try({
@@ -112,9 +117,6 @@ export const UsersServiceLive = Layer.effect(
         catch: (error) =>
           new Error(`Error processing user posts: ${String(error)}`),
       });
-
-      const hasMore = offset + PAGE_SIZE < totalCount;
-      const hasPrevious = offset > 0;
 
       const popularTagsResult = yield* db.execute(
         db
@@ -132,21 +134,10 @@ export const UsersServiceLive = Layer.effect(
           .limit(10),
       );
 
-      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-      const currentPage = page + 1;
-
       return {
         data: posts,
         meta: {
-          pagination: {
-            currentPage,
-            hasMore,
-            hasPrevious,
-            limit: PAGE_SIZE,
-            offset,
-            total: totalCount,
-            totalPages,
-          },
+          pagination,
           popularTags: mapPopularTags(popularTagsResult),
         },
         user: userInfo,
@@ -156,3 +147,23 @@ export const UsersServiceLive = Layer.effect(
     return { all, userPosts };
   }),
 );
+
+export const fetchUsersEffect = Effect.fn("fetchUsers")(function* () {
+  const svc = yield* UsersService;
+  return yield* svc.all();
+});
+
+export const fetchUserPostsEffect = Effect.fn("fetchUserPosts")(function* (
+  data: z.infer<typeof fetchUserInputSchema>,
+) {
+  const svc = yield* UsersService;
+  return yield* svc.userPosts(data);
+});
+
+export const fetchUsers = createServerFn().handler(
+  createHandler(fetchUsersEffect, UsersServiceLive),
+);
+
+export const fetchUserPosts = createServerFn()
+  .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))
+  .handler(createHandler(fetchUserPostsEffect, UsersServiceLive));

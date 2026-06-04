@@ -3,7 +3,7 @@ import { createContext } from "react";
 import {
   addComment as _addComment,
   deleteComment as _deleteComment,
-} from "./comments.fn";
+} from "./comments.service";
 
 export const defaultCommentsFns = {
   addComment: _addComment,

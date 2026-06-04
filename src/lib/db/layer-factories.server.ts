@@ -16,16 +16,15 @@ export const makeDBLayer = async () => {
 };
 
 export const makeAuthLayer = async () => {
-  const [{ kysely }, { auth }, { getRequestHeaders }] = await Promise.all([
-    import("./kysely"),
+  const [{ auth }, { getRequestHeaders }] = await Promise.all([
     import("../auth"),
     import("@tanstack/react-start/server"),
   ]);
+  const dbLayer = await makeDBLayer();
   return Layer.mergeAll(
-    Layer.succeed(KyselyDB)(makeFromKysely(kysely)),
+    dbLayer,
     Layer.succeed(AuthService)(auth),
     Layer.succeed(RequestHeadersService)(() => getRequestHeaders()),
-    LOG_LAYER,
   );
 };
 
