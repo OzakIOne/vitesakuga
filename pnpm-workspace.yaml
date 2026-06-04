@@ -11,3 +11,5 @@ allowBuilds:
   msgpackr-extract: true
   sharp: true
   workerd: true
+configDependencies:
+  "@pnpm/pacquet": 0.2.14
