@@ -3,6 +3,7 @@ import { Layer } from "effect";
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel, Debug } from "../effect/logger";
+import { TracingLive } from "../effect/tracing";
 import { KyselyDB } from "./context";
 
 const LOG_LAYER = withMinimumLogLevel(Debug);
@@ -12,6 +13,7 @@ export const makeDBLayer = async () => {
   return Layer.mergeAll(
     Layer.succeed(KyselyDB)(makeFromKysely(kysely)),
     LOG_LAYER,
+    TracingLive,
   );
 };
 
@@ -37,5 +39,6 @@ export const makeMiddlewareLayer = async () => {
     Layer.succeed(AuthService)(auth),
     Layer.succeed(RequestHeadersService)(() => getRequestHeaders()),
     LOG_LAYER,
+    TracingLive,
   );
 };

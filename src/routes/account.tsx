@@ -14,7 +14,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
@@ -23,13 +23,17 @@ import {
   useDeleteAccount,
   useUpdateProfile,
 } from "src/lib/auth/auth.hooks";
-import { requireAuth } from "src/lib/auth/auth.middleware";
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 
 export const Route = createFileRoute("/account")({
-  beforeLoad: async (_ctx) => {
-    const user = await requireAuth();
-    return { user };
+  beforeLoad: ({ context, location }) => {
+    if (!context.user) {
+      throw redirect({
+        search: { redirect: location.pathname },
+        to: "/login",
+      });
+    }
+    return { user: context.user };
   },
   component: RouteComponent,
 });

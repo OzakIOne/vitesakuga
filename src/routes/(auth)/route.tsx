@@ -1,15 +1,17 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { z } from "zod";
 
 export const Route = createFileRoute("/(auth)")({
-  beforeLoad: ({ context }) => {
-    const REDIRECT_URL = "/";
+  validateSearch: z.object({ redirect: z.string().optional() }),
+  beforeLoad: ({ context, search }) => {
+    const redirectUrl = search.redirect || "/";
     if (context.user) {
       throw redirect({
-        to: REDIRECT_URL,
+        to: redirectUrl,
       });
     }
     return {
-      redirectUrl: REDIRECT_URL,
+      redirectUrl,
     };
   },
   component: RouteComponent,

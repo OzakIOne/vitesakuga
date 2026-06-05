@@ -13,6 +13,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
+  redirect,
   useBlocker,
   useNavigate,
   useRouteContext,
@@ -26,7 +27,6 @@ import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import { requireAuth } from "src/lib/auth/auth.middleware";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormFileUploadSchema } from "src/lib/posts/posts.schema";
 import type { FileUploadData, VideoMetadata } from "src/lib/posts/posts.schema";
@@ -40,9 +40,14 @@ import {
 } from "src/lib/upload/upload.processor";
 
 export const Route = createFileRoute("/upload")({
-  beforeLoad: async (_ctx) => {
-    const user = await requireAuth();
-    return { user };
+  beforeLoad: ({ context, location }) => {
+    if (!context.user) {
+      throw redirect({
+        search: { redirect: location.pathname },
+        to: "/login",
+      });
+    }
+    return { user: context.user };
   },
   component: RouteComponent,
 });

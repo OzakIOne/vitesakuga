@@ -8,6 +8,7 @@ import type { AuthSessionProvider } from "../auth/context";
 import { RequestHeadersService } from "../auth/context";
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel, Debug } from "../effect/logger";
+import { TracingLive } from "../effect/tracing";
 import { KyselyDB } from "./context";
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
@@ -82,6 +83,7 @@ export const makeTestLayer = (
     ),
     Layer.succeed(RequestHeadersService)(headers),
     LOG_LAYER,
+    TracingLive,
   );
 
 export interface ServiceTestContext {

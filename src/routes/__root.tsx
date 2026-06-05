@@ -75,6 +75,9 @@ export const Route = createRootRouteWithContext<{
       { color: "#fffff", href: "/site.webmanifest", rel: "manifest" },
       { href: "/favicon.ico", rel: "icon" },
     ],
+    scripts: [
+      { src: "https://unpkg.com/react-scan/dist/auto.global.js", async: true },
+    ],
     meta: [
       {
         charSet: "utf8",
@@ -98,9 +101,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
         <HeadContent />
       </head>
       <body>
@@ -176,14 +178,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               </Button>
             </>
           ) : (
-            <>
-              <Link className="link" to="/login">
-                Login
-              </Link>{" "}
-              <Link className="link" to="/signup">
-                Sign Up
-              </Link>
-            </>
+            (() => {
+              const currentPath = router.state.location.pathname;
+              const authPaths = ["/login", "/signup"];
+              const hasRedirect =
+                currentPath !== "/" && !authPaths.includes(currentPath);
+              const search = hasRedirect
+                ? ({ redirect: currentPath } as const)
+                : {};
+              return (
+                <>
+                  <Link className="link" search={search} to="/login">
+                    Login
+                  </Link>{" "}
+                  <Link className="link" search={search} to="/signup">
+                    Sign Up
+                  </Link>
+                </>
+              );
+            })()
           )}
           <ColorModeButton />
         </Center>
