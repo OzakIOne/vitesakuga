@@ -1,3 +1,5 @@
+import "src/lib/polyfills"
+
 import {
   Badge,
   Box,
@@ -13,11 +15,11 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@tanstack/react-db";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
-import { tagsQueryGetTags } from "src/lib/tags/tags.queries";
+import { tagsCollection } from "src/lib/db/collections";
 
 type SearchBoxProps = {
   defaultValue?: string | undefined;
@@ -40,7 +42,9 @@ export function SearchBox({
   const [tags, setTags] = useState<string[]>(defaultTags);
   const [tagSearchValue, setTagSearchValue] = useState("");
 
-  const { data: allTags = [] } = useQuery(tagsQueryGetTags());
+  const { data: allTags = [] } = useLiveQuery((q) =>
+    q.from({ t: tagsCollection }).orderBy(({ t }) => t.name, "asc"),
+  );
 
   // Filter tags based on search and exclude already selected tags
   // ? usememo useful?

@@ -27,6 +27,9 @@ import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
+import { eq } from "@tanstack/db";
+import { useLiveQuery } from "@tanstack/react-db";
+import { uploadDraftCollection } from "src/lib/db/collections";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import { FormFileUploadSchema } from "src/lib/posts/posts.schema";
 import type { FileUploadData, VideoMetadata } from "src/lib/posts/posts.schema";
@@ -61,6 +64,18 @@ function RouteComponent() {
   const frameRateRef = useRef<number | null>(null);
   const videoRef = useRef<any>(null);
 
+  const { data: draftEntries } = useLiveQuery((query) =>
+    query
+      .from({ draft: uploadDraftCollection })
+      .where(({ draft }) => eq(draft.id, "upload-draft")),
+  );
+  const draft = draftEntries[0];
+  const [savedVideoName, setSavedVideoName] = useState<string | null>(
+    () => draft?.videoName ?? null,
+  );
+
+  const draftLoadedRef = useRef(false);
+
   const uploadPostMutation = useMutation({
     mutationFn: async (data: FormData) => uploadPost({ data }),
     onError: (error) => {
@@ -74,6 +89,8 @@ function RouteComponent() {
     },
     onSuccess: (newPost) => {
       form.reset();
+      uploadDraftCollection.delete("upload-draft");
+      setSavedVideoName(null);
       void queryClient.invalidateQueries({ queryKey: postsKeys.all });
       void navigate({ to: `/posts/${newPost.id}` });
       toaster.create({
@@ -173,12 +190,12 @@ function RouteComponent() {
 
   const form = useForm({
     defaultValues: {
-      content: "",
-      relatedPostId: undefined as number | undefined,
-      source: undefined as string | undefined,
-      tags: [] as { id?: number; name: string }[],
+      content: draft?.content ?? "",
+      relatedPostId: draft?.relatedPostId ?? (undefined as number | undefined),
+      source: draft?.source ?? (undefined as string | undefined),
+      tags: (draft?.tags ?? []) as { id?: number; name: string }[],
       thumbnail: undefined as unknown as File,
-      title: "",
+      title: draft?.title ?? "",
       userId: user?.id ?? "",
       video: undefined as unknown as File,
       videoMetadata: undefined as VideoMetadata,
@@ -198,6 +215,58 @@ function RouteComponent() {
     },
   });
 
+  useEffect(() => {
+    if (draft && !draftLoadedRef.current) {
+      draftLoadedRef.current = true;
+      form.reset(
+        {
+          content: draft.content,
+          relatedPostId: draft.relatedPostId,
+          source: draft.source,
+          tags: draft.tags,
+          thumbnail: undefined as unknown as File,
+          title: draft.title,
+          userId: user?.id ?? "",
+          video: undefined as unknown as File,
+          videoMetadata: undefined as VideoMetadata,
+        },
+        { keepDefaultValues: false },
+      );
+      setSavedVideoName(draft.videoName || null);
+    }
+  }, [draft, form, user?.id]);
+
+  const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const persistDraft = (values: typeof form.state.values) => {
+    clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      const id = "upload-draft";
+      const data = {
+        content: values.content ?? "",
+        id,
+        relatedPostId: values.relatedPostId,
+        source: values.source,
+        tags: values.tags ?? [],
+        title: values.title ?? "",
+        videoName: values.video?.name ?? draft?.videoName ?? "",
+      };
+
+      if (uploadDraftCollection.state.get(id)) {
+        uploadDraftCollection.update(id, (d) => {
+          d.title = data.title;
+          d.content = data.content;
+          d.source = data.source;
+          d.relatedPostId = data.relatedPostId;
+          d.tags = data.tags;
+          d.videoName = data.videoName;
+        });
+      } else {
+        uploadDraftCollection.insert(data);
+      }
+    }, 500);
+  };
+
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const { data: relatedPosts } = useQuery({
     enabled: relatedPostSearch.length > 2,
@@ -215,7 +284,7 @@ function RouteComponent() {
   });
 
   return (
-    <Box maxW="xl" mx="auto" py={8}>
+    <Box maxW="xl" mx="auto" px={4} py={8}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -358,6 +427,7 @@ function RouteComponent() {
                       const file = details.acceptedFiles[0] || null;
                       field.handleChange(file);
                       if (file) {
+                        setSavedVideoName(null);
                         const previewURL = URL.createObjectURL(file);
                         setVideoPreviewUrl(previewURL);
 
@@ -410,15 +480,22 @@ function RouteComponent() {
                   >
                     <FileUpload.HiddenInput />
                     {!field.state.value && (
-                      <FileUpload.Dropzone minHeight="32">
-                        <Icon color="fg.muted" size="md">
-                          <LuUpload />
-                        </Icon>
-                        <FileUpload.DropzoneContent>
-                          <Box>Drag and drop files here</Box>
-                          <Box color="fg.muted">.mp4, .mov, .mkv</Box>
-                        </FileUpload.DropzoneContent>
-                      </FileUpload.Dropzone>
+                      <>
+                        <FileUpload.Dropzone minHeight="32">
+                          <Icon color="fg.muted" size="md">
+                            <LuUpload />
+                          </Icon>
+                          <FileUpload.DropzoneContent>
+                            <Box>Drag and drop files here</Box>
+                            <Box color="fg.muted">.mp4, .mov, .mkv</Box>
+                          </FileUpload.DropzoneContent>
+                        </FileUpload.Dropzone>
+                        {savedVideoName && (
+                          <Text color="gray.500" fontSize="sm" mt={1}>
+                            Previously selected: {savedVideoName}
+                          </Text>
+                        )}
+                      </>
                     )}
                     <FileUpload.List clearable showSize />
                   </FileUpload.Root>
@@ -484,6 +561,13 @@ function RouteComponent() {
             )}
           </form.Field>
         </Box>
+
+        <form.Subscribe selector={(state) => state.values}>
+          {(values) => {
+            persistDraft(values);
+            return null;
+          }}
+        </form.Subscribe>
 
         <form.Subscribe
           selector={(state) => [

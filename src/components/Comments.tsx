@@ -10,9 +10,12 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react";
+import { eq } from "@tanstack/db";
+import { useLiveQuery } from "@tanstack/react-db";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
+import { commentDraftsCollection } from "src/lib/db/collections";
 import {
   useAddComment,
   useDeleteComment,
@@ -25,7 +28,16 @@ type CommentsProps = {
 };
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
-  const [comment, setComment] = useState("");
+  const postIdStr = postId.toString();
+
+  const { data: drafts } = useLiveQuery((query) =>
+    query
+      .from({ draft: commentDraftsCollection })
+      .where(({ draft }) => eq(draft.id, postIdStr)),
+  );
+  const draft = drafts[0];
+  const comment = draft?.content ?? "";
+
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
     null,
   );
@@ -49,8 +61,20 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       return;
     }
     addCommentMutation.mutate(comment.trim(), {
-      onSuccess: () => setComment(""),
+      onSuccess: () => {
+        commentDraftsCollection.delete(postIdStr);
+      },
     });
+  };
+
+  const handleChange = (value: string) => {
+    if (draft) {
+      commentDraftsCollection.update(postIdStr, (d) => {
+        d.content = value;
+      });
+    } else {
+      commentDraftsCollection.insert({ id: postIdStr, content: value });
+    }
   };
 
   return (
@@ -65,7 +89,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
             <Textarea
               mb={2}
               onChange={(e) => {
-                setComment(e.target.value);
+                handleChange(e.target.value);
               }}
               placeholder="Write a comment..."
               value={comment}

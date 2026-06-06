@@ -52,7 +52,7 @@ function PostComponent() {
   };
 
   return (
-    <Box p={4}>
+    <>
       {isEditMode && isOwner ? (
         <PostEditForm
           initialTags={initialTags}
@@ -93,6 +93,6 @@ function PostComponent() {
           </Suspense>
         </PostsPageLayout>
       )}
-    </Box>
+    </>
   );
 }

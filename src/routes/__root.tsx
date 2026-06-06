@@ -1,4 +1,4 @@
-import { Box, Button, Center } from "@chakra-ui/react";
+import { Box, Button, Center, IconButton, Menu } from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
@@ -16,10 +16,11 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type * as React from "react";
+import { LuMenu } from "react-icons/lu";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { GlobalShortcuts } from "src/components/GlobalShortcuts";
 import { NotFound } from "src/components/NotFound";
-import { ColorModeButton } from "src/components/ui/color-mode";
+import { ColorModeButton, useColorMode } from "src/components/ui/color-mode";
 import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
@@ -99,6 +100,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const ctx = Route.useRouteContext();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { toggleColorMode } = useColorMode();
+
+  const currentPath = router.state.location.pathname;
+  const authPaths = ["/login", "/signup"];
+  const hasRedirect =
+    currentPath !== "/" && !authPaths.includes(currentPath);
+  const redirectSearch = hasRedirect
+    ? ({ redirect: currentPath } as const)
+    : {};
+
+  const handleSignOut = () => {
+    void (async () => {
+      await authClient.signOut();
+      await queryClient.invalidateQueries({
+        queryKey: usersKeys.userInfo,
+      });
+      await router.invalidate();
+    })();
+  };
 
   return (
     <html lang="en">
@@ -157,48 +177,70 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Convert video
           </Link>{" "}
-          {ctx.user ? (
-            <>
-              <Link className="link" to="/account">
-                Account
-              </Link>{" "}
-              <Button
-                onClick={() => {
-                  void (async () => {
-                    await authClient.signOut();
-                    await queryClient.invalidateQueries({
-                      queryKey: usersKeys.userInfo,
-                    });
-                    await router.invalidate();
-                  })();
-                }}
-                size="xs"
-              >
-                Sign Out
-              </Button>
-            </>
-          ) : (
-            (() => {
-              const currentPath = router.state.location.pathname;
-              const authPaths = ["/login", "/signup"];
-              const hasRedirect =
-                currentPath !== "/" && !authPaths.includes(currentPath);
-              const search = hasRedirect
-                ? ({ redirect: currentPath } as const)
-                : {};
-              return (
-                <>
-                  <Link className="link" search={search} to="/login">
-                    Login
-                  </Link>{" "}
-                  <Link className="link" search={search} to="/signup">
-                    Sign Up
-                  </Link>
-                </>
-              );
-            })()
-          )}
-          <ColorModeButton />
+
+          <Box alignItems="center" display={{ base: "none", md: "flex" }} gap={2}>
+            {ctx.user ? (
+              <>
+                <Link className="link" to="/account">
+                  Account
+                </Link>{" "}
+                <Button onClick={handleSignOut} size="xs">
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link className="link" search={redirectSearch} to="/login">
+                  Login
+                </Link>{" "}
+                <Link className="link" search={redirectSearch} to="/signup">
+                  Sign Up
+                </Link>
+              </>
+            )}
+            <ColorModeButton />
+          </Box>
+
+          <Box display={{ base: "flex", md: "none" }}>
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <IconButton aria-label="Menu" size="sm" variant="ghost">
+                  <LuMenu />
+                </IconButton>
+              </Menu.Trigger>
+              <Menu.Positioner>
+                <Menu.Content>
+                  {ctx.user ? (
+                    <>
+                      <Menu.Item asChild value="account">
+                        <Link to="/account">Account</Link>
+                      </Menu.Item>
+                      <Menu.Item onClick={handleSignOut} value="signout">
+                        Sign Out
+                      </Menu.Item>
+                    </>
+                  ) : (
+                    <>
+                      <Menu.Item asChild value="login">
+                        <Link search={redirectSearch} to="/login">
+                          Login
+                        </Link>
+                      </Menu.Item>
+                      <Menu.Item asChild value="signup">
+                        <Link search={redirectSearch} to="/signup">
+                          Sign Up
+                        </Link>
+                      </Menu.Item>
+                    </>
+                  )}
+                  <Menu.Separator />
+                  <Menu.Item onClick={toggleColorMode} value="theme">
+                    Toggle Theme
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Menu.Root>
+          </Box>
         </Center>
         <Box pt={16}>{children}</Box>
         <Toaster />

@@ -612,7 +612,19 @@ export const uploadPostEffect = Effect.fn("uploadPost")(function* (
   data: z.infer<typeof FormFileUploadSchema>,
 ) {
   const svc = yield* PostsService;
-  return yield* svc.upload(data);
+  return yield* svc.upload(data).pipe(
+    Effect.tapError((error) =>
+      Effect.logError("Upload failed").pipe(
+        Effect.annotateLogs({
+          error: String(error),
+          fileName: data.video.name,
+          fileSize: data.video.size,
+          title: data.title,
+          userId: data.userId,
+        }),
+      ),
+    ),
+  );
 });
 
 export const getPostsByTagEffect = Effect.fn("getPostsByTag")(function* (

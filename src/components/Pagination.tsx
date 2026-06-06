@@ -12,18 +12,21 @@ export const Pagination = ({
   totalPages,
   onPageChange,
 }: PaginationProps) => {
-  const siblings = 1;
-  const leftRange = Math.max(1, currentPage - siblings);
-  const rightRange = Math.min(totalPages, currentPage + siblings);
+  if (totalPages <= 1) return null;
 
-  const showFirst = leftRange > 1;
-  const showLast = rightRange < totalPages;
+  const lastPageIndex = totalPages - 1;
+  const siblings = 1;
+  const leftRange = Math.max(0, currentPage - siblings);
+  const rightRange = Math.min(lastPageIndex, currentPage + siblings);
+
+  const showFirst = leftRange > 0;
+  const showLast = rightRange < lastPageIndex;
 
   return (
     <HStack gap={2} justify="center" mb={8} mt={8}>
       <IconButton
         aria-label="Previous page"
-        disabled={currentPage <= 1}
+        disabled={currentPage <= 0}
         onClick={() => {
           onPageChange(currentPage - 1);
         }}
@@ -35,15 +38,15 @@ export const Pagination = ({
       {showFirst && (
         <>
           <Button
-            colorPalette={currentPage === 1 ? "blue" : "gray"}
+            colorPalette={currentPage === 0 ? "blue" : "gray"}
             onClick={() => {
-              onPageChange(1);
+              onPageChange(0);
             }}
-            variant={currentPage === 1 ? "solid" : "ghost"}
+            variant={currentPage === 0 ? "solid" : "ghost"}
           >
             1
           </Button>
-          {leftRange > 2 && <Text>...</Text>}
+          {leftRange > 1 && <Text>...</Text>}
         </>
       )}
 
@@ -59,19 +62,19 @@ export const Pagination = ({
           }}
           variant={currentPage === page ? "solid" : "ghost"}
         >
-          {page}
+          {page + 1}
         </Button>
       ))}
 
       {showLast && (
         <>
-          {rightRange < totalPages - 1 && <Text>...</Text>}
+          {rightRange < lastPageIndex - 1 && <Text>...</Text>}
           <Button
-            colorPalette={currentPage === totalPages ? "blue" : "gray"}
+            colorPalette={currentPage === lastPageIndex ? "blue" : "gray"}
             onClick={() => {
-              onPageChange(totalPages);
+              onPageChange(lastPageIndex);
             }}
-            variant={currentPage === totalPages ? "solid" : "ghost"}
+            variant={currentPage === lastPageIndex ? "solid" : "ghost"}
           >
             {totalPages}
           </Button>
@@ -80,7 +83,7 @@ export const Pagination = ({
 
       <IconButton
         aria-label="Next page"
-        disabled={currentPage >= totalPages}
+        disabled={currentPage >= lastPageIndex}
         onClick={() => {
           onPageChange(currentPage + 1);
         }}

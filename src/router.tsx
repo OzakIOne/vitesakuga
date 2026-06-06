@@ -1,13 +1,13 @@
-import { QueryClient } from "@tanstack/react-query";
-import { createRouter as createTanStackRouter } from "@tanstack/react-router";
-import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { createRouter as createTanStackRouter } from "@tanstack/react-router"
+import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query"
 
-import { DefaultCatchBoundary } from "./components/DefaultCatchBoundary";
-import { NotFound } from "./components/NotFound";
-import { routeTree } from "./routeTree.gen";
+import { DefaultCatchBoundary } from "./components/DefaultCatchBoundary"
+import { NotFound } from "./components/NotFound"
+import { getQueryClient } from "./lib/query-client"
+import { routeTree } from "./routeTree.gen"
 
 export function getRouter() {
-  const queryClient = new QueryClient();
+  const queryClient = getQueryClient()
 
   console.log("Running in", {
     mode: import.meta.env.MODE,

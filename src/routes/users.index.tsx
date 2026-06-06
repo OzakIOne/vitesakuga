@@ -1,31 +1,33 @@
-import { Spinner, Stack, Text } from "@chakra-ui/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Suspense } from "react";
-import { User } from "src/components/User";
-import { usersQueryOptions } from "src/lib/users/users.queries";
+import "src/lib/polyfills"
+
+import { Spinner, Stack, Text } from "@chakra-ui/react"
+import { useLiveSuspenseQuery } from "@tanstack/react-db"
+import { createFileRoute } from "@tanstack/react-router"
+import { Suspense } from "react"
+import { User } from "src/components/User"
+import { usersCollection } from "src/lib/db/collections"
 
 export const Route = createFileRoute("/users/")({
   component: UsersLayoutComponent,
-});
+})
 
 function UsersContent() {
-  const usersQuery = useSuspenseQuery(usersQueryOptions());
+  const { data: users } = useLiveSuspenseQuery((q) =>
+    q.from({ u: usersCollection }).orderBy(({ u }) => u.name, "asc"),
+  )
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {usersQuery.data.map(
-        (user: { id: string; image: string | null; name: string }) => (
-          <User
-            id={user.id}
-            image={user.image}
-            key={user.id}
-            name={user.name}
-          />
-        ),
-      )}
+      {users.map((user) => (
+        <User
+          id={user.id}
+          image={user.image}
+          key={user.id}
+          name={user.name}
+        />
+      ))}
     </div>
-  );
+  )
 }
 
 function UsersLayoutComponent() {
@@ -40,5 +42,5 @@ function UsersLayoutComponent() {
     >
       <UsersContent />
     </Suspense>
-  );
+  )
 }

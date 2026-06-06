@@ -1,3 +1,5 @@
+import "src/lib/polyfills"
+
 import {
   Badge,
   Box,
@@ -7,10 +9,10 @@ import {
   Wrap,
   createListCollection,
 } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
-import { tagsQueryGetTags } from "src/lib/tags/tags.queries";
+import { tagsCollection } from "src/lib/db/collections";
 
 type Tag = {
   id?: number;
@@ -25,7 +27,9 @@ type TagInputProps = {
 export function TagInput({ value, onChange }: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
 
-  const { data: allTags = [] } = useQuery(tagsQueryGetTags());
+  const { data: allTags = [] } = useLiveQuery((q) =>
+    q.from({ t: tagsCollection }).orderBy(({ t }) => t.name, "asc"),
+  );
 
   // Filter tags based on search and exclude already selected tags
   const filteredTags = useMemo(() => {

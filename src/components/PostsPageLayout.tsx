@@ -2,6 +2,7 @@ import {
   Badge,
   Box,
   Button,
+  Collapsible,
   DataList,
   Grid,
   GridItem,
@@ -11,6 +12,7 @@ import {
   Text,
   VStack,
   Wrap,
+  useCollapsibleContext,
 } from "@chakra-ui/react";
 import type { RegisteredRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -37,6 +39,21 @@ export type PostsPageLayoutProps = {
   fromRoute: RegisteredRoutes;
   videoMetadata?: VideoMetadata | undefined;
 };
+
+function CollapseArrow() {
+  const ctx = useCollapsibleContext();
+  return (
+    <Text
+      as="span"
+      display="inline-block"
+      mr={1}
+      transform={ctx.open ? "rotate(90deg)" : "rotate(0deg)"}
+      transition="transform 0.2s"
+    >
+      ▶
+    </Text>
+  );
+}
 
 export function PostsPageLayout({
   searchQuery,
@@ -97,43 +114,50 @@ export function PostsPageLayout({
             )}
 
             {videoMetadata && (
-              <Box border="1px" borderRadius="md" p={4} shadow="md">
-                <Heading mb={3} size="sm">
-                  Video Metadata
-                </Heading>
-                <VStack align="stretch" fontSize="xs" gap={1}>
-                  <DataList.Root orientation="horizontal">
-                    {Object.entries(videoMetadata).map(([key, value]) => (
-                      <DataList.Item key={key}>
-                        <DataList.ItemLabel>{key}</DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          {key === "Encoded_Library_Settings" ? (
-                            <Popover.Root>
-                              <Popover.Trigger asChild>
-                                <Button size="xs" variant="outline">
-                                  View Settings
-                                </Button>
-                              </Popover.Trigger>
-                              <Portal>
-                                <Popover.Positioner>
-                                  <Popover.Content>
-                                    <Popover.Arrow />
-                                    <Popover.Body>
-                                      <Text>{value}</Text>
-                                    </Popover.Body>
-                                  </Popover.Content>
-                                </Popover.Positioner>
-                              </Portal>
-                            </Popover.Root>
-                          ) : (
-                            value
-                          )}
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                    ))}
-                  </DataList.Root>
-                </VStack>
-              </Box>
+              <Collapsible.Root defaultOpen={false}>
+                <Box border="1px" borderRadius="md" p={4} shadow="md">
+                  <Heading mb={3} size="sm">
+                    <Collapsible.Trigger cursor="pointer">
+                      <CollapseArrow />
+                      Video Metadata
+                    </Collapsible.Trigger>
+                  </Heading>
+                  <Collapsible.Content>
+                    <VStack align="stretch" fontSize="xs" gap={1}>
+                      <DataList.Root orientation="horizontal">
+                        {Object.entries(videoMetadata).map(([key, value]) => (
+                          <DataList.Item key={key}>
+                            <DataList.ItemLabel>{key}</DataList.ItemLabel>
+                            <DataList.ItemValue>
+                              {key === "Encoded_Library_Settings" ? (
+                                <Popover.Root>
+                                  <Popover.Trigger asChild>
+                                    <Button size="xs" variant="outline">
+                                      View Settings
+                                    </Button>
+                                  </Popover.Trigger>
+                                  <Portal>
+                                    <Popover.Positioner>
+                                      <Popover.Content>
+                                        <Popover.Arrow />
+                                        <Popover.Body>
+                                          <Text>{value}</Text>
+                                        </Popover.Body>
+                                      </Popover.Content>
+                                    </Popover.Positioner>
+                                  </Portal>
+                                </Popover.Root>
+                              ) : (
+                                value
+                              )}
+                            </DataList.ItemValue>
+                          </DataList.Item>
+                        ))}
+                      </DataList.Root>
+                    </VStack>
+                  </Collapsible.Content>
+                </Box>
+              </Collapsible.Root>
             )}
           </VStack>
         </GridItem>
