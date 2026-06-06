@@ -41,7 +41,7 @@ function UserContent() {
         selectedTags={tags}
         sortBy={sortBy}
       >
-        <User id={data.user.id} image={data.user.image} name={data.user.name} />
+        {data && <User id={data.user.id} image={data.user.image} name={data.user.name} />}
 
         {isFetching && (
           <Stack align="center" justify="center" pb={2}>

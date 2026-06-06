@@ -71,6 +71,9 @@ export const UsersServiceLive = Layer.effect(
       );
 
       if (Option.isNone(userInfoOption)) {
+        yield* Effect.logError("User not found").pipe(
+          Effect.annotateLogs("userId", userId),
+        );
         return yield* Effect.fail(new Error(`User ${userId} not found`));
       }
       const userInfo = userInfoOption.value;

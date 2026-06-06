@@ -13,7 +13,7 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
   const authSvc = yield* AuthService;
   const getHeaders = yield* RequestHeadersService;
 
-  return yield* Effect.tryPromise({
+  const session = yield* Effect.tryPromise({
     try: () =>
       authSvc.api.getSession({
         headers: getHeaders(),
@@ -21,6 +21,14 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
       }),
     catch: (error) => new Error(`Failed to get session: ${String(error)}`),
   });
+
+  if (session?.user) {
+    yield* Effect.logInfo("Session retrieved").pipe(
+      Effect.annotateLogs("userId", session.user.id),
+    );
+  }
+
+  return session;
 });
 
 export const getUserSessionEffect = Effect.fn("getUserSession")(function* () {
@@ -57,6 +65,7 @@ export const requireAuthEffect = Effect.fn("requireAuth")(function* () {
   });
 
   if (!session?.user) {
+    yield* Effect.logWarning("Authentication required");
     return yield* Effect.fail(new AuthRequiredError({ redirectTo: "/login" }));
   }
 

@@ -302,6 +302,15 @@ export const PostsServiceLive = Layer.effect(
         videoMetadata,
       } = data;
 
+      yield* Effect.logInfo("Upload started").pipe(
+        Effect.annotateLogs({
+          fileName: video.name,
+          fileSize: video.size,
+          title,
+          userId,
+        }),
+      );
+
       const envServer = yield* Effect.tryPromise({
         try: async () => (await import("../env/server")).envServer,
         catch: (error) =>
@@ -354,10 +363,20 @@ export const PostsServiceLive = Layer.effect(
       });
 
       if (videocmd.$metadata.httpStatusCode !== 200) {
+        yield* Effect.logError("Video upload to R2 failed").pipe(
+          Effect.annotateLogs({
+            httpStatusCode: String(videocmd.$metadata.httpStatusCode ?? "unknown"),
+            videoKey,
+          }),
+        );
         return yield* Effect.fail(
           new Error("There was an error uploading file"),
         );
       }
+
+      yield* Effect.logInfo("Video uploaded to R2").pipe(
+        Effect.annotateLogs("videoKey", videoKey),
+      );
 
       const thumbBuffer = yield* Effect.tryPromise({
         try: () => thumbnail.arrayBuffer(),
@@ -379,10 +398,20 @@ export const PostsServiceLive = Layer.effect(
       });
 
       if (thumbnailcmd.$metadata.httpStatusCode !== 200) {
+        yield* Effect.logError("Thumbnail upload to R2 failed").pipe(
+          Effect.annotateLogs({
+            httpStatusCode: String(thumbnailcmd.$metadata.httpStatusCode ?? "unknown"),
+            thumbnailKey,
+          }),
+        );
         return yield* Effect.fail(
           new Error("There was an error uploading thumbnail"),
         );
       }
+
+      yield* Effect.logInfo("Thumbnail uploaded to R2").pipe(
+        Effect.annotateLogs("thumbnailKey", thumbnailKey),
+      );
 
       const newPost = yield* db.executeTakeFirstOrError(
         db
@@ -402,7 +431,17 @@ export const PostsServiceLive = Layer.effect(
 
       if (tags.length > 0) {
         yield* resolveAndLinkTags(db, newPost.id, tags);
+        yield* Effect.logInfo("Tags linked to post").pipe(
+          Effect.annotateLogs({
+            postId: String(newPost.id),
+            tagCount: tags.length,
+          }),
+        );
       }
+
+      yield* Effect.logInfo("Upload completed").pipe(
+        Effect.annotateLogs("postId", String(newPost.id)),
+      );
 
       return newPost;
     });
@@ -489,6 +528,10 @@ export const PostsServiceLive = Layer.effect(
 
       const { postId, title, content, source, relatedPostId, tags } = data;
 
+      yield* Effect.logInfo("Post update started").pipe(
+        Effect.annotateLogs({ postId: String(postId), userId: session.user.id }),
+      );
+
       const postOption = yield* db.executeTakeFirstOption(
         db
           .selectFrom("posts")
@@ -533,6 +576,10 @@ export const PostsServiceLive = Layer.effect(
           db.deleteFrom("post_tags").where("postId", "=", postId),
         );
       }
+
+      yield* Effect.logInfo("Post updated").pipe(
+        Effect.annotateLogs("postId", String(postId)),
+      );
 
       return updatedPost;
     });

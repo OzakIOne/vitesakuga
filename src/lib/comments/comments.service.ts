@@ -5,14 +5,13 @@ import { z } from "zod";
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
 import { makeAuthLayer } from "../db/layer-factories.server";
-import { commentInsertSchema } from "../db/schema";
+import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
 import {
   CommentNotFoundError,
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
 import { createHandler } from "../server-fn.handler";
-import { commentSchema } from "./comments.schema";
 
 export class CommentsService extends Context.Service<
   CommentsService,
@@ -53,7 +52,7 @@ export const CommentsServiceLive = Layer.effect(
       );
 
       return yield* Effect.try({
-        try: () => z.array(commentSchema).parse(comments),
+        try: () => z.array(commentsSelectSchema).parse(comments),
         catch: (error) =>
           new Error(`Error processing comments: ${String(error)}`),
       });
@@ -62,7 +61,7 @@ export const CommentsServiceLive = Layer.effect(
     const add = Effect.fn("CommentsService.add")(function* (
       data: z.infer<typeof commentInsertSchema>,
     ) {
-      return yield* db.executeTakeFirstOrError(
+      const comment = yield* db.executeTakeFirstOrError(
         db
           .insertInto("comments")
           .values({
@@ -73,6 +72,16 @@ export const CommentsServiceLive = Layer.effect(
           })
           .returning(["id", "postId", "content", "userId", "createdAt"]),
       );
+
+      yield* Effect.logInfo("Comment added").pipe(
+        Effect.annotateLogs({
+          commentId: String(comment.id),
+          postId: String(data.postId),
+          userId: data.userId,
+        }),
+      );
+
+      return comment;
     });
 
     const delete_ = Effect.fn("CommentsService.delete_")(function* (
@@ -115,6 +124,13 @@ export const CommentsServiceLive = Layer.effect(
       }
 
       yield* db.execute(db.deleteFrom("comments").where("id", "=", commentId));
+
+      yield* Effect.logInfo("Comment deleted").pipe(
+        Effect.annotateLogs({
+          commentId: String(commentId),
+          userId: session.user.id,
+        }),
+      );
 
       return { success: true };
     });
