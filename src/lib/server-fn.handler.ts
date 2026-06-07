@@ -29,7 +29,14 @@ export function createHandler<TParams>(
     }
     const layer = serviceLayer.pipe(Layer.provideMerge(base));
     return Effect.runPromise(
-      effect(data).pipe(Effect.provide(layer)) as Effect.Effect<any, Error>,
+      effect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: String(error) }),
+          ),
+        ),
+      ) as Effect.Effect<any, Error>,
     );
   };
 }

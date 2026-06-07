@@ -59,8 +59,8 @@ function RouteComponent() {
 
   const passwordForm = useForm({
     defaultValues: {
-      currentPassword: "",
-      newPassword: "",
+      currentPassword: null,
+      newPassword: null,
     },
     onSubmit: async ({ value, formApi }) => {
       changePasswordMutation.mutate(value, {
@@ -113,6 +113,7 @@ function RouteComponent() {
                       <InputGroup startElement={<LuUser />}>
                         <Input
                           className="h-12 w-full"
+                          onBlur={field.handleBlur}
                           onChange={(e) => {
                             field.handleChange(e.target.value);
                           }}
@@ -133,6 +134,7 @@ function RouteComponent() {
                       <InputGroup startElement={<LuImage />}>
                         <Input
                           className="h-12 w-full"
+                          onBlur={field.handleBlur}
                           onChange={(e) => {
                             field.handleChange(e.target.value);
                           }}
@@ -161,11 +163,14 @@ function RouteComponent() {
                 )}
               </profileForm.Field>
 
-              <profileForm.Subscribe selector={(state) => [state.isSubmitting]}>
-                {([isSubmitting]) => (
+              <profileForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
+                {([canSubmit, isSubmitting]) => (
                   <Center>
                     <Button
-                      disabled={isSubmitting}
+                      disabled={!canSubmit}
+                      loading={isSubmitting}
                       fontWeight="medium"
                       marginTop="4"
                       type="submit"
@@ -192,6 +197,7 @@ function RouteComponent() {
                     <Field.Label>Current Password</Field.Label>
                     <PasswordInput
                       className="h-12 w-full"
+                      onBlur={field.handleBlur}
                       onChange={(e) => {
                         field.handleChange(e.target.value);
                       }}
@@ -209,6 +215,7 @@ function RouteComponent() {
                     <Field.Label>New Password</Field.Label>
                     <PasswordInput
                       className="h-12 w-full"
+                      onBlur={field.handleBlur}
                       onChange={(e) => {
                         field.handleChange(e.target.value);
                       }}
@@ -220,16 +227,24 @@ function RouteComponent() {
                 )}
               </passwordForm.Field>
 
-              <Center>
-                <Button
-                  colorPalette="orange"
-                  fontWeight="medium"
-                  margin="4"
-                  type="submit"
-                >
-                  Update Password
-                </Button>
-              </Center>
+              <passwordForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
+                {([canSubmit, isSubmitting]) => (
+                  <Center>
+                    <Button
+                      disabled={!canSubmit}
+                      loading={isSubmitting}
+                      colorPalette="orange"
+                      fontWeight="medium"
+                      margin="4"
+                      type="submit"
+                    >
+                      {isSubmitting ? "Updating..." : "Update Password"}
+                    </Button>
+                  </Center>
+                )}
+              </passwordForm.Subscribe>
             </form>
           </div>
 

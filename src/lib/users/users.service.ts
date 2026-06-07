@@ -4,6 +4,7 @@ import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
 
 import { KyselyDB } from "../db/context";
+import { UserNotFoundError } from "../errors";
 import { computePagination } from "../pagination/pagination";
 import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
@@ -70,13 +71,21 @@ export const UsersServiceLive = Layer.effect(
           .where("id", "=", userId),
       );
 
-      if (Option.isNone(userInfoOption)) {
-        yield* Effect.logError("User not found").pipe(
-          Effect.annotateLogs("userId", userId),
-        );
-        return yield* Effect.fail(new Error(`User ${userId} not found`));
-      }
-      const userInfo = userInfoOption.value;
+      const userInfo = yield* Option.match(userInfoOption, {
+        onNone: () =>
+          Effect.logError("User not found").pipe(
+            Effect.annotateLogs("userId", userId),
+            Effect.flatMap(() =>
+              Effect.fail(
+                new UserNotFoundError({
+                  message: `User ${userId} not found`,
+                  userId,
+                }),
+              ),
+            ),
+          ),
+        onSome: (value) => Effect.succeed(value),
+      });
 
       let query = db
         .selectFrom("posts")

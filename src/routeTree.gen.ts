@@ -27,12 +27,12 @@ const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/upload.lazy').then((d) => d.Route))
 const ConvertRoute = ConvertRouteImport.update({
   id: '/convert',
   path: '/convert',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/convert.lazy').then((d) => d.Route))
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',

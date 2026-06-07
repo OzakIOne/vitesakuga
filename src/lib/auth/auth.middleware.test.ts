@@ -14,8 +14,8 @@ beforeEach(() => {
   mockGetHeaders = vi.fn(() => new Headers());
 
   testLayer = Layer.mergeAll(
-    Layer.succeed(AuthService, { api: { getSession: mockGetSession } }),
-    Layer.succeed(RequestHeadersService, mockGetHeaders),
+    Layer.succeed(AuthService)({ api: { getSession: mockGetSession } }),
+    Layer.succeed(RequestHeadersService)(mockGetHeaders),
     withMinimumLogLevel(Debug),
   );
 });

@@ -43,7 +43,7 @@ export const requireAuthEffect = Effect.fn("requireAuth")(function* () {
   const headers = getHeaders();
   const cookie = headers.get("cookie") ?? "";
 
-  if (cookie.includes("e2e-test-auth=bypass")) {
+  if (process.env.NODE_ENV !== "production" && cookie.includes("e2e-test-auth=bypass")) {
     return {
       createdAt: new Date(),
       email: "e2e@test.local",

@@ -40,11 +40,11 @@ export const Route = createRootRouteWithContext<{
   user: Awaited<ReturnType<typeof getUserSession>>;
 }>()({
   beforeLoad: async ({ context }) => {
-    const user = await context.queryClient.fetchQuery({
-      queryFn: async ({ signal }) => getUserSession({ signal }),
-      queryKey: ["user"],
-      staleTime: 60 * 60 * 1000,
-    }); // we're using react-query for caching, see router.tsx
+      const user = await context.queryClient.fetchQuery({
+        queryFn: async ({ signal }) => getUserSession({ signal }),
+        queryKey: usersKeys.userInfo,
+        staleTime: 60 * 60 * 1000,
+      });
     return { user };
   },
   component: RootComponent,

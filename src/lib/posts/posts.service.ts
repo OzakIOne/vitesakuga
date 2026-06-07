@@ -236,16 +236,16 @@ export const PostsServiceLive = Layer.effect(
           .where("posts.id", "=", postId),
       );
 
-      if (Option.isNone(postOption)) {
-        return yield* Effect.fail(
-          new PostNotFoundError({
-            message: `Post ${postId} not found`,
-            postId,
-          }),
-        );
-      }
-
-      const postWithUser = postOption.value;
+      const postWithUser = yield* Option.match(postOption, {
+        onNone: () =>
+          Effect.fail(
+            new PostNotFoundError({
+              message: `Post ${postId} not found`,
+              postId,
+            }),
+          ),
+        onSome: (value) => Effect.succeed(value),
+      });
 
       const tags = yield* db.execute(
         db
@@ -264,7 +264,10 @@ export const PostsServiceLive = Layer.effect(
           )
         : Option.none();
 
-      const relatedPost = Option.getOrElse(relatedPostOption, () => null);
+      const relatedPost = Option.match(relatedPostOption, {
+        onNone: () => null,
+        onSome: (value) => value,
+      });
 
       return {
         post: {
@@ -539,16 +542,16 @@ export const PostsServiceLive = Layer.effect(
           .where("id", "=", postId),
       );
 
-      if (Option.isNone(postOption)) {
-        return yield* Effect.fail(
-          new PostNotFoundError({
-            message: `Post ${postId} not found`,
-            postId,
-          }),
-        );
-      }
-
-      const post = postOption.value;
+      const post = yield* Option.match(postOption, {
+        onNone: () =>
+          Effect.fail(
+            new PostNotFoundError({
+              message: `Post ${postId} not found`,
+              postId,
+            }),
+          ),
+        onSome: (value) => Effect.succeed(value),
+      });
 
       if (post.userId !== session.user.id) {
         return yield* Effect.fail(

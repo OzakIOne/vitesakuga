@@ -104,16 +104,16 @@ export const CommentsServiceLive = Layer.effect(
           .where("id", "=", commentId),
       );
 
-      if (Option.isNone(commentOption)) {
-        return yield* Effect.fail(
-          new CommentNotFoundError({
-            commentId,
-            message: `Comment ${commentId} not found`,
-          }),
-        );
-      }
-
-      const comment = commentOption.value;
+      const comment = yield* Option.match(commentOption, {
+        onNone: () =>
+          Effect.fail(
+            new CommentNotFoundError({
+              commentId,
+              message: `Comment ${commentId} not found`,
+            }),
+          ),
+        onSome: (value) => Effect.succeed(value),
+      });
 
       if (comment.userId !== session.user.id) {
         return yield* Effect.fail(
@@ -164,7 +164,7 @@ export const fetchComments = createServerFn()
   .inputValidator((input: unknown) => z.number().parse(input))
   .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
 
-export const addComment = createServerFn()
+export const addComment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => commentInsertSchema.parse(input))
   .handler(createHandler(addCommentEffect, CommentsServiceLive));
 

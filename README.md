@@ -5,7 +5,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] dockploy ??
 - [ ] split upload and convert into components and utils
 - [ ] better style Video (fix tailwind class not working)
-- [ ] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
+- [x] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
   - there is builtint keyboard shortcut in media chrome
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
 - [x] add dompurify with z.transform to schemas

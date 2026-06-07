@@ -1,3 +1,4 @@
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { useCallback, useRef } from "react"
@@ -21,19 +22,20 @@ export type PostListingData = {
   }
 }
 
-export function usePostsPage<TData extends PostListingData>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  queryOptions: any,
+export function usePostsPage<
+  TData extends PostListingData,
+  TQueryKey extends QueryKey = QueryKey,
+>(
+  queryOptions: UseQueryOptions<TData, Error, TData, TQueryKey>,
 ) {
   const navigate = useNavigate()
   const previousDataRef = useRef<TData | undefined>(undefined)
 
-  const queryResult = useQuery({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, isFetching } = useQuery({
     ...queryOptions,
-    placeholderData: previousDataRef.current,
+    placeholderData: previousDataRef.current as any,
   }) as { data: TData; isFetching: boolean }
-
-  const { data, isFetching } = queryResult
 
   if (data) {
     previousDataRef.current = data
@@ -53,11 +55,11 @@ export function usePostsPage<TData extends PostListingData>(
   )
 
   return {
-    data: data as TData,
+    data,
     handlePageChange,
     isFetching,
     popularTags: data?.meta?.popularTags ?? [],
-    posts: (data?.data ?? []) as TData["data"],
+    posts: data?.data ?? [],
     totalPages: data?.meta?.pagination?.totalPages ?? 0,
   }
 }
