@@ -11,6 +11,21 @@ services:
     networks:
       - my_network
 
+  rustfs:
+    container_name: rustfs
+    image: rustfs/rustfs:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+    volumes:
+      - rustfs_data:/data
+    networks:
+      - my_network
+    command: ["--access-key", "rustfsadmin", "--secret-key", "rustfsadmin", "/data"]
+
   # drizzle-gate:
   #   image: ghcr.io/drizzle-team/gateway:latest
   #   container_name: drizzle-gate
@@ -39,4 +54,5 @@ networks:
 
 volumes:
   pgdata:
+  rustfs_data:
   # drizzle:

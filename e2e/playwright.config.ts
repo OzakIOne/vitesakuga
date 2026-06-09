@@ -12,8 +12,7 @@ export default defineConfig({
       use: {
         launchOptions: {
           env: {
-            FONTCONFIG_PATH: "/tmp/fontconfig",
-            LD_LIBRARY_PATH: "/tmp/playwright-deps/usr/lib",
+            LD_LIBRARY_PATH: "/usr/lib",
           },
         },
       },
@@ -34,6 +33,15 @@ export default defineConfig({
       port: 3000,
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
+      env: {
+        DATABASE_DRIVER: "pglite",
+        DATABASE_URL: "postgresql://e2e:e2e@localhost:5432/e2e",
+        CLOUDFLARE_ACCESS_KEY: "rustfsadmin",
+        CLOUDFLARE_BUCKET: "e2e-test",
+        CLOUDFLARE_R2: "http://localhost:9000",
+        CLOUDFLARE_R2_PUBLIC_URL: "http://localhost:9000/e2e-test",
+        CLOUDFLARE_SECRET_KEY: "rustfsadmin",
+      },
     },
   ],
   workers: 1,

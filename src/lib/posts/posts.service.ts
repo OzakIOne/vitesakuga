@@ -13,6 +13,7 @@ import {
 } from "../errors";
 import { computePagination } from "../pagination/pagination";
 import { createHandler } from "../server-fn.handler";
+import { StorageModule } from "../storage/storage.module";
 import { mapPopularTags } from "../tags/tags.utils";
 import {
   FormFileUploadSchema,
@@ -21,7 +22,6 @@ import {
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
-import type { AllowedVideoExtension } from "./posts.utils";
 
 const PAGE_SIZE = 30;
 
@@ -79,6 +79,7 @@ export const PostsServiceLive = Layer.effect(
   PostsService,
   Effect.gen(function* () {
     const db = yield* KyselyDB;
+    const storage = yield* StorageModule;
 
     const search = Effect.fn("PostsService.search")(function* (
       data: z.infer<typeof searchPostsBaseSchema>,
@@ -314,106 +315,10 @@ export const PostsServiceLive = Layer.effect(
         }),
       );
 
-      const envServer = yield* Effect.tryPromise({
-        try: async () => (await import("../env/server")).envServer,
-        catch: (error) =>
-          new Error(`Failed to load environment: ${String(error)}`),
-      });
-
-      const s3 = yield* Effect.tryPromise({
-        try: async () => {
-          const mod = await import("@aws-sdk/client-s3");
-          return {
-            PutObjectCommand: mod.PutObjectCommand,
-            S3Client: mod.S3Client,
-          };
-        },
-        catch: (error) =>
-          new Error(`Failed to load S3 client: ${String(error)}`),
-      });
-
-      const videoExtName = video.name.split(".").pop() as AllowedVideoExtension;
-      const videoBaseName = crypto.randomUUID();
-      const videoKey = `videos/${userId}/${videoBaseName}.${videoExtName}`;
-      const thumbnailKey = `thumbnails/${userId}/${videoBaseName}.jpg`;
-
-      const cfclient = new s3.S3Client({
-        credentials: {
-          accessKeyId: envServer.CLOUDFLARE_ACCESS_KEY,
-          secretAccessKey: envServer.CLOUDFLARE_SECRET_KEY,
-        },
-        endpoint: envServer.CLOUDFLARE_R2,
-        region: "auto",
-      });
-
-      const videoBuffer = yield* Effect.tryPromise({
-        try: () => video.arrayBuffer(),
-        catch: (error) =>
-          new Error(`Failed to read video file: ${String(error)}`),
-      });
-
-      const videoCommand = new s3.PutObjectCommand({
-        Body: Buffer.from(videoBuffer),
-        Bucket: envServer.CLOUDFLARE_BUCKET,
-        ContentType: video.type,
-        Key: videoKey,
-      });
-
-      const videocmd = yield* Effect.tryPromise({
-        try: () => cfclient.send(videoCommand),
-        catch: (error) =>
-          new Error(`There was an error uploading file: ${String(error)}`),
-      });
-
-      if (videocmd.$metadata.httpStatusCode !== 200) {
-        yield* Effect.logError("Video upload to R2 failed").pipe(
-          Effect.annotateLogs({
-            httpStatusCode: String(videocmd.$metadata.httpStatusCode ?? "unknown"),
-            videoKey,
-          }),
-        );
-        return yield* Effect.fail(
-          new Error("There was an error uploading file"),
-        );
-      }
-
-      yield* Effect.logInfo("Video uploaded to R2").pipe(
-        Effect.annotateLogs("videoKey", videoKey),
-      );
-
-      const thumbBuffer = yield* Effect.tryPromise({
-        try: () => thumbnail.arrayBuffer(),
-        catch: (error) =>
-          new Error(`Failed to read thumbnail file: ${String(error)}`),
-      });
-
-      const thumbnailCommand = new s3.PutObjectCommand({
-        Body: Buffer.from(thumbBuffer),
-        Bucket: envServer.CLOUDFLARE_BUCKET,
-        ContentType: thumbnail.type,
-        Key: thumbnailKey,
-      });
-
-      const thumbnailcmd = yield* Effect.tryPromise({
-        try: () => cfclient.send(thumbnailCommand),
-        catch: (error) =>
-          new Error(`There was an error uploading thumbnail: ${String(error)}`),
-      });
-
-      if (thumbnailcmd.$metadata.httpStatusCode !== 200) {
-        yield* Effect.logError("Thumbnail upload to R2 failed").pipe(
-          Effect.annotateLogs({
-            httpStatusCode: String(thumbnailcmd.$metadata.httpStatusCode ?? "unknown"),
-            thumbnailKey,
-          }),
-        );
-        return yield* Effect.fail(
-          new Error("There was an error uploading thumbnail"),
-        );
-      }
-
-      yield* Effect.logInfo("Thumbnail uploaded to R2").pipe(
-        Effect.annotateLogs("thumbnailKey", thumbnailKey),
+      const { key: videoKey } = yield* storage.uploadVideo(userId, video);
+      const { key: thumbnailKey } = yield* storage.uploadThumbnail(
+        userId,
+        thumbnail,
       );
 
       const newPost = yield* db.executeTakeFirstOrError(

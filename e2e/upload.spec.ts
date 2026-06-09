@@ -27,6 +27,9 @@ test.describe("Upload page", () => {
   test("uploading a video shows preview and thumbnail selector", async ({
     page,
   }) => {
+    await page.locator("#title").fill("Test Video");
+    await page.locator("#content").fill("A test video description");
+
     const fileChooserPromise = page.waitForEvent("filechooser", {
       timeout: 10000,
     });

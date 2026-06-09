@@ -9,37 +9,20 @@ import {
   Input,
   Text,
 } from "@chakra-ui/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  createLazyFileRoute,
-  useBlocker,
-  useNavigate,
-  useRouteContext,
-} from "@tanstack/react-router";
-import type { MediaInfo } from "mediainfo.js";
-import mediaInfoFactory from "mediainfo.js";
-import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { createLazyFileRoute } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { LuCamera, LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import { eq } from "@tanstack/db";
-import { useLiveQuery } from "@tanstack/react-db";
-import { uploadDraftCollection } from "src/lib/db/collections";
 import { postsKeys } from "src/lib/posts/posts.queries";
-import { FormFileUploadSchema } from "src/lib/posts/posts.schema";
-import type { FileUploadData, VideoMetadata } from "src/lib/posts/posts.schema";
-import { searchPosts, uploadPost } from "src/lib/posts/posts.service";
-import {
-  analyzeVideo,
-  buildFormData,
-  generateAutoThumbnails,
-  generateThumbnails,
-  type GeneratedThumbnail,
-} from "src/lib/upload/upload.processor";
+import { searchPosts } from "src/lib/posts/posts.service";
+import { useUploadDraft } from "src/lib/upload/useUploadDraft";
+import { useUploadForm } from "src/lib/upload/useUploadForm";
+import { useVideoProcessing } from "src/lib/upload/useVideoProcessing";
 
 export const Route = createLazyFileRoute("/upload")({
   component: RouteComponent,
@@ -52,59 +35,24 @@ export const Route = createLazyFileRoute("/upload")({
 
 function RouteComponent() {
   const { user } = Route.useRouteContext() as { user: any };
-  const { queryClient } = useRouteContext({ from: "/upload" });
-  const [videoFilePreview, setVideoPreviewUrl] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
-  const frameRateRef = useRef<number | null>(null);
-  const videoRef = useRef<any>(null);
 
-  const { data: draftEntries } = useLiveQuery((query) =>
-    query
-      .from({ draft: uploadDraftCollection })
-      .where(({ draft }) => eq(draft.id, "upload-draft")),
-  );
-  const draft = draftEntries[0];
-  const [savedVideoName, setSavedVideoName] = useState<string | null>(
-    () => draft?.videoName ?? null,
-  );
+  const video = useVideoProcessing();
+  const draft = useUploadDraft();
 
-  const draftLoadedRef = useRef(false);
-
-  const uploadPostMutation = useMutation({
-    mutationFn: async (data: FormData) => uploadPost({ data }),
-    onError: (error) => {
-      console.error("Upload failed:", error);
-      toaster.create({
-        description: "There was an error uploading your post.",
-        duration: 5000,
-        title: "Upload failed",
-        type: "error",
-      });
-    },
-    onSuccess: (newPost) => {
-      form.reset();
-      uploadDraftCollection.delete("upload-draft");
-      setSavedVideoName(null);
-      void queryClient.invalidateQueries({ queryKey: postsKeys.all });
-      void navigate({ to: `/posts/${newPost.id}` });
-      toaster.create({
-        description: "Your post has been uploaded successfully.",
-        duration: 5000,
-        title: "Upload successful",
-        type: "success",
-      });
-    },
+  const form = useUploadForm({
+    draft: draft.draft,
+    onDraftClear: draft.clear,
+    thumbnail: video.thumbnails[video.selectedThumbnailIndex]?.file,
+    userId: user?.id ?? "",
+    videoFile: video.videoFile,
+    videoMetadata: video.videoMetadata,
   });
 
-  const [thumbnails, setThumbnails] = useState<GeneratedThumbnail[]>([]);
-  const [selectedThumbnailIndex, setSelectedThumbnailIndex] =
-    useState<number>(0);
+  const videoRef = useRef<any>(null);
 
   const handleCapture = async () => {
-    const videoFile = form.getFieldValue("video");
     const player = videoRef.current;
-    if (!videoFile || !player || !player.media) {
+    if (!player?.media) {
       toaster.create({
         description: "Could not determine the current time from the player.",
         duration: 3000,
@@ -113,25 +61,14 @@ function RouteComponent() {
       });
       return;
     }
-
-    const time = player.media.currentTime;
-
     try {
-      const generated = await generateThumbnails(videoFile, [time]);
-      if (generated.length > 0) {
-        setThumbnails((prev) => {
-          const newThumbs = [...prev, ...generated];
-          setSelectedThumbnailIndex(newThumbs.length - 1);
-          return newThumbs;
-        });
-        form.setFieldValue("thumbnail", generated[0].file);
-        toaster.create({
-          description: "Thumbnail captured successfully.",
-          duration: 3000,
-          title: "Captured",
-          type: "success",
-        });
-      }
+      await video.captureFrame(player.media.currentTime);
+      toaster.create({
+        description: "Thumbnail captured successfully.",
+        duration: 3000,
+        title: "Captured",
+        type: "success",
+      });
     } catch (error) {
       console.error("Failed to capture thumbnail:", error);
       toaster.create({
@@ -143,123 +80,12 @@ function RouteComponent() {
     }
   };
 
-  const handleSubmit = async (values: FileUploadData): Promise<void> => {
-    const formData = buildFormData(values);
-    await uploadPostMutation.mutateAsync(formData);
-  };
-
-  useEffect(() => {
-    void mediaInfoFactory({
-      format: "JSON",
-      locateFile: () => "/MediaInfoModule.wasm",
-    }).then((mi) => {
-      mediaInfoRef.current = mi;
-    });
-
-    return () => {
-      if (mediaInfoRef.current) {
-        mediaInfoRef.current.close();
-      }
-    };
-  }, []);
-
-  useEffect(
-    () => () => {
-      thumbnails.forEach((t) => URL.revokeObjectURL(t.url));
-    },
-    [thumbnails],
-  );
-
-  useBlocker({
-    enableBeforeUnload: true,
-    shouldBlockFn: () => {
-      if (!form.state.isDirty) {
-        return false;
-      }
-      const shouldLeave = confirm(
-        "You have unsubmitted changes. Do you want to leave?",
-      );
-      return !shouldLeave;
-    },
-  });
-
-  const form = useForm({
-    defaultValues: {
-      content: draft?.content ?? "",
-      relatedPostId: draft?.relatedPostId ?? (undefined as number | undefined),
-      source: draft?.source ?? (undefined as string | undefined),
-      tags: (draft?.tags ?? []) as { id?: number; name: string }[],
-      thumbnail: undefined as unknown as File,
-      title: draft?.title ?? "",
-      userId: user?.id ?? "",
-      video: undefined as unknown as File,
-      videoMetadata: undefined as VideoMetadata,
-    },
-    onSubmit: async ({ value }) => {
-      await handleSubmit(value);
-    },
-    validators: {
-      // fix typing lint issue
-      onSubmit: ({ value }) => {
-        const result = FormFileUploadSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.issues.map((i) => i.message).join(", ");
-        }
-        return undefined;
-      },
-    },
-  });
-
-  useEffect(() => {
-    if (draft && !draftLoadedRef.current) {
-      draftLoadedRef.current = true;
-      form.reset(
-        {
-          content: draft.content,
-          relatedPostId: draft.relatedPostId,
-          source: draft.source,
-          tags: draft.tags,
-          thumbnail: undefined as unknown as File,
-          title: draft.title,
-          userId: user?.id ?? "",
-          video: undefined as unknown as File,
-          videoMetadata: undefined as VideoMetadata,
-        },
-        { keepDefaultValues: false },
-      );
-      setSavedVideoName(draft.videoName || null);
+  const handleFileChange = async (file: File | null) => {
+    if (file) {
+      await video.selectFile(file);
+    } else {
+      video.clearFile();
     }
-  }, [draft, form, user?.id]);
-
-  const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const persistDraft = (values: typeof form.state.values) => {
-    clearTimeout(persistTimeoutRef.current);
-    persistTimeoutRef.current = setTimeout(() => {
-      const id = "upload-draft";
-      const data = {
-        content: values.content ?? "",
-        id,
-        relatedPostId: values.relatedPostId,
-        source: values.source,
-        tags: values.tags ?? [],
-        title: values.title ?? "",
-        videoName: values.video?.name ?? draft?.videoName ?? "",
-      };
-
-      if (uploadDraftCollection.state.get(id)) {
-        uploadDraftCollection.update(id, (d) => {
-          d.title = data.title;
-          d.content = data.content;
-          d.source = data.source;
-          d.relatedPostId = data.relatedPostId;
-          d.tags = data.tags;
-          d.videoName = data.videoName;
-        });
-      } else {
-        uploadDraftCollection.insert(data);
-      }
-    }, 500);
   };
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
@@ -283,19 +109,19 @@ function RouteComponent() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void form.handleSubmit();
+          void form.submit();
         }}
       >
         <Box mb={6}>
-          <form.Field name="title">
+          <form.form.Field name="title">
             {(field) => (
               <FormTextWrapper field={field} isRequired label="Title" />
             )}
-          </form.Field>
+          </form.form.Field>
         </Box>
 
         <Box mb={6}>
-          <form.Field name="content">
+          <form.form.Field name="content">
             {(field) => (
               <FormTextWrapper
                 asTextarea
@@ -305,11 +131,11 @@ function RouteComponent() {
                 label="Description"
               />
             )}
-          </form.Field>
+          </form.form.Field>
         </Box>
 
         <Box mb={6}>
-          <form.Field name="source">
+          <form.form.Field name="source">
             {(field) => (
               <FormTextWrapper
                 field={field}
@@ -317,11 +143,11 @@ function RouteComponent() {
                 label="Source URL"
               />
             )}
-          </form.Field>
+          </form.form.Field>
         </Box>
 
         <Box mb={6}>
-          <form.Field name="relatedPostId">
+          <form.form.Field name="relatedPostId">
             {(field) => (
               <Field.Root>
                 <Field.Label>Related Post</Field.Label>
@@ -387,11 +213,11 @@ function RouteComponent() {
                 )}
               </Field.Root>
             )}
-          </form.Field>
+          </form.form.Field>
         </Box>
 
         <Box mb={6}>
-          <form.Field name="tags">
+          <form.form.Field name="tags">
             {(field) => (
               <Field.Root>
                 <Field.Label>Tags</Field.Label>
@@ -403,11 +229,11 @@ function RouteComponent() {
                 />
               </Field.Root>
             )}
-          </form.Field>
+          </form.form.Field>
         </Box>
 
         <Box mb={6}>
-          <form.Field name="video">
+          <form.form.Field name="video">
             {(field) => (
               <>
                 <Field.Root required>
@@ -420,61 +246,11 @@ function RouteComponent() {
                     maxW="xl"
                     onFileChange={async (details) => {
                       const file = details.acceptedFiles[0] || null;
-                      field.handleChange(file);
-                      if (file) {
-                        setSavedVideoName(null);
-                        const previewURL = URL.createObjectURL(file);
-                        setVideoPreviewUrl(previewURL);
-
-                        if (mediaInfoRef.current) {
-                          void analyzeVideo(file, mediaInfoRef.current)
-                            .then((parsedData) => {
-                              frameRateRef.current =
-                                parsedData?.FrameRate ?? null;
-                              form.setFieldValue("videoMetadata", parsedData);
-                            })
-                            .catch((error: unknown) => {
-                              console.error(
-                                "MediaInfo analysis failed:",
-                                error,
-                              );
-                              toaster.create({
-                                description:
-                                  "Could not extract video metadata.",
-                                duration: 3000,
-                                title: "MediaInfo failed",
-                                type: "warning",
-                              });
-                            });
-                        }
-
-                        try {
-                          const generated = await generateAutoThumbnails(file);
-                          setThumbnails(generated);
-                          if (generated.length > 0) {
-                            setSelectedThumbnailIndex(0);
-                            form.setFieldValue("thumbnail", generated[0].file);
-                          }
-                        } catch (error) {
-                          console.error(
-                            "Failed to generate thumbnails:",
-                            error,
-                          );
-                          toaster.create({
-                            description: "Please try re-uploading the video.",
-                            duration: 3000,
-                            title: "Thumbnail generation failed",
-                            type: "error",
-                          });
-                        }
-                        return;
-                      }
-                      setVideoPreviewUrl(null);
-                      setThumbnails([]);
+                      await handleFileChange(file);
                     }}
                   >
                     <FileUpload.HiddenInput />
-                    {!field.state.value && (
+                    {!video.videoFile && (
                       <>
                         <FileUpload.Dropzone minHeight="32">
                           <Icon color="fg.muted" size="md">
@@ -485,22 +261,22 @@ function RouteComponent() {
                             <Box color="fg.muted">.mp4, .mov, .mkv</Box>
                           </FileUpload.DropzoneContent>
                         </FileUpload.Dropzone>
-                        {savedVideoName && (
+                        {draft.draft?.videoName && (
                           <Text color="gray.500" fontSize="sm" mt={1}>
-                            Previously selected: {savedVideoName}
+                            Previously selected: {draft.draft.videoName}
                           </Text>
                         )}
                       </>
                     )}
                     <FileUpload.List clearable showSize />
                   </FileUpload.Root>
-                  {videoFilePreview && (
+                  {video.previewUrl && (
                     <>
                       <Video
                         bypass
-                        frameRate={frameRateRef.current ?? undefined}
+                        frameRate={video.frameRate ?? undefined}
                         ref={videoRef}
-                        url={videoFilePreview}
+                        url={video.previewUrl}
                       />
                       <Box mt={4}>
                         <Box
@@ -519,13 +295,13 @@ function RouteComponent() {
                             Capture Current Frame
                           </Button>
                         </Box>
-                        {thumbnails.length > 0 && (
+                        {video.thumbnails.length > 0 && (
                           <Grid gap={2} templateColumns="repeat(5, 1fr)">
-                            {thumbnails.map((thumb, index) => (
+                            {video.thumbnails.map((thumb, index) => (
                               <Box
                                 border="4px solid"
                                 borderColor={
-                                  selectedThumbnailIndex === index
+                                  video.selectedThumbnailIndex === index
                                     ? "blue.500"
                                     : "transparent"
                                 }
@@ -533,8 +309,7 @@ function RouteComponent() {
                                 cursor="pointer"
                                 key={thumb.url}
                                 onClick={() => {
-                                  setSelectedThumbnailIndex(index);
-                                  form.setFieldValue("thumbnail", thumb.file);
+                                  video.selectThumbnail(index);
                                 }}
                                 overflow="hidden"
                                 transition="border-color 0.2s"
@@ -554,23 +329,36 @@ function RouteComponent() {
                 <FieldInfo field={field} />
               </>
             )}
-          </form.Field>
+          </form.form.Field>
         </Box>
 
-        <form.Subscribe selector={(state) => state.values}>
+        <form.form.Subscribe selector={(state) => state.values}>
           {(values) => {
-            persistDraft(values);
+            if (values.title || values.content) {
+              draft.persist({
+                content: values.content ?? "",
+                relatedPostId: values.relatedPostId,
+                source: values.source,
+                tags: values.tags ?? [],
+                title: values.title ?? "",
+                videoName: video.videoFile?.name ?? draft.draft?.videoName ?? "",
+              });
+            }
             return null;
           }}
-        </form.Subscribe>
+        </form.form.Subscribe>
 
-        <form.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting, state.isPristine]}
+        <form.form.Subscribe
+          selector={(state) => [
+            state.canSubmit,
+            state.isSubmitting,
+            state.isPristine,
+          ]}
         >
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button
               colorScheme="blue"
-              disabled={!canSubmit || isPristine}
+              disabled={!canSubmit || isPristine || !video.videoFile}
               loading={isSubmitting}
               style={{ width: "100%" }}
               type="submit"
@@ -578,9 +366,9 @@ function RouteComponent() {
               {isSubmitting ? "Uploading..." : "Upload"}
             </Button>
           )}
-        </form.Subscribe>
+        </form.form.Subscribe>
 
-        <form.Subscribe selector={(state) => state.errors}>
+        <form.form.Subscribe selector={(state) => state.errors}>
           {(errors) =>
             errors.length > 0 ? (
               <Text color="red.500" fontSize="sm" mt={2}>
@@ -588,7 +376,7 @@ function RouteComponent() {
               </Text>
             ) : null
           }
-        </form.Subscribe>
+        </form.form.Subscribe>
       </form>
     </Box>
   );

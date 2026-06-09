@@ -1,6 +1,9 @@
 import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
 import { Effect, Layer } from "effect";
 import { Kysely } from "kysely";
+import { resolve } from "node:path";
 import { vi } from "vitest";
 
 import { AuthService } from "../auth/context";
@@ -9,64 +12,21 @@ import { RequestHeadersService } from "../auth/context";
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel, Debug } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
+import { makeTestStorageLayer } from "../storage/storage.test";
 import { KyselyDB } from "./context";
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
-
-const SCHEMA_DDL = `
-CREATE TABLE IF NOT EXISTS "user" (
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "email" TEXT NOT NULL UNIQUE,
-  "emailVerified" BOOLEAN NOT NULL DEFAULT false,
-  "id" TEXT PRIMARY KEY,
-  "image" TEXT,
-  "name" TEXT NOT NULL,
-  "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS posts (
-  "content" TEXT NOT NULL,
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "id" SERIAL PRIMARY KEY,
-  "relatedPostId" INTEGER,
-  "source" TEXT,
-  "thumbnailKey" TEXT NOT NULL,
-  "title" TEXT NOT NULL,
-  "userId" TEXT NOT NULL REFERENCES "user"("id"),
-  "videoKey" TEXT NOT NULL,
-  "videoMetadata" JSON NOT NULL DEFAULT '{}'
-);
-
-CREATE TABLE IF NOT EXISTS tags (
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "id" SERIAL PRIMARY KEY,
-  "name" TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE IF NOT EXISTS post_tags (
-  "postId" INTEGER NOT NULL REFERENCES posts("id") ON DELETE CASCADE,
-  "tagId" INTEGER NOT NULL REFERENCES tags("id") ON DELETE CASCADE,
-  PRIMARY KEY ("postId", "tagId")
-);
-
-CREATE TABLE IF NOT EXISTS comments (
-  "content" TEXT NOT NULL,
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "id" SERIAL PRIMARY KEY,
-  "postId" BIGINT NOT NULL REFERENCES posts("id") ON DELETE CASCADE,
-  "userId" TEXT NOT NULL REFERENCES "user"("id")
-);
-`;
+import * as schema from "./schema";
 
 const LOG_LAYER = withMinimumLogLevel(Debug);
 
-export const runSchema = async (pg: PGlite) => {
-  await pg.exec(SCHEMA_DDL);
-};
-
 export const createTestKysely = async () => {
   const pg = await PGlite.create("memory://");
-  await runSchema(pg);
+  const drizzleDb = drizzle(pg, { schema });
+
+  const migrationsFolder = resolve(process.cwd(), "drizzle");
+  await migrate(drizzleDb, { migrationsFolder });
+
   const db = new Kysely<DB>({ dialect: new PGliteDialect(pg) });
   return { pg, db } as const;
 };
@@ -75,16 +35,19 @@ export const makeTestLayer = (
   db: Kysely<DB>,
   auth: AuthSessionProvider | null,
   headers: () => Headers,
-) =>
-  Layer.mergeAll(
+) => {
+  const { layer: storageLayer } = makeTestStorageLayer();
+  return Layer.mergeAll(
     Layer.succeed(KyselyDB)(makeFromKysely(db)),
     Layer.succeed(AuthService)(
       auth ?? { api: { getSession: async () => null } },
     ),
     Layer.succeed(RequestHeadersService)(headers),
+    storageLayer,
     LOG_LAYER,
     TracingLive,
   );
+};
 
 export interface ServiceTestContext {
   db: Kysely<DB>;

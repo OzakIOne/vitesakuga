@@ -1,1 +1,1 @@
-ALTER TABLE "posts" ALTER COLUMN "videoMetadata" SET DATA TYPE json;
+ALTER TABLE "posts" ALTER COLUMN "videoMetadata" SET DATA TYPE json USING "videoMetadata"::json;

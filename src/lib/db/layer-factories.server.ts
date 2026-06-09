@@ -8,10 +8,22 @@ import { KyselyDB } from "./context";
 
 const LOG_LAYER = withMinimumLogLevel(Debug);
 
+const isE2E = process.env.DATABASE_DRIVER === "pglite";
+
 export const makeDBLayer = async () => {
-  const { kysely } = await import("./kysely");
+  const dbModule = isE2E
+    ? await import("./e2e-db")
+    : await import("./kysely");
+
+  const kyselyInstance = isE2E
+    ? await (dbModule as typeof import("./e2e-db")).createE2EKysely()
+    : (dbModule as typeof import("./kysely")).kysely;
+
+  const { StorageLive } = await import("../storage/storage.s3");
+
   return Layer.mergeAll(
-    Layer.succeed(KyselyDB)(makeFromKysely(kysely)),
+    Layer.succeed(KyselyDB)(makeFromKysely(kyselyInstance)),
+    StorageLive,
     LOG_LAYER,
     TracingLive,
   );

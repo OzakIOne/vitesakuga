@@ -65,6 +65,13 @@ export async function generateThumbnails(
     throw new Error("No video track found");
   }
 
+  const decodable = await videoTrack.canDecode();
+  if (!decodable) {
+    throw new Error(
+      "Your browser does not support decoding this video's codec. Thumbnails cannot be generated.",
+    );
+  }
+
   const sink = new CanvasSink(videoTrack, { width: 640 });
   const results: GeneratedThumbnail[] = [];
 
@@ -115,6 +122,13 @@ export async function generateAutoThumbnails(
   const videoTrack = await input.getPrimaryVideoTrack();
   if (!videoTrack) {
     throw new Error("No video track found");
+  }
+
+  const decodable = await videoTrack.canDecode();
+  if (!decodable) {
+    throw new Error(
+      "Your browser does not support decoding this video's codec. Thumbnails cannot be generated.",
+    );
   }
 
   const startTimestamp = await videoTrack.getFirstTimestamp();

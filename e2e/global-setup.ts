@@ -1,88 +1,111 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { Data, Effect } from "effect";
 
-const DEPS_DIR = "/tmp/playwright-deps";
-const FONTCONFIG_DIR = "/tmp/fontconfig";
+const RUSTFS_ENDPOINT = "http://localhost:9000";
+const RUSTFS_ACCESS_KEY = "rustfsadmin";
+const RUSTFS_SECRET_KEY = "rustfsadmin";
+const BUCKET = "e2e-test";
 
-function setupDeps(): void {
-  if (existsSync(`${DEPS_DIR}/usr/lib/libatk-1.0.so.0`)) {
-    console.log("Chromium deps already set up at", DEPS_DIR);
-  } else {
-    console.log("Downloading Chromium shared libraries...");
-    const packages = [
-      "at-spi2-core",
-      "libx11",
-      "libxcomposite",
-      "libxdamage",
-      "libxext",
-      "libxfixes",
-      "libxrandr",
-      "libxcb",
-      "libxkbcommon",
-      "mesa",
-      "alsa-lib",
-      "nspr",
-      "nss",
-      "cups",
-      "dbus-glib",
-      "pango",
-      "cairo",
-      "libdrm",
-      "expat",
-      "libxshmfence",
-      "libxrender",
-      "libxau",
-      "libxdmcp",
-      "libxi",
-    ];
+class CommandError extends Data.TaggedError("CommandError")<{
+  readonly command: string;
+  readonly message: string;
+}> {}
 
-    mkdirSync(DEPS_DIR, { recursive: true });
+const exec = (cmd: string) =>
+  Effect.try({
+    try: () => execSync(cmd, { stdio: "pipe", encoding: "utf-8" }).trim(),
+    catch: () =>
+      new CommandError({ command: cmd, message: `Command failed: ${cmd}` }),
+  });
 
-    for (const pkg of packages) {
-      try {
-        const url = execSync(
-          `curl -s "https://archlinux.org/packages/extra/x86_64/${pkg}/download/" -o /dev/null -w '%{redirect_url}'`,
-          { encoding: "utf-8" },
-        ).trim();
-        const realUrl =
-          url ||
-          execSync(
-            `curl -s "https://archlinux.org/packages/core/x86_64/${pkg}/download/" -o /dev/null -w '%{redirect_url}'`,
-            { encoding: "utf-8" },
-          ).trim();
-        if (!realUrl) continue;
+const curlStatus = (url: string) =>
+  exec(`curl -s -o /dev/null -w "%{http_code}" ${url}`).pipe(
+    Effect.catch(() => Effect.succeed("000")),
+  );
 
-        execSync(`curl -sL "${realUrl}" | zstd -d | tar -xC "${DEPS_DIR}"`, {
-          stdio: "pipe",
-        });
-      } catch {
-        console.warn(`  Skipping ${pkg} (download failed)`);
-      }
+const sleep = (ms: number) =>
+  Effect.promise(() => new Promise((resolve) => setTimeout(resolve, ms)));
+
+const isRunning = Effect.gen(function* () {
+  const status = yield* curlStatus(`${RUSTFS_ENDPOINT}/`);
+  return status === "403" || status === "200";
+});
+
+const waitForHealth = Effect.gen(function* () {
+  yield* Effect.log("Waiting for RustFS...");
+
+  for (let i = 0; i < 30; i++) {
+    const ready = yield* isRunning;
+    if (ready) {
+      yield* Effect.log("RustFS is ready");
+      return;
     }
-    console.log("Chromium deps installed.");
+    yield* sleep(1000);
   }
 
-  if (existsSync(`${FONTCONFIG_DIR}/fonts.conf`)) {
-    console.log("Fontconfig already set up at", FONTCONFIG_DIR);
-  } else {
-    console.log("Setting up fontconfig...");
-    mkdirSync(FONTCONFIG_DIR, { recursive: true });
-    writeFileSync(
-      `${FONTCONFIG_DIR}/fonts.conf`,
-      [
-        '<?xml version="1.0"?>',
-        '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">',
-        "<fontconfig>",
-        "  <dir>/mnt/c/Windows/Fonts</dir>",
-        `  <cachedir>${FONTCONFIG_DIR}/cache</cachedir>`,
-        "  <config><rescan><int>30</int></rescan></config>",
-        "</fontconfig>",
-      ].join("\n"),
-    );
-    console.log("Fontconfig set up.");
-  }
-}
+  return yield* Effect.fail(
+    new CommandError({ command: "curl", message: "RustFS not ready" }),
+  );
+});
 
-export default function globalSetup(): void {
-  setupDeps();
+const startRustFS = Effect.gen(function* () {
+  const running = yield* isRunning;
+
+  if (running) {
+    yield* Effect.log("RustFS is already running");
+    return;
+  }
+
+  yield* Effect.log("Starting RustFS...");
+  yield* exec("docker compose up -d rustfs").pipe(
+    Effect.catch((error) =>
+      Effect.fail(
+        new CommandError({
+          command: "docker compose",
+          message: `Failed to start RustFS: ${error instanceof CommandError ? error.message : String(error)}`,
+        }),
+      ),
+    ),
+  );
+
+  yield* waitForHealth;
+});
+
+const createBucket = Effect.gen(function* () {
+  const { S3Client, CreateBucketCommand } = yield* Effect.tryPromise({
+    try: () => import("@aws-sdk/client-s3"),
+    catch: () => new Error("Failed to import AWS SDK"),
+  });
+
+  const client = new S3Client({
+    endpoint: RUSTFS_ENDPOINT,
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: RUSTFS_ACCESS_KEY,
+      secretAccessKey: RUSTFS_SECRET_KEY,
+    },
+    forcePathStyle: true,
+  });
+
+  yield* Effect.tryPromise({
+    try: () => client.send(new CreateBucketCommand({ Bucket: BUCKET })),
+    catch: () => new Error("Bucket creation failed"),
+  }).pipe(Effect.catch(() => Effect.log("Bucket already exists or created")));
+
+  yield* Effect.log(`Bucket "${BUCKET}" ready`);
+});
+
+const setup = Effect.gen(function* () {
+  yield* startRustFS;
+  yield* createBucket;
+}).pipe(
+  Effect.catch((error) =>
+    Effect.logWarning(
+      `Setup warning: ${error instanceof Error ? error.message : String(error)}`,
+    ),
+  ),
+);
+
+export default async function globalSetup(): Promise<void> {
+  await Effect.runPromise(setup);
 }
