@@ -40,11 +40,11 @@ export const Route = createRootRouteWithContext<{
   user: Awaited<ReturnType<typeof getUserSession>>;
 }>()({
   beforeLoad: async ({ context }) => {
-      const user = await context.queryClient.fetchQuery({
-        queryFn: async ({ signal }) => getUserSession({ signal }),
-        queryKey: usersKeys.userInfo,
-        staleTime: 60 * 60 * 1000,
-      });
+    const user = await context.queryClient.fetchQuery({
+      queryFn: async ({ signal }) => getUserSession({ signal }),
+      queryKey: usersKeys.userInfo,
+      staleTime: 60 * 60 * 1000,
+    });
     return { user };
   },
   component: RootComponent,
@@ -104,8 +104,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
   const currentPath = router.state.location.pathname;
   const authPaths = ["/login", "/signup"];
-  const hasRedirect =
-    currentPath !== "/" && !authPaths.includes(currentPath);
+  const hasRedirect = currentPath !== "/" && !authPaths.includes(currentPath);
   const redirectSearch = hasRedirect
     ? ({ redirect: currentPath } as const)
     : {};
@@ -177,8 +176,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Convert video
           </Link>{" "}
-
-          <Box alignItems="center" display={{ base: "none", md: "flex" }} gap={2}>
+          <Box
+            alignItems="center"
+            display={{ base: "none", md: "flex" }}
+            gap={2}
+          >
             {ctx.user ? (
               <>
                 <Link className="link" to="/account">
@@ -200,7 +202,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             )}
             <ColorModeButton />
           </Box>
-
           <Box display={{ base: "flex", md: "none" }}>
             <Menu.Root>
               <Menu.Trigger asChild>

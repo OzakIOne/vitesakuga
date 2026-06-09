@@ -16,7 +16,10 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
   const headers = getHeaders();
   const cookie = headers.get("cookie") ?? "";
 
-  if (process.env.NODE_ENV !== "production" && cookie.includes("e2e-test-auth=bypass")) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    cookie.includes("e2e-test-auth=bypass")
+  ) {
     return {
       session: {
         createdAt: new Date(),

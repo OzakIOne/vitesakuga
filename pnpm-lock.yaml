@@ -254,6 +254,9 @@ importers:
       '@effect/language-service':
         specifier: ^0.86.2
         version: 0.86.2
+      '@effect/tsgo':
+        specifier: 0.14.1
+        version: 0.14.1
       '@electric-sql/pglite':
         specifier: ^0.5.1
         version: 0.5.1
@@ -891,6 +894,45 @@ packages:
         optional: true
       '@opentelemetry/sdk-trace-web':
         optional: true
+
+  '@effect/tsgo-darwin-arm64@0.14.1':
+    resolution: {integrity: sha512-fzbOQMnp/94/gI4XqHtRMnhke+oIARCRzztp7buQ6JMtHd+UFmDs/WSO9aLNpm3X8fjVejVNQe+lJt+JzKsXKQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@effect/tsgo-darwin-x64@0.14.1':
+    resolution: {integrity: sha512-RFh2ufR7WLg+zBXyFcOS+wuxzOG43O3JoZDqz10YDaSYZbPdVXmVlu+I3K26jgvo91RUZs9XKRX1c29Ohq916Q==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@effect/tsgo-linux-arm64@0.14.1':
+    resolution: {integrity: sha512-8CB9fbCBnfGGL8awQCaD5DXTfLTPm3pk6bqcNrv5NYGEvULPrhEPLCL+yduUWFjmBVN6cy+GGOpdGl/TmdsxgA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@effect/tsgo-linux-arm@0.14.1':
+    resolution: {integrity: sha512-15W6HM709IcHVALMBTWwIolIQvofR/XwiL/zYfyIu8LwcWCLmOwn+6mLfC3z0aP2F+iml5pTd0NLWtEVlyJ5jQ==}
+    cpu: [arm]
+    os: [linux]
+
+  '@effect/tsgo-linux-x64@0.14.1':
+    resolution: {integrity: sha512-r8LYsxO3odbbFj4uk57f/6xu0rV+KCgaCNVvkwvTH0tUhEaSKZFXN37Tzi1e9O8jENSP1qNH45UTrY4aI2SU0A==}
+    cpu: [x64]
+    os: [linux]
+
+  '@effect/tsgo-win32-arm64@0.14.1':
+    resolution: {integrity: sha512-YYlba6rciujog8RunyGvjFnGzOP34iHl+z/ua54ICj0/bCvwzV7Pw7fQfYuh/cuyQyxYj9ZQ2zFZ+a1DMDKOcA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@effect/tsgo-win32-x64@0.14.1':
+    resolution: {integrity: sha512-zlBx1TOwj0GXHA8UCUR2B7alZ/P/xNasoSaV8U7xTSQ93lc3CQ6XXI192A4TSZBCf2skFacVg6GxM6GgBsLr2g==}
+    cpu: [x64]
+    os: [win32]
+
+  '@effect/tsgo@0.14.1':
+    resolution: {integrity: sha512-wg6cNUy6dm0gUEh55/EGnoqgsas6DfF0+dJXvhbJkNDaMu3XxIT+frlPL18LPwWTT9Bi/lqjo7sa+sAglJT21w==}
+    hasBin: true
 
   '@electric-sql/pglite@0.5.1':
     resolution: {integrity: sha512-h2Vc+qkQqsEL5kvyN5nBAxn3Vbyvka7QfDW7Io+CdcwU1+X8JbCAN2og+5dI11S3eJuDfroUCxzJaap6k+ezEw==}
@@ -6996,6 +7038,37 @@ snapshots:
       '@opentelemetry/sdk-trace-base': 2.7.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-node': 2.7.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-web': 2.7.1(@opentelemetry/api@1.9.1)
+
+  '@effect/tsgo-darwin-arm64@0.14.1':
+    optional: true
+
+  '@effect/tsgo-darwin-x64@0.14.1':
+    optional: true
+
+  '@effect/tsgo-linux-arm64@0.14.1':
+    optional: true
+
+  '@effect/tsgo-linux-arm@0.14.1':
+    optional: true
+
+  '@effect/tsgo-linux-x64@0.14.1':
+    optional: true
+
+  '@effect/tsgo-win32-arm64@0.14.1':
+    optional: true
+
+  '@effect/tsgo-win32-x64@0.14.1':
+    optional: true
+
+  '@effect/tsgo@0.14.1':
+    optionalDependencies:
+      '@effect/tsgo-darwin-arm64': 0.14.1
+      '@effect/tsgo-darwin-x64': 0.14.1
+      '@effect/tsgo-linux-arm': 0.14.1
+      '@effect/tsgo-linux-arm64': 0.14.1
+      '@effect/tsgo-linux-x64': 0.14.1
+      '@effect/tsgo-win32-arm64': 0.14.1
+      '@effect/tsgo-win32-x64': 0.14.1
 
   '@electric-sql/pglite@0.5.1': {}
 

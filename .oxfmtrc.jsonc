@@ -5,5 +5,5 @@
   "quoteProps": "as-needed",
   "sortImports": true,
   "sortTailwindcss": true,
-  "ignorePatterns": ["routeTree.gen.ts", "drizzle/"],
+  "ignorePatterns": ["routeTree.gen.ts", "drizzle/", ".agents/"],
 }

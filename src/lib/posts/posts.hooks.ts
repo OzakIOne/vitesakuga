@@ -1,44 +1,42 @@
-import type { QueryKey, UseQueryOptions } from "@tanstack/react-query"
-import { useQuery } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
-import { useCallback, useRef } from "react"
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { useCallback, useRef } from "react";
 
-import type { DbSchemaSelect } from "../db/schema"
-import type { PaginationMeta } from "../pagination/pagination"
+import type { DbSchemaSelect } from "../db/schema";
+import type { PaginationMeta } from "../pagination/pagination";
 
 export type PopularTag = {
-  id: number
-  name: string
-  postCount: number
-}
+  id: number;
+  name: string;
+  postCount: number;
+};
 
-export type { PaginationMeta }
+export type { PaginationMeta };
 
 export type PostListingData = {
-  data: DbSchemaSelect["posts"][]
+  data: DbSchemaSelect["posts"][];
   meta: {
-    pagination: PaginationMeta
-    popularTags: PopularTag[]
-  }
-}
+    pagination: PaginationMeta;
+    popularTags: PopularTag[];
+  };
+};
 
 export function usePostsPage<
   TData extends PostListingData,
   TQueryKey extends QueryKey = QueryKey,
->(
-  queryOptions: UseQueryOptions<TData, Error, TData, TQueryKey>,
-) {
-  const navigate = useNavigate()
-  const previousDataRef = useRef<TData | undefined>(undefined)
+>(queryOptions: UseQueryOptions<TData, Error, TData, TQueryKey>) {
+  const navigate = useNavigate();
+  const previousDataRef = useRef<TData | undefined>(undefined);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, isFetching } = useQuery({
     ...queryOptions,
     placeholderData: previousDataRef.current as any,
-  }) as { data: TData; isFetching: boolean }
+  }) as { data: TData; isFetching: boolean };
 
   if (data) {
-    previousDataRef.current = data
+    previousDataRef.current = data;
   }
 
   const handlePageChange = useCallback(
@@ -48,11 +46,11 @@ export function usePostsPage<
           ...prev,
           page: newPage,
         })) as never,
-      })
-      window.scrollTo({ behavior: "smooth", top: 0 })
+      });
+      window.scrollTo({ behavior: "smooth", top: 0 });
     },
     [navigate],
-  )
+  );
 
   return {
     data,
@@ -61,5 +59,5 @@ export function usePostsPage<
     popularTags: data?.meta?.popularTags ?? [],
     posts: data?.data ?? [],
     totalPages: data?.meta?.pagination?.totalPages ?? 0,
-  }
+  };
 }

@@ -437,7 +437,10 @@ export const PostsServiceLive = Layer.effect(
       const { postId, title, content, source, relatedPostId, tags } = data;
 
       yield* Effect.logInfo("Post update started").pipe(
-        Effect.annotateLogs({ postId: String(postId), userId: session.user.id }),
+        Effect.annotateLogs({
+          postId: String(postId),
+          userId: session.user.id,
+        }),
       );
 
       const postOption = yield* db.executeTakeFirstOption(

@@ -341,7 +341,8 @@ function RouteComponent() {
                 source: values.source,
                 tags: values.tags ?? [],
                 title: values.title ?? "",
-                videoName: video.videoFile?.name ?? draft.draft?.videoName ?? "",
+                videoName:
+                  video.videoFile?.name ?? draft.draft?.videoName ?? "",
               });
             }
             return null;

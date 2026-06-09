@@ -1,6 +1,6 @@
-import { QueryClient } from "@tanstack/react-query"
+import { QueryClient } from "@tanstack/react-query";
 
-let _queryClient: QueryClient | undefined
+let _queryClient: QueryClient | undefined;
 
 export function getQueryClient(): QueryClient {
   if (!_queryClient) {
@@ -10,7 +10,7 @@ export function getQueryClient(): QueryClient {
           staleTime: 60 * 1000,
         },
       },
-    })
+    });
   }
-  return _queryClient
+  return _queryClient;
 }

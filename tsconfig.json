@@ -30,7 +30,13 @@
     "strict": true,
     "target": "ES2022",
     "types": ["vite/client", "@cloudflare/workers-types"],
-    "plugins": [{ "name": "effect/language-service" }]
+    "plugins": [
+      { "name": "effect/language-service" },
+      {
+        "name": "@effect/language-service"
+      }
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json"
 }

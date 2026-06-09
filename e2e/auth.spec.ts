@@ -51,9 +51,7 @@ test.describe("Auth flow", () => {
 
     await expect(page.getByText("Sign Out")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("link", { name: "Account" })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Login" }),
-    ).not.toBeVisible();
+    await expect(page.getByRole("link", { name: "Login" })).not.toBeVisible();
   });
 
   test("upload page redirects to login when not authenticated", async ({

@@ -15,12 +15,12 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
-import { commentDraftsCollection } from "src/lib/db/collections";
 import {
   useAddComment,
   useDeleteComment,
 } from "src/lib/comments/comments.hooks";
 import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
+import { commentDraftsCollection } from "src/lib/db/collections";
 
 type CommentsProps = {
   postId: number;

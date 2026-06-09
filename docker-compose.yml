@@ -24,7 +24,8 @@ services:
       - rustfs_data:/data
     networks:
       - my_network
-    command: ["--access-key", "rustfsadmin", "--secret-key", "rustfsadmin", "/data"]
+    command:
+      ["--access-key", "rustfsadmin", "--secret-key", "rustfsadmin", "/data"]
 
   # drizzle-gate:
   #   image: ghcr.io/drizzle-team/gateway:latest

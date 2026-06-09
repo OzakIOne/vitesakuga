@@ -1,12 +1,13 @@
+import { resolve } from "node:path";
+
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Kysely } from "kysely";
-import { resolve } from "node:path";
 
-import * as schema from "./schema";
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
+import * as schema from "./schema";
 
 let e2eKysely: Kysely<DB> | null = null;
 

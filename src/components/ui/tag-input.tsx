@@ -1,5 +1,4 @@
-import "src/lib/polyfills"
-
+import "src/lib/polyfills";
 import {
   Badge,
   Box,

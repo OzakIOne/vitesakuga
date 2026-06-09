@@ -34,36 +34,33 @@ export function useUploadDraft(): UseUploadDraftReturn {
     undefined,
   );
 
-  const persist = useCallback(
-    (values: UploadDraftData) => {
-      clearTimeout(persistTimeoutRef.current);
-      persistTimeoutRef.current = setTimeout(() => {
-        const data = {
-          content: values.content ?? "",
-          id: DRAFT_ID,
-          relatedPostId: values.relatedPostId,
-          source: values.source,
-          tags: values.tags ?? [],
-          title: values.title ?? "",
-          videoName: values.videoName ?? "",
-        };
+  const persist = useCallback((values: UploadDraftData) => {
+    clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      const data = {
+        content: values.content ?? "",
+        id: DRAFT_ID,
+        relatedPostId: values.relatedPostId,
+        source: values.source,
+        tags: values.tags ?? [],
+        title: values.title ?? "",
+        videoName: values.videoName ?? "",
+      };
 
-        if (uploadDraftCollection.state.get(DRAFT_ID)) {
-          uploadDraftCollection.update(DRAFT_ID, (d) => {
-            d.title = data.title;
-            d.content = data.content;
-            d.source = data.source;
-            d.relatedPostId = data.relatedPostId;
-            d.tags = data.tags;
-            d.videoName = data.videoName;
-          });
-        } else {
-          uploadDraftCollection.insert(data);
-        }
-      }, 500);
-    },
-    [],
-  );
+      if (uploadDraftCollection.state.get(DRAFT_ID)) {
+        uploadDraftCollection.update(DRAFT_ID, (d) => {
+          d.title = data.title;
+          d.content = data.content;
+          d.source = data.source;
+          d.relatedPostId = data.relatedPostId;
+          d.tags = data.tags;
+          d.videoName = data.videoName;
+        });
+      } else {
+        uploadDraftCollection.insert(data);
+      }
+    }, 500);
+  }, []);
 
   const clear = useCallback(() => {
     clearTimeout(persistTimeoutRef.current);

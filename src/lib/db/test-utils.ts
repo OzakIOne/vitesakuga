@@ -1,9 +1,10 @@
+import { resolve } from "node:path";
+
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Effect, Layer } from "effect";
 import { Kysely } from "kysely";
-import { resolve } from "node:path";
 import { vi } from "vitest";
 
 import { AuthService } from "../auth/context";

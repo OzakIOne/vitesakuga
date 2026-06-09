@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+
 import { Data, Effect } from "effect";
 
 const RUSTFS_ENDPOINT = "http://localhost:9000";

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/upload")({
   beforeLoad: ({ context, location }) => {
@@ -6,8 +6,8 @@ export const Route = createFileRoute("/upload")({
       throw redirect({
         search: { redirect: location.pathname },
         to: "/login",
-      })
+      });
     }
-    return { user: context.user }
+    return { user: context.user };
   },
-})
+});

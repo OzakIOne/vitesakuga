@@ -1,5 +1,4 @@
-import "src/lib/polyfills"
-
+import "src/lib/polyfills";
 import {
   Badge,
   Box,
@@ -14,8 +13,8 @@ import {
   Wrap,
   createListCollection,
 } from "@chakra-ui/react";
-import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useLiveQuery } from "@tanstack/react-db";
+import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
