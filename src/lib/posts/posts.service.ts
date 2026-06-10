@@ -553,15 +553,15 @@ export const updatePostEffect = Effect.fn("updatePost")(function* (
 });
 
 export const searchPosts = createServerFn()
-  .inputValidator((input: unknown) => searchPostsBaseSchema.parse(input))
+  .validator((input: unknown) => searchPostsBaseSchema.parse(input))
   .handler(createHandler(searchPostsEffect, PostsServiceLive));
 
 export const fetchPostDetail = createServerFn()
-  .inputValidator((postId: unknown) => z.coerce.number().parse(postId))
+  .validator((postId: unknown) => z.coerce.number().parse(postId))
   .handler(createHandler(fetchPostDetailEffect, PostsServiceLive));
 
 export const uploadPost = createServerFn({ method: "POST" })
-  .inputValidator((data: FormData) => {
+  .validator((data: FormData) => {
     const raw = Object.fromEntries(data.entries());
     const normalized = {
       relatedPostId: undefined,
@@ -577,9 +577,9 @@ export const uploadPost = createServerFn({ method: "POST" })
   .handler(createHandler(uploadPostEffect, PostsServiceLive));
 
 export const updatePost = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => updatePostInputSchema.parse(input))
+  .validator((input: unknown) => updatePostInputSchema.parse(input))
   .handler(createHandler(updatePostEffect, PostsServiceLive, makeAuthLayer));
 
 export const getPostsByTag = createServerFn()
-  .inputValidator((input: unknown) => postByTagSchema.parse(input))
+  .validator((input: unknown) => postByTagSchema.parse(input))
   .handler(createHandler(getPostsByTagEffect, PostsServiceLive));

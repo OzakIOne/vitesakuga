@@ -49,6 +49,15 @@ services:
     networks:
       - my_network
 
+  otelite:
+    build: .
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "4000:3000"
+    volumes:
+      - otelite_data:/home/ozaki/.local/share/otelite
+
 networks:
   my_network:
     driver: bridge
@@ -56,4 +65,5 @@ networks:
 volumes:
   pgdata:
   rustfs_data:
+  otelite_data:
   # drizzle:

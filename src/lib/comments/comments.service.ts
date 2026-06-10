@@ -161,15 +161,15 @@ export const deleteCommentEffect = Effect.fn("deleteComment")(function* (data: {
 });
 
 export const fetchComments = createServerFn()
-  .inputValidator((input: unknown) => z.number().parse(input))
+  .validator((input: unknown) => z.number().parse(input))
   .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
 
 export const addComment = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => commentInsertSchema.parse(input))
+  .validator((input: unknown) => commentInsertSchema.parse(input))
   .handler(createHandler(addCommentEffect, CommentsServiceLive));
 
 export const deleteComment = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z.object({ commentId: z.number() }).parse(input),
   )
   .handler(

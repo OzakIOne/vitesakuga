@@ -177,5 +177,5 @@ export const fetchUsers = createServerFn().handler(
 );
 
 export const fetchUserPosts = createServerFn()
-  .inputValidator((input: unknown) => fetchUserInputSchema.parse(input))
+  .validator((input: unknown) => fetchUserInputSchema.parse(input))
   .handler(createHandler(fetchUserPostsEffect, UsersServiceLive));

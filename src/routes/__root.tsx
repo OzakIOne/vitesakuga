@@ -1,4 +1,4 @@
-import { Box, Button, Center, IconButton, Menu } from "@chakra-ui/react";
+import { Box, Button, Center, ClientOnly, IconButton, Menu } from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
@@ -76,9 +76,7 @@ export const Route = createRootRouteWithContext<{
       { color: "#fffff", href: "/site.webmanifest", rel: "manifest" },
       { href: "/favicon.ico", rel: "icon" },
     ],
-    scripts: [
-      { src: "https://unpkg.com/react-scan/dist/auto.global.js", async: true },
-    ],
+    scripts: [],
     meta: [
       {
         charSet: "utf8",
@@ -120,7 +118,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -244,27 +242,29 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           </Box>
         </Center>
         <Box pt={16}>{children}</Box>
-        <Toaster />
-        <TanStackDevtools
-          plugins={[
-            {
-              name: "TanStack Query",
-              render: <ReactQueryDevtoolsPanel />,
-            },
-            {
-              name: "TanStack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            {
-              name: "TanStack Form",
-              render: <FormDevtoolsPanel />,
-            },
-            {
-              name: "TanStack Pacer",
-              render: <PacerDevtoolsPanel />,
-            },
-          ]}
-        />
+        <ClientOnly fallback={null}>
+          <Toaster />
+          <TanStackDevtools
+            plugins={[
+              {
+                name: "TanStack Query",
+                render: <ReactQueryDevtoolsPanel />,
+              },
+              {
+                name: "TanStack Router",
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              {
+                name: "TanStack Form",
+                render: <FormDevtoolsPanel />,
+              },
+              {
+                name: "TanStack Pacer",
+                render: <PacerDevtoolsPanel />,
+              },
+            ]}
+          />
+        </ClientOnly>
         <Scripts />
       </body>
     </html>
