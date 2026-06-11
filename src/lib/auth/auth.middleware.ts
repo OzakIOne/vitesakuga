@@ -1,5 +1,6 @@
 import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { User } from "better-auth";
 import { Data, Effect } from "effect";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
@@ -77,15 +78,17 @@ export const requireAuthEffect = Effect.fn("requireAuth")(function* () {
   return session.user;
 });
 
-export const getUserSession = createServerFn().handler(async () => {
-  const layer = await resolveMiddlewareLayer();
-  return Effect.runPromise(
-    getUserSessionEffect().pipe(Effect.provide(layer)) as Effect.Effect<
-      any,
-      Error
-    >,
-  );
-});
+export const getUserSession = createServerFn().handler(
+  async (): Promise<User | null> => {
+    const layer = await resolveMiddlewareLayer();
+    return Effect.runPromise(
+      getUserSessionEffect().pipe(Effect.provide(layer)) as Effect.Effect<
+        any,
+        Error
+      >,
+    );
+  },
+);
 
 export const requireAuth = createServerFn().handler(async () => {
   const layer = await resolveMiddlewareLayer();

@@ -16,7 +16,7 @@ const EnvSchema = Schema.Struct({
   DATABASE_URL: Schema.String,
   GITHUB_CLIENT_ID: Schema.String,
   GITHUB_CLIENT_SECRET: Schema.String,
-  NODE_ENV: Schema.Literals(["development", "production"]),
+  NODE_ENV: Schema.Literals(["development", "production", "test"]),
   VITE_BASE_URL: Schema.String,
 });
 

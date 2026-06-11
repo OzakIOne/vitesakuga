@@ -1,37 +1,34 @@
-import { Pool, neon } from "@neondatabase/serverless";
+import { Pool as NeonPool, neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
 import { Effect } from "effect";
+import { Pool as PgPool } from "pg";
 
 import { envServer } from "../env/server";
 import * as schema from "./schema";
 
-let neonPool: Pool | null = null;
+const isLocal = process.env.DATABASE_DRIVER === "local";
 
-/**
- * Singleton for Neon Serverless Pool (Neon HTTP Development/Production)
- * Used by Drizzle in Neon environments
- */
-export const getNeonPoolSingleton = (): Pool => {
-  if (neonPool) {
-    return neonPool;
+let pool: PgPool | NeonPool | null = null;
+
+function getPool(): PgPool | NeonPool {
+  if (pool) {
+    return pool;
   }
 
-  neonPool = new Pool({
-    connectionString: envServer.DATABASE_URL,
+  pool = isLocal
+    ? new PgPool({ connectionString: envServer.DATABASE_URL })
+    : new NeonPool({ connectionString: envServer.DATABASE_URL });
+
+  pool.on("error", (err: Error) => {
+    Effect.runSync(Effect.logError("Unexpected error on database client", err));
   });
 
-  neonPool.on("error", (err: Error) => {
-    Effect.runSync(Effect.logError("Unexpected error on Neon client", err));
-  });
+  return pool;
+}
 
-  return neonPool;
-};
+export const db = isLocal
+  ? drizzleNode({ client: getPool() as PgPool, schema })
+  : drizzleNeon({ client: neon(envServer.DATABASE_URL), schema });
 
-export const db = drizzleNeon({ client: neon(envServer.DATABASE_URL), schema });
-
-/**
- * Get the appropriate Kysely pool
- * - Local: postgres-js pool (getTcpPoolSingleton)
- * - Neon: Neon serverless pool (getNeonPoolSingleton)
- */
-export const getKyselyPool = () => getNeonPoolSingleton();
+export const getKyselyPool = () => getPool();

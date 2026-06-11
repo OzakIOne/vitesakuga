@@ -181,6 +181,55 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Convert video
           </Link>{" "}
+          <Box display={{ base: "none", md: "block" }}>
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <Button size="xs" variant="ghost">
+                  Dev Tools
+                </Button>
+              </Menu.Trigger>
+              <Menu.Positioner>
+                <Menu.Content>
+                  <Menu.Item asChild value="otelite">
+                    <a
+                      href="http://localhost:4000"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Otelite
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild value="rustfs">
+                    <a
+                      href="http://localhost:9001"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      RustFS
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild value="opencode">
+                    <a
+                      href="http://localhost:4096"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Opencode
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild value="signoz">
+                    <a
+                      href="http://localhost:8080"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      SigNoz
+                    </a>
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Menu.Root>
+          </Box>{" "}
           <Box
             alignItems="center"
             display={{ base: "none", md: "flex" }}
@@ -242,6 +291,43 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   <Menu.Separator />
                   <Menu.Item onClick={toggleColorMode} value="theme">
                     Toggle Theme
+                  </Menu.Item>
+                  <Menu.Separator />
+                  <Menu.Item asChild value="otelite">
+                    <a
+                      href="http://localhost:4000"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Otelite
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild value="rustfs">
+                    <a
+                      href="http://localhost:9001"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      RustFS
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild value="opencode">
+                    <a
+                      href="http://localhost:4096"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Opencode
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild value="signoz">
+                    <a
+                      href="http://localhost:8080"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      SigNoz
+                    </a>
                   </Menu.Item>
                 </Menu.Content>
               </Menu.Positioner>

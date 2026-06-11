@@ -9,6 +9,7 @@
     "dcd": "docker compose down",
     "dcu": "docker compose up -d",
     "dev": "vite dev --mode development --host",
+    "dev:local": "vite dev --mode test --host",
     "dev:prod": "vite dev --mode production",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",

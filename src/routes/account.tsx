@@ -39,7 +39,7 @@ export const Route = createFileRoute("/account")({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext() as { user: any };
+  const { user } = Route.useRouteContext();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
   const deleteAccountMutation = useDeleteAccount();
