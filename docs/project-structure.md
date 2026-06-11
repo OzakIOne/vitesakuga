@@ -34,6 +34,7 @@ src/
 ```
 
 **Key files at `src/lib/` root:**
+
 - `errors.ts` — Effect `Data.TaggedError` domain error classes
 - `ids.ts` — Branded nominal ID types (PostId, UserId, etc.)
 - `polyfills.ts` — crypto.randomUUID polyfill

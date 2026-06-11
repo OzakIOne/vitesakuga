@@ -3,11 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { Debug, withMinimumLogLevel } from "../effect/logger";
-import { getUserSessionEffect, requireAuthEffect } from "./auth.middleware";
+import {
+  getSessionEffect,
+  getUserSessionEffect,
+  requireAuthEffect,
+} from "./auth.middleware";
 
 let mockGetSession: ReturnType<typeof vi.fn>;
 let mockGetHeaders: ReturnType<typeof vi.fn>;
 let testLayer: Layer.Layer;
+
+const runEffect = <T>(effect: Effect.Effect<T>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(testLayer)));
 
 beforeEach(() => {
   mockGetSession = vi.fn();
@@ -20,33 +27,22 @@ beforeEach(() => {
   );
 });
 
-const runEffect = <T>(effect: Effect.Effect<T>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(testLayer)));
-
 describe(getUserSessionEffect, () => {
   it("returns user when session exists", async () => {
-    mockGetSession.mockResolvedValueOnce({
-      user: { id: "user-1" },
-    });
-
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
     const result = await runEffect(getUserSessionEffect());
-
     expect(result).toEqual({ id: "user-1" });
   });
 
   it("returns null when no session", async () => {
     mockGetSession.mockResolvedValueOnce(null);
-
     const result = await runEffect(getUserSessionEffect());
-
     expect(result).toBeNull();
   });
 
   it("returns null when session has no user", async () => {
     mockGetSession.mockResolvedValueOnce({ user: null });
-
     const result = await runEffect(getUserSessionEffect());
-
     expect(result).toBeNull();
   });
 
@@ -55,7 +51,7 @@ describe(getUserSessionEffect, () => {
     mockGetHeaders.mockReturnValue(headers);
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
 
-    await runEffect(getUserSessionEffect());
+    await runEffect(getSessionEffect());
 
     expect(mockGetSession).toHaveBeenCalledWith({
       headers,
@@ -69,9 +65,7 @@ describe(requireAuthEffect, () => {
     mockGetSession.mockResolvedValueOnce({
       user: { id: "user-1", email: "test@test.com" },
     });
-
     const result = await runEffect(requireAuthEffect());
-
     expect(result).toEqual({ id: "user-1", email: "test@test.com" });
   });
 
@@ -87,7 +81,6 @@ describe(requireAuthEffect, () => {
 
   it("throws redirect when not authenticated", async () => {
     mockGetSession.mockResolvedValueOnce(null);
-
     await expect(runEffect(requireAuthEffect())).rejects.toThrow();
   });
 });

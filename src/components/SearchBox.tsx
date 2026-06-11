@@ -1,4 +1,3 @@
-import "src/lib/polyfills";
 import {
   Badge,
   Box,
@@ -11,14 +10,12 @@ import {
   Input,
   Portal,
   Wrap,
-  createListCollection,
 } from "@chakra-ui/react";
-import { useLiveQuery } from "@tanstack/react-db";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { LuX } from "react-icons/lu";
-import { tagsCollection } from "src/lib/db/collections";
+import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 type SearchBoxProps = {
   defaultValue?: string | undefined;
@@ -41,28 +38,10 @@ export function SearchBox({
   const [tags, setTags] = useState<string[]>(defaultTags);
   const [tagSearchValue, setTagSearchValue] = useState("");
 
-  const { data: allTags = [] } = useLiveQuery((q) =>
-    q.from({ t: tagsCollection }).orderBy(({ t }) => t.name, "asc"),
-  );
-
-  // Filter tags based on search and exclude already selected tags
-  // ? usememo useful?
-  const filteredTags = useMemo(
-    () =>
-      allTags
-        .filter((tag: { name: string }) => !tags.includes(tag.name))
-        .filter((tag: { name: string }) =>
-          tag.name.toLowerCase().includes(tagSearchValue.toLowerCase()),
-        )
-        .map((tag: { name: string }) => tag.name),
-    [allTags, tagSearchValue, tags],
-  );
-
-  // ? usememo useful?
-  const collection = useMemo(
-    () => createListCollection({ items: filteredTags }),
-    [filteredTags],
-  );
+  const { collection } = useTagCollection({
+    search: tagSearchValue,
+    exclude: tags,
+  });
 
   const handleAddTag = (details: Combobox.ValueChangeDetails) => {
     const newValues = details.value;
@@ -185,8 +164,8 @@ export function SearchBox({
               <Combobox.Positioner>
                 <Combobox.Content>
                   <Combobox.ItemGroup>
-                    {filteredTags.length > 0 ? (
-                      filteredTags.map((item: string) => (
+                    {collection.items.length > 0 ? (
+                      collection.items.map((item: string) => (
                         <Combobox.Item item={item} key={item}>
                           {item}
                           <Combobox.ItemIndicator />

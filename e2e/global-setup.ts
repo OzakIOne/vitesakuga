@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 
-import { Data, Effect } from "effect";
+import { Data, Duration, Effect, Schedule } from "effect";
 
 const RUSTFS_ENDPOINT = "http://localhost:9000";
 const RUSTFS_ACCESS_KEY = "rustfsadmin";
@@ -24,39 +24,29 @@ const curlStatus = (url: string) =>
     Effect.catch(() => Effect.succeed("000")),
   );
 
-const sleep = (ms: number) =>
-  Effect.promise(() => new Promise((resolve) => setTimeout(resolve, ms)));
-
-const isRunning = Effect.gen(function* () {
-  const status = yield* curlStatus(`${RUSTFS_ENDPOINT}/`);
-  return status === "403" || status === "200";
-});
-
 const waitForHealth = Effect.gen(function* () {
   yield* Effect.log("Waiting for RustFS...");
 
-  for (let i = 0; i < 30; i++) {
-    const ready = yield* isRunning;
-    if (ready) {
-      yield* Effect.log("RustFS is ready");
-      return;
-    }
-    yield* sleep(1000);
-  }
-
-  return yield* Effect.fail(
-    new CommandError({ command: "curl", message: "RustFS not ready" }),
+  yield* Effect.retry(
+    Effect.gen(function* () {
+      yield* Effect.sleep(Duration.seconds(1));
+      const status = yield* curlStatus(`${RUSTFS_ENDPOINT}/`);
+      if (status === "403" || status === "200") return;
+      return yield* Effect.fail("not ready");
+    }),
+    Schedule.recurs(30),
+  ).pipe(
+    Effect.catch(() =>
+      Effect.fail(
+        new CommandError({ command: "curl", message: "RustFS not ready" }),
+      ),
+    ),
   );
+
+  yield* Effect.log("RustFS is ready");
 });
 
 const startRustFS = Effect.gen(function* () {
-  const running = yield* isRunning;
-
-  if (running) {
-    yield* Effect.log("RustFS is already running");
-    return;
-  }
-
   yield* Effect.log("Starting RustFS...");
   yield* exec("docker compose up -d rustfs").pipe(
     Effect.catch((error) =>

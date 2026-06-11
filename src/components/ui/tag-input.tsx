@@ -1,4 +1,3 @@
-import "src/lib/polyfills";
 import {
   Badge,
   Box,
@@ -8,10 +7,9 @@ import {
   Wrap,
   createListCollection,
 } from "@chakra-ui/react";
-import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
-import { tagsCollection } from "src/lib/db/collections";
+import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 type Tag = {
   id?: number;
@@ -26,21 +24,11 @@ type TagInputProps = {
 export function TagInput({ value, onChange }: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
 
-  const { data: allTags = [] } = useLiveQuery((q) =>
-    q.from({ t: tagsCollection }).orderBy(({ t }) => t.name, "asc"),
-  );
+  const { allTags, collection: baseCollection } = useTagCollection({
+    search: searchValue,
+    exclude: value.map((tag) => tag.name),
+  });
 
-  // Filter tags based on search and exclude already selected tags
-  const filteredTags = useMemo(() => {
-    const selectedNames = new Set(value.map((tag) => tag.name));
-    return allTags
-      .filter((tag: { name: string }) => !selectedNames.has(tag.name))
-      .filter((tag: { name: string }) =>
-        tag.name.toLowerCase().includes(searchValue.toLowerCase()),
-      );
-  }, [allTags, searchValue, value]);
-
-  // Check if we should show "Create new tag" option
   const showCreateOption = useMemo(() => {
     if (!searchValue.trim()) {
       return false;
@@ -52,14 +40,12 @@ export function TagInput({ value, onChange }: TagInputProps) {
     return !exactMatch;
   }, [searchValue, allTags]);
 
-  // Combine filtered tags with create option
   const items = useMemo(() => {
-    const tagNames = filteredTags.map((tag: { name: string }) => tag.name);
     if (showCreateOption) {
-      return [...tagNames, `Create: ${searchValue}`];
+      return [...baseCollection.items, `Create: ${searchValue}`];
     }
-    return tagNames;
-  }, [filteredTags, showCreateOption, searchValue]);
+    return baseCollection.items;
+  }, [baseCollection.items, showCreateOption, searchValue]);
 
   const collection = useMemo(() => createListCollection({ items }), [items]);
 

@@ -65,6 +65,7 @@ The `createHandler` function (`src/lib/server-fn.handler.ts`) bridges TanStack S
 - Third argument (optional): a `makeBaseLayer` factory for additional dependencies (e.g., `makeAuthLayer` for authenticated routes)
 
 At runtime, it:
+
 1. Dynamically imports the base layer factory (avoids bundling server code on client)
 2. Merges the service layer with the base layer
 3. Runs the Effect to completion via `Effect.runPromise`
@@ -84,12 +85,12 @@ At runtime, it:
 
 ## Effective Service Files
 
-| Feature | Service file |
-|---|---|
+| Feature  | Service file                           |
+| -------- | -------------------------------------- |
 | Comments | `src/lib/comments/comments.service.ts` |
-| Posts | `src/lib/posts/posts.service.ts` |
-| Tags | `src/lib/tags/tags.service.ts` |
-| Users | `src/lib/users/users.service.ts` |
+| Posts    | `src/lib/posts/posts.service.ts`       |
+| Tags     | `src/lib/tags/tags.service.ts`         |
+| Users    | `src/lib/users/users.service.ts`       |
 
 ## Error Handling
 

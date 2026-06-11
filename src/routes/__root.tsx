@@ -1,4 +1,11 @@
-import { Box, Button, Center, ClientOnly, IconButton, Menu } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Center,
+  ClientOnly,
+  IconButton,
+  Menu,
+} from "@chakra-ui/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";

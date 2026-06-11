@@ -12,18 +12,18 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 ### General Commands
 
-  - build: vite build
-  - db: drizzle-kit
-  - dev: vite dev --mode development --host
-  - dev:prod: vite dev --mode production
-  - format: oxfmt --write .
-  - format:check: oxfmt --check .
-  - lint: oxlint . --fix
-  - lint:check: oxlint .
-  - server: vite preview
-  - start: node .output/server/index.mjs
-  - test: vitest -w
-  - test:e2e: playwright test --config=e2e/playwright.config.ts
+- build: vite build
+- db: drizzle-kit
+- dev: vite dev --mode development --host
+- dev:prod: vite dev --mode production
+- format: oxfmt --write .
+- format:check: oxfmt --check .
+- lint: oxlint . --fix
+- lint:check: oxlint .
+- server: vite preview
+- start: node .output/server/index.mjs
+- test: vitest -w
+- test:e2e: playwright test --config=e2e/playwright.config.ts
 
 ### Testing
 
@@ -57,8 +57,6 @@ For more specific guidelines, refer to the following documents:
 - [Project Structure & File Conventions](./docs/project-structure.md)
 - [Feature Implementation Guidelines](./docs/feature-implementation-guidelines.md)
 - [Additional Resources](./docs/additional-resources.md)
-
-
 
 ## Plan Mode
 
