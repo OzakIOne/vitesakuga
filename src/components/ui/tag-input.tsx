@@ -9,12 +9,8 @@ import {
 } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
+import type { Tag } from "src/lib/posts/posts.schema";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
-
-type Tag = {
-  id?: number;
-  name: string;
-};
 
 type TagInputProps = {
   value: Tag[];

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { getAllPopularTags, getAllTags } from "./tags.service";
+import { getAllPopularTags } from "./tags.service";
 
 const tagsKeys = {
   all: ["tags"] as const,
@@ -16,16 +16,6 @@ const tagsQueries = {
       queryKey: tagsKeys.popular(),
       staleTime: 30 * 1000, // 30 seconds
     }),
-  getTags: () =>
-    queryOptions({
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      queryFn: async () => getAllTags(),
-      queryKey: tagsKeys.list(),
-      staleTime: 30 * 1000, // 30 seconds
-    }),
 };
-
-// Backward compatibility export
-export const tagsQueryGetTags = () => tagsQueries.getTags();
 
 export const tagsQueryGetPopularTags = () => tagsQueries.getPopularTags();

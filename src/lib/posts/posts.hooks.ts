@@ -6,13 +6,11 @@ import { useCallback, useRef } from "react";
 import type { DbSchemaSelect } from "../db/schema";
 import type { PaginationMeta } from "../pagination/pagination";
 
-export type PopularTag = {
+type PopularTag = {
   id: number;
   name: string;
   postCount: number;
 };
-
-export type { PaginationMeta };
 
 export type PostListingData = {
   data: DbSchemaSelect["posts"][];

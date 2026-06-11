@@ -1,7 +1,6 @@
 import z from "zod";
 
 import { sanitize } from "../sanitize";
-
 export const VideoMetadataSchema = z
   .object({
     BitDepth: z.coerce.number(),
@@ -30,6 +29,8 @@ const TagSchema = z
     name: z.string().min(1),
   })
   .strict();
+
+export type Tag = { id?: number; name: string };
 
 export const FormFileUploadSchema = z
   .object({
@@ -73,8 +74,6 @@ export const updatePostInputSchema = z
       .transform((val) => sanitize(val)),
   })
   .strict();
-
-export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
 
 export const searchPostsBaseSchema = z
   .object({

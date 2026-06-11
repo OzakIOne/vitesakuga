@@ -2,11 +2,11 @@ import { Layer } from "effect";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { makeFromKysely } from "../effect/effect.utils";
-import { withMinimumLogLevel, Debug } from "../effect/logger";
+import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
 import { KyselyDB } from "./context";
 
-const LOG_LAYER = withMinimumLogLevel(Debug);
+const LOG_LAYER = withMinimumLogLevel("Debug");
 
 const isE2E = process.env.DATABASE_DRIVER === "pglite";
 

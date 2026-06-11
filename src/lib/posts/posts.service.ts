@@ -519,7 +519,7 @@ export const fetchPostDetailEffect = Effect.fn("fetchPostDetail")(function* (
   return yield* svc.fetchDetail(postId);
 });
 
-export const uploadPostEffect = Effect.fn("uploadPost")(function* (
+const uploadPostEffect = Effect.fn("uploadPost")(function* (
   data: z.infer<typeof FormFileUploadSchema>,
 ) {
   const svc = yield* PostsService;

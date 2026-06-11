@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
-import { Debug, withMinimumLogLevel } from "../effect/logger";
+import { withMinimumLogLevel } from "../effect/logger";
 import {
   getSessionEffect,
   getUserSessionEffect,
@@ -23,7 +23,7 @@ beforeEach(() => {
   testLayer = Layer.mergeAll(
     Layer.succeed(AuthService)({ api: { getSession: mockGetSession } }),
     Layer.succeed(RequestHeadersService)(mockGetHeaders),
-    withMinimumLogLevel(Debug),
+    withMinimumLogLevel("Debug"),
   );
 });
 

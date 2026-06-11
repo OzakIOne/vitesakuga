@@ -1,9 +1,9 @@
-export interface PaginationInput {
+export type PaginationInput = {
   page: number;
   pageSize: number;
 }
 
-export interface PaginationMeta {
+export type PaginationMeta = {
   currentPage: number;
   hasMore: boolean;
   hasPrevious: boolean;

@@ -11,7 +11,7 @@ import { AuthService } from "../auth/context";
 import type { AuthSessionProvider } from "../auth/context";
 import { RequestHeadersService } from "../auth/context";
 import { makeFromKysely } from "../effect/effect.utils";
-import { withMinimumLogLevel, Debug } from "../effect/logger";
+import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
 import { makeRustFSStorageLayer } from "../storage/storage.rustfs";
 import { KyselyDB } from "./context";
@@ -19,9 +19,9 @@ import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
 import * as schema from "./schema";
 
-const LOG_LAYER = withMinimumLogLevel(Debug);
+const LOG_LAYER = withMinimumLogLevel("Debug");
 
-export const createTestKysely = async () => {
+const createTestKysely = async () => {
   const pg = await PGlite.create("memory://");
   const drizzleDb = drizzle(pg, { schema });
 
@@ -32,7 +32,7 @@ export const createTestKysely = async () => {
   return { pg, db } as const;
 };
 
-export const makeTestLayer = (
+const makeTestLayer = (
   db: Kysely<DB>,
   auth: AuthSessionProvider | null,
   headers: () => Headers,
@@ -50,12 +50,12 @@ export const makeTestLayer = (
   );
 };
 
-export interface ServiceTestContext {
+export type ServiceTestContext = {
   db: Kysely<DB>;
   testLayer: Layer.Layer<any, any>;
   runEffect: <T>(effect: Effect.Effect<T>) => Promise<T>;
   mockGetSession: ReturnType<typeof vi.fn>;
-}
+};
 
 export const makeServiceTestLayer = async (
   serviceLive: Layer.Layer<any, any>,

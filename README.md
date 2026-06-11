@@ -2,6 +2,7 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
+- [ ] fix createHandler typing issue
 - [ ] add playlist feature, which are pools in sakugabooru i think anyway, playlist like on youtube
 - [ ] dockploy ??
 - [ ] split upload and convert into components and utils

@@ -5,6 +5,7 @@ import {
   localStorageCollectionOptions,
 } from "@tanstack/react-db";
 
+import type { Tag } from "src/lib/posts/posts.schema";
 import type { DbSchemaSelect } from "../db/schema";
 import { getQueryClient } from "../query-client";
 import { getAllTags } from "../tags/tags.service";
@@ -13,7 +14,7 @@ import { fetchUsers } from "../users/users.service";
 const queryClient = getQueryClient();
 
 export const tagsCollection = createCollection(
-  queryCollectionOptions({
+  queryCollectionOptions<{ id: number; name: string }>({
     queryKey: ["tags", "collection"],
     queryFn: async () => getAllTags(),
     queryClient,
@@ -51,7 +52,7 @@ type UploadDraft = {
   content: string;
   source: string | undefined;
   relatedPostId: number | undefined;
-  tags: { id?: number; name: string }[];
+  tags: Tag[];
   videoName: string;
 };
 

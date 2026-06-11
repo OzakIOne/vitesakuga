@@ -14,7 +14,7 @@ export const tagsInsertSchema = createInsertSchema(tags);
 export const postsSelectSchema = createSelectSchema(posts);
 export const postsInsertSchema = createInsertSchema(posts);
 
-export const commentsSelectSchema = createSelectSchema(comments).passthrough();
+export const commentsSelectSchema = createSelectSchema(comments).loose();
 export const commentsInsertSchema = createInsertSchema(comments);
 
 type UserSelect = z.infer<typeof userSelectSchema>;

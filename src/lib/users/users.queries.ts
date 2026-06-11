@@ -23,16 +23,7 @@ const usersQueries = {
       queryKey: usersKeys.detail(params),
       staleTime: 5 * 60 * 1000, // 5 minutes
     }),
-  listUsers: () =>
-    queryOptions({
-      gcTime: 10 * 60 * 1000, // 10 minutes
-      queryFn: async () => fetchUsers(),
-      queryKey: usersKeys.list(),
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    }),
 };
-
-export const usersQueryOptions = () => usersQueries.listUsers();
 
 export const userQueryOptions = (params: FetchUserInput) =>
   usersQueries.detail(params);
