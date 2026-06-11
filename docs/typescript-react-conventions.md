@@ -22,7 +22,7 @@ This document outlines the conventions and best practices for writing TypeScript
 
 ## Imports
 
-- Absolute imports from the root (e.g., `import { foo } from "lib/utils";`) are supported via `paths: {"*": ["./*"]}` and `vite-tsconfig-paths`.
+- Absolute imports from the root using `src/` prefix (e.g., `import { foo } from "src/lib/utils"`) are supported via `paths: {"*": ["./*"]}` and `vite-tsconfig-paths`.
 
 ## Naming Conventions
 

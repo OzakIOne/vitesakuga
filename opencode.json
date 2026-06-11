@@ -7,5 +7,18 @@
       "enabled": true
     }
   },
+  "references": {
+    "effect": {
+      "repository": "github.com/Effect-TS/effect-smol",
+      "description": "use this whenever there's a question about effect or you need to know how to do something in effect"
+    },
+    "effect-accountability": {
+      "repository": "github.com/mikearnaldi/accountability",
+      "description": "use this to see how effect is used in a real project"
+    },
+    "docs": {
+      "path": "./docs"
+    }
+  },
   "lsp": true
 }

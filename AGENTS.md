@@ -8,28 +8,22 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 **Never use npm. Always use pnpm.** All commands (install, add, run, exec, dlx, etc.) must be executed using `pnpm`. npm is forbidden in this project.
 
-## Local Effect Source
-
-The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for reference.
-There is also accountability cloned to `~/.local/share/effect-solutions/accountability` for reference.
-Use this to explore APIs, find usage examples, and understand implementation
-details when the documentation isn't enough.
-
 ## Build, Lint, and Test Commands
 
 ### General Commands
 
-- build: vite build
-- db: drizzle-kit
-- dev: vite dev --mode development
-- devprod: vite dev --mode production
-- format: oxfmt --write .
-- formatcheck: oxfmt --check .
-- lint: oxlint . --fix
-- lintcheck: oxlint .
-- server: vite preview
-- start: node run .output/server/index.mjs
-- test: vitest -w
+  - build: vite build
+  - db: drizzle-kit
+  - dev: vite dev --mode development --host
+  - dev:prod: vite dev --mode production
+  - format: oxfmt --write .
+  - format:check: oxfmt --check .
+  - lint: oxlint . --fix
+  - lint:check: oxlint .
+  - server: vite preview
+  - start: node .output/server/index.mjs
+  - test: vitest -w
+  - test:e2e: playwright test --config=e2e/playwright.config.ts
 
 ### Testing
 
@@ -64,9 +58,7 @@ For more specific guidelines, refer to the following documents:
 - [Feature Implementation Guidelines](./docs/feature-implementation-guidelines.md)
 - [Additional Resources](./docs/additional-resources.md)
 
-## Copilot Instructions
 
-The original Copilot instructions from `.github/copilot-instructions.md` are also a valuable reference and should be adhered to for additional context and guidance not explicitly covered here.
 
 ## Plan Mode
 
@@ -169,8 +161,6 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 4. **Edge cases** - Handle boundary conditions and error states
 5. **User experience** - Accessibility, performance, and usability considerations
 6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
-
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `pnpm dlx ultracite fix` before committing to ensure compliance.
 
 ## Agent skills
 
