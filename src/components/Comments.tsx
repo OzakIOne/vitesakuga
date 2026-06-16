@@ -35,7 +35,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       .from({ draft: commentDraftsCollection })
       .where(({ draft }) => eq(draft.id, postIdStr)),
   );
-  const draft = drafts[0];
+  const draft = drafts?.[0];
   const comment = draft?.content ?? "";
 
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(

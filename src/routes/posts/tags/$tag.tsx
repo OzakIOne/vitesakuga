@@ -10,8 +10,8 @@ import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
   // fix initial window is not defined error
-  ssr: "data-only",
   validateSearch: searchPostsBaseSchema,
+  ssr: "data-only",
 });
 
 function RouteComponent() {

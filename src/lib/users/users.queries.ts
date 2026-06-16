@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { FetchUserInput } from "./users.schema";
-import { fetchUserPosts, fetchUsers } from "./users.service";
+import { fetchUserPosts } from "./users.service";
 
 export const usersKeys = {
   all: ["users"] as const,

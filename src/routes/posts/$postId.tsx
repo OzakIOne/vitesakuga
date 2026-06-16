@@ -1,4 +1,4 @@
-import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Spinner, Stack, Text } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,

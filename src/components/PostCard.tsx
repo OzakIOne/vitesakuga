@@ -58,6 +58,9 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
             <Text color="gray.600" fontSize="xs" lineClamp={1}>
               {post.content}
             </Text>
+            <Text color="gray.500" fontSize="xs">
+              {new Date(post.createdAt).toLocaleDateString()}
+            </Text>
           </VStack>
         </HStack>
       </VStack>

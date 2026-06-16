@@ -16,6 +16,15 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
 - [ ] better ui
 
+## Patches
+
+- **`@tanstack/react-db` SSR crash (React 19):** `pnpm` patch adds `getServerSnapshot` to `useSyncExternalStore` to fix `Missing getServerSnapshot` error during SSR.
+  - Upstream PR: https://github.com/TanStack/db/pull/1534
+  - Tracking issue: https://github.com/TanStack/db/issues/545
+  - When the PR is merged and released, remove:
+    - `pnpm.patchedDependencies["@tanstack/react-db"]` from `package.json`
+    - `patches/@tanstack__react-db.patch`
+
 ## Secondary
 
 - [ ] ? add post ranking

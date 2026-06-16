@@ -61,7 +61,7 @@ export const makeServiceTestLayer = async (
   serviceLive: Layer.Layer<any, any>,
 ): Promise<ServiceTestContext> => {
   const { db } = await createTestKysely();
-  const mockGetSession = vi.fn();
+  const mockGetSession = vi.fn<AuthSessionProvider["api"]["getSession"]>();
   const baseLayer = makeTestLayer(
     db,
     { api: { getSession: mockGetSession } } as AuthSessionProvider,

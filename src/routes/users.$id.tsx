@@ -20,8 +20,8 @@ export const Route = createFileRoute("/users/$id")({
   errorComponent: UserErrorComponent,
   notFoundComponent: () => <NotFound>User not found</NotFound>,
   // fix initial window is not defined error
-  ssr: "data-only",
   validateSearch: searchPostsBaseSchema,
+  ssr: "data-only",
 });
 
 function UserContent() {

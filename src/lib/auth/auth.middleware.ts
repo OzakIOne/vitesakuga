@@ -1,4 +1,3 @@
-import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { User } from "better-auth";
 import { Data, Effect } from "effect";
@@ -6,8 +5,9 @@ import { Data, Effect } from "effect";
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { resolveMiddlewareLayer } from "../server-fn.handler";
 
-export class AuthRequiredError extends Data.TaggedError("AuthRequiredError")<{
-  readonly redirectTo: string;
+export class SessionFetchError extends Data.TaggedError("SessionFetchError")<{
+  readonly message: string;
+  readonly cause: unknown;
 }> {}
 
 export const getSessionEffect = Effect.fn("getSession")(function* () {
@@ -50,7 +50,8 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
         headers,
         query: { disableCookieCache: true },
       }),
-    catch: (error) => new Error(`Failed to get session: ${String(error)}`),
+    catch: (error) =>
+      new SessionFetchError({ message: "Failed to get session", cause: error }),
   });
 
   if (session?.user) {
@@ -67,38 +68,11 @@ export const getUserSessionEffect = Effect.fn("getUserSession")(function* () {
   return session?.user ?? null;
 });
 
-export const requireAuthEffect = Effect.fn("requireAuth")(function* () {
-  const session = yield* getSessionEffect();
-
-  if (!session?.user) {
-    yield* Effect.logWarning("Authentication required");
-    return yield* Effect.fail(new AuthRequiredError({ redirectTo: "/login" }));
-  }
-
-  return session.user;
-});
-
 export const getUserSession = createServerFn().handler(
   async (): Promise<User | null> => {
     const layer = await resolveMiddlewareLayer();
     return Effect.runPromise(
-      getUserSessionEffect().pipe(Effect.provide(layer)) as Effect.Effect<
-        any,
-        Error
-      >,
+      getUserSessionEffect().pipe(Effect.provide(layer)),
     );
   },
 );
-
-export const requireAuth = createServerFn().handler(async () => {
-  const layer = await resolveMiddlewareLayer();
-  return Effect.runPromise(
-    requireAuthEffect().pipe(
-      Effect.provide(layer),
-      Effect.catchTags({
-        AuthRequiredError: (error: AuthRequiredError) =>
-          Effect.succeed(redirect({ to: error.redirectTo })),
-      }),
-    ),
-  );
-});

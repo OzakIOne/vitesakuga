@@ -18,8 +18,8 @@ import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 
 export const Route = createFileRoute("/posts/")({
   component: PostsContent,
-  ssr: "data-only",
   validateSearch: searchPostsBaseSchema,
+  ssr: "data-only",
 });
 
 function PostsContent() {

@@ -27,6 +27,11 @@ export function Post({
       {post.videoKey && <Video bypass={false} url={post.videoKey} />}
       {post.title && <Heading as="h3">{post.title}</Heading>}
       {post.content && <Text mb={4}>{post.content}</Text>}
+      {post.createdAt && (
+        <Text color="gray.500" fontSize="sm" mb={4}>
+          Posted {new Date(post.createdAt).toLocaleDateString()}
+        </Text>
+      )}
 
       {tags.length > 0 && (
         <Box mb={4}>

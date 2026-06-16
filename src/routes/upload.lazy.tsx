@@ -7,6 +7,7 @@ import {
   Icon,
   Image,
   Input,
+  Spinner,
   Text,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,7 +19,7 @@ import { FormTextWrapper } from "src/components/form/FieldText";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Video } from "src/components/Video";
-import { postsKeys } from "src/lib/posts/posts.queries";
+import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
 import { searchPosts } from "src/lib/posts/posts.service";
 import { useUploadDraft } from "src/lib/upload/useUploadDraft";
 import { useUploadForm } from "src/lib/upload/useUploadForm";
@@ -89,8 +90,11 @@ function RouteComponent() {
   };
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
-  const { data: relatedPosts } = useQuery({
-    enabled: relatedPostSearch.length > 2,
+  const isNumericSearch = /^\d+$/.test(relatedPostSearch.trim());
+  const numericId = isNumericSearch ? Number(relatedPostSearch.trim()) : null;
+
+  const { data: relatedPosts, isFetching: isSearchLoading } = useQuery({
+    enabled: relatedPostSearch.length > 2 && !isNumericSearch,
     queryFn: async () =>
       searchPosts({
         data: { page: 0, q: relatedPostSearch, tags: [] as string[] },
@@ -103,6 +107,13 @@ function RouteComponent() {
       tags: [],
     }),
   });
+
+  const { data: postById, isFetching: isIdLookupLoading } = useQuery({
+    enabled: isNumericSearch && numericId !== null && numericId > 0,
+    ...postQueryDetail(numericId!),
+  });
+
+  const isFetching = isSearchLoading || isIdLookupLoading;
 
   return (
     <Box maxW="xl" mx="auto" px={4} py={8}>
@@ -151,13 +162,20 @@ function RouteComponent() {
             {(field) => (
               <Field.Root>
                 <Field.Label>Related Post</Field.Label>
-                <Input
-                  onChange={(e) => {
-                    setRelatedPostSearch(e.target.value);
-                  }}
-                  placeholder="Search for related posts..."
-                  value={relatedPostSearch}
-                />
+                <Field.HelperText>
+                  Search by title or enter a post ID
+                </Field.HelperText>
+                <Box alignItems="center" display="flex" gap={2} mt={1}>
+                  <Input
+                    flex={1}
+                    onChange={(e) => {
+                      setRelatedPostSearch(e.target.value);
+                    }}
+                    placeholder="Search by title or enter post ID..."
+                    value={relatedPostSearch}
+                  />
+                  {isFetching && <Spinner size="sm" />}
+                </Box>
                 {relatedPosts && relatedPosts.data.length > 0 && (
                   <Box
                     border="1px"
@@ -194,6 +212,38 @@ function RouteComponent() {
                     )}
                   </Box>
                 )}
+                {postById && (
+                  <Box
+                    bg="green.50"
+                    border="1px"
+                    borderColor="green.200"
+                    borderRadius="md"
+                    cursor="pointer"
+                    mt={2}
+                    onClick={() => {
+                      field.handleChange(Number(postById.post.id));
+                      setRelatedPostSearch(postById.post.title);
+                    }}
+                    p={2}
+                  >
+                    <Text color="green.600" fontSize="sm">
+                      Post #{postById.post.id} found
+                    </Text>
+                    <Text fontWeight="medium">{postById.post.title}</Text>
+                    <Text color="gray.600" fontSize="sm">
+                      {postById.post.content.slice(0, 60)}...
+                    </Text>
+                  </Box>
+                )}
+                {!isFetching &&
+                  isNumericSearch &&
+                  numericId !== null &&
+                  numericId > 0 &&
+                  !postById && (
+                    <Text color="gray.500" fontSize="sm" mt={2}>
+                      No post found with ID #{numericId}
+                    </Text>
+                  )}
                 {field.state.value && (
                   <Box bg="blue.50" borderRadius="md" mt={2} p={2}>
                     <Text fontSize="sm">

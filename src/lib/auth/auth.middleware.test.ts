@@ -3,11 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { withMinimumLogLevel } from "../effect/logger";
-import {
-  getSessionEffect,
-  getUserSessionEffect,
-  requireAuthEffect,
-} from "./auth.middleware";
+import { getSessionEffect, getUserSessionEffect } from "./auth.middleware";
 
 let mockGetSession: ReturnType<typeof vi.fn>;
 let mockGetHeaders: ReturnType<typeof vi.fn>;
@@ -57,30 +53,5 @@ describe(getUserSessionEffect, () => {
       headers,
       query: { disableCookieCache: true },
     });
-  });
-});
-
-describe(requireAuthEffect, () => {
-  it("returns user when authenticated", async () => {
-    mockGetSession.mockResolvedValueOnce({
-      user: { id: "user-1", email: "test@test.com" },
-    });
-    const result = await runEffect(requireAuthEffect());
-    expect(result).toEqual({ id: "user-1", email: "test@test.com" });
-  });
-
-  it("bypasses auth with E2E test cookie", async () => {
-    const headers = new Headers({ cookie: "e2e-test-auth=bypass" });
-    mockGetHeaders.mockReturnValue(headers);
-
-    const result = await runEffect(requireAuthEffect());
-
-    expect(result.id).toBe("e2e-test-user");
-    expect(mockGetSession).not.toHaveBeenCalled();
-  });
-
-  it("throws redirect when not authenticated", async () => {
-    mockGetSession.mockResolvedValueOnce(null);
-    await expect(runEffect(requireAuthEffect())).rejects.toThrow();
   });
 });
