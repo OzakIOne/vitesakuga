@@ -11,7 +11,7 @@ export function useTagCollection(options: {
 }) {
   const { search, exclude = [] } = options;
 
-  const { data: allTags = [] } = useLiveQuery((q) =>
+  const { data: allTags } = useLiveQuery((q) =>
     q.from({ t: tagsCollection }).orderBy(({ t }) => t.name, "asc"),
   );
 

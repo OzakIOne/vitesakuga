@@ -30,7 +30,7 @@ const TagSchema = z
   })
   .strict();
 
-export type Tag = { id?: number; name: string };
+export type Tag = z.infer<typeof TagSchema>;
 
 export const FormFileUploadTextSchema = z
   .object({

@@ -121,6 +121,12 @@
       "skillPath": "skills/productivity/write-a-skill/SKILL.md",
       "computedHash": "b44d8aab2ead83c716e01af4c9a24ccc4575ce70ad58ec4f1749fb88c9cc82ba"
     },
+    "xstate-v5": {
+      "source": "statelyai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/xstate-v5/SKILL.md",
+      "computedHash": "5395d58e38da39477cfa61d2b388777a88f021d16ec0f8d4ce6653b487d98fb3"
+    },
     "zoom-out": {
       "source": "mattpocock/skills",
       "sourceType": "github",

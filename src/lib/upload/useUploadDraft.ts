@@ -3,13 +3,14 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useRef } from "react";
 
 import { uploadDraftCollection } from "../db/collections";
+import type { Tag } from "../posts/posts.schema";
 
 export type UploadDraftData = {
   title: string;
   content: string;
   source: string | undefined;
   relatedPostId: number | undefined;
-  tags: { id?: number; name: string }[];
+  tags: Tag[];
   videoName: string;
 };
 

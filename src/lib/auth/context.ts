@@ -1,3 +1,4 @@
+import type { Session, User } from "better-auth";
 import { Context } from "effect";
 
 export type AuthSessionProvider = {
@@ -5,7 +6,7 @@ export type AuthSessionProvider = {
     getSession(args: {
       headers: Headers;
       query: { disableCookieCache: boolean };
-    }): Promise<{ user: { id: string } | null } | null>;
+    }): Promise<{ session: Session; user: User } | null>;
   };
 };
 

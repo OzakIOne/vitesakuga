@@ -5,7 +5,7 @@ import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { toaster } from "../../components/ui/toaster";
 import { postsKeys } from "../posts/posts.queries";
 import { FormFileUploadSchema } from "../posts/posts.schema";
-import type { VideoMetadata } from "../posts/posts.schema";
+import type { Tag, VideoMetadata } from "../posts/posts.schema";
 import { uploadPost } from "../posts/posts.service";
 import { buildFormData } from "./upload.processor";
 import type { UploadDraftData } from "./useUploadDraft";
@@ -55,7 +55,7 @@ export function useUploadForm(params: UseUploadFormParams) {
       content: draft?.content ?? "",
       relatedPostId: draft?.relatedPostId as number | undefined,
       source: draft?.source as string | undefined,
-      tags: (draft?.tags ?? []) as { id?: number | undefined; name: string }[],
+      tags: (draft?.tags ?? []) as Tag[],
       thumbnail: undefined as unknown as File,
       title: draft?.title ?? "",
       userId,
