@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createActor } from "xstate";
+import { createActor, fromCallback, fromPromise } from "xstate";
 
 import {
   convertMachine,
@@ -40,10 +40,10 @@ describe(getCodecFamily, () => {
 });
 
 describe(isPassthroughCompatible, () => {
-  const mp4Passthrough = SUPPORTED_OUTPUTS[1];
-  const webmPassthrough = SUPPORTED_OUTPUTS[3];
-  const mkvPassthrough = SUPPORTED_OUTPUTS[4];
-  const mp4Transcode = SUPPORTED_OUTPUTS[0];
+  const mp4Passthrough = SUPPORTED_OUTPUTS[1]!;
+  const webmPassthrough = SUPPORTED_OUTPUTS[3]!;
+  const mkvPassthrough = SUPPORTED_OUTPUTS[4]!;
+  const mp4Transcode = SUPPORTED_OUTPUTS[0]!;
 
   it("transcode options are always compatible", () => {
     expect(isPassthroughCompatible(mp4Transcode, "avc1")).toBe(true);
@@ -89,11 +89,31 @@ describe(isPassthroughCompatible, () => {
 
 describe("convertMachine", () => {
   const dummyFile = new File(["dummy"], "test.mp4", { type: "video/mp4" });
+  const mp4Transcode = SUPPORTED_OUTPUTS[0]!;
 
-  const mp4Transcode = SUPPORTED_OUTPUTS[0];
-
+  /** Creates an actor with mocked probe that sets codecs to known values. */
   function createConvertActor() {
-    return createActor(convertMachine);
+    return createActor(
+      convertMachine.provide({
+        actors: {
+          probeFile: fromPromise(
+            async (): Promise<{
+              videoCodec: string | null;
+              audioCodec: string | null;
+            }> => ({
+              videoCodec: "avc1",
+              audioCodec: "aac",
+            }),
+          ),
+          runConversion: fromCallback(() => () => {}),
+        },
+      }),
+    );
+  }
+
+  /** Waits for invoked actors to settle. */
+  async function flushActors() {
+    await new Promise((r) => setTimeout(r, 0));
   }
 
   it("starts in idle state", () => {
@@ -111,14 +131,13 @@ describe("convertMachine", () => {
       expect(actor.getSnapshot().context.file).toBe(dummyFile);
     });
 
-    it("clears output, codecs, and errors on new file selection", () => {
+    it("clears output, codecs, and errors on new file selection", async () => {
       const actor = createConvertActor();
       actor.start();
-      actor.send({
-        type: "file.probed",
-        videoCodec: "avc1",
-        audioCodec: "aac",
-      });
+      actor.send({ type: "file.selected", file: dummyFile });
+      await flushActors();
+      // probe should have set codecs
+      expect(actor.getSnapshot().context.inputVideoCodec).toBe("avc1");
       actor.send({ type: "output.selected", output: mp4Transcode });
       actor.send({ type: "file.selected", file: dummyFile });
 
@@ -131,20 +150,72 @@ describe("convertMachine", () => {
     });
   });
 
-  describe("file.probed event", () => {
-    it("sets codec info while staying in ready", () => {
+  describe("probeFile actor (invoked on ready)", () => {
+    it("sets codec info from probe result", async () => {
       const actor = createConvertActor();
       actor.start();
       actor.send({ type: "file.selected", file: dummyFile });
-      actor.send({
-        type: "file.probed",
-        videoCodec: "avc1",
-        audioCodec: "aac",
-      });
-
       expect(actor.getSnapshot().value).toBe("ready");
+
+      await flushActors();
+
       expect(actor.getSnapshot().context.inputVideoCodec).toBe("avc1");
       expect(actor.getSnapshot().context.inputAudioCodec).toBe("aac");
+    });
+
+    it("clears codecs on probe failure", async () => {
+      const actor = createActor(
+        convertMachine.provide({
+          actors: {
+            probeFile: fromPromise(
+              async (): Promise<{
+                videoCodec: string | null;
+                audioCodec: string | null;
+              }> => {
+                throw new Error("probe failed");
+              },
+            ),
+          },
+        }),
+      );
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+
+      await flushActors();
+
+      expect(actor.getSnapshot().value).toBe("ready");
+      expect(actor.getSnapshot().context.inputVideoCodec).toBeNull();
+      expect(actor.getSnapshot().context.inputAudioCodec).toBeNull();
+    });
+
+    it("restarts probe on new file selection in ready state", async () => {
+      let callCount = 0;
+      const actor = createActor(
+        convertMachine.provide({
+          actors: {
+            probeFile: fromPromise(
+              async (): Promise<{
+                videoCodec: string | null;
+                audioCodec: string | null;
+              }> => {
+                callCount++;
+                return { videoCodec: null, audioCodec: null };
+              },
+            ),
+          },
+        }),
+      );
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      await flushActors();
+      expect(callCount).toBe(1);
+
+      actor.send({
+        type: "file.selected",
+        file: new File(["new"], "new.mp4", { type: "video/mp4" }),
+      });
+      await flushActors();
+      expect(callCount).toBe(2);
     });
   });
 
@@ -188,7 +259,6 @@ describe("convertMachine", () => {
       const actor = createConvertActor();
       actor.start();
       actor.send({ type: "file.selected", file: dummyFile });
-      // no output.selected — guard should block
       actor.send({ type: "convert" });
 
       expect(actor.getSnapshot().value).toBe("ready");
@@ -343,6 +413,27 @@ describe("convertMachine", () => {
 
       expect(actor.getSnapshot().value).toBe("ready");
       expect(actor.getSnapshot().context.error).toBeNull();
+    });
+  });
+
+  describe("tags", () => {
+    it("converting state has 'converting' tag", () => {
+      const actor = createConvertActor();
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      actor.send({ type: "output.selected", output: mp4Transcode });
+      actor.send({ type: "convert" });
+
+      expect(actor.getSnapshot().hasTag("converting")).toBe(true);
+    });
+
+    it("other states do not have 'converting' tag", () => {
+      const actor = createConvertActor();
+      actor.start();
+      expect(actor.getSnapshot().hasTag("converting")).toBe(false);
+
+      actor.send({ type: "file.selected", file: dummyFile });
+      expect(actor.getSnapshot().hasTag("converting")).toBe(false);
     });
   });
 });

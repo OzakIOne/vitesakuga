@@ -18,7 +18,7 @@ export default defineConfig({
       },
     },
   ],
-  reporter: [["list"], ["html", { outputFolder: ".test-report" }]],
+  reporter: [["list"], ["html", { outputFolder: ".test-report", host: "0.0.0.0" }]],
   retries: process.env.CI ? 2 : 0,
   testDir: ".",
   timeout: 60000,

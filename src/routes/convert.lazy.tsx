@@ -16,7 +16,7 @@ import {
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
 import type React from "react";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { LuUpload } from "react-icons/lu";
 import type { AnyActorRef } from "xstate";
 
@@ -45,11 +45,8 @@ export const Route = createLazyFileRoute("/convert")({
 type ActorLike = Pick<AnyActorRef, "getSnapshot" | "subscribe">;
 
 function ConversionProgress({ actor }: { actor: ActorLike }) {
-  const progress = useSelector(actor, (s) => s.context.progress as number);
-  const isConverting = useSelector(
-    actor,
-    (s) => s.matches("converting") as boolean,
-  );
+  const progress = useSelector(actor, (s) => s.context.progress);
+  const isConverting = useSelector(actor, (s) => s.hasTag("converting"));
 
   if (!isConverting) return null;
 
@@ -80,45 +77,13 @@ function RouteComponent() {
   const isConverting = useSelector(actorRef, (s) => s.matches("converting"));
   const isSuccess = useSelector(actorRef, (s) => s.matches("success"));
 
-  const probeFile = useCallback(
-    async (f: File) => {
-      try {
-        const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
-        const input = new Input({
-          formats: ALL_FORMATS,
-          source: new BlobSource(f),
-        });
-        const [videoTrack, audioTrack] = await Promise.all([
-          input.getPrimaryVideoTrack(),
-          input.getPrimaryAudioTrack(),
-        ]);
-        const [videoConfig, audioConfig] = await Promise.all([
-          videoTrack?.getDecoderConfig(),
-          audioTrack?.getDecoderConfig(),
-        ]);
-        actorRef.send({
-          type: "file.probed",
-          videoCodec: videoConfig?.codec ?? null,
-          audioCodec: audioConfig?.codec ?? null,
-        });
-        input.dispose();
-      } catch {
-        actorRef.send({
-          type: "file.probed",
-          videoCodec: null,
-          audioCodec: null,
-        });
-      }
-    },
-    [actorRef],
-  );
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { files } = e.target;
     if (files && files.length > 0) {
       const selected = files[0];
-      actorRef.send({ type: "file.selected", file: selected });
-      void probeFile(selected);
+      if (selected) {
+        actorRef.send({ type: "file.selected", file: selected });
+      }
     }
   };
 

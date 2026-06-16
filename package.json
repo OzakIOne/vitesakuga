@@ -30,7 +30,8 @@
     "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "tz": "taze major -a -f",
     "wrangler:dev": "wrangler pages dev --proxy 3000 -- pnpm vite dev --mode development",
-    "wrangler:preview": "wrangler pages dev .output/public"
+    "wrangler:preview": "wrangler pages dev .output/public",
+    "look": "bun scripts/lookup-opencode-session.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1068.0",
