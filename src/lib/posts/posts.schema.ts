@@ -32,29 +32,38 @@ const TagSchema = z
 
 export type Tag = { id?: number; name: string };
 
-export const FormFileUploadSchema = z
+export const FormFileUploadTextSchema = z
   .object({
     content: z
       .string()
       .min(3, "You must have a length of at least 3")
       .transform((val) => sanitize(val)),
     relatedPostId: z.number().min(0).or(z.undefined()),
-    source: z.url().or(z.literal("")).or(z.undefined()),
+    source: z
+      .url({
+        protocol: /^https?$/,
+        error: "URL must start with https:",
+      })
+      .or(z.literal(""))
+      .or(z.undefined()),
     tags: z.array(TagSchema),
-    thumbnail: z.instanceof(File),
     title: z
       .string()
       .min(3, "You must have a length of at least 3")
       .transform((val) => sanitize(val)),
-    userId: z.string(),
-    video: z
-      .instanceof(File)
-      .refine((file) => /\.(mp4|avi|mov|wmv|flv|mkv)$/i.test(file.name), {
-        message: "Only video files are allowed",
-      }),
-    videoMetadata: VideoMetadataSchema,
   })
-  .strict();
+  .loose();
+
+export const FormFileUploadSchema = FormFileUploadTextSchema.extend({
+  userId: z.string(),
+  video: z
+    .instanceof(File)
+    .refine((file) => /\.(mp4|avi|mov|wmv|flv|mkv)$/i.test(file.name), {
+      message: "Only video files are allowed",
+    }),
+  thumbnail: z.instanceof(File),
+  videoMetadata: VideoMetadataSchema,
+}).strict();
 
 export type FileUploadData = z.infer<typeof FormFileUploadSchema>;
 

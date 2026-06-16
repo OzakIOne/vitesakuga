@@ -15,9 +15,10 @@ import { useTagCollection } from "src/lib/tags/tags.hooks";
 type TagInputProps = {
   value: Tag[];
   onChange: (tags: Tag[]) => void;
+  onBlur?: () => void;
 };
 
-export function TagInput({ value, onChange }: TagInputProps) {
+export function TagInput({ value, onChange, onBlur }: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
 
   const { allTags, collection: baseCollection } = useTagCollection({
@@ -115,7 +116,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
         )}
 
         <Combobox.Control>
-          <Combobox.Input placeholder="Add tags..." />
+          <Combobox.Input onBlur={onBlur} placeholder="Add tags..." />
           <Combobox.IndicatorGroup>
             <Combobox.Trigger />
           </Combobox.IndicatorGroup>

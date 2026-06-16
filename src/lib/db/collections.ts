@@ -4,8 +4,8 @@ import {
   createCollection,
   localStorageCollectionOptions,
 } from "@tanstack/react-db";
-
 import type { Tag } from "src/lib/posts/posts.schema";
+
 import type { DbSchemaSelect } from "../db/schema";
 import { getQueryClient } from "../query-client";
 import { getAllTags } from "../tags/tags.service";

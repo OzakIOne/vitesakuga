@@ -2,8 +2,8 @@ import "src/lib/polyfills";
 import { createListCollection } from "@chakra-ui/react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
-import type { Tag } from "src/lib/posts/posts.schema";
 import { tagsCollection } from "src/lib/db/collections";
+import type { Tag } from "src/lib/posts/posts.schema";
 
 export function useTagCollection(options: {
   search: string;

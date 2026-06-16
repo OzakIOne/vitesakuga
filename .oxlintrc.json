@@ -19,7 +19,8 @@
     "typescript/consistent-type-definitions": ["error", "type"],
     "react-perf/jsx-no-new-function-as-prop": "off",
     "max-statements": "off", // toggle back later
-    "typescript/strict-boolean-expressions": "off"
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/no-deprecated": "error"
   },
   "options": {
     "typeAware": true,

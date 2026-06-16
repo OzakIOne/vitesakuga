@@ -55,7 +55,7 @@ export function useUploadForm(params: UseUploadFormParams) {
       content: draft?.content ?? "",
       relatedPostId: draft?.relatedPostId as number | undefined,
       source: draft?.source as string | undefined,
-      tags: (draft?.tags ?? []) as { id?: number; name: string }[],
+      tags: (draft?.tags ?? []) as { id?: number | undefined; name: string }[],
       thumbnail: undefined as unknown as File,
       title: draft?.title ?? "",
       userId,
@@ -67,13 +67,7 @@ export function useUploadForm(params: UseUploadFormParams) {
       await uploadPostMutation.mutateAsync(formData);
     },
     validators: {
-      onSubmit: ({ value }) => {
-        const result = FormFileUploadSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.issues.map((i) => i.message).join(", ");
-        }
-        return undefined;
-      },
+      onChange: FormFileUploadSchema,
     },
   });
 

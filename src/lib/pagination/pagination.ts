@@ -1,7 +1,7 @@
 export type PaginationInput = {
   page: number;
   pageSize: number;
-}
+};
 
 export type PaginationMeta = {
   currentPage: number;
@@ -11,7 +11,7 @@ export type PaginationMeta = {
   offset: number;
   total: number;
   totalPages: number;
-}
+};
 
 export function computePagination(
   totalCount: number,

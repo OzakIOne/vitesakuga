@@ -18,7 +18,7 @@ function LoginForm() {
   const [serverError, setServerError] = useState("");
   const [socialLoading, setSocialLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
