@@ -35,7 +35,7 @@ export const Route = createLazyFileRoute("/upload")({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext() as { user: any };
+  const { user } = Route.useRouteContext();
 
   const video = useVideoProcessing();
   const draft = useUploadDraft();
@@ -97,7 +97,7 @@ function RouteComponent() {
     enabled: relatedPostSearch.length > 2 && !isNumericSearch,
     queryFn: async () =>
       searchPosts({
-        data: { page: 0, q: relatedPostSearch, tags: [] as string[] },
+        data: { page: 0, q: relatedPostSearch, tags: [] },
       }),
     queryKey: postsKeys.search({
       dateRange: "all",
@@ -110,7 +110,7 @@ function RouteComponent() {
 
   const { data: postById, isFetching: isIdLookupLoading } = useQuery({
     enabled: isNumericSearch && numericId !== null && numericId > 0,
-    ...postQueryDetail(numericId!),
+    ...postQueryDetail(numericId ?? -1),
   });
 
   const isFetching = isSearchLoading || isIdLookupLoading;

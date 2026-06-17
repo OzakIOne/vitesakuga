@@ -6,7 +6,6 @@ import z from "zod";
 import { KyselyDB } from "../db/context";
 import { UserNotFoundError } from "../errors";
 import { computePagination } from "../pagination/pagination";
-import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchUserInputSchema } from "./users.schema";
 
@@ -172,10 +171,36 @@ export const fetchUserPostsEffect = Effect.fn("fetchUserPosts")(function* (
   return yield* svc.userPosts(data);
 });
 
-export const fetchUsers = createServerFn().handler(
-  createHandler(fetchUsersEffect, UsersServiceLive),
-);
+export const fetchUsers = createServerFn().handler(async () => {
+  const { makeDBLayer } = await import("../db/layer-factories.server");
+  const base = await makeDBLayer();
+  const layer = UsersServiceLive.pipe(Layer.provideMerge(base));
+  return Effect.runPromise(
+    fetchUsersEffect().pipe(
+      Effect.provide(layer),
+      Effect.tapError((error) =>
+        Effect.logError("Server function failed").pipe(
+          Effect.annotateLogs({ error: String(error) }),
+        ),
+      ),
+    ),
+  );
+});
 
 export const fetchUserPosts = createServerFn()
   .validator((input: unknown) => fetchUserInputSchema.parse(input))
-  .handler(createHandler(fetchUserPostsEffect, UsersServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = UsersServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      fetchUserPostsEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: String(error) }),
+          ),
+        ),
+      ),
+    );
+  });

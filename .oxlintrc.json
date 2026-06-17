@@ -18,7 +18,7 @@
     "@tanstack/eslint-plugin-router",
     "@effect/eslint-plugin"
   ],
-  "ignorePatterns": ["*.test.*"],
+  "ignorePatterns": ["*.test.*", "scripts/"],
   "rules": {
     "no-void": "off",
     "require-await": "off",

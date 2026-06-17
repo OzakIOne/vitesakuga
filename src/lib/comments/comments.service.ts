@@ -4,22 +4,22 @@ import { z } from "zod";
 
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
-import { makeAuthLayer } from "../db/layer-factories.server";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
 import {
   CommentNotFoundError,
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
-import { createHandler } from "../server-fn.handler";
 
 export class CommentsService extends Context.Service<
   CommentsService,
   {
-    readonly fetch: (postId: number) => Effect.Effect<unknown, Error>;
+    readonly fetch: (
+      postId: number,
+    ) => Effect.Effect<z.infer<typeof commentsSelectSchema>[], Error>;
     readonly add: (
       data: z.infer<typeof commentInsertSchema>,
-    ) => Effect.Effect<unknown, Error>;
+    ) => Effect.Effect<z.infer<typeof commentsSelectSchema>, Error>;
     readonly delete_: (
       commentId: number,
     ) => Effect.Effect<{ success: boolean }, Error>;
@@ -160,18 +160,58 @@ export const deleteCommentEffect = Effect.fn("deleteComment")(function* (data: {
   return yield* svc.delete_(data.commentId);
 });
 
-export const fetchComments = createServerFn()
+export const fetchComments = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => z.number().parse(input))
-  .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = CommentsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      fetchCommentsEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: String(error) }),
+          ),
+        ),
+      ),
+    );
+  });
 
-export const addComment = createServerFn({ method: "POST" })
+export const addComment = createServerFn({ method: "POST", strict: { output: false } })
   .validator((input: unknown) => commentInsertSchema.parse(input))
-  .handler(createHandler(addCommentEffect, CommentsServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = CommentsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      addCommentEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: String(error) }),
+          ),
+        ),
+      ),
+    );
+  });
 
 export const deleteComment = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     z.object({ commentId: z.number() }).parse(input),
   )
-  .handler(
-    createHandler(deleteCommentEffect, CommentsServiceLive, makeAuthLayer),
-  );
+  .handler(async ({ data }) => {
+    const { makeAuthLayer } = await import("../db/layer-factories.server");
+    const base = await makeAuthLayer();
+    const layer = CommentsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      deleteCommentEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: String(error) }),
+          ),
+        ),
+      ),
+    );
+  });

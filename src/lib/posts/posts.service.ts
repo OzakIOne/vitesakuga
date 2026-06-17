@@ -5,14 +5,16 @@ import { z } from "zod";
 
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
-import { makeAuthLayer } from "../db/layer-factories.server";
 import {
   ForbiddenError,
   PostNotFoundError,
   UnauthorizedError,
+  ValidationError,
 } from "../errors";
-import { computePagination } from "../pagination/pagination";
-import { createHandler } from "../server-fn.handler";
+import {
+  computePagination,
+  type PaginationMeta,
+} from "../pagination/pagination";
 import { StorageModule } from "../storage/storage.module";
 import { mapPopularTags } from "../tags/tags.utils";
 import {
@@ -25,22 +27,52 @@ import {
 
 const PAGE_SIZE = 30;
 
+type PostsSearchResult = {
+  data: z.infer<typeof postsSelectSchema>[];
+  meta: {
+    pagination: PaginationMeta;
+    popularTags: ReturnType<typeof mapPopularTags>;
+  };
+};
+
+type PostDetailResult = {
+  post: {
+    content: string;
+    createdAt: Date;
+    id: number;
+    relatedPostId: number | null;
+    source: string | null;
+    title: string;
+    videoKey: string;
+    videoMetadata: z.infer<typeof VideoMetadataSchema>;
+  };
+  relatedPost: z.infer<typeof postsSelectSchema> | null;
+  tags: { id: number; name: string }[];
+  user: {
+    id: string;
+    image: string | null;
+    name: string;
+  };
+};
+
 export class PostsService extends Context.Service<
   PostsService,
   {
     readonly search: (
       data: z.infer<typeof searchPostsBaseSchema>,
-    ) => Effect.Effect<unknown, Error>;
-    readonly fetchDetail: (postId: number) => Effect.Effect<unknown, Error>;
+    ) => Effect.Effect<PostsSearchResult, Error>;
+    readonly fetchDetail: (
+      postId: number,
+    ) => Effect.Effect<PostDetailResult, Error>;
     readonly upload: (
       data: z.infer<typeof FormFileUploadSchema>,
-    ) => Effect.Effect<unknown, Error>;
-    readonly getByTag: (
-      data: z.infer<typeof postByTagSchema>,
-    ) => Effect.Effect<unknown, Error>;
+    ) => Effect.Effect<z.infer<typeof postsSelectSchema>, Error>;
     readonly update: (
       data: z.infer<typeof updatePostInputSchema>,
-    ) => Effect.Effect<unknown, Error>;
+    ) => Effect.Effect<z.infer<typeof postsSelectSchema>, Error>;
+    readonly getByTag: (
+      data: z.infer<typeof postByTagSchema>,
+    ) => Effect.Effect<PostsSearchResult, Error>;
   }
 >()("PostsService") {}
 
@@ -151,7 +183,9 @@ export const PostsServiceLive = Layer.effect(
       const parsed = yield* Effect.try({
         try: () => z.array(postsSelectSchema).parse(items),
         catch: (error) =>
-          new Error(`Error processing search results: ${String(error)}`),
+          new ValidationError({
+            message: `Error processing search results: ${String(error)}`,
+          }),
       });
 
       let popularTagsQuery = db
@@ -386,7 +420,9 @@ export const PostsServiceLive = Layer.effect(
       const parsed = yield* Effect.try({
         try: () => z.array(postsSelectSchema).parse(items),
         catch: (error) =>
-          new Error(`Error processing posts by tag: ${String(error)}`),
+          new ValidationError({
+            message: `Error processing posts by tag: ${String(error)}`,
+          }),
       });
 
       const popularTagsResult = yield* db.execute(
@@ -523,19 +559,7 @@ const uploadPostEffect = Effect.fn("uploadPost")(function* (
   data: z.infer<typeof FormFileUploadSchema>,
 ) {
   const svc = yield* PostsService;
-  return yield* svc.upload(data).pipe(
-    Effect.tapError((error) =>
-      Effect.logError("Upload failed").pipe(
-        Effect.annotateLogs({
-          error: String(error),
-          fileName: data.video.name,
-          fileSize: data.video.size,
-          title: data.title,
-          userId: data.userId,
-        }),
-      ),
-    ),
-  );
+  return yield* svc.upload(data);
 });
 
 export const getPostsByTagEffect = Effect.fn("getPostsByTag")(function* (
@@ -552,13 +576,41 @@ export const updatePostEffect = Effect.fn("updatePost")(function* (
   return yield* svc.update(data);
 });
 
-export const searchPosts = createServerFn()
+export const searchPosts = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => searchPostsBaseSchema.parse(input))
-  .handler(createHandler(searchPostsEffect, PostsServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      searchPostsEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: error }),
+          ),
+        ),
+      ),
+    );
+  });
 
-export const fetchPostDetail = createServerFn()
+export const fetchPostDetail = createServerFn({ strict: { output: false } })
   .validator((postId: unknown) => z.coerce.number().parse(postId))
-  .handler(createHandler(fetchPostDetailEffect, PostsServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      fetchPostDetailEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: error }),
+          ),
+        ),
+      ),
+    );
+  });
 
 export const uploadPost = createServerFn({ method: "POST" })
   .validator((data: FormData) => {
@@ -574,12 +626,54 @@ export const uploadPost = createServerFn({ method: "POST" })
     };
     return FormFileUploadSchema.parse(normalized);
   })
-  .handler(createHandler(uploadPostEffect, PostsServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      uploadPostEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: error }),
+          ),
+        ),
+      ),
+    );
+  });
 
 export const updatePost = createServerFn({ method: "POST" })
   .validator((input: unknown) => updatePostInputSchema.parse(input))
-  .handler(createHandler(updatePostEffect, PostsServiceLive, makeAuthLayer));
+  .handler(async ({ data }) => {
+    const { makeAuthLayer } = await import("../db/layer-factories.server");
+    const base = await makeAuthLayer();
+    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      updatePostEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: error }),
+          ),
+        ),
+      ),
+    );
+  });
 
-export const getPostsByTag = createServerFn()
+export const getPostsByTag = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => postByTagSchema.parse(input))
-  .handler(createHandler(getPostsByTagEffect, PostsServiceLive));
+  .handler(async ({ data }) => {
+    const { makeDBLayer } = await import("../db/layer-factories.server");
+    const base = await makeDBLayer();
+    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
+    return Effect.runPromise(
+      getPostsByTagEffect(data).pipe(
+        Effect.provide(layer),
+        Effect.tapError((error) =>
+          Effect.logError("Server function failed").pipe(
+            Effect.annotateLogs({ error: error }),
+          ),
+        ),
+      ),
+    );
+  });

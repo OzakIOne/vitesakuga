@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
-import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "./tags.utils";
 
 export class TagsService extends Context.Service<
@@ -55,10 +54,34 @@ export const getAllPopularTagsEffect = Effect.fn("getAllPopularTags")(
   },
 );
 
-export const getAllTags = createServerFn().handler(
-  createHandler(getAllTagsEffect, TagsServiceLive),
-);
+export const getAllTags = createServerFn().handler(async () => {
+  const { makeDBLayer } = await import("../db/layer-factories.server");
+  const base = await makeDBLayer();
+  const layer = TagsServiceLive.pipe(Layer.provideMerge(base));
+  return Effect.runPromise(
+    getAllTagsEffect().pipe(
+      Effect.provide(layer),
+      Effect.tapError((error) =>
+        Effect.logError("Server function failed").pipe(
+          Effect.annotateLogs({ error: error }),
+        ),
+      ),
+    ),
+  );
+});
 
-export const getAllPopularTags = createServerFn().handler(
-  createHandler(getAllPopularTagsEffect, TagsServiceLive),
-);
+export const getAllPopularTags = createServerFn().handler(async () => {
+  const { makeDBLayer } = await import("../db/layer-factories.server");
+  const base = await makeDBLayer();
+  const layer = TagsServiceLive.pipe(Layer.provideMerge(base));
+  return Effect.runPromise(
+    getAllPopularTagsEffect().pipe(
+      Effect.provide(layer),
+      Effect.tapError((error) =>
+        Effect.logError("Server function failed").pipe(
+          Effect.annotateLogs({ error: error }),
+        ),
+      ),
+    ),
+  );
+});
