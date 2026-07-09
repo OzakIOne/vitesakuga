@@ -20,5 +20,6 @@
       "path": "./docs"
     }
   },
+  "plugin": [".opencode/plugins/graphify.js"],
   "lsp": true
 }

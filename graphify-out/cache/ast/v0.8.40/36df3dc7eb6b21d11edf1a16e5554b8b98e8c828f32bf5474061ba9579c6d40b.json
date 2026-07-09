@@ -1,0 +1,191 @@
+{
+  "nodes": [
+    {
+      "id": "home_ozaki_dev_vitesakuga_agents_skills_xstate_v5_references_v4_to_v5_quick_ref_md",
+      "label": "v4-to-v5-quick-ref.md",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "label": "XState v4 to v5 Quick Reference",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_core_renames",
+      "label": "Core renames",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_prefer_v5_argument_style",
+      "label": "Prefer v5 argument style",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L14"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_prefer_setup",
+      "label": "Prefer `setup(...)`",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_transition_object_shapes",
+      "label": "Transition object shapes",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L56"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_parallel_states_transition_locality",
+      "label": "Parallel states: transition locality",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L71"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_invocation",
+      "label": "Invocation",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L174"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_actor_creation",
+      "label": "Actor creation",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L186"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_typing",
+      "label": "Typing",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L201"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_guard_and_action_objects",
+      "label": "Guard and action objects",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L212"
+    },
+    {
+      "id": "references_v4_to_v5_quick_ref_preserve_scope",
+      "label": "Preserve scope",
+      "file_type": "document",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L221"
+    }
+  ],
+  "edges": [
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_xstate_v5_references_v4_to_v5_quick_ref_md",
+      "target": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_core_renames",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_prefer_v5_argument_style",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_prefer_setup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_transition_object_shapes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_parallel_states_transition_locality",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_invocation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L174",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_actor_creation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L186",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_typing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L201",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_guard_and_action_objects",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L212",
+      "weight": 1.0
+    },
+    {
+      "source": "references_v4_to_v5_quick_ref_xstate_v4_to_v5_quick_reference",
+      "target": "references_v4_to_v5_quick_ref_preserve_scope",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/xstate-v5/references/v4-to-v5-quick-ref.md",
+      "source_location": "L221",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

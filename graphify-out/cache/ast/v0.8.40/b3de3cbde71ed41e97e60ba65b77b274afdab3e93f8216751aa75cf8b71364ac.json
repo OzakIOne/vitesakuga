@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    {
+      "id": "home_ozaki_dev_vitesakuga_agents_skills_playwright_best_practices_license_md",
+      "label": "LICENSE.md",
+      "file_type": "document",
+      "source_file": ".agents/skills/playwright-best-practices/LICENSE.md",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

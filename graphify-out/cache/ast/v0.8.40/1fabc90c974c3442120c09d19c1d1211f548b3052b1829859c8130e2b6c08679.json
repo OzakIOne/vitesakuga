@@ -1,0 +1,319 @@
+{
+  "nodes": [
+    {
+      "id": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "tanstack_pacer_skill_overview",
+      "label": "Overview",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "tanstack_pacer_skill_installation",
+      "label": "Installation",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L15"
+    },
+    {
+      "id": "tanstack_pacer_skill_debouncing",
+      "label": "Debouncing",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L22"
+    },
+    {
+      "id": "tanstack_pacer_skill_class_api",
+      "label": "Class API",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "tanstack_pacer_skill_factory_function",
+      "label": "Factory Function",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L49"
+    },
+    {
+      "id": "tanstack_pacer_skill_react_hooks",
+      "label": "React Hooks",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L63"
+    },
+    {
+      "id": "tanstack_pacer_skill_throttling",
+      "label": "Throttling",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L86"
+    },
+    {
+      "id": "tanstack_pacer_skill_class_api_90",
+      "label": "Class API",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L90"
+    },
+    {
+      "id": "tanstack_pacer_skill_react_hooks_110",
+      "label": "React Hooks",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L110"
+    },
+    {
+      "id": "tanstack_pacer_skill_rate_limiting",
+      "label": "Rate Limiting",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L124"
+    },
+    {
+      "id": "tanstack_pacer_skill_class_api_128",
+      "label": "Class API",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L128"
+    },
+    {
+      "id": "tanstack_pacer_skill_react_hooks_149",
+      "label": "React Hooks",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L149"
+    },
+    {
+      "id": "tanstack_pacer_skill_queuing",
+      "label": "Queuing",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L162"
+    },
+    {
+      "id": "tanstack_pacer_skill_batching",
+      "label": "Batching",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L184"
+    },
+    {
+      "id": "tanstack_pacer_skill_async_variants",
+      "label": "Async Variants",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L205"
+    },
+    {
+      "id": "tanstack_pacer_skill_choosing_the_right_utility",
+      "label": "Choosing the Right Utility",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L222"
+    },
+    {
+      "id": "tanstack_pacer_skill_leading_vs_trailing_edge",
+      "label": "Leading vs Trailing Edge",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L233"
+    },
+    {
+      "id": "tanstack_pacer_skill_best_practices",
+      "label": "Best Practices",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L239"
+    },
+    {
+      "id": "tanstack_pacer_skill_common_pitfalls",
+      "label": "Common Pitfalls",
+      "file_type": "document",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L248"
+    }
+  ],
+  "edges": [
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_overview",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_installation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_debouncing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_debouncing",
+      "target": "tanstack_pacer_skill_class_api",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_debouncing",
+      "target": "tanstack_pacer_skill_factory_function",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_debouncing",
+      "target": "tanstack_pacer_skill_react_hooks",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_throttling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_throttling",
+      "target": "tanstack_pacer_skill_class_api_90",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_throttling",
+      "target": "tanstack_pacer_skill_react_hooks_110",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_rate_limiting",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L124",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_rate_limiting",
+      "target": "tanstack_pacer_skill_class_api_128",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "tanstack_pacer_skill_rate_limiting",
+      "target": "tanstack_pacer_skill_react_hooks_149",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L149",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_queuing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L162",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_batching",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L184",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_async_variants",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L205",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_choosing_the_right_utility",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L222",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_leading_vs_trailing_edge",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L233",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_best_practices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L239",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_tanstack_pacer_skill_md",
+      "target": "tanstack_pacer_skill_common_pitfalls",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/tanstack-pacer/SKILL.md",
+      "source_location": "L248",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

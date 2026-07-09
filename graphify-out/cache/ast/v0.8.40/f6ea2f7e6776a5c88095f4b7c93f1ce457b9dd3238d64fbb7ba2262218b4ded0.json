@@ -1,0 +1,271 @@
+{
+  "nodes": [
+    {
+      "id": "home_ozaki_dev_vitesakuga_agents_skills_effect_best_practices_references_layer_patterns_md",
+      "label": "layer-patterns.md",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "references_layer_patterns_layer_patterns",
+      "label": "Layer Patterns",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "references_layer_patterns_dependencies_in_effect_service",
+      "label": "Dependencies in Effect.Service",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L3"
+    },
+    {
+      "id": "references_layer_patterns_correct_pattern",
+      "label": "Correct Pattern",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "references_layer_patterns_wrong_pattern_leaked_dependencies",
+      "label": "Wrong Pattern (Leaked Dependencies)",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L38"
+    },
+    {
+      "id": "references_layer_patterns_infrastructure_layers",
+      "label": "Infrastructure Layers",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L62"
+    },
+    {
+      "id": "references_layer_patterns_layer_mergeall_over_nested_provides",
+      "label": "Layer.mergeAll Over Nested Provides",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L108"
+    },
+    {
+      "id": "references_layer_patterns_layer_providemerge_for_sequential_composition",
+      "label": "Layer.provideMerge for Sequential Composition",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L147"
+    },
+    {
+      "id": "references_layer_patterns_layer_deduplication_benefits",
+      "label": "Layer Deduplication Benefits",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L170"
+    },
+    {
+      "id": "references_layer_patterns_typescript_lsp_performance",
+      "label": "TypeScript LSP Performance",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L204"
+    },
+    {
+      "id": "references_layer_patterns_layerconfig_pattern",
+      "label": "layerConfig Pattern",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L237"
+    },
+    {
+      "id": "references_layer_patterns_layer_naming_conventions",
+      "label": "Layer Naming Conventions",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L296"
+    },
+    {
+      "id": "references_layer_patterns_layer_unwrapeffect_for_config_dependent_layers",
+      "label": "Layer.unwrapEffect for Config-Dependent Layers",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L339"
+    },
+    {
+      "id": "references_layer_patterns_scoped_layers",
+      "label": "Scoped Layers",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L381"
+    },
+    {
+      "id": "references_layer_patterns_testing_layer_composition",
+      "label": "Testing Layer Composition",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L420"
+    },
+    {
+      "id": "references_layer_patterns_layer_effect_vs_layer_succeed",
+      "label": "Layer.effect vs Layer.succeed",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L453"
+    },
+    {
+      "id": "references_layer_patterns_lazy_layers",
+      "label": "Lazy Layers",
+      "file_type": "document",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L475"
+    }
+  ],
+  "edges": [
+    {
+      "source": "home_ozaki_dev_vitesakuga_agents_skills_effect_best_practices_references_layer_patterns_md",
+      "target": "references_layer_patterns_layer_patterns",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_dependencies_in_effect_service",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_dependencies_in_effect_service",
+      "target": "references_layer_patterns_correct_pattern",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_dependencies_in_effect_service",
+      "target": "references_layer_patterns_wrong_pattern_leaked_dependencies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_infrastructure_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layer_mergeall_over_nested_provides",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layer_providemerge_for_sequential_composition",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layer_deduplication_benefits",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L170",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_typescript_lsp_performance",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L204",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layerconfig_pattern",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L237",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layer_naming_conventions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L296",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layer_unwrapeffect_for_config_dependent_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L339",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_scoped_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L381",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_testing_layer_composition",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L420",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_layer_effect_vs_layer_succeed",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L453",
+      "weight": 1.0
+    },
+    {
+      "source": "references_layer_patterns_layer_patterns",
+      "target": "references_layer_patterns_lazy_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/skills/effect-best-practices/references/layer-patterns.md",
+      "source_location": "L475",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

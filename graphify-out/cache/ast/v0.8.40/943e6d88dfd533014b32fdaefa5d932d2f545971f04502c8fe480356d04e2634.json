@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "home_ozaki_dev_vitesakuga_github_copilot_instructions_md",
+      "label": "copilot-instructions.md",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "github_copilot_instructions_package_manager",
+      "label": "Package Manager",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L5"
+    },
+    {
+      "id": "github_copilot_instructions_key_patterns_conventions",
+      "label": "Key Patterns & Conventions",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L9"
+    },
+    {
+      "id": "github_copilot_instructions_server_functions",
+      "label": "Server Functions",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L11"
+    },
+    {
+      "id": "github_copilot_instructions_routing_data_fetching",
+      "label": "Routing & Data fetching",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L21"
+    },
+    {
+      "id": "github_copilot_instructions_form_handling",
+      "label": "Form Handling",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L35"
+    },
+    {
+      "id": "github_copilot_instructions_detailed_guidelines",
+      "label": "Detailed Guidelines",
+      "file_type": "document",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L42"
+    }
+  ],
+  "edges": [
+    {
+      "source": "home_ozaki_dev_vitesakuga_github_copilot_instructions_md",
+      "target": "github_copilot_instructions_package_manager",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_github_copilot_instructions_md",
+      "target": "github_copilot_instructions_key_patterns_conventions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "github_copilot_instructions_key_patterns_conventions",
+      "target": "github_copilot_instructions_server_functions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "github_copilot_instructions_key_patterns_conventions",
+      "target": "github_copilot_instructions_routing_data_fetching",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "github_copilot_instructions_key_patterns_conventions",
+      "target": "github_copilot_instructions_form_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "home_ozaki_dev_vitesakuga_github_copilot_instructions_md",
+      "target": "github_copilot_instructions_detailed_guidelines",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/copilot-instructions.md",
+      "source_location": "L42",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

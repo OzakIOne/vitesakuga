@@ -1,0 +1,191 @@
+{
+  "nodes": [
+    {
+      "id": "home_ozaki_dev_vitesakuga_context_md",
+      "label": "CONTEXT.md",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "vitesakuga_context_domain_glossary",
+      "label": "Domain Glossary",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "vitesakuga_context_core_entities",
+      "label": "Core Entities",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L5"
+    },
+    {
+      "id": "vitesakuga_context_upload_path",
+      "label": "Upload Path",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L15"
+    },
+    {
+      "id": "vitesakuga_context_post_detail",
+      "label": "Post Detail",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L27"
+    },
+    {
+      "id": "vitesakuga_context_auth",
+      "label": "Auth",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L33"
+    },
+    {
+      "id": "vitesakuga_context_search_pagination",
+      "label": "Search & Pagination",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "vitesakuga_context_video_conversion",
+      "label": "Video Conversion",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "vitesakuga_context_infrastructure",
+      "label": "Infrastructure",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L53"
+    },
+    {
+      "id": "vitesakuga_context_storage",
+      "label": "Storage",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L63"
+    },
+    {
+      "id": "vitesakuga_context_pagination",
+      "label": "Pagination",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L67"
+    },
+    {
+      "id": "vitesakuga_context_conventions",
+      "label": "Conventions",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L71"
+    }
+  ],
+  "edges": [
+    {
+      "source": "home_ozaki_dev_vitesakuga_context_md",
+      "target": "vitesakuga_context_domain_glossary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_core_entities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_upload_path",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_post_detail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_auth",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_search_pagination",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_video_conversion",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_infrastructure",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_storage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_pagination",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "vitesakuga_context_domain_glossary",
+      "target": "vitesakuga_context_conventions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L71",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
