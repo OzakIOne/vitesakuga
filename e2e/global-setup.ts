@@ -53,7 +53,7 @@ const startRustFS = Effect.gen(function* () {
       Effect.fail(
         new CommandError({
           command: "docker compose",
-          message: `Failed to start RustFS: ${error instanceof CommandError ? error.message : String(error)}`,
+          message: `Failed to start RustFS: ${error instanceof CommandError ? error.message : error}`,
         }),
       ),
     ),
@@ -92,7 +92,7 @@ const setup = Effect.gen(function* () {
 }).pipe(
   Effect.catch((error) =>
     Effect.logWarning(
-      `Setup warning: ${error instanceof Error ? error.message : String(error)}`,
+      `Setup warning: ${error instanceof Error ? error.message : error}`,
     ),
   ),
 );

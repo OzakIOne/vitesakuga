@@ -8,7 +8,7 @@ import { KyselyDB } from "./context";
 
 const LOG_LAYER = withMinimumLogLevel("Debug");
 
-const isE2E = process.env.DATABASE_DRIVER === "pglite";
+const isE2E = process.env["DATABASE_DRIVER"] === "pglite";
 
 export const makeDBLayer = async () => {
   const dbModule = isE2E ? await import("./e2e-db") : await import("./kysely");

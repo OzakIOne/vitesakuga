@@ -4,7 +4,7 @@ import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
 import z from "zod";
 
 import { KyselyDB } from "../db/context";
-import { UserNotFoundError } from "../errors";
+import { UserNotFoundError, ValidationError } from "../errors";
 import { computePagination } from "../pagination/pagination";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchUserInputSchema } from "./users.schema";
@@ -52,9 +52,10 @@ export const UsersServiceLive = Layer.effect(
       return yield* Effect.try({
         try: () => z.array(userSelectSchema).parse(data),
         catch: (error) =>
-          new Error(
-            `There was an error processing the search results: ${String(error)}`,
-          ),
+          new ValidationError({
+            message: "There was an error processing the search results",
+            cause: error,
+          }),
       });
     });
 
@@ -126,7 +127,10 @@ export const UsersServiceLive = Layer.effect(
       const posts = yield* Effect.try({
         try: () => z.array(postsSelectSchema).parse(items),
         catch: (error) =>
-          new Error(`Error processing user posts: ${String(error)}`),
+          new ValidationError({
+            message: "Error processing user posts",
+            cause: error,
+          }),
       });
 
       const popularTagsResult = yield* db.execute(
@@ -180,7 +184,7 @@ export const fetchUsers = createServerFn().handler(async () => {
       Effect.provide(layer),
       Effect.tapError((error) =>
         Effect.logError("Server function failed").pipe(
-          Effect.annotateLogs({ error: String(error) }),
+          Effect.annotateLogs({ error: error }),
         ),
       ),
     ),
@@ -198,7 +202,7 @@ export const fetchUserPosts = createServerFn()
         Effect.provide(layer),
         Effect.tapError((error) =>
           Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: String(error) }),
+            Effect.annotateLogs({ error: error }),
           ),
         ),
       ),

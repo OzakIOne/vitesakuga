@@ -19,23 +19,17 @@ test.describe("Convert page", () => {
   });
 
   test("page loads with converter form", async ({ page }) => {
-    await expect(
-      page.getByText("Drag and drop files here"),
-    ).toBeVisible();
+    await expect(page.getByText("Drag and drop files here")).toBeVisible();
     await expect(
       page.getByRole("combobox", { name: "Output Format" }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Convert" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Convert" })).toBeVisible();
   });
 
   test("convert button is disabled without file and format", async ({
     page,
   }) => {
-    await expect(
-      page.getByRole("button", { name: "Convert" }),
-    ).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Convert" })).toBeDisabled();
   });
 
   test("output format select opens and shows options", async ({ page }) => {
@@ -65,9 +59,9 @@ test.describe("Convert page", () => {
 
     await expect(page.getByText("test.mp4")).toBeVisible({ timeout: 10000 });
 
-    await expect(
-      page.getByRole("button", { name: "Convert" }),
-    ).toBeDisabled({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: "Convert" })).toBeDisabled({
+      timeout: 5000,
+    });
   });
 
   test("shows converter description text at bottom", async ({ page }) => {
@@ -77,9 +71,7 @@ test.describe("Convert page", () => {
       ),
     ).toBeVisible();
     await expect(
-      page.getByText(
-        /Transcode: MP4 \(H\.264\/AAC\), WebM \(VP9\/Opus\)/,
-      ),
+      page.getByText(/Transcode: MP4 \(H\.264\/AAC\), WebM \(VP9\/Opus\)/),
     ).toBeVisible();
   });
 });

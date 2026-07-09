@@ -77,14 +77,12 @@ export const StorageLive = Layer.effect(
         });
 
         if (result.$metadata.httpStatusCode !== 200) {
-          return yield* Effect.fail(
-            new StorageError({
-              cause: result.$metadata,
-              key,
-              message: `Upload failed with status ${result.$metadata.httpStatusCode}`,
-              operation: "upload",
-            }),
-          );
+          return yield* new StorageError({
+            cause: result.$metadata,
+            key,
+            message: `Upload failed with status ${result.$metadata.httpStatusCode}`,
+            operation: "upload",
+          });
         }
 
         yield* Effect.logInfo("File uploaded to R2").pipe(

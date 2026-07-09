@@ -136,7 +136,7 @@ console.error("Error:", error)
 **Correct:**
 ```typescript
 yield* Effect.log("Processing order", { orderId })
-yield* Effect.logError("Operation failed", { error: String(error) })
+yield* Effect.logError("Operation failed", { error: (error) })
 ```
 
 ## FORBIDDEN: process.env Directly

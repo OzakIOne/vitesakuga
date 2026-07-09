@@ -7,7 +7,7 @@ import { Pool as PgPool } from "pg";
 import { envServer } from "../env/server";
 import * as schema from "./schema";
 
-const isLocal = process.env.DATABASE_DRIVER === "local";
+const isLocal = process.env["DATABASE_DRIVER"] === "local";
 
 let pool: PgPool | NeonPool | null = null;
 

@@ -67,7 +67,13 @@ export function useUploadForm(params: UseUploadFormParams) {
       await uploadPostMutation.mutateAsync(formData);
     },
     validators: {
-      onChange: FormFileUploadSchema,
+      onSubmit: ({ value }) => {
+        const result = FormFileUploadSchema.safeParse(value);
+        if (!result.success) {
+          return result.error.issues.map((i) => i.message).join(", ");
+        }
+        return undefined;
+      },
     },
   });
 

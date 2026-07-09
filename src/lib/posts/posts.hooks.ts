@@ -27,11 +27,14 @@ export function usePostsPage<
   const navigate = useNavigate();
   const previousDataRef = useRef<TData | undefined>(undefined);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { placeholderData: _placeholderData, ...restOptions } = queryOptions;
+
   const { data, isFetching } = useQuery({
-    ...queryOptions,
-    placeholderData: previousDataRef.current as any,
-  }) as { data: TData; isFetching: boolean };
+    ...restOptions,
+    ...(previousDataRef.current !== undefined
+      ? { placeholderData: previousDataRef.current }
+      : {}),
+  } as UseQueryOptions<TData, Error, TData, TQueryKey>);
 
   if (data) {
     previousDataRef.current = data;

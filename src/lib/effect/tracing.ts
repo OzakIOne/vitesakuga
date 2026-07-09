@@ -7,5 +7,7 @@ import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 export const TracingLive = NodeSdk.layer(() => ({
   resource: { serviceName: "vitesakuga" },
   spanProcessor: new BatchSpanProcessor(new OTLPTraceExporter()),
-  logRecordProcessor: new BatchLogRecordProcessor(new OTLPLogExporter()),
+  logRecordProcessor: new BatchLogRecordProcessor({
+    exporter: new OTLPLogExporter(),
+  }),
 }));

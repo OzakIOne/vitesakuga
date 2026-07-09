@@ -23,7 +23,7 @@ export default defineConfig({
       VITE_BASE_URL: "http://localhost:3000",
     },
     environment: "node", // Logic-only tests don't need jsdom
-    exclude: ["e2e/**", "node_modules/**", "dist/**"],
+    exclude: ["e2e/**", "node_modules/**", "dist/**", ".opencode/**"],
     globals: false, // We are using explicit imports
     setupFiles: ["./vitest.setup.ts"],
   },

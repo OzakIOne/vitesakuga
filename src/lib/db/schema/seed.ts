@@ -28,6 +28,6 @@ async function main() {
   process.stdout.write("Database seeded successfully.\n");
 }
 
-if (process.env.SEED_DB === "true") {
+if (process.env["SEED_DB"] === "true") {
   void main();
 }

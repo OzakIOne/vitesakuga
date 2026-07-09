@@ -42,8 +42,8 @@ export function PostEditForm({
       await updatePostMutation.mutateAsync({
         content: value.content,
         postId: post.id,
-        relatedPostId: value.relatedPostId ?? undefined,
-        source: value.source ?? undefined,
+        relatedPostId: value.relatedPostId,
+        source: value.source,
         tags: value.tags,
         title: value.title,
       });
@@ -55,8 +55,8 @@ export function PostEditForm({
       postId: number;
       title: string;
       content: string;
-      source?: string;
-      relatedPostId?: number;
+      source: string | undefined;
+      relatedPostId: number | undefined;
       tags: { id?: number; name: string }[];
     }) => updatePost({ data }),
     onError: (error) => {

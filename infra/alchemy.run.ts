@@ -1,6 +1,11 @@
 import alchemy from "alchemy";
 import { R2Bucket } from "alchemy/cloudflare";
-import { Config, Console, Effect } from "effect";
+import { Config, Console, Data, Effect } from "effect";
+
+class InfrastructureError extends Data.TaggedError("InfrastructureError")<{
+  readonly message: string;
+  readonly cause?: unknown;
+}> {}
 
 const deploy = Effect.gen(function* () {
   const accountId = yield* Config.string("CLOUDFLARE_ACCOUNT_ID");
@@ -10,7 +15,10 @@ const deploy = Effect.gen(function* () {
   const app = yield* Effect.tryPromise({
     try: () => alchemy("vitesakuga-infra"),
     catch: (error) =>
-      new Error(`Failed to initialize alchemy app: ${String(error)}`),
+      new InfrastructureError({
+        message: "Failed to initialize alchemy app",
+        cause: error,
+      }),
   });
 
   const bucket = yield* Effect.tryPromise({
@@ -18,7 +26,11 @@ const deploy = Effect.gen(function* () {
       R2Bucket("sakuga-bucket", {
         name: "vitesakuga-media",
       }),
-    catch: (error) => new Error(`Failed to create R2Bucket: ${String(error)}`),
+    catch: (error) =>
+      new InfrastructureError({
+        message: "Failed to create R2Bucket",
+        cause: error,
+      }),
   });
 
   yield* Console.log("\n✅ Deployment successfully orchestrated!");
@@ -36,10 +48,13 @@ const deploy = Effect.gen(function* () {
   yield* Effect.tryPromise({
     try: () => app.finalize(),
     catch: (error) =>
-      new Error(`Failed to finalize alchemy app: ${String(error)}`),
+      new InfrastructureError({
+        message: "Failed to finalize alchemy app",
+        cause: error,
+      }),
   });
 });
 
 Effect.runPromise(deploy).catch((error) => {
-  throw new Error(`Deployment failed: ${String(error)}`);
+  throw new Error(`Deployment failed: ${error}`);
 });

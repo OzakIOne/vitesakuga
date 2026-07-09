@@ -41,9 +41,6 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  optimizeDeps: {
-    include: ["use-sync-external-store"],
-  },
   server: {
     port: 3000,
   },

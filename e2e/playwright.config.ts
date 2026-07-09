@@ -1,8 +1,10 @@
 import { defineConfig } from "@playwright/test";
 
+const CI = process.env["CI"];
+
 export default defineConfig({
   expect: { timeout: 10000 },
-  forbidOnly: !!process.env.CI,
+  forbidOnly: !!CI,
   fullyParallel: true,
   globalSetup: "./global-setup.ts",
   outputDir: ".test-results",
@@ -18,8 +20,11 @@ export default defineConfig({
       },
     },
   ],
-  reporter: [["list"], ["html", { outputFolder: ".test-report", host: "0.0.0.0" }]],
-  retries: process.env.CI ? 2 : 0,
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: ".test-report", host: "0.0.0.0" }],
+  ],
+  retries: CI ? 2 : 0,
   testDir: ".",
   timeout: 60000,
   use: {
@@ -31,7 +36,7 @@ export default defineConfig({
       command: "pnpm dev",
       cwd: "..",
       port: 3000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !CI,
       timeout: 120000,
       env: {
         DATABASE_DRIVER: "pglite",

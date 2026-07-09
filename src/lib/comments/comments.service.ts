@@ -11,12 +11,22 @@ import {
   UnauthorizedError,
 } from "../errors";
 
+export type CommentWithUser = {
+  content: string;
+  createdAt: Date;
+  id: number;
+  postId: number;
+  userId: string;
+  userName: string;
+  userImage: string | null;
+};
+
 export class CommentsService extends Context.Service<
   CommentsService,
   {
     readonly fetch: (
       postId: number,
-    ) => Effect.Effect<z.infer<typeof commentsSelectSchema>[], Error>;
+    ) => Effect.Effect<readonly CommentWithUser[], Error>;
     readonly add: (
       data: z.infer<typeof commentInsertSchema>,
     ) => Effect.Effect<z.infer<typeof commentsSelectSchema>, Error>;
@@ -51,11 +61,7 @@ export const CommentsServiceLive = Layer.effect(
           ]),
       );
 
-      return yield* Effect.try({
-        try: () => z.array(commentsSelectSchema).parse(comments),
-        catch: (error) =>
-          new Error(`Error processing comments: ${String(error)}`),
-      });
+      return comments;
     });
 
     const add = Effect.fn("CommentsService.add")(function* (
@@ -90,11 +96,9 @@ export const CommentsServiceLive = Layer.effect(
       const session = yield* getSessionEffect();
 
       if (!session?.user) {
-        return yield* Effect.fail(
-          new UnauthorizedError({
-            message: "You must be logged in to delete a comment",
-          }),
-        );
+        return yield* new UnauthorizedError({
+          message: "You must be logged in to delete a comment",
+        });
       }
 
       const commentOption = yield* db.executeTakeFirstOption(
@@ -116,11 +120,9 @@ export const CommentsServiceLive = Layer.effect(
       });
 
       if (comment.userId !== session.user.id) {
-        return yield* Effect.fail(
-          new ForbiddenError({
-            message: "You can only delete your own comments",
-          }),
-        );
+        return yield* new ForbiddenError({
+          message: "You can only delete your own comments",
+        });
       }
 
       yield* db.execute(db.deleteFrom("comments").where("id", "=", commentId));
@@ -171,14 +173,17 @@ export const fetchComments = createServerFn({ strict: { output: false } })
         Effect.provide(layer),
         Effect.tapError((error) =>
           Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: String(error) }),
+            Effect.annotateLogs({ error: error }),
           ),
         ),
       ),
     );
   });
 
-export const addComment = createServerFn({ method: "POST", strict: { output: false } })
+export const addComment = createServerFn({
+  method: "POST",
+  strict: { output: false },
+})
   .validator((input: unknown) => commentInsertSchema.parse(input))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
@@ -189,7 +194,7 @@ export const addComment = createServerFn({ method: "POST", strict: { output: fal
         Effect.provide(layer),
         Effect.tapError((error) =>
           Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: String(error) }),
+            Effect.annotateLogs({ error: error }),
           ),
         ),
       ),
@@ -209,7 +214,7 @@ export const deleteComment = createServerFn({ method: "POST" })
         Effect.provide(layer),
         Effect.tapError((error) =>
           Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: String(error) }),
+            Effect.annotateLogs({ error: error }),
           ),
         ),
       ),

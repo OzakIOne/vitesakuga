@@ -52,13 +52,13 @@ const makeTestLayer = (
 
 export type ServiceTestContext = {
   db: Kysely<DB>;
-  testLayer: Layer.Layer<any, any>;
+  testLayer: Layer.Layer<unknown, unknown>;
   runEffect: <T>(effect: Effect.Effect<T>) => Promise<T>;
   mockGetSession: ReturnType<typeof vi.fn>;
 };
 
 export const makeServiceTestLayer = async (
-  serviceLive: Layer.Layer<any, any>,
+  serviceLive: Layer.Layer<unknown, unknown>,
 ): Promise<ServiceTestContext> => {
   const { db } = await createTestKysely();
   const mockGetSession = vi.fn<AuthSessionProvider["api"]["getSession"]>();
