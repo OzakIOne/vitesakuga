@@ -63,6 +63,7 @@
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.25",
     "@xstate/react": "^6.1.0",
+    "alchemy": "2.0.0-beta.61",
     "better-auth": "1.6.18",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
@@ -104,7 +105,6 @@
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "7.0.0-dev.20260615.1",
     "@vitejs/plugin-react": "^6.0.2",
-    "alchemy": "^0.93.12",
     "dotenv": "^17.4.2",
     "drizzle-seed": "^0.3.1",
     "jsdom": "^29.1.1",
@@ -120,5 +120,10 @@
     "vitest": "^4.1.9",
     "wrangler": "^4.100.0"
   },
-  "packageManager": "pnpm@11.7.0"
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "onFail": "download"
+    }
+  }
 }

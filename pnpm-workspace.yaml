@@ -6,6 +6,7 @@ trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 10080
 trustPolicyExclude:
   - "tinyexec"
+  - "@effect/vitest@4.0.0-beta.98"
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
@@ -17,4 +18,4 @@ overrides:
   "kysely": "^0.29.2"
   "better-auth": "1.6.14"
 patchedDependencies:
-  "@tanstack/react-db": patches/@tanstack__react-db.patch
+  "@tanstack/react-db@0.1.86": patches/@tanstack__react-db.patch
