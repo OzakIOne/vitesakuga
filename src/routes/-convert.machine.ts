@@ -157,31 +157,29 @@ export const convertMachine = setup({
     }),
   },
   actors: {
-    probeFile: fromPromise(
-      async ({ input }: { input: { file: File } }) => {
-        const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
-        const mediainput = new Input({
-          formats: ALL_FORMATS,
-          source: new BlobSource(input.file),
-        });
-        try {
-          const [videoTrack, audioTrack] = await Promise.all([
-            mediainput.getPrimaryVideoTrack(),
-            mediainput.getPrimaryAudioTrack(),
-          ]);
-          const [videoConfig, audioConfig] = await Promise.all([
-            videoTrack?.getDecoderConfig(),
-            audioTrack?.getDecoderConfig(),
-          ]);
-          return {
-            videoCodec: videoConfig?.codec ?? null,
-            audioCodec: audioConfig?.codec ?? null,
-          };
-        } finally {
-          mediainput.dispose();
-        }
-      },
-    ),
+    probeFile: fromPromise(async ({ input }: { input: { file: File } }) => {
+      const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
+      const mediainput = new Input({
+        formats: ALL_FORMATS,
+        source: new BlobSource(input.file),
+      });
+      try {
+        const [videoTrack, audioTrack] = await Promise.all([
+          mediainput.getPrimaryVideoTrack(),
+          mediainput.getPrimaryAudioTrack(),
+        ]);
+        const [videoConfig, audioConfig] = await Promise.all([
+          videoTrack?.getDecoderConfig(),
+          audioTrack?.getDecoderConfig(),
+        ]);
+        return {
+          videoCodec: videoConfig?.codec ?? null,
+          audioCodec: audioConfig?.codec ?? null,
+        };
+      } finally {
+        mediainput.dispose();
+      }
+    }),
     runConversion: fromCallback<
       ConvertProgressEvent | ConvertDoneEvent | ConvertErrorEvent,
       { file: File; output: OutputFormat }
@@ -328,14 +326,17 @@ export const convertMachine = setup({
     ready: {
       invoke: {
         src: "probeFile",
+        // oxlint-disable-next-line
         input: ({ context }) => ({ file: context.file! }),
         onDone: {
           actions: [
             {
               type: "setCodecs",
               params: ({ event }) => ({
-                videoCodec: event.output.videoCodec,
-                audioCodec: event.output.audioCodec,
+                // oxlint-disable-next-line
+                videoCodec: event.output.videoCodec!,
+                // oxlint-disable-next-line
+                audioCodec: event.output.audioCodec!,
               }),
             },
           ],
@@ -385,7 +386,9 @@ export const convertMachine = setup({
       invoke: {
         src: "runConversion",
         input: ({ context }) => ({
+          // oxlint-disable-next-line
           file: context.file!,
+          // oxlint-disable-next-line
           output: context.output!,
         }),
       },

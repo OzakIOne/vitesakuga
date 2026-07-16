@@ -1,6 +1,6 @@
 blockExoticSubdeps: true
 
-minimumReleaseAge: 1440
+minimumReleaseAge: 1000
 
 trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 10080

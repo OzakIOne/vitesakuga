@@ -2,7 +2,13 @@ import { createSchemaFactory } from "drizzle-zod";
 import type z from "zod";
 
 import type { userInsertSchema, userSelectSchema } from "./auth.schema";
-import { comments, posts, tags } from "./sakuga.schema";
+import {
+  comments,
+  playlists,
+  playlistPosts,
+  posts,
+  tags,
+} from "./sakuga.schema";
 
 const { createInsertSchema, createSelectSchema } = createSchemaFactory({
   coerce: true,
@@ -17,6 +23,12 @@ export const postsInsertSchema = createInsertSchema(posts);
 export const commentsSelectSchema = createSelectSchema(comments).loose();
 export const commentsInsertSchema = createInsertSchema(comments);
 
+export const playlistsSelectSchema = createSelectSchema(playlists);
+export const playlistsInsertSchema = createInsertSchema(playlists);
+
+export const playlistPostsSelectSchema = createSelectSchema(playlistPosts);
+export const playlistPostsInsertSchema = createInsertSchema(playlistPosts);
+
 type UserSelect = z.infer<typeof userSelectSchema>;
 type PostsSelect = z.infer<typeof postsSelectSchema>;
 type CommentsSelect = z.infer<typeof commentsSelectSchema>;
@@ -27,6 +39,8 @@ export type DbSchemaSelect = {
   posts: PostsSelect;
   comments: CommentsSelect;
   tags: TagsSelect;
+  playlists: z.infer<typeof playlistsSelectSchema>;
+  playlistPosts: z.infer<typeof playlistPostsSelectSchema>;
 };
 
 type UserInsert = z.infer<typeof userInsertSchema>;
@@ -39,4 +53,6 @@ export type DbSchemaInsert = {
   posts: PostsInsert;
   comments: CommentsInsert;
   tags: TagsInsert;
+  playlists: z.infer<typeof playlistsInsertSchema>;
+  playlistPosts: z.infer<typeof playlistPostsInsertSchema>;
 };

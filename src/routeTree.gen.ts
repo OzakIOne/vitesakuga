@@ -22,6 +22,8 @@ import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as PostsTagsTagRouteImport } from './routes/posts/tags/$tag'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as UsersIdPlaylistsIndexRouteImport } from './routes/users.$id.playlists.index'
+import { Route as UsersIdPlaylistsPlaylistIdRouteImport } from './routes/users.$id.playlists.$playlistId'
 
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
@@ -87,6 +89,17 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersIdPlaylistsIndexRoute = UsersIdPlaylistsIndexRouteImport.update({
+  id: '/playlists/',
+  path: '/playlists/',
+  getParentRoute: () => UsersIdRoute,
+} as any)
+const UsersIdPlaylistsPlaylistIdRoute =
+  UsersIdPlaylistsPlaylistIdRouteImport.update({
+    id: '/playlists/$playlistId',
+    path: '/playlists/$playlistId',
+    getParentRoute: () => UsersIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,11 +109,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
-  '/users/$id': typeof UsersIdRoute
+  '/users/$id': typeof UsersIdRouteWithChildren
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
+  '/users/$id/playlists/$playlistId': typeof UsersIdPlaylistsPlaylistIdRoute
+  '/users/$id/playlists/': typeof UsersIdPlaylistsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,11 +125,13 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
-  '/users/$id': typeof UsersIdRoute
+  '/users/$id': typeof UsersIdRouteWithChildren
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
+  '/users/$id/playlists/$playlistId': typeof UsersIdPlaylistsPlaylistIdRoute
+  '/users/$id/playlists': typeof UsersIdPlaylistsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,11 +143,13 @@ export interface FileRoutesById {
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
   '/posts/$postId': typeof PostsPostIdRoute
-  '/users/$id': typeof UsersIdRoute
+  '/users/$id': typeof UsersIdRouteWithChildren
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
+  '/users/$id/playlists/$playlistId': typeof UsersIdPlaylistsPlaylistIdRoute
+  '/users/$id/playlists/': typeof UsersIdPlaylistsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +166,8 @@ export interface FileRouteTypes {
     | '/users/'
     | '/api/auth/$'
     | '/posts/tags/$tag'
+    | '/users/$id/playlists/$playlistId'
+    | '/users/$id/playlists/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +182,8 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/auth/$'
     | '/posts/tags/$tag'
+    | '/users/$id/playlists/$playlistId'
+    | '/users/$id/playlists'
   id:
     | '__root__'
     | '/'
@@ -176,6 +199,8 @@ export interface FileRouteTypes {
     | '/users/'
     | '/api/auth/$'
     | '/posts/tags/$tag'
+    | '/users/$id/playlists/$playlistId'
+    | '/users/$id/playlists/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -185,7 +210,7 @@ export interface RootRouteChildren {
   ConvertRoute: typeof ConvertRoute
   UploadRoute: typeof UploadRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
-  UsersIdRoute: typeof UsersIdRoute
+  UsersIdRoute: typeof UsersIdRouteWithChildren
   PostsIndexRoute: typeof PostsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -285,6 +310,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users/$id/playlists/': {
+      id: '/users/$id/playlists/'
+      path: '/playlists'
+      fullPath: '/users/$id/playlists/'
+      preLoaderRoute: typeof UsersIdPlaylistsIndexRouteImport
+      parentRoute: typeof UsersIdRoute
+    }
+    '/users/$id/playlists/$playlistId': {
+      id: '/users/$id/playlists/$playlistId'
+      path: '/playlists/$playlistId'
+      fullPath: '/users/$id/playlists/$playlistId'
+      preLoaderRoute: typeof UsersIdPlaylistsPlaylistIdRouteImport
+      parentRoute: typeof UsersIdRoute
+    }
   }
 }
 
@@ -302,6 +341,19 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
 
+interface UsersIdRouteChildren {
+  UsersIdPlaylistsPlaylistIdRoute: typeof UsersIdPlaylistsPlaylistIdRoute
+  UsersIdPlaylistsIndexRoute: typeof UsersIdPlaylistsIndexRoute
+}
+
+const UsersIdRouteChildren: UsersIdRouteChildren = {
+  UsersIdPlaylistsPlaylistIdRoute: UsersIdPlaylistsPlaylistIdRoute,
+  UsersIdPlaylistsIndexRoute: UsersIdPlaylistsIndexRoute,
+}
+
+const UsersIdRouteWithChildren =
+  UsersIdRoute._addFileChildren(UsersIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
@@ -309,7 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConvertRoute: ConvertRoute,
   UploadRoute: UploadRoute,
   PostsPostIdRoute: PostsPostIdRoute,
-  UsersIdRoute: UsersIdRoute,
+  UsersIdRoute: UsersIdRouteWithChildren,
   PostsIndexRoute: PostsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

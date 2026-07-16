@@ -1,5 +1,7 @@
 import { Box, Button, VStack } from "@chakra-ui/react";
+import { useState } from "react";
 import { Comments } from "src/components/Comments";
+import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 
@@ -22,6 +24,8 @@ export function PostDetailDisplay({
   onEditClick,
   onBack,
 }: PostDetailDisplayProps) {
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+
   return (
     <VStack align="stretch" gap={4}>
       <Button alignSelf="flex-start" onClick={onBack}>
@@ -31,6 +35,9 @@ export function PostDetailDisplay({
       <Box border="1px" borderRadius="md" p={4} shadow="md">
         <Post
           currentUserId={currentUserId}
+          onAddToPlaylist={
+            currentUserId ? () => setShowPlaylistModal(true) : undefined
+          }
           onEditClick={onEditClick}
           post={post}
           relatedPost={relatedPost}
@@ -38,6 +45,14 @@ export function PostDetailDisplay({
           user={user}
         />
       </Box>
+
+      {showPlaylistModal && currentUserId && (
+        <PlaylistAddModal
+          onCancel={() => setShowPlaylistModal(false)}
+          postId={post.id}
+          userId={currentUserId}
+        />
+      )}
 
       <Comments currentUserId={currentUserId} postId={post.id} />
     </VStack>

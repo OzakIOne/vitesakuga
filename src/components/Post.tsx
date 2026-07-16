@@ -1,4 +1,12 @@
-import { Badge, Box, Button, Heading, Stack, Text } from "@chakra-ui/react";
+import {
+  Badge,
+  Box,
+  Button,
+  Heading,
+  HStack,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 
@@ -12,6 +20,7 @@ export function Post({
   relatedPost,
   currentUserId,
   onEditClick,
+  onAddToPlaylist,
 }: {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
@@ -19,13 +28,28 @@ export function Post({
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
   currentUserId?: string | undefined;
   onEditClick?: (() => void) | undefined;
+  onAddToPlaylist?: (() => void) | undefined;
 }) {
   const isOwner = currentUserId === user.id;
 
   return (
     <>
       {post.videoKey && <Video bypass={false} url={post.videoKey} />}
-      {post.title && <Heading as="h3">{post.title}</Heading>}
+      {post.title && (
+        <HStack justify="space-between">
+          <Heading as="h3">{post.title}</Heading>
+          {currentUserId && onAddToPlaylist && (
+            <Button
+              colorPalette="blue"
+              onClick={onAddToPlaylist}
+              size="sm"
+              variant="outline"
+            >
+              Add to playlist
+            </Button>
+          )}
+        </HStack>
+      )}
       {post.content && <Text mb={4}>{post.content}</Text>}
       {post.createdAt && (
         <Text color="gray.500" fontSize="sm" mb={4}>

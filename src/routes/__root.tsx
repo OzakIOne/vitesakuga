@@ -37,6 +37,10 @@ import {
   CommentsFnsContext,
   defaultCommentsFns,
 } from "src/lib/comments/comments.fn-context";
+import {
+  PlaylistsFnsContext,
+  defaultPlaylistsFns,
+} from "src/lib/playlists/playlists.fn-context";
 import { usersKeys } from "src/lib/users/users.queries";
 import { seo } from "src/utils/seo";
 
@@ -371,9 +375,11 @@ function RootComponent() {
         <GlobalShortcuts />
         <AuthClientContext.Provider value={authClient}>
           <CommentsFnsContext.Provider value={defaultCommentsFns}>
-            <RootDocument>
-              <Outlet />
-            </RootDocument>
+            <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
+              <RootDocument>
+                <Outlet />
+              </RootDocument>
+            </PlaylistsFnsContext.Provider>
           </CommentsFnsContext.Provider>
         </AuthClientContext.Provider>
       </HotkeysProvider>

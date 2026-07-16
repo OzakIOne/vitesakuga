@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   integer,
   json,
   pgTable,
@@ -7,6 +8,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "node_modules/drizzle-orm";
 import { z } from "zod";
@@ -73,6 +75,52 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   user: one(user, {
     fields: [posts.userId],
     references: [user.id],
+  }),
+}));
+
+export const playlists = pgTable("playlists", {
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  description: text("description"),
+  id: serial("id").primaryKey(),
+  isPublic: boolean("is_public").notNull().default(false),
+  title: text("title").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  userId: text("user_id")
+    .references(() => user.id, { onDelete: "cascade" })
+    .notNull(),
+});
+
+export const playlistsRelations = relations(playlists, ({ one, many }) => ({
+  playlistPosts: many(playlistPosts),
+  user: one(user, {
+    fields: [playlists.userId],
+    references: [user.id],
+  }),
+}));
+
+export const playlistPosts = pgTable(
+  "playlist_posts",
+  {
+    playlistId: integer("playlist_id")
+      .references(() => playlists.id, { onDelete: "cascade" })
+      .notNull(),
+    postId: integer("post_id").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("unique_playlist_post").on(table.playlistId, table.postId),
+  ],
+);
+
+export const playlistPostsRelations = relations(playlistPosts, ({ one }) => ({
+  playlist: one(playlists, {
+    fields: [playlistPosts.playlistId],
+    references: [playlists.id],
+  }),
+  post: one(posts, {
+    fields: [playlistPosts.postId],
+    references: [posts.id],
   }),
 }));
 

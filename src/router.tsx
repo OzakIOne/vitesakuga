@@ -11,7 +11,7 @@ export function getRouter() {
 
   console.log("Running in", {
     mode: import.meta.env.MODE,
-    url: import.meta.env.VITE_BASE_URL,
+    url: import.meta.env["VITE_BASE_URL"],
   });
 
   const router = createTanStackRouter({
