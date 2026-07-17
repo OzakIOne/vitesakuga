@@ -1,0 +1,9 @@
+.agents/
+.github/
+.opencode/
+.vscode/
+.zed/
+docker/
+scripts/
+infra/
+graphify-out/cost.json
