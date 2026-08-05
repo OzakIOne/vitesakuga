@@ -13,7 +13,7 @@ import { RequestHeadersService } from "../auth/context";
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
-import { makeRustFSStorageLayer } from "../storage/storage.rustfs";
+import { makeGarageStorageLayer } from "../storage/storage.garage";
 import { KyselyDB } from "./context";
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
@@ -37,7 +37,7 @@ const makeTestLayer = (
   auth: AuthSessionProvider | null,
   headers: () => Headers,
 ) => {
-  const { layer: storageLayer } = makeRustFSStorageLayer();
+  const { layer: storageLayer } = makeGarageStorageLayer();
   return Layer.mergeAll(
     Layer.succeed(KyselyDB)(makeFromKysely(db)),
     Layer.succeed(AuthService)(

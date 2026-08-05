@@ -203,15 +203,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                       Otelite
                     </a>
                   </Menu.Item>
-                  <Menu.Item asChild value="rustfs">
-                    <a
-                      href="http://localhost:9001"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      RustFS
-                    </a>
-                  </Menu.Item>
                   <Menu.Item asChild value="opencode">
                     <a
                       href="http://localhost:4096"
@@ -304,15 +295,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                       target="_blank"
                     >
                       Otelite
-                    </a>
-                  </Menu.Item>
-                  <Menu.Item asChild value="rustfs">
-                    <a
-                      href="http://localhost:9001"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      RustFS
                     </a>
                   </Menu.Item>
                   <Menu.Item asChild value="opencode">

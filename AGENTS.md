@@ -6,7 +6,7 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 ## Package Manager
 
-**Never use npm. Always use pnpm.** All commands (install, add, run, exec, dlx, etc.) must be executed using `pnpm`. npm is forbidden in this project.
+**Never use npm or pnpm. Always use `nub`** (`nub install`, `nub add`, `nub run <script>`, `nub exec <bin>`). npm and pnpm are forbidden in this project. `nub` respects the existing `pnpm-lock.yaml` and resolves the right Node version from `package.json#engines`.
 
 ## Build, Lint, and Test Commands
 
@@ -29,16 +29,16 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 The project uses `vitest` for testing.
 
-- **Run Tests (watch mode)**: `pnpm test` (runs `vitest -w`)
-- **Run All Tests (single pass)**: `vitest`
-- **Run a Single Test File**: `vitest <path/to/test-file.test.ts>`
-- **Run a Specific Test by Name**: `vitest -t "Test suite name" -t "specific test name"`
+- **Run Tests (watch mode)**: `nub run test` (runs `vitest -w`)
+- **Run All Tests (single pass)**: `nub exec vitest run`
+- **Run a Single Test File**: `nub exec vitest run <path/to/test-file.test.ts>`
+- **Run a Specific Test by Name**: `nub exec vitest run -t "Test suite name" -t "specific test name"`
 
 ### Database Commands (Drizzle Kit)
 
-- **Generate Migrations**: `pnpm db generate` (runs `drizzle-kit generate:pg`)
-- **Push Schema Changes**: `pnpm db push` (runs `drizzle-kit push:pg`)
-- **Apply Migrations**: `pnpm db migrate` (runs `drizzle-kit migrate`)
+- **Generate Migrations**: `nub run db generate` (runs `drizzle-kit generate:pg`)
+- **Push Schema Changes**: `nub run db push` (runs `drizzle-kit push:pg`)
+- **Apply Migrations**: `nub run db migrate` (runs `drizzle-kit migrate`)
 
 ## General Code Style Principles
 

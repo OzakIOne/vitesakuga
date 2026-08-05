@@ -70,5 +70,6 @@
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "js/ts.experimental.useTsgo": true,
   "typescript.experimental.useTsgo": true,
-  "typescript.native-preview.tsdk": "node_modules/@typescript/native-preview"
+  "typescript.native-preview.tsdk": "node_modules/@typescript/native-preview",
+"js/ts.tsdk.additionalLocations": ["./node_modules/typescript/bin"]
 }

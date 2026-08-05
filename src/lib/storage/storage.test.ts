@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { StorageModule } from "./storage.module";
 import type { StorageError } from "./storage.module";
-import { makeRustFSStorageLayer } from "./storage.rustfs";
+import { makeGarageStorageLayer } from "./storage.garage";
 
 const runTest = <A>(effect: Effect.Effect<A, StorageError, StorageModule>) => {
-  const { layer } = makeRustFSStorageLayer();
+  const { layer } = makeGarageStorageLayer();
   return Effect.runPromise(effect.pipe(Effect.provide(layer)));
 };
 

@@ -8,10 +8,11 @@ export default defineConfig({
     env: {
       BASE_URL: "/",
       BETTER_AUTH_SECRET: "test-secret-with-at-least-32-characters!!",
-      CLOUDFLARE_ACCESS_KEY: "rustfsadmin",
+      CLOUDFLARE_ACCESS_KEY: "GK1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
       CLOUDFLARE_BUCKET: "e2e-test",
-      CLOUDFLARE_R2: "http://localhost:9000",
-      CLOUDFLARE_SECRET_KEY: "rustfsadmin",
+      CLOUDFLARE_R2: "http://localhost:3900",
+      CLOUDFLARE_SECRET_KEY:
+        "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
       DATABASE_URL: "postgresql://user:password@localhost:5432/test",
       DEV: "true",
       GITHUB_CLIENT_ID: "test-client-id",

@@ -11,21 +11,25 @@ services:
     networks:
       - my_network
 
-  rustfs:
-    container_name: rustfs
-    image: rustfs/rustfs:latest
+  garage:
+    container_name: garage
+    image: dxflrs/garage:v2.3.0
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "3900:3900"
+      - "3901:3901"
+      - "3902:3902"
+      - "3903:3903"
     environment:
-      - RUSTFS_ACCESS_KEY=rustfsadmin
-      - RUSTFS_SECRET_KEY=rustfsadmin
+      - GARAGE_DEFAULT_ACCESS_KEY=GK1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
+      - GARAGE_DEFAULT_SECRET_KEY=1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
+      - GARAGE_DEFAULT_BUCKET=e2e-test
     volumes:
-      - rustfs_data:/data
+      - ./garage.toml:/etc/garage.toml
+      - garage_meta:/meta
+      - garage_data:/data
     networks:
       - my_network
-    command:
-      ["--access-key", "rustfsadmin", "--secret-key", "rustfsadmin", "/data"]
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
 
   # drizzle-gate:
   #   image: ghcr.io/drizzle-team/gateway:latest
@@ -64,6 +68,7 @@ networks:
 
 volumes:
   pgdata:
-  rustfs_data:
+  garage_meta:
+  garage_data:
   otelite_data:
   # drizzle:

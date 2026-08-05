@@ -1,7 +1,7 @@
-# Graph Report - vitesakuga  (2026-08-06)
+# Graph Report - vitesakuga  (2026-08-05)
 
 ## Corpus Check
-- 165 files · ~56,787 words
+- 165 files · ~56,729 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0195551d`
+- Built from commit: `ca1b7975`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -234,7 +234,7 @@ Nodes (12): ActorLike, outputFormats, Route, RouteComponent(), ConvertDoneEvent,
 
 ### Community 18 - "dependencies"
 Cohesion: 0.15
-Nodes (13): alchemy, drizzle-kit, effect, @effect/opentelemetry, media-chrome, @opentelemetry/sdk-logs, dependencies, alchemy (+5 more)
+Nodes (13): alchemy, @aws-sdk/client-s3, drizzle-kit, effect, media-chrome, @opentelemetry/sdk-logs, dependencies, alchemy (+5 more)
 
 ### Community 19 - "FileRoutesByPath"
 Cohesion: 0.24
@@ -250,7 +250,7 @@ Nodes (7): DefaultCatchBoundary(), getQueryClient(), getRouter(), Register, @tan
 
 ### Community 22 - "global-setup.ts"
 Cohesion: 0.25
-Nodes (7): CommandError, createBucket, curlStatus(), exec(), setup, startGarage, waitForHealth
+Nodes (7): CommandError, createBucket, curlStatus(), exec(), setup, startRustFS, waitForHealth
 
 ### Community 23 - "devDependencies"
 Cohesion: 0.22
@@ -274,7 +274,7 @@ Nodes (19): postsSelectSchema, tagsKeys, tagsQueries, getAllPopularTags, getAllP
 
 ### Community 28 - "vitest.setup.ts"
 Cohesion: 0.33
-Nodes (6): CommandError, curlStatus(), ensureGarage, exec(), isRunning, waitForHealth
+Nodes (6): CommandError, curlStatus(), ensureRustFS, exec(), isRunning, waitForHealth
 
 ### Community 29 - "Domain Docs"
 Cohesion: 0.33
@@ -324,9 +324,9 @@ Nodes (3): tagsQueryGetPopularTags(), Home(), Route
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dependencies` connect `dependencies` to `scripts`, `better-auth`, `@chakra-ui/react`, `drizzle-orm`, `drizzle-zod`, `@emotion/react`, `isomorphic-dompurify`, `jsdom`, `kysely`, `mediabunny`, `mediainfo.js`, `neonctl`, `@neondatabase/serverless`, `next-themes`, `@opentelemetry/api`, `@opentelemetry/exporter-logs-otlp-http`, `@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/resources`, `@opentelemetry/sdk-trace-base`, `@opentelemetry/sdk-trace-node`, `@opentelemetry/semantic-conventions`, `pg`, `postgres`, `react`, `react-dom`, `react-icons`, `@tailwindcss/vite`, `@tanstack/db`, `@tanstack/query-db-collection`, `@tanstack/react-db`, `@tanstack/react-form`, `@tanstack/react-form-devtools`, `@tanstack/react-hotkeys`, `@tanstack/react-pacer`, `@tanstack/react-pacer-devtools`, `@tanstack/react-query`, `@tanstack/react-query-devtools`, `@tanstack/react-router`, `@tanstack/react-router-devtools`, `@tanstack/react-router-ssr-query`, `@tanstack/react-start`, `xstate`, `@xstate/react`, `zod`?**
+- **Why does `dependencies` connect `dependencies` to `scripts`, `better-auth`, `@chakra-ui/react`, `drizzle-orm`, `drizzle-zod`, `@emotion/react`, `isomorphic-dompurify`, `kysely`, `mediabunny`, `mediainfo.js`, `neonctl`, `@neondatabase/serverless`, `next-themes`, `@opentelemetry/api`, `@opentelemetry/exporter-logs-otlp-http`, `@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/resources`, `@opentelemetry/sdk-trace-base`, `@opentelemetry/sdk-trace-node`, `@opentelemetry/semantic-conventions`, `pg`, `postgres`, `react`, `react-dom`, `react-icons`, `@tailwindcss/vite`, `@tanstack/db`, `@tanstack/query-db-collection`, `@tanstack/react-db`, `@tanstack/react-form`, `@tanstack/react-form-devtools`, `@tanstack/react-hotkeys`, `@tanstack/react-pacer`, `@tanstack/react-pacer-devtools`, `@tanstack/react-query`, `@tanstack/react-query-devtools`, `@tanstack/react-router`, `@tanstack/react-router-devtools`, `@tanstack/react-router-ssr-query`, `@tanstack/react-start`, `xstate`, `@xstate/react`, `zod`, `@effect/opentelemetry`?**
   _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Why does `devDependencies` connect `devDependencies` to `scripts`, `@cloudflare/vite-plugin`, `@cloudflare/workers-types`, `dotenv`, `drizzle-seed`, `@effect/eslint-plugin`, `@effect/language-service`, `@effect/tsgo`, `@electric-sql/pglite`, `nitro`, `oxfmt`, `oxlint`, `@playwright/test`, `@tanstack/devtools-vite`, `@tanstack/eslint-plugin-query`, `@tanstack/eslint-plugin-router`, `@tanstack/react-devtools`, `taze`, `@testing-library/react`, `@types/bun`, `@types/node`, `@types/pg`, `@types/react`, `@types/react-dom`, `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `wrangler`, `@effect/opentelemetry`?**
+- **Why does `devDependencies` connect `devDependencies` to `scripts`, `@cloudflare/vite-plugin`, `@cloudflare/workers-types`, `dotenv`, `drizzle-seed`, `@effect/eslint-plugin`, `@effect/language-service`, `@effect/tsgo`, `@electric-sql/pglite`, `jsdom`, `nitro`, `oxfmt`, `oxlint`, `@playwright/test`, `@tanstack/devtools-vite`, `@tanstack/eslint-plugin-query`, `@tanstack/eslint-plugin-router`, `@tanstack/react-devtools`, `taze`, `@testing-library/react`, `@types/bun`, `@types/node`, `@types/pg`, `@types/react`, `@types/react-dom`, `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `wrangler`?**
   _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **What connects `$schema`, `eslint`, `typescript` to the rest of the system?**
   _472 weakly-connected nodes found - possible documentation gaps or missing edges._

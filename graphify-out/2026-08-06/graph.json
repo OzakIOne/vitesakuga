@@ -678,7 +678,7 @@
       "label": "CommandError",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L11",
+      "source_location": "L10",
       "_origin": "ast",
       "id": "e2e_global_setup_commanderror",
       "community": 22,
@@ -689,7 +689,7 @@
       "label": "exec()",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L16",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "e2e_global_setup_exec",
       "community": 22,
@@ -700,7 +700,7 @@
       "label": "curlStatus()",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L23",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "e2e_global_setup_curlstatus",
       "community": 22,
@@ -711,7 +711,7 @@
       "label": "waitForHealth",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L28",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "e2e_global_setup_waitforhealth",
       "community": 22,
@@ -719,21 +719,21 @@
       "norm_label": "waitforhealth"
     },
     {
-      "label": "startGarage",
+      "label": "startRustFS",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L50",
+      "source_location": "L49",
       "_origin": "ast",
-      "id": "e2e_global_setup_startgarage",
+      "id": "e2e_global_setup_startrustfs",
       "community": 22,
       "community_name": "global-setup.ts",
-      "norm_label": "startgarage"
+      "norm_label": "startrustfs"
     },
     {
       "label": "createBucket",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L66",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "e2e_global_setup_createbucket",
       "community": 22,
@@ -744,7 +744,7 @@
       "label": "setup",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L90",
+      "source_location": "L89",
       "_origin": "ast",
       "id": "e2e_global_setup_setup",
       "community": 22,
@@ -755,7 +755,7 @@
       "label": "globalSetup()",
       "file_type": "code",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L101",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "e2e_global_setup_globalsetup",
       "community": 22,
@@ -1539,8 +1539,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "package_dependencies_aws_sdk_client_s3",
-      "community": 53,
-      "community_name": "jsdom",
+      "community": 18,
+      "community_name": "dependencies",
       "norm_label": "@aws-sdk/client-s3"
     },
     {
@@ -1550,8 +1550,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "aws_sdk_client_s3",
-      "community": 53,
-      "community_name": "jsdom",
+      "community": 18,
+      "community_name": "dependencies",
       "norm_label": "@aws-sdk/client-s3"
     },
     {
@@ -1583,8 +1583,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "package_dependencies_effect_opentelemetry",
-      "community": 18,
-      "community_name": "dependencies",
+      "community": 123,
+      "community_name": "@effect/opentelemetry",
       "norm_label": "@effect/opentelemetry"
     },
     {
@@ -1594,8 +1594,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "effect_opentelemetry",
-      "community": 18,
-      "community_name": "dependencies",
+      "community": 123,
+      "community_name": "@effect/opentelemetry",
       "norm_label": "@effect/opentelemetry"
     },
     {
@@ -3084,26 +3084,26 @@
       "norm_label": "drizzle-seed"
     },
     {
-      "label": "happy-dom",
+      "label": "jsdom",
       "file_type": "code",
       "source_file": "package.json",
       "source_location": "L109",
       "_origin": "ast",
-      "id": "package_devdependencies_happy_dom",
-      "community": 123,
-      "community_name": "@effect/opentelemetry",
-      "norm_label": "happy-dom"
+      "id": "package_devdependencies_jsdom",
+      "community": 53,
+      "community_name": "jsdom",
+      "norm_label": "jsdom"
     },
     {
-      "label": "happy-dom",
+      "label": "jsdom",
       "file_type": "concept",
       "source_file": "package.json",
       "source_location": "L109",
       "_origin": "ast",
-      "id": "happy_dom",
-      "community": 123,
-      "community_name": "@effect/opentelemetry",
-      "norm_label": "happy-dom"
+      "id": "jsdom",
+      "community": 53,
+      "community_name": "jsdom",
+      "norm_label": "jsdom"
     },
     {
       "label": "knip",
@@ -7748,28 +7748,6 @@
       "norm_label": "resolvemiddlewarelayer()"
     },
     {
-      "label": "storage.garage.ts",
-      "file_type": "code",
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_storage_storage_garage",
-      "community": 1,
-      "community_name": "test-utils.ts",
-      "norm_label": "storage.garage.ts"
-    },
-    {
-      "label": "makeGarageStorageLayer()",
-      "file_type": "code",
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L11",
-      "_origin": "ast",
-      "id": "src_lib_storage_storage_garage_makegaragestoragelayer",
-      "community": 1,
-      "community_name": "test-utils.ts",
-      "norm_label": "makegaragestoragelayer()"
-    },
-    {
       "label": "storage.module.ts",
       "file_type": "code",
       "source_file": "src/lib/storage/storage.module.ts",
@@ -7801,6 +7779,28 @@
       "community": 1,
       "community_name": "test-utils.ts",
       "norm_label": "storagemodule"
+    },
+    {
+      "label": "storage.rustfs.ts",
+      "file_type": "code",
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_storage_storage_rustfs",
+      "community": 1,
+      "community_name": "test-utils.ts",
+      "norm_label": "storage.rustfs.ts"
+    },
+    {
+      "label": "makeRustFSStorageLayer()",
+      "file_type": "code",
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
+      "community": 1,
+      "community_name": "test-utils.ts",
+      "norm_label": "makerustfsstoragelayer()"
     },
     {
       "label": "storage.s3.ts",
@@ -9071,7 +9071,7 @@
       "label": "RootComponent()",
       "file_type": "code",
       "source_file": "src/routes/__root.tsx",
-      "source_location": "L353",
+      "source_location": "L371",
       "_origin": "ast",
       "id": "src_routes_root_rootcomponent",
       "community": 5,
@@ -10179,15 +10179,15 @@
       "norm_label": "waitforhealth"
     },
     {
-      "label": "ensureGarage",
+      "label": "ensureRustFS",
       "file_type": "code",
       "source_file": "vitest.setup.ts",
       "source_location": "L51",
       "_origin": "ast",
-      "id": "vitest_setup_ensuregarage",
+      "id": "vitest_setup_ensurerustfs",
       "community": 28,
       "community_name": "vitest.setup.ts",
-      "norm_label": "ensuregarage"
+      "norm_label": "ensurerustfs"
     },
     {
       "label": "AGENTS.md",
@@ -12241,7 +12241,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L11",
+      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12252,7 +12252,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L66",
+      "source_location": "L65",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12263,7 +12263,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12274,7 +12274,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L16",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12285,7 +12285,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L101",
+      "source_location": "L100",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12296,7 +12296,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L90",
+      "source_location": "L89",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12307,18 +12307,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L50",
+      "source_location": "L49",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
-      "target": "e2e_global_setup_startgarage",
+      "target": "e2e_global_setup_startrustfs",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L28",
+      "source_location": "L27",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup",
@@ -12330,7 +12330,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "e2e/global-setup.ts",
-      "source_location": "L24",
+      "source_location": "L23",
       "weight": 1.0,
       "_origin": "ast",
       "source": "e2e_global_setup_curlstatus",
@@ -14279,7 +14279,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
-      "target": "package_devdependencies_happy_dom",
+      "target": "package_devdependencies_jsdom",
       "confidence_score": 1.0
     },
     {
@@ -14806,8 +14806,8 @@
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
-      "source": "package_devdependencies_happy_dom",
-      "target": "happy_dom",
+      "source": "package_devdependencies_jsdom",
+      "target": "jsdom",
       "confidence_score": 1.0
     },
     {
@@ -21952,7 +21952,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_db_test_utils",
-      "target": "src_lib_storage_storage_garage",
+      "target": "src_lib_storage_storage_rustfs",
       "confidence_score": 1.0
     },
     {
@@ -21964,7 +21964,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_db_test_utils",
-      "target": "src_lib_storage_storage_garage_makegaragestoragelayer",
+      "target": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
       "confidence_score": 1.0
     },
     {
@@ -22060,7 +22060,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_db_test_utils_maketestlayer",
-      "target": "src_lib_storage_storage_garage_makegaragestoragelayer",
+      "target": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
       "confidence_score": 1.0
     },
     {
@@ -25604,101 +25604,6 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L11",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_garage",
-      "target": "src_lib_storage_storage_garage_makegaragestoragelayer",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L3",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_garage",
-      "target": "src_lib_storage_storage_module",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L3",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_garage",
-      "target": "src_lib_storage_storage_module_storageerror",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L3",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_garage",
-      "target": "src_lib_storage_storage_module_storagemodule",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.test.ts",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_test",
-      "target": "src_lib_storage_storage_garage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "indirect_call",
-      "context": "argument",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "src/lib/storage/storage.garage.ts",
-      "source_location": "L13",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_garage_makegaragestoragelayer",
-      "target": "src_lib_storage_storage_module_storagemodule"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.test.ts",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_test",
-      "target": "src_lib_storage_storage_garage_makegaragestoragelayer",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/lib/storage/storage.test.ts",
-      "source_location": "L9",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_lib_storage_storage_test_runtest",
-      "target": "src_lib_storage_storage_garage_makegaragestoragelayer",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
       "source_file": "src/lib/storage/storage.module.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -25722,6 +25627,18 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_rustfs",
+      "target": "src_lib_storage_storage_module",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/lib/storage/storage.s3.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -25746,6 +25663,18 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_rustfs",
+      "target": "src_lib_storage_storage_module_storageerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/lib/storage/storage.s3.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -25770,6 +25699,30 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_rustfs",
+      "target": "src_lib_storage_storage_module_storagemodule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
+      "target": "src_lib_storage_storage_module_storagemodule"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/lib/storage/storage.s3.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -25788,6 +25741,53 @@
       "_origin": "ast",
       "source": "src_lib_storage_storage_test",
       "target": "src_lib_storage_storage_module_storagemodule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.rustfs.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_rustfs",
+      "target": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.test.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_test",
+      "target": "src_lib_storage_storage_rustfs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.test.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_test",
+      "target": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/storage/storage.test.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_storage_storage_test_runtest",
+      "target": "src_lib_storage_storage_rustfs_makerustfsstoragelayer",
       "confidence_score": 1.0
     },
     {
@@ -29134,7 +29134,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "vitest_setup",
-      "target": "vitest_setup_ensuregarage",
+      "target": "vitest_setup_ensurerustfs",
       "confidence_score": 1.0
     },
     {
@@ -30482,5 +30482,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0195551d4ef8838bf5b03aff7a5de4d05f7b53de"
+  "built_at_commit": "ca1b79756707909bb900303dbea39443fa630072"
 }
