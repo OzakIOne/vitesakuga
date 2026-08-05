@@ -66,14 +66,22 @@ export function PlaylistAddModal({
 
     setIsCreating(true);
     try {
-      await createPlaylist({ data: { title: trimmed, isPublic: false } });
+      const playlist = await createPlaylist({
+        data: { title: trimmed, isPublic: false },
+      });
       setNewTitle("");
+      await addPostToPlaylist({
+        data: { playlistId: playlist.id, postId },
+      });
       await queryClient.invalidateQueries({ queryKey });
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
     } catch {
-      // error toast handled by the mutation hook
+      void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.userPlaylists(userId),
+      });
     } finally {
       setIsCreating(false);
     }

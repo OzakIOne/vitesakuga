@@ -118,9 +118,5 @@
   "116": "upload.spec.ts",
   "117": "nitro.config.ts",
   "118": "tailwind.config.mjs",
-  "119": "vitest.config.ts",
-  "120": "upload.lazy.tsx",
-  "121": "useUploadForm.ts",
-  "122": "index.tsx",
-  "123": "@effect/opentelemetry"
+  "119": "vitest.config.ts"
 }

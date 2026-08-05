@@ -10,6 +10,7 @@ import {
   PostAlreadyInPlaylistError,
   PostNotFoundError,
   UnauthorizedError,
+  ValidationError,
 } from "../errors";
 import {
   computePagination,
@@ -246,40 +247,53 @@ export const PlaylistsServiceLive = Layer.effect(
         onSome: () => Effect.succeed(undefined),
       });
 
-      const existing = yield* db.executeTakeFirstOption(
-        db
-          .selectFrom("playlist_posts")
-          .selectAll()
-          .where("playlist_id", "=", data.playlistId)
-          .where("post_id", "=", data.postId),
-      );
+      const inserted = yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          yield* trx.executeTakeFirstOrError(
+            trx
+              .selectFrom("playlists")
+              .select(["id"])
+              .where("id", "=", data.playlistId)
+              .forUpdate(),
+          );
 
-      if (existing) {
-        return yield* new PostAlreadyInPlaylistError({
-          message: `Post ${data.postId} is already in playlist ${data.playlistId}`,
-          playlistId: data.playlistId,
-          postId: data.postId,
-        });
-      }
+          const existing = yield* trx.executeTakeFirstOption(
+            trx
+              .selectFrom("playlist_posts")
+              .selectAll()
+              .where("playlist_id", "=", data.playlistId)
+              .where("post_id", "=", data.postId),
+          );
 
-      const maxResults = yield* db.execute(
-        db
-          .selectFrom("playlist_posts")
-          .select(db.fn.max("playlist_posts.position").as("max_pos"))
-          .where("playlist_id", "=", data.playlistId),
-      );
-      const maxPos = maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
-      const nextPosition = (maxPos != null ? Number(maxPos) : -1) + 1;
+          if (Option.isSome(existing)) {
+            return yield* new PostAlreadyInPlaylistError({
+              message: `Post ${data.postId} is already in playlist ${data.playlistId}`,
+              playlistId: data.playlistId,
+              postId: data.postId,
+            });
+          }
 
-      const inserted = yield* db.executeTakeFirstOrError(
-        db
-          .insertInto("playlist_posts")
-          .values({
-            playlist_id: data.playlistId,
-            position: nextPosition,
-            post_id: data.postId,
-          })
-          .returningAll(),
+          const maxResults = yield* trx.execute(
+            trx
+              .selectFrom("playlist_posts")
+              .select(trx.fn.max("playlist_posts.position").as("max_pos"))
+              .where("playlist_id", "=", data.playlistId),
+          );
+          const maxPos =
+            maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
+          const nextPosition = (maxPos != null ? Number(maxPos) : -1) + 1;
+
+          return yield* trx.executeTakeFirstOrError(
+            trx
+              .insertInto("playlist_posts")
+              .values({
+                playlist_id: data.playlistId,
+                position: nextPosition,
+                post_id: data.postId,
+              })
+              .returningAll(),
+          );
+        }),
       );
 
       return {
@@ -295,11 +309,36 @@ export const PlaylistsServiceLive = Layer.effect(
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
 
-      yield* db.execute(
-        db
-          .deleteFrom("playlist_posts")
-          .where("playlist_id", "=", data.playlistId)
-          .where("post_id", "=", data.postId),
+      yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          yield* trx.execute(
+            trx
+              .deleteFrom("playlist_posts")
+              .where("playlist_id", "=", data.playlistId)
+              .where("post_id", "=", data.postId),
+          );
+
+          const remaining = yield* trx.execute(
+            trx
+              .selectFrom("playlist_posts")
+              .select(["post_id"])
+              .where("playlist_id", "=", data.playlistId)
+              .orderBy("position", "asc")
+              .orderBy("created_at", "asc"),
+          );
+
+          let position = 0;
+          for (const row of remaining) {
+            yield* trx.execute(
+              trx
+                .updateTable("playlist_posts")
+                .set({ position })
+                .where("playlist_id", "=", data.playlistId)
+                .where("post_id", "=", row.post_id),
+            );
+            position++;
+          }
+        }),
       );
 
       return { success: true };
@@ -311,15 +350,39 @@ export const PlaylistsServiceLive = Layer.effect(
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
 
-      for (const item of data.items) {
-        yield* db.execute(
-          db
-            .updateTable("playlist_posts")
-            .set({ position: item.position })
-            .where("playlist_id", "=", data.playlistId)
-            .where("post_id", "=", item.postId),
-        );
+      const currentPostIds = yield* db.execute(
+        db
+          .selectFrom("playlist_posts")
+          .select(["post_id"])
+          .where("playlist_id", "=", data.playlistId),
+      );
+
+      const currentSet = new Set(currentPostIds.map((row) => row.post_id));
+      const submittedSet = new Set(data.items.map((item) => item.postId));
+
+      if (
+        currentSet.size !== submittedSet.size ||
+        [...currentSet].some((postId) => !submittedSet.has(postId))
+      ) {
+        return yield* new ValidationError({
+          message:
+            "Reorder items must cover every post in the playlist exactly once",
+        });
       }
+
+      yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          for (const item of data.items) {
+            yield* trx.execute(
+              trx
+                .updateTable("playlist_posts")
+                .set({ position: item.position })
+                .where("playlist_id", "=", data.playlistId)
+                .where("post_id", "=", item.postId),
+            );
+          }
+        }),
+      );
 
       return { success: true };
     });
@@ -349,6 +412,7 @@ export const PlaylistsServiceLive = Layer.effect(
         const postCounts = yield* db.execute(
           db
             .selectFrom("playlist_posts")
+            .innerJoin("posts", "posts.id", "playlist_posts.post_id")
             .select([
               "playlist_posts.playlist_id",
               db.fn.countAll().as("count"),
@@ -365,22 +429,23 @@ export const PlaylistsServiceLive = Layer.effect(
           );
         }
 
+        const thumbnailRows = yield* db.execute(
+          db
+            .selectFrom("playlist_posts")
+            .innerJoin("posts", "posts.id", "playlist_posts.post_id")
+            .select([
+              "playlist_posts.playlist_id",
+              "posts.thumbnailKey",
+            ] as const)
+            .where("playlist_posts.playlist_id", "in", playlistIds)
+            .orderBy("playlist_posts.position", "asc"),
+        );
+
         const thumbnailMap = new Map<number, string | null>();
-        for (const p of playlists) {
-          const firstPostOption = yield* db.executeTakeFirstOption(
-            db
-              .selectFrom("playlist_posts")
-              .innerJoin("posts", "posts.id", "playlist_posts.post_id")
-              .selectAll("posts")
-              .where("playlist_posts.playlist_id", "=", p.id)
-              .orderBy("playlist_posts.position", "asc")
-              .limit(1),
-          );
-          const thumb = Option.match(firstPostOption, {
-            onNone: () => null as string | null,
-            onSome: (row) => row.thumbnailKey,
-          });
-          thumbnailMap.set(p.id, thumb);
+        for (const row of thumbnailRows) {
+          if (!thumbnailMap.has(row.playlist_id)) {
+            thumbnailMap.set(row.playlist_id, row.thumbnailKey);
+          }
         }
 
         return playlists.map((p) => ({
@@ -724,8 +789,8 @@ export const fetchUserPlaylists = createServerFn({
 })
   .validator((input: unknown) => z.string().parse(input))
   .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
+    const { makeAuthLayer } = await import("../db/layer-factories.server");
+    const base = await makeAuthLayer();
     const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
     return Effect.runPromise(
       fetchUserPlaylistsEffect(data).pipe(
@@ -744,8 +809,8 @@ export const fetchPlaylistDetail = createServerFn({
 })
   .validator((input: unknown) => fetchPlaylistDetailSchema.parse(input))
   .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
+    const { makeAuthLayer } = await import("../db/layer-factories.server");
+    const base = await makeAuthLayer();
     const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
     return Effect.runPromise(
       fetchPlaylistDetailEffect(data).pipe(
