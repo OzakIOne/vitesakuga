@@ -26,7 +26,7 @@ export const tagsCollection = createCollection(
 export const usersCollection = createCollection(
   queryCollectionOptions<DbSchemaSelect["user"]>({
     queryKey: ["users", "collection"],
-    queryFn: async () => fetchUsers(),
+    queryFn: async () => [...(await fetchUsers())],
     queryClient,
     getKey: (item) => item.id,
     syncMode: "eager",

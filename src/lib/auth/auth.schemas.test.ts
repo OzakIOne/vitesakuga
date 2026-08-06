@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { parse } from "../effect/schema.utils";
 import {
   loginSchema,
   passwordSchema,
@@ -7,9 +8,9 @@ import {
   signUpSchema,
 } from "./auth.schemas";
 
-describe(signUpSchema, () => {
+describe("signUpSchema", () => {
   it("accepts valid signup data", () => {
-    const result = signUpSchema.parse({
+    const result = parse(signUpSchema)({
       name: "John Doe",
       email: "john@example.com",
       password: "password123",
@@ -25,7 +26,7 @@ describe(signUpSchema, () => {
 
   it("rejects when passwords do not match", () => {
     expect(() =>
-      signUpSchema.parse({
+      parse(signUpSchema)({
         name: "John Doe",
         email: "john@example.com",
         password: "password123",
@@ -36,7 +37,7 @@ describe(signUpSchema, () => {
 
   it("rejects email that is not a valid email", () => {
     expect(() =>
-      signUpSchema.parse({
+      parse(signUpSchema)({
         name: "John Doe",
         email: "not-an-email",
         password: "password123",
@@ -47,7 +48,7 @@ describe(signUpSchema, () => {
 
   it("rejects name shorter than 3 characters", () => {
     expect(() =>
-      signUpSchema.parse({
+      parse(signUpSchema)({
         name: "ab",
         email: "john@example.com",
         password: "password123",
@@ -58,7 +59,7 @@ describe(signUpSchema, () => {
 
   it("rejects password shorter than 8 characters", () => {
     expect(() =>
-      signUpSchema.parse({
+      parse(signUpSchema)({
         name: "John Doe",
         email: "john@example.com",
         password: "short",
@@ -68,9 +69,9 @@ describe(signUpSchema, () => {
   });
 });
 
-describe(loginSchema, () => {
+describe("loginSchema", () => {
   it("accepts valid login data", () => {
-    const result = loginSchema.parse({
+    const result = parse(loginSchema)({
       email: "john@example.com",
       password: "password123",
     });
@@ -82,7 +83,7 @@ describe(loginSchema, () => {
 
   it("rejects invalid email", () => {
     expect(() =>
-      loginSchema.parse({
+      parse(loginSchema)({
         email: "invalid",
         password: "password123",
       }),
@@ -91,7 +92,7 @@ describe(loginSchema, () => {
 
   it("rejects empty email", () => {
     expect(() =>
-      loginSchema.parse({
+      parse(loginSchema)({
         email: "",
         password: "password123",
       }),
@@ -99,9 +100,9 @@ describe(loginSchema, () => {
   });
 });
 
-describe(profileSchema, () => {
+describe("profileSchema", () => {
   it("accepts a name and a valid URL for image", () => {
-    const result = profileSchema.parse({
+    const result = parse(profileSchema)({
       name: "John Doe",
       image: "https://example.com/avatar.jpg",
     });
@@ -112,7 +113,7 @@ describe(profileSchema, () => {
   });
 
   it("accepts an empty string for image", () => {
-    const result = profileSchema.parse({
+    const result = parse(profileSchema)({
       name: "John Doe",
       image: "",
     });
@@ -124,7 +125,7 @@ describe(profileSchema, () => {
 
   it("rejects an invalid URL for image", () => {
     expect(() =>
-      profileSchema.parse({
+      parse(profileSchema)({
         name: "John Doe",
         image: "not-a-url",
       }),
@@ -132,9 +133,9 @@ describe(profileSchema, () => {
   });
 });
 
-describe(passwordSchema, () => {
+describe("passwordSchema", () => {
   it("accepts valid password change data", () => {
-    const result = passwordSchema.parse({
+    const result = parse(passwordSchema)({
       currentPassword: "oldpass123",
       newPassword: "newpass123",
     });
@@ -146,7 +147,7 @@ describe(passwordSchema, () => {
 
   it("rejects empty current password", () => {
     expect(() =>
-      passwordSchema.parse({
+      parse(passwordSchema)({
         currentPassword: "",
         newPassword: "newpass123",
       }),

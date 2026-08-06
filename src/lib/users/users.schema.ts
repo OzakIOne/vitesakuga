@@ -1,12 +1,21 @@
-import z from "zod";
+import { Effect, Schema, SchemaGetter } from "effect";
 
-export const fetchUserInputSchema = z
-  .object({
-    page: z.number().min(0).default(0),
-    q: z.string().trim().default(""),
-    tags: z.array(z.string()).default([]),
-    userId: z.string(),
-  })
-  .strict();
+export const fetchUserInputSchema = Schema.Struct({
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
+  ),
+  q: Schema.String.pipe(
+    Schema.decode({
+      decode: SchemaGetter.transform((val) => val.trim()),
+      encode: SchemaGetter.transform((val) => val),
+    }),
+    Schema.withDecodingDefault(Effect.succeed("")),
+  ),
+  tags: Schema.Array(Schema.String).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
+  userId: Schema.String,
+});
 
-export type FetchUserInput = z.infer<typeof fetchUserInputSchema>;
+export type FetchUserInput = Schema.Schema.Type<typeof fetchUserInputSchema>;

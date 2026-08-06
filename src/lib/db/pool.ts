@@ -5,7 +5,6 @@ import { Effect } from "effect";
 import { Pool as PgPool } from "pg";
 
 import { envServer } from "../env/server";
-import * as schema from "./schema";
 
 const isLocal = process.env["DATABASE_DRIVER"] === "local";
 
@@ -28,7 +27,7 @@ function getPool(): PgPool | NeonPool {
 }
 
 export const db = isLocal
-  ? drizzleNode({ client: getPool() as PgPool, schema })
-  : drizzleNeon({ client: neon(envServer.DATABASE_URL), schema });
+  ? drizzleNode({ client: getPool() as PgPool })
+  : drizzleNeon({ client: neon(envServer.DATABASE_URL) });
 
 export const getKyselyPool = () => getPool();

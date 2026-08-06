@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option } from "effect";
-import { z } from "zod";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
+import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
   PlaylistNotFoundError,
@@ -89,31 +89,31 @@ export class PlaylistsService extends Context.Service<
   PlaylistsService,
   {
     readonly create: (
-      data: z.infer<typeof createPlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
     ) => Effect.Effect<PlaylistRow, Error>;
     readonly update: (
-      data: z.infer<typeof updatePlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
     ) => Effect.Effect<PlaylistRow, Error>;
     readonly delete_: (
       playlistId: number,
     ) => Effect.Effect<{ success: boolean }, Error>;
     readonly addPost: (
-      data: z.infer<typeof addPostToPlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
     ) => Effect.Effect<
       { playlist_id: number; post_id: number; position: number },
       Error
     >;
     readonly removePost: (
-      data: z.infer<typeof removePostFromPlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
     ) => Effect.Effect<{ success: boolean }, Error>;
     readonly reorder: (
-      data: z.infer<typeof reorderPlaylistPostsInputSchema>,
+      data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
     ) => Effect.Effect<{ success: boolean }, Error>;
     readonly fetchUserPlaylists: (
       userId: string,
     ) => Effect.Effect<readonly PlaylistWithMeta[], Error>;
     readonly fetchDetail: (
-      data: z.infer<typeof fetchPlaylistDetailSchema>,
+      data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
     ) => Effect.Effect<PlaylistDetailResult, Error>;
     readonly fetchForPost: (
       postId: number,
@@ -169,7 +169,7 @@ export const PlaylistsServiceLive = Layer.effect(
     });
 
     const create = Effect.fn("PlaylistsService.create")(function* (
-      data: z.infer<typeof createPlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
     ) {
       const user = yield* requireAuth();
 
@@ -189,7 +189,7 @@ export const PlaylistsServiceLive = Layer.effect(
     });
 
     const update = Effect.fn("PlaylistsService.update")(function* (
-      data: z.infer<typeof updatePlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
     ) {
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
@@ -227,7 +227,7 @@ export const PlaylistsServiceLive = Layer.effect(
     });
 
     const addPost = Effect.fn("PlaylistsService.addPost")(function* (
-      data: z.infer<typeof addPostToPlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
     ) {
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
@@ -304,7 +304,7 @@ export const PlaylistsServiceLive = Layer.effect(
     });
 
     const removePost = Effect.fn("PlaylistsService.removePost")(function* (
-      data: z.infer<typeof removePostFromPlaylistInputSchema>,
+      data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
     ) {
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
@@ -345,7 +345,7 @@ export const PlaylistsServiceLive = Layer.effect(
     });
 
     const reorder = Effect.fn("PlaylistsService.reorder")(function* (
-      data: z.infer<typeof reorderPlaylistPostsInputSchema>,
+      data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
     ) {
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
@@ -457,7 +457,7 @@ export const PlaylistsServiceLive = Layer.effect(
     );
 
     const fetchDetail = Effect.fn("PlaylistsService.fetchDetail")(function* (
-      data: z.infer<typeof fetchPlaylistDetailSchema>,
+      data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
     ) {
       const { playlistId, page } = data;
       const session = yield* getSessionEffect();
@@ -612,14 +612,14 @@ export const PlaylistsServiceLive = Layer.effect(
 );
 
 export const createPlaylistEffect = Effect.fn("createPlaylist")(function* (
-  data: z.infer<typeof createPlaylistInputSchema>,
+  data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
 ) {
   const svc = yield* PlaylistsService;
   return yield* svc.create(data);
 });
 
 export const updatePlaylistEffect = Effect.fn("updatePlaylist")(function* (
-  data: z.infer<typeof updatePlaylistInputSchema>,
+  data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
 ) {
   const svc = yield* PlaylistsService;
   return yield* svc.update(data);
@@ -633,21 +633,23 @@ export const deletePlaylistEffect = Effect.fn("deletePlaylist")(function* (
 });
 
 export const addPostToPlaylistEffect = Effect.fn("addPostToPlaylist")(
-  function* (data: z.infer<typeof addPostToPlaylistInputSchema>) {
+  function* (data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>) {
     const svc = yield* PlaylistsService;
     return yield* svc.addPost(data);
   },
 );
 
 export const removePostFromPlaylistEffect = Effect.fn("removePostFromPlaylist")(
-  function* (data: z.infer<typeof removePostFromPlaylistInputSchema>) {
+  function* (
+    data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
+  ) {
     const svc = yield* PlaylistsService;
     return yield* svc.removePost(data);
   },
 );
 
 export const reorderPlaylistPostsEffect = Effect.fn("reorderPlaylistPosts")(
-  function* (data: z.infer<typeof reorderPlaylistPostsInputSchema>) {
+  function* (data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>) {
     const svc = yield* PlaylistsService;
     return yield* svc.reorder(data);
   },
@@ -661,7 +663,7 @@ export const fetchUserPlaylistsEffect = Effect.fn("fetchUserPlaylists")(
 );
 
 export const fetchPlaylistDetailEffect = Effect.fn("fetchPlaylistDetail")(
-  function* (data: z.infer<typeof fetchPlaylistDetailSchema>) {
+  function* (data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) {
     const svc = yield* PlaylistsService;
     return yield* svc.fetchDetail(data);
   },
@@ -675,7 +677,7 @@ export const fetchPlaylistsForPostEffect = Effect.fn("fetchPlaylistsForPost")(
 );
 
 export const createPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) => createPlaylistInputSchema.parse(input))
+  .validator((input: unknown) => parseStrict(createPlaylistInputSchema)(input))
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -693,7 +695,7 @@ export const createPlaylist = createServerFn({ method: "POST" })
   });
 
 export const updatePlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) => updatePlaylistInputSchema.parse(input))
+  .validator((input: unknown) => parseStrict(updatePlaylistInputSchema)(input))
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -712,7 +714,7 @@ export const updatePlaylist = createServerFn({ method: "POST" })
 
 export const deletePlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
-    z.object({ playlistId: z.number() }).parse(input),
+    parse(Schema.Struct({ playlistId: Schema.Number }))(input),
   )
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
@@ -731,7 +733,9 @@ export const deletePlaylist = createServerFn({ method: "POST" })
   });
 
 export const addPostToPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) => addPostToPlaylistInputSchema.parse(input))
+  .validator((input: unknown) =>
+    parseStrict(addPostToPlaylistInputSchema)(input),
+  )
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -749,7 +753,9 @@ export const addPostToPlaylist = createServerFn({ method: "POST" })
   });
 
 export const removePostFromPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) => removePostFromPlaylistInputSchema.parse(input))
+  .validator((input: unknown) =>
+    parseStrict(removePostFromPlaylistInputSchema)(input),
+  )
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -767,7 +773,9 @@ export const removePostFromPlaylist = createServerFn({ method: "POST" })
   });
 
 export const reorderPlaylistPosts = createServerFn({ method: "POST" })
-  .validator((input: unknown) => reorderPlaylistPostsInputSchema.parse(input))
+  .validator((input: unknown) =>
+    parseStrict(reorderPlaylistPostsInputSchema)(input),
+  )
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -787,7 +795,7 @@ export const reorderPlaylistPosts = createServerFn({ method: "POST" })
 export const fetchUserPlaylists = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => z.string().parse(input))
+  .validator((input: unknown) => parse(Schema.String)(input))
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -807,7 +815,7 @@ export const fetchUserPlaylists = createServerFn({
 export const fetchPlaylistDetail = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => fetchPlaylistDetailSchema.parse(input))
+  .validator((input: unknown) => parseStrict(fetchPlaylistDetailSchema)(input))
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -827,7 +835,7 @@ export const fetchPlaylistDetail = createServerFn({
 export const fetchPlaylistsForPost = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => z.number().parse(input))
+  .validator((input: unknown) => parse(Schema.Number)(input))
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();

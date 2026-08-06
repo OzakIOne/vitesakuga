@@ -36,9 +36,10 @@ The project uses `vitest` for testing.
 
 ### Database Commands (Drizzle Kit)
 
-- **Generate Migrations**: `nub run db generate` (runs `drizzle-kit generate:pg`)
-- **Push Schema Changes**: `nub run db push` (runs `drizzle-kit push:pg`)
+- **Generate Migrations**: `nub run db generate` (runs `drizzle-kit generate`)
+- **Push Schema Changes**: `nub run db push` (runs `drizzle-kit push`)
 - **Apply Migrations**: `nub run db migrate` (runs `drizzle-kit migrate`)
+- **Upgrade Migration Folder**: `drizzle-kit up` (v0 → v1 structure)
 
 ## General Code Style Principles
 

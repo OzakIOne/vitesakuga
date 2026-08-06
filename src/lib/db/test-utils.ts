@@ -17,13 +17,12 @@ import { makeGarageStorageLayer } from "../storage/storage.garage";
 import { KyselyDB } from "./context";
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
-import * as schema from "./schema";
 
 const LOG_LAYER = withMinimumLogLevel("Debug");
 
 const createTestKysely = async () => {
   const pg = await PGlite.create("memory://");
-  const drizzleDb = drizzle(pg, { schema });
+  const drizzleDb = drizzle({ client: pg });
 
   const migrationsFolder = resolve(process.cwd(), "drizzle");
   await migrate(drizzleDb, { migrationsFolder });

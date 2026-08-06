@@ -19,7 +19,7 @@ import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 type SearchBoxProps = {
   defaultValue?: string | undefined;
-  defaultTags?: string[] | undefined;
+  defaultTags?: readonly string[] | undefined;
   placeholder?: string | undefined;
   showTitle?: boolean | undefined;
   title?: string | undefined;
@@ -35,7 +35,7 @@ export function SearchBox({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [search, setSearch] = useState(defaultValue);
-  const [tags, setTags] = useState<string[]>(defaultTags);
+  const [tags, setTags] = useState<string[]>(() => [...defaultTags]);
   const [tagSearchValue, setTagSearchValue] = useState("");
 
   const { collection } = useTagCollection({

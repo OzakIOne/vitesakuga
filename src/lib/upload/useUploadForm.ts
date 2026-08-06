@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 
 import { toaster } from "../../components/ui/toaster";
+import { safeParseStrict } from "../effect/schema.utils";
 import { postsKeys } from "../posts/posts.queries";
 import { FormFileUploadSchema } from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
@@ -68,9 +69,9 @@ export function useUploadForm(params: UseUploadFormParams) {
     },
     validators: {
       onSubmit: ({ value }) => {
-        const result = FormFileUploadSchema.safeParse(value);
+        const result = safeParseStrict(FormFileUploadSchema)(value);
         if (!result.success) {
-          return result.error.issues.map((i) => i.message).join(", ");
+          return result.message;
         }
         return undefined;
       },

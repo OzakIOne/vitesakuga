@@ -1,58 +1,119 @@
-import { createSchemaFactory } from "drizzle-zod";
-import type z from "zod";
+import { Schema } from "effect";
 
 import type { userInsertSchema, userSelectSchema } from "./auth.schema";
-import {
-  comments,
-  playlists,
-  playlistPosts,
-  posts,
-  tags,
-} from "./sakuga.schema";
 
-const { createInsertSchema, createSelectSchema } = createSchemaFactory({
-  coerce: true,
+export const tagsSelectSchema = Schema.Struct({
+  createdAt: Schema.Date,
+  id: Schema.Number,
+  name: Schema.String,
 });
 
-export const tagsSelectSchema = createSelectSchema(tags);
-export const tagsInsertSchema = createInsertSchema(tags);
+export const tagsInsertSchema = Schema.Struct({
+  createdAt: Schema.optionalKey(Schema.Date),
+  id: Schema.optionalKey(Schema.Number),
+  name: Schema.String,
+});
 
-export const postsSelectSchema = createSelectSchema(posts);
-export const postsInsertSchema = createInsertSchema(posts);
+export const postsSelectSchema = Schema.Struct({
+  content: Schema.String,
+  createdAt: Schema.Date,
+  id: Schema.Number,
+  relatedPostId: Schema.NullOr(Schema.Number),
+  source: Schema.NullOr(Schema.String),
+  thumbnailKey: Schema.String,
+  title: Schema.String,
+  userId: Schema.String,
+  videoKey: Schema.String,
+  videoMetadata: Schema.Json,
+});
 
-export const commentsSelectSchema = createSelectSchema(comments).loose();
-export const commentsInsertSchema = createInsertSchema(comments);
+export const postsInsertSchema = Schema.Struct({
+  content: Schema.String,
+  createdAt: Schema.optionalKey(Schema.Date),
+  id: Schema.optionalKey(Schema.Number),
+  relatedPostId: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  source: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  thumbnailKey: Schema.String,
+  title: Schema.String,
+  userId: Schema.String,
+  videoKey: Schema.String,
+  videoMetadata: Schema.Json,
+});
 
-export const playlistsSelectSchema = createSelectSchema(playlists);
-export const playlistsInsertSchema = createInsertSchema(playlists);
+export const commentsSelectSchema = Schema.Struct({
+  content: Schema.String,
+  createdAt: Schema.Date,
+  id: Schema.Number,
+  postId: Schema.Number,
+  userId: Schema.String,
+});
 
-export const playlistPostsSelectSchema = createSelectSchema(playlistPosts);
-export const playlistPostsInsertSchema = createInsertSchema(playlistPosts);
+export const commentsInsertSchema = Schema.Struct({
+  content: Schema.String,
+  createdAt: Schema.optionalKey(Schema.Date),
+  id: Schema.optionalKey(Schema.Number),
+  postId: Schema.Number,
+  userId: Schema.String,
+});
 
-type UserSelect = z.infer<typeof userSelectSchema>;
-type PostsSelect = z.infer<typeof postsSelectSchema>;
-type CommentsSelect = z.infer<typeof commentsSelectSchema>;
-type TagsSelect = z.infer<typeof tagsSelectSchema>;
+export const playlistsSelectSchema = Schema.Struct({
+  created_at: Schema.Date,
+  description: Schema.NullOr(Schema.String),
+  id: Schema.Number,
+  is_public: Schema.Boolean,
+  title: Schema.String,
+  updated_at: Schema.Date,
+  user_id: Schema.String,
+});
+
+export const playlistsInsertSchema = Schema.Struct({
+  created_at: Schema.optionalKey(Schema.Date),
+  description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  id: Schema.optionalKey(Schema.Number),
+  is_public: Schema.optionalKey(Schema.Boolean),
+  title: Schema.String,
+  updated_at: Schema.optionalKey(Schema.Date),
+  user_id: Schema.String,
+});
+
+export const playlistPostsSelectSchema = Schema.Struct({
+  created_at: Schema.Date,
+  playlist_id: Schema.Number,
+  position: Schema.Number,
+  post_id: Schema.Number,
+});
+
+export const playlistPostsInsertSchema = Schema.Struct({
+  created_at: Schema.optionalKey(Schema.Date),
+  playlist_id: Schema.Number,
+  position: Schema.optionalKey(Schema.Number),
+  post_id: Schema.Number,
+});
+
+type UserSelect = Schema.Schema.Type<typeof userSelectSchema>;
+type PostsSelect = Schema.Schema.Type<typeof postsSelectSchema>;
+type CommentsSelect = Schema.Schema.Type<typeof commentsSelectSchema>;
+type TagsSelect = Schema.Schema.Type<typeof tagsSelectSchema>;
 
 export type DbSchemaSelect = {
   user: UserSelect;
   posts: PostsSelect;
   comments: CommentsSelect;
   tags: TagsSelect;
-  playlists: z.infer<typeof playlistsSelectSchema>;
-  playlistPosts: z.infer<typeof playlistPostsSelectSchema>;
+  playlists: Schema.Schema.Type<typeof playlistsSelectSchema>;
+  playlistPosts: Schema.Schema.Type<typeof playlistPostsSelectSchema>;
 };
 
-type UserInsert = z.infer<typeof userInsertSchema>;
-type PostsInsert = z.infer<typeof postsInsertSchema>;
-type CommentsInsert = z.infer<typeof commentsInsertSchema>;
-type TagsInsert = z.infer<typeof tagsInsertSchema>;
+type UserInsert = Schema.Schema.Type<typeof userInsertSchema>;
+type PostsInsert = Schema.Schema.Type<typeof postsInsertSchema>;
+type CommentsInsert = Schema.Schema.Type<typeof commentsInsertSchema>;
+type TagsInsert = Schema.Schema.Type<typeof tagsInsertSchema>;
 
 export type DbSchemaInsert = {
   user: UserInsert;
   posts: PostsInsert;
   comments: CommentsInsert;
   tags: TagsInsert;
-  playlists: z.infer<typeof playlistsInsertSchema>;
-  playlistPosts: z.infer<typeof playlistPostsInsertSchema>;
+  playlists: Schema.Schema.Type<typeof playlistsInsertSchema>;
+  playlistPosts: Schema.Schema.Type<typeof playlistPostsInsertSchema>;
 };

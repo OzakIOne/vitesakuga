@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { parse, parseStrict } from "../effect/schema.utils";
 import { searchPostsBaseSchema, updatePostInputSchema } from "./posts.schema";
 
-describe(searchPostsBaseSchema, () => {
+describe("searchPostsBaseSchema", () => {
   it("should use default values for empty input", () => {
-    const result = searchPostsBaseSchema.parse({});
+    const result = parseStrict(searchPostsBaseSchema)({});
     expect(result).toStrictEqual({
       dateRange: "all",
       page: 0,
@@ -22,20 +23,22 @@ describe(searchPostsBaseSchema, () => {
       sortBy: "oldest",
       tags: ["anime", "action"],
     };
-    const result = searchPostsBaseSchema.parse(input);
+    const result = parseStrict(searchPostsBaseSchema)(input);
     expect(result).toStrictEqual(input);
   });
 
   it("should throw on invalid page number (< 0)", () => {
-    expect(() => searchPostsBaseSchema.parse({ page: -1 })).toThrow();
+    expect(() => parseStrict(searchPostsBaseSchema)({ page: -1 })).toThrow();
   });
 
   it("should throw on invalid sortBy option", () => {
-    expect(() => searchPostsBaseSchema.parse({ sortBy: "random" })).toThrow();
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({ sortBy: "random" }),
+    ).toThrow();
   });
 
   it("should handle partial updates correctly", () => {
-    const result = searchPostsBaseSchema.parse({ q: "test" });
+    const result = parseStrict(searchPostsBaseSchema)({ q: "test" });
     expect(result.q).toBe("test");
     expect(result.page).toBe(0); // Default
     expect(result.sortBy).toBe("newest"); // Default
@@ -43,12 +46,12 @@ describe(searchPostsBaseSchema, () => {
 
   it("should throw on unknown extra key", () => {
     expect(() =>
-      searchPostsBaseSchema.parse({ unknownKey: "value" }),
+      parseStrict(searchPostsBaseSchema)({ unknownKey: "value" }),
     ).toThrow();
   });
 });
 
-describe(updatePostInputSchema, () => {
+describe("updatePostInputSchema", () => {
   const defaultValues = {
     content: "qwe",
     postId: 1,
@@ -72,13 +75,13 @@ describe(updatePostInputSchema, () => {
       ],
       title: "title",
     };
-    const result = updatePostInputSchema.parse(input);
+    const result = parseStrict(updatePostInputSchema)(input);
     expect(result).toStrictEqual(input);
   });
 
   it("should throw on invalid postId (< 0)", () => {
     expect(() =>
-      updatePostInputSchema.parse({
+      parseStrict(updatePostInputSchema)({
         ...defaultValues,
         postId: -1,
       }),
@@ -87,7 +90,7 @@ describe(updatePostInputSchema, () => {
 
   it("should throw on invalid relatedPostId (< 0)", () => {
     expect(() =>
-      updatePostInputSchema.parse({
+      parseStrict(updatePostInputSchema)({
         ...defaultValues,
         relatedPostId: -1,
       }),
@@ -96,7 +99,7 @@ describe(updatePostInputSchema, () => {
 
   it("should throw on invalid source", () => {
     expect(() =>
-      updatePostInputSchema.parse({
+      parseStrict(updatePostInputSchema)({
         ...defaultValues,
         source: "invalid",
       }),
@@ -105,7 +108,7 @@ describe(updatePostInputSchema, () => {
 
   it("should throw on invalid tags", () => {
     expect(() =>
-      updatePostInputSchema.parse({
+      parseStrict(updatePostInputSchema)({
         ...defaultValues,
         tags: ["invalid"],
       }),
@@ -114,7 +117,7 @@ describe(updatePostInputSchema, () => {
 
   it("should throw on invalid title", () => {
     expect(() =>
-      updatePostInputSchema.parse({
+      parseStrict(updatePostInputSchema)({
         ...defaultValues,
         title: "",
       }),
@@ -123,7 +126,7 @@ describe(updatePostInputSchema, () => {
 
   it("should throw on invalid content", () => {
     expect(() =>
-      updatePostInputSchema.parse({
+      parseStrict(updatePostInputSchema)({
         ...defaultValues,
         content: "",
       }),
@@ -131,7 +134,7 @@ describe(updatePostInputSchema, () => {
   });
 
   it("should purify content", () => {
-    const result = updatePostInputSchema.parse({
+    const result = parseStrict(updatePostInputSchema)({
       ...defaultValues,
       content: "<script>alert('xss')</script>",
     });
@@ -139,7 +142,7 @@ describe(updatePostInputSchema, () => {
   });
 
   it("should purify title", () => {
-    const result = updatePostInputSchema.parse({
+    const result = parseStrict(updatePostInputSchema)({
       ...defaultValues,
       title: "<script>alert('xss')</script>",
     });

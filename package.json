@@ -64,10 +64,9 @@
     "@tanstack/react-start": "^1.168.37",
     "@xstate/react": "^6.1.0",
     "alchemy": "2.0.0-beta.67",
-    "better-auth": "1.6.18",
-    "drizzle-kit": "^0.31.10",
-    "drizzle-orm": "^0.45.2",
-    "drizzle-zod": "^0.8.3",
+    "better-auth": "1.7.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.4",
     "effect": "4.0.0-beta.59",
     "isomorphic-dompurify": "^3.21.0",
     "kysely": "^0.29.4",
@@ -81,8 +80,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
-    "xstate": "^5.32.5",
-    "zod": "^4.4.3"
+    "xstate": "^5.32.5"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.51.0",
@@ -105,7 +103,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "dotenv": "^17.4.2",
-    "drizzle-seed": "^0.3.1",
+    "drizzle-seed": "1.0.0-rc.4",
     "happy-dom": "^20.0.1",
     "knip": "^6.31.0",
     "nitro": "3.0.260610-beta",

@@ -5,15 +5,17 @@ import {
   useNavigate,
   useRouteContext,
 } from "@tanstack/react-router";
+import { Schema } from "effect";
 import { Suspense, useState } from "react";
 import { NotFound } from "src/components/NotFound";
 import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
 import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
+import { parse } from "src/lib/effect/schema.utils";
 import { postQueryDetail } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
-import z from "zod";
 
 export const Route = createFileRoute("/posts/$postId")({
   component: PostComponent,
@@ -21,10 +23,10 @@ export const Route = createFileRoute("/posts/$postId")({
   notFoundComponent: () => <NotFound>Post not found</NotFound>,
   params: {
     parse: (params) => ({
-      postId: z.coerce.number().parse(params.postId),
+      postId: parse(Schema.NumberFromString)(params.postId),
     }),
   },
-  validateSearch: searchPostsBaseSchema,
+  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
 });
 
 function PostComponent() {

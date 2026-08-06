@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usePostsPage } from "src/lib/posts/posts.hooks";
 import { postsQueryByTag } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
@@ -10,7 +11,7 @@ import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 export const Route = createFileRoute("/posts/tags/$tag")({
   component: RouteComponent,
   // fix initial window is not defined error
-  validateSearch: searchPostsBaseSchema,
+  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
   ssr: "data-only",
 });
 

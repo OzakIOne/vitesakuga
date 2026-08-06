@@ -11,24 +11,32 @@ import {
 } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Effect, Schema } from "effect";
 import { useCallback } from "react";
 import { NotFound } from "src/components/NotFound";
 import { Pagination } from "src/components/Pagination";
 import { assetUrl } from "src/lib/assets/url";
+import { parse } from "src/lib/effect/schema.utils";
 import { playlistQueryDetail } from "src/lib/playlists/playlists.queries";
-import { z } from "zod";
+
+const PlaylistSearchSchema = Schema.Struct({
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
+  ),
+});
 
 export const Route = createFileRoute("/users/$id/playlists/$playlistId")({
   component: PlaylistDetailContent,
   notFoundComponent: () => <NotFound>Playlist not found</NotFound>,
-  validateSearch: z.object({ page: z.number().min(0).default(0) }),
+  validateSearch: Schema.toStandardSchemaV1(PlaylistSearchSchema),
   ssr: "data-only",
 });
 
 function PlaylistDetailContent() {
   const params = Route.useParams();
   const userId = params.id;
-  const playlistId = z.coerce.number().parse(params.playlistId);
+  const playlistId = parse(Schema.NumberFromString)(params.playlistId);
   const { page } = Route.useSearch();
   const navigate = useNavigate();
 

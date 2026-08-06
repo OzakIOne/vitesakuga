@@ -1,106 +1,131 @@
-import z from "zod";
+import { Effect, Schema, SchemaGetter } from "effect";
 
 import { sanitize } from "../sanitize";
-export const VideoMetadataSchema = z
-  .object({
-    BitDepth: z.coerce.number(),
-    BitRate: z.coerce.number(),
-    ChromaSubsampling: z.string().optional(),
-    CodecID: z.string().optional(),
-    ColorSpace: z.string().optional(),
-    DisplayAspectRatio: z.string().optional(),
-    Duration: z.coerce.number(),
-    Encoded_Library_Name: z.string().optional(),
-    Encoded_Library_Settings: z.string().optional(),
-    Format_Profile: z.string().optional(),
-    FrameCount: z.coerce.number(),
-    FrameRate: z.coerce.number(),
-    Height: z.coerce.number(),
-    Width: z.coerce.number(),
-    colour_primaries: z.string().optional(),
-  })
-  .optional();
 
-export type VideoMetadata = z.infer<typeof VideoMetadataSchema>;
+const CoerceNumber = Schema.Union([Schema.Number, Schema.NumberFromString]);
 
-const TagSchema = z
-  .object({
-    id: z.number().optional(),
-    name: z.string().min(1),
-  })
-  .strict();
+const OptionalString = Schema.optionalKey(Schema.String);
 
-export type Tag = z.infer<typeof TagSchema>;
+export const VideoMetadataSchema = Schema.optional(
+  Schema.Struct({
+    BitDepth: CoerceNumber,
+    BitRate: CoerceNumber,
+    ChromaSubsampling: OptionalString,
+    CodecID: OptionalString,
+    ColorSpace: OptionalString,
+    DisplayAspectRatio: OptionalString,
+    Duration: CoerceNumber,
+    Encoded_Library_Name: OptionalString,
+    Encoded_Library_Settings: OptionalString,
+    Format_Profile: OptionalString,
+    FrameCount: CoerceNumber,
+    FrameRate: CoerceNumber,
+    Height: CoerceNumber,
+    Width: CoerceNumber,
+    colour_primaries: OptionalString,
+  }),
+);
 
-export const FormFileUploadTextSchema = z
-  .object({
-    content: z
-      .string()
-      .min(3, "You must have a length of at least 3")
-      .transform((val) => sanitize(val)),
-    relatedPostId: z.number().min(0).or(z.undefined()),
-    source: z
-      .url({
-        protocol: /^https?$/,
-        error: "URL must start with https:",
-      })
-      .or(z.literal(""))
-      .or(z.undefined()),
-    tags: z.array(TagSchema),
-    title: z
-      .string()
-      .min(3, "You must have a length of at least 3")
-      .transform((val) => sanitize(val)),
-  })
-  .loose();
+export type VideoMetadata = Schema.Schema.Type<typeof VideoMetadataSchema>;
 
-export const FormFileUploadSchema = FormFileUploadTextSchema.extend({
-  userId: z.string(),
-  video: z
-    .instanceof(File)
-    .refine((file) => /\.(mp4|avi|mov|wmv|flv|mkv)$/i.test(file.name), {
-      message: "Only video files are allowed",
+export const TagSchema = Schema.Struct({
+  id: Schema.optionalKey(Schema.Number),
+  name: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+});
+
+export type Tag = Schema.Schema.Type<typeof TagSchema>;
+
+const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
+  schema.pipe(
+    Schema.decodeTo(Schema.String, {
+      decode: SchemaGetter.transform((val) => sanitize(val)),
+      encode: SchemaGetter.transform((val) => val),
     }),
-  thumbnail: z.instanceof(File),
+  );
+
+const MinLen3 = Schema.isMinLength(3, {
+  message: "You must have a length of at least 3",
+});
+
+const HttpsUrl = Schema.String.pipe(
+  Schema.check(Schema.isPattern(/^https?:\/\//)),
+);
+
+const RelatedPostId = Schema.Number.pipe(
+  Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+);
+
+export const FormFileUploadTextSchema = Schema.Struct({
+  content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  relatedPostId: Schema.optionalKey(RelatedPostId),
+  source: Schema.optionalKey(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  tags: Schema.Array(TagSchema),
+  title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+});
+
+const VideoFile = Schema.instanceOf(File).pipe(
+  Schema.refine(
+    (file): file is File => /\.(mp4|avi|mov|wmv|flv|mkv)$/i.test(file.name),
+    { message: "Only video files are allowed" },
+  ),
+);
+
+export const FormFileUploadSchema = Schema.Struct({
+  content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  relatedPostId: Schema.optionalKey(RelatedPostId),
+  source: Schema.optionalKey(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  tags: Schema.Array(TagSchema),
+  thumbnail: Schema.instanceOf(File),
+  title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  userId: Schema.String,
+  video: VideoFile,
   videoMetadata: VideoMetadataSchema,
-}).strict();
+});
 
-export type FileUploadData = z.infer<typeof FormFileUploadSchema>;
+export type FileUploadData = Schema.Schema.Type<typeof FormFileUploadSchema>;
 
-export const updatePostInputSchema = z
-  .object({
-    content: z
-      .string()
-      .min(3, "You must have a length of at least 3")
-      .transform((val) => sanitize(val)),
-    postId: z.number().min(0),
-    relatedPostId: z.number().min(0).or(z.undefined()),
-    source: z.url().or(z.literal("")).or(z.undefined()),
-    tags: z.array(TagSchema),
-    title: z
-      .string()
-      .min(3, "You must have a length of at least 3")
-      .transform((val) => sanitize(val)),
-  })
-  .strict();
+export const updatePostInputSchema = Schema.Struct({
+  content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  postId: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  relatedPostId: Schema.optionalKey(RelatedPostId),
+  source: Schema.optionalKey(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  tags: Schema.Array(TagSchema),
+  title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+});
 
-export const searchPostsBaseSchema = z
-  .object({
-    dateRange: z.enum(["all", "today", "week", "month"]).default("all"),
-    page: z.number().min(0).default(0),
-    q: z.string().trim().default(""),
-    sortBy: z.enum(["newest", "oldest"]).default("newest"),
-    tags: z.array(z.string()).default([]),
-  })
-  .strict();
+export const searchPostsBaseSchema = Schema.Struct({
+  dateRange: Schema.Literals(["all", "today", "week", "month"]).pipe(
+    Schema.withDecodingDefault(Effect.succeed("all")),
+  ),
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
+  ),
+  q: Schema.String.pipe(
+    Schema.decode({
+      decode: SchemaGetter.transform((val) => val.trim()),
+      encode: SchemaGetter.transform((val) => val),
+    }),
+    Schema.withDecodingDefault(Effect.succeed("")),
+  ),
+  sortBy: Schema.Literals(["newest", "oldest"]).pipe(
+    Schema.withDecodingDefault(Effect.succeed("newest")),
+  ),
+  tags: Schema.Array(Schema.String).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
+});
 
-export type PostsSearchParams = z.infer<typeof searchPostsBaseSchema>;
+export type PostsSearchParams = Schema.Schema.Type<
+  typeof searchPostsBaseSchema
+>;
 
-export const postByTagSchema = z
-  .object({
-    page: z.number().min(0).default(0),
-    tag: z.string(),
-  })
-  .strict();
+export const postByTagSchema = Schema.Struct({
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
+  ),
+  tag: Schema.String,
+});
 
-export type PostByTagParams = z.infer<typeof postByTagSchema>;
+export type PostByTagParams = Schema.Schema.Type<typeof postByTagSchema>;

@@ -8,6 +8,7 @@ import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasswordInput } from "src/components/ui/password-input";
 import { useSignUp, useSocialLogin } from "src/lib/auth/auth.hooks";
 import { signUpSchema } from "src/lib/auth/auth.schemas";
+import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 
 export const Route = createFileRoute("/(auth)/signup")({
   component: SignupForm,
@@ -33,7 +34,7 @@ function SignupForm() {
       });
     },
     validators: {
-      onChange: signUpSchema,
+      onChange: toStandardSchemaV1Strict(signUpSchema),
     },
   });
 

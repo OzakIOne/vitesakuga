@@ -23,6 +23,7 @@ import {
   useUpdateProfile,
 } from "src/lib/auth/auth.hooks";
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
+import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: ({ context, location }) => {
@@ -52,7 +53,7 @@ function RouteComponent() {
       updateProfileMutation.mutate(value);
     },
     validators: {
-      onChange: profileSchema,
+      onChange: toStandardSchemaV1Strict(profileSchema),
     },
   });
 
@@ -67,7 +68,7 @@ function RouteComponent() {
       });
     },
     validators: {
-      onChange: passwordSchema,
+      onChange: toStandardSchemaV1Strict(passwordSchema),
     },
   });
 

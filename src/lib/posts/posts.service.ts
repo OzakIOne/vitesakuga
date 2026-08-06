@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
-import { z } from "zod";
 
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
+import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
   PostNotFoundError,
@@ -28,7 +28,7 @@ import {
 const PAGE_SIZE = 30;
 
 type PostsSearchResult = {
-  data: z.infer<typeof postsSelectSchema>[];
+  data: Schema.Schema.Type<typeof postsSelectSchema>[];
   meta: {
     pagination: PaginationMeta;
     popularTags: ReturnType<typeof mapPopularTags>;
@@ -44,9 +44,9 @@ type PostDetailResult = {
     source: string | null;
     title: string;
     videoKey: string;
-    videoMetadata: z.infer<typeof VideoMetadataSchema>;
+    videoMetadata: Schema.Schema.Type<typeof VideoMetadataSchema>;
   };
-  relatedPost: z.infer<typeof postsSelectSchema> | null;
+  relatedPost: Schema.Schema.Type<typeof postsSelectSchema> | null;
   tags: { id: number; name: string }[];
   user: {
     id: string;
@@ -59,19 +59,19 @@ export class PostsService extends Context.Service<
   PostsService,
   {
     readonly search: (
-      data: z.infer<typeof searchPostsBaseSchema>,
+      data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
     ) => Effect.Effect<PostsSearchResult, Error>;
     readonly fetchDetail: (
       postId: number,
     ) => Effect.Effect<PostDetailResult, Error>;
     readonly upload: (
-      data: z.infer<typeof FormFileUploadSchema>,
-    ) => Effect.Effect<z.infer<typeof postsSelectSchema>, Error>;
+      data: Schema.Schema.Type<typeof FormFileUploadSchema>,
+    ) => Effect.Effect<Schema.Schema.Type<typeof postsSelectSchema>, Error>;
     readonly update: (
-      data: z.infer<typeof updatePostInputSchema>,
-    ) => Effect.Effect<z.infer<typeof postsSelectSchema>, Error>;
+      data: Schema.Schema.Type<typeof updatePostInputSchema>,
+    ) => Effect.Effect<Schema.Schema.Type<typeof postsSelectSchema>, Error>;
     readonly getByTag: (
-      data: z.infer<typeof postByTagSchema>,
+      data: Schema.Schema.Type<typeof postByTagSchema>,
     ) => Effect.Effect<PostsSearchResult, Error>;
   }
 >()("PostsService") {}
@@ -79,7 +79,7 @@ export class PostsService extends Context.Service<
 const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   db: KyselyDB["Service"],
   postId: number,
-  tags: Array<{ id?: number | undefined; name: string }>,
+  tags: ReadonlyArray<{ id?: number | undefined; name: string }>,
 ) {
   const allTagIds: number[] = [];
 
@@ -114,7 +114,7 @@ export const PostsServiceLive = Layer.effect(
     const storage = yield* StorageModule;
 
     const search = Effect.fn("PostsService.search")(function* (
-      data: z.infer<typeof searchPostsBaseSchema>,
+      data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
     ) {
       const { q, tags, page, sortBy, dateRange } = data;
 
@@ -181,7 +181,7 @@ export const PostsServiceLive = Layer.effect(
       );
 
       const parsed = yield* Effect.try({
-        try: () => z.array(postsSelectSchema).parse(items),
+        try: () => parse(Schema.Array(postsSelectSchema))(items),
         catch: (error) =>
           new ValidationError({
             message: `Error processing search results: ${String(error)}`,
@@ -313,7 +313,7 @@ export const PostsServiceLive = Layer.effect(
           source: postWithUser.source,
           title: postWithUser.title,
           videoKey: postWithUser.videoKey,
-          videoMetadata: VideoMetadataSchema.parse(postWithUser.videoMetadata),
+          videoMetadata: parse(VideoMetadataSchema)(postWithUser.videoMetadata),
         },
         relatedPost,
         tags,
@@ -326,7 +326,7 @@ export const PostsServiceLive = Layer.effect(
     });
 
     const upload = Effect.fn("PostsService.upload")(function* (
-      data: z.infer<typeof FormFileUploadSchema>,
+      data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) {
       const {
         video,
@@ -389,7 +389,7 @@ export const PostsServiceLive = Layer.effect(
     });
 
     const getByTag = Effect.fn("PostsService.getByTag")(function* (
-      data: z.infer<typeof postByTagSchema>,
+      data: Schema.Schema.Type<typeof postByTagSchema>,
     ) {
       const { tag: tagName, page } = data;
 
@@ -418,7 +418,7 @@ export const PostsServiceLive = Layer.effect(
       );
 
       const parsed = yield* Effect.try({
-        try: () => z.array(postsSelectSchema).parse(items),
+        try: () => parse(Schema.Array(postsSelectSchema))(items),
         catch: (error) =>
           new ValidationError({
             message: `Error processing posts by tag: ${String(error)}`,
@@ -458,7 +458,7 @@ export const PostsServiceLive = Layer.effect(
     });
 
     const update = Effect.fn("PostsService.update")(function* (
-      data: z.infer<typeof updatePostInputSchema>,
+      data: Schema.Schema.Type<typeof updatePostInputSchema>,
     ) {
       const session = yield* getSessionEffect();
 
@@ -542,7 +542,7 @@ export const PostsServiceLive = Layer.effect(
 );
 
 export const searchPostsEffect = Effect.fn("searchPosts")(function* (
-  data: z.infer<typeof searchPostsBaseSchema>,
+  data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
 ) {
   const svc = yield* PostsService;
   return yield* svc.search(data);
@@ -556,28 +556,28 @@ export const fetchPostDetailEffect = Effect.fn("fetchPostDetail")(function* (
 });
 
 const uploadPostEffect = Effect.fn("uploadPost")(function* (
-  data: z.infer<typeof FormFileUploadSchema>,
+  data: Schema.Schema.Type<typeof FormFileUploadSchema>,
 ) {
   const svc = yield* PostsService;
   return yield* svc.upload(data);
 });
 
 export const getPostsByTagEffect = Effect.fn("getPostsByTag")(function* (
-  data: z.infer<typeof postByTagSchema>,
+  data: Schema.Schema.Type<typeof postByTagSchema>,
 ) {
   const svc = yield* PostsService;
   return yield* svc.getByTag(data);
 });
 
 export const updatePostEffect = Effect.fn("updatePost")(function* (
-  data: z.infer<typeof updatePostInputSchema>,
+  data: Schema.Schema.Type<typeof updatePostInputSchema>,
 ) {
   const svc = yield* PostsService;
   return yield* svc.update(data);
 });
 
 export const searchPosts = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => searchPostsBaseSchema.parse(input))
+  .validator((input: unknown) => parseStrict(searchPostsBaseSchema)(input))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();
@@ -595,7 +595,7 @@ export const searchPosts = createServerFn({ strict: { output: false } })
   });
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
-  .validator((postId: unknown) => z.coerce.number().parse(postId))
+  .validator((postId: unknown) => parse(Schema.NumberFromString)(postId))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();
@@ -615,16 +615,18 @@ export const fetchPostDetail = createServerFn({ strict: { output: false } })
 export const uploadPost = createServerFn({ method: "POST" })
   .validator((data: FormData) => {
     const raw = Object.fromEntries(data.entries());
-    const normalized = {
+    const tags = raw["tags"] ? JSON.parse(raw["tags"] as string) : [];
+    const videoMetadata = raw["videoMetadata"]
+      ? JSON.parse(raw["videoMetadata"] as string)
+      : undefined;
+    const normalized: Record<string, unknown> = {
       relatedPostId: undefined,
       source: undefined,
       ...raw,
-      tags: raw.tags ? JSON.parse(raw.tags) : [],
-      videoMetadata: raw.videoMetadata
-        ? JSON.parse(raw.videoMetadata)
-        : undefined,
+      tags,
+      videoMetadata,
     };
-    return FormFileUploadSchema.parse(normalized);
+    return parseStrict(FormFileUploadSchema)(normalized);
   })
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
@@ -643,7 +645,7 @@ export const uploadPost = createServerFn({ method: "POST" })
   });
 
 export const updatePost = createServerFn({ method: "POST" })
-  .validator((input: unknown) => updatePostInputSchema.parse(input))
+  .validator((input: unknown) => parseStrict(updatePostInputSchema)(input))
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");
     const base = await makeAuthLayer();
@@ -661,7 +663,7 @@ export const updatePost = createServerFn({ method: "POST" })
   });
 
 export const getPostsByTag = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => postByTagSchema.parse(input))
+  .validator((input: unknown) => parseStrict(postByTagSchema)(input))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();

@@ -1,65 +1,67 @@
-import { z } from "zod";
+import { Effect, Schema, SchemaGetter } from "effect";
 
 import { sanitize } from "../sanitize";
 
-export const createPlaylistInputSchema = z
-  .object({
-    title: z
-      .string()
-      .min(1, "Title is required")
-      .max(200)
-      .transform((val) => sanitize(val)),
-    description: z
-      .string()
-      .max(1000)
-      .transform((val) => sanitize(val))
-      .optional(),
-    isPublic: z.boolean().optional().default(false),
-  })
-  .strict();
+const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
+  schema.pipe(
+    Schema.decodeTo(Schema.String, {
+      decode: SchemaGetter.transform((val) => sanitize(val)),
+      encode: SchemaGetter.transform((val) => val),
+    }),
+  );
 
-export const updatePlaylistInputSchema = z
-  .object({
-    playlistId: z.number(),
-    title: z
-      .string()
-      .min(1)
-      .max(200)
-      .transform((val) => sanitize(val))
-      .optional(),
-    description: z
-      .string()
-      .max(1000)
-      .transform((val) => sanitize(val))
-      .optional(),
-    isPublic: z.boolean().optional(),
-  })
-  .strict();
+export const createPlaylistInputSchema = Schema.Struct({
+  title: sanitizeString(
+    Schema.String.pipe(
+      Schema.check(Schema.isMinLength(1, { message: "Title is required" })),
+      Schema.check(Schema.isMaxLength(200)),
+    ),
+  ),
+  description: Schema.optionalKey(
+    sanitizeString(Schema.String.pipe(Schema.check(Schema.isMaxLength(1000)))),
+  ),
+  isPublic: Schema.optionalKey(
+    Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  ),
+});
 
-export const addPostToPlaylistInputSchema = z
-  .object({
-    playlistId: z.number(),
-    postId: z.number(),
-  })
-  .strict();
+export const updatePlaylistInputSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  title: Schema.optionalKey(
+    sanitizeString(
+      Schema.String.pipe(
+        Schema.check(Schema.isMinLength(1)),
+        Schema.check(Schema.isMaxLength(200)),
+      ),
+    ),
+  ),
+  description: Schema.optionalKey(
+    sanitizeString(Schema.String.pipe(Schema.check(Schema.isMaxLength(1000)))),
+  ),
+  isPublic: Schema.optionalKey(Schema.Boolean),
+});
+
+export const addPostToPlaylistInputSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  postId: Schema.Number,
+});
 
 export const removePostFromPlaylistInputSchema = addPostToPlaylistInputSchema;
 
-export const reorderPlaylistPostsInputSchema = z
-  .object({
-    playlistId: z.number(),
-    items: z.array(
-      z.object({
-        postId: z.number(),
-        position: z.number(),
-      }),
-    ),
-  })
-  .strict();
+export const reorderPlaylistPostsInputSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  items: Schema.Array(
+    Schema.Struct({
+      postId: Schema.Number,
+      position: Schema.Number,
+    }),
+  ),
+});
 
-export const fetchPlaylistDetailSchema = z
-  .object({
-    playlistId: z.number(),
-    page: z.number().min(0).default(0),
-  })
-  .strict();
+export const fetchPlaylistDetailSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
+  ),
+});

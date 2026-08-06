@@ -31,7 +31,7 @@ type RegisteredRoutes =
 
 export type PostsPageLayoutProps = {
   searchQuery?: string | undefined;
-  selectedTags?: string[] | undefined;
+  selectedTags?: readonly string[] | undefined;
   popularTags: PopularTag[];
   sortBy: PostsSearchParams["sortBy"];
   dateRange: PostsSearchParams["dateRange"];

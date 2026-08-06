@@ -1,9 +1,11 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { createSchemaFactory } from "drizzle-zod";
-
-export const { createInsertSchema, createSelectSchema } = createSchemaFactory({
-  coerce: true,
-});
+import {
+  boolean,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { Schema } from "effect";
 
 export const user = pgTable("user", {
   createdAt: timestamp()
@@ -21,8 +23,25 @@ export const user = pgTable("user", {
     .notNull(),
 });
 
-export const userSelectSchema = createSelectSchema(user);
-export const userInsertSchema = createInsertSchema(user);
+export const userSelectSchema = Schema.Struct({
+  createdAt: Schema.Date,
+  email: Schema.String,
+  emailVerified: Schema.Boolean,
+  id: Schema.String,
+  image: Schema.NullOr(Schema.String),
+  name: Schema.String,
+  updatedAt: Schema.Date,
+});
+
+export const userInsertSchema = Schema.Struct({
+  createdAt: Schema.optionalKey(Schema.Date),
+  email: Schema.String,
+  emailVerified: Schema.optionalKey(Schema.Boolean),
+  id: Schema.String,
+  image: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  name: Schema.String,
+  updatedAt: Schema.optionalKey(Schema.Date),
+});
 
 export const session = pgTable("session", {
   createdAt: timestamp().notNull(),
@@ -37,23 +56,30 @@ export const session = pgTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const account = pgTable("account", {
-  accessToken: text(),
-  accessTokenExpiresAt: timestamp(),
-  accountId: text().notNull(),
-  createdAt: timestamp().notNull(),
-  id: text().primaryKey(),
-  idToken: text(),
-  password: text(),
-  providerId: text().notNull(),
-  refreshToken: text(),
-  refreshTokenExpiresAt: timestamp(),
-  scope: text(),
-  updatedAt: timestamp().notNull(),
-  userId: text()
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-});
+export const account = pgTable(
+  "account",
+  {
+    accessToken: text(),
+    accessTokenExpiresAt: timestamp(),
+    accountId: text().notNull(),
+    createdAt: timestamp().notNull(),
+    id: text().primaryKey(),
+    idToken: text(),
+    issuer: text().notNull().default("local:credential"),
+    password: text(),
+    providerId: text().notNull(),
+    refreshToken: text(),
+    refreshTokenExpiresAt: timestamp(),
+    scope: text(),
+    updatedAt: timestamp().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("account_issuer_accountId_unique").on(t.issuer, t.accountId),
+  ],
+);
 
 export const verification = pgTable("verification", {
   createdAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),

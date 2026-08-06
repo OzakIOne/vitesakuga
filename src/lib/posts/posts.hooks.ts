@@ -13,7 +13,7 @@ type PopularTag = {
 };
 
 export type PostListingData = {
-  data: DbSchemaSelect["posts"][];
+  data: readonly DbSchemaSelect["posts"][];
   meta: {
     pagination: PaginationMeta;
     popularTags: PopularTag[];

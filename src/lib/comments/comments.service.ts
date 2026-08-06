@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option } from "effect";
-import { z } from "zod";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 
 import { getSessionEffect } from "../auth/auth.middleware";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
+import { parse } from "../effect/schema.utils";
 import {
   CommentNotFoundError,
   ForbiddenError,
@@ -28,8 +28,8 @@ export class CommentsService extends Context.Service<
       postId: number,
     ) => Effect.Effect<readonly CommentWithUser[], Error>;
     readonly add: (
-      data: z.infer<typeof commentInsertSchema>,
-    ) => Effect.Effect<z.infer<typeof commentsSelectSchema>, Error>;
+      data: Schema.Schema.Type<typeof commentInsertSchema>,
+    ) => Effect.Effect<Schema.Schema.Type<typeof commentsSelectSchema>, Error>;
     readonly delete_: (
       commentId: number,
     ) => Effect.Effect<{ success: boolean }, Error>;
@@ -65,7 +65,7 @@ export const CommentsServiceLive = Layer.effect(
     });
 
     const add = Effect.fn("CommentsService.add")(function* (
-      data: z.infer<typeof commentInsertSchema>,
+      data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) {
       const comment = yield* db.executeTakeFirstOrError(
         db
@@ -149,7 +149,7 @@ export const fetchCommentsEffect = Effect.fn("fetchComments")(function* (
 });
 
 export const addCommentEffect = Effect.fn("addComment")(function* (
-  data: z.infer<typeof commentInsertSchema>,
+  data: Schema.Schema.Type<typeof commentInsertSchema>,
 ) {
   const svc = yield* CommentsService;
   return yield* svc.add(data);
@@ -163,7 +163,7 @@ export const deleteCommentEffect = Effect.fn("deleteComment")(function* (data: {
 });
 
 export const fetchComments = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => z.number().parse(input))
+  .validator((input: unknown) => parse(Schema.Number)(input))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();
@@ -184,7 +184,7 @@ export const addComment = createServerFn({
   method: "POST",
   strict: { output: false },
 })
-  .validator((input: unknown) => commentInsertSchema.parse(input))
+  .validator((input: unknown) => parse(commentInsertSchema)(input))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();
@@ -203,7 +203,7 @@ export const addComment = createServerFn({
 
 export const deleteComment = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
-    z.object({ commentId: z.number() }).parse(input),
+    parse(Schema.Struct({ commentId: Schema.Number }))(input),
   )
   .handler(async ({ data }) => {
     const { makeAuthLayer } = await import("../db/layer-factories.server");

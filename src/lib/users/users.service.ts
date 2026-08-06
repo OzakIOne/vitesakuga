@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
-import z from "zod";
 
 import { KyselyDB } from "../db/context";
+import { parse, parseStrict } from "../effect/schema.utils";
 import { UserNotFoundError, ValidationError } from "../errors";
 import { computePagination } from "../pagination/pagination";
 import { mapPopularTags } from "../tags/tags.utils";
@@ -15,14 +15,14 @@ export class UsersService extends Context.Service<
   UsersService,
   {
     readonly all: () => Effect.Effect<
-      z.infer<typeof userSelectSchema>[],
+      readonly Schema.Schema.Type<typeof userSelectSchema>[],
       Error
     >;
     readonly userPosts: (
-      data: z.infer<typeof fetchUserInputSchema>,
+      data: Schema.Schema.Type<typeof fetchUserInputSchema>,
     ) => Effect.Effect<
       {
-        data: z.infer<typeof postsSelectSchema>[];
+        data: readonly Schema.Schema.Type<typeof postsSelectSchema>[];
         meta: {
           pagination: {
             currentPage: number;
@@ -50,7 +50,7 @@ export const UsersServiceLive = Layer.effect(
     const all = Effect.fn("UsersService.all")(function* () {
       const data = yield* db.execute(db.selectFrom("user").selectAll());
       return yield* Effect.try({
-        try: () => z.array(userSelectSchema).parse(data),
+        try: () => parse(Schema.Array(userSelectSchema))(data),
         catch: (error) =>
           new ValidationError({
             message: "There was an error processing the search results",
@@ -60,7 +60,7 @@ export const UsersServiceLive = Layer.effect(
     });
 
     const userPosts = Effect.fn("UsersService.userPosts")(function* (
-      data: z.infer<typeof fetchUserInputSchema>,
+      data: Schema.Schema.Type<typeof fetchUserInputSchema>,
     ) {
       const { userId, tags, q, page } = data;
 
@@ -125,7 +125,7 @@ export const UsersServiceLive = Layer.effect(
       );
 
       const posts = yield* Effect.try({
-        try: () => z.array(postsSelectSchema).parse(items),
+        try: () => parse(Schema.Array(postsSelectSchema))(items),
         catch: (error) =>
           new ValidationError({
             message: "Error processing user posts",
@@ -169,7 +169,7 @@ export const fetchUsersEffect = Effect.fn("fetchUsers")(function* () {
 });
 
 export const fetchUserPostsEffect = Effect.fn("fetchUserPosts")(function* (
-  data: z.infer<typeof fetchUserInputSchema>,
+  data: Schema.Schema.Type<typeof fetchUserInputSchema>,
 ) {
   const svc = yield* UsersService;
   return yield* svc.userPosts(data);
@@ -192,7 +192,7 @@ export const fetchUsers = createServerFn().handler(async () => {
 });
 
 export const fetchUserPosts = createServerFn()
-  .validator((input: unknown) => fetchUserInputSchema.parse(input))
+  .validator((input: unknown) => parseStrict(fetchUserInputSchema)(input))
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();

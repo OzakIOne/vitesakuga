@@ -7,7 +7,6 @@ import { Kysely } from "kysely";
 
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
-import * as schema from "./schema";
 
 let e2eKysely: Kysely<DB> | null = null;
 
@@ -17,7 +16,7 @@ export const createE2EKysely = async (): Promise<Kysely<DB>> => {
   }
 
   const pg = await PGlite.create("memory://");
-  const drizzleDb = drizzle(pg, { schema });
+  const drizzleDb = drizzle({ client: pg });
 
   const migrationsFolder = resolve(process.cwd(), "drizzle");
   await migrate(drizzleDb, { migrationsFolder });

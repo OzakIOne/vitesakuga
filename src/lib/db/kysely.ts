@@ -1,38 +1,116 @@
-import type { Kyselify } from "drizzle-orm/kysely";
+import type { Generated } from "kysely";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool as PgPool } from "pg";
 
 import { getKyselyPool } from "./pool";
-import type * as authschema from "./schema/auth.schema";
-import type * as sakugaschema from "./schema/sakuga.schema";
 
-type DrizzleSchema = typeof sakugaschema & typeof authschema;
-
-// Extract table name and convert to Kyselify
-// oxlint-disable-next-line
-type KyselyDB<T extends Record<string, any>> = {
-  [K in keyof T as T[K] extends { _: { name: infer Name } }
-    ? Name extends string
-      ? Name
-      : never
-    : // oxlint-disable-next-line
-      never]: T[K] extends { _: any } ? Kyselify<T[K]> : never;
+type UserTable = {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image: string | null;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
 };
 
-type DB = KyselyDB<DrizzleSchema>;
+type SessionTable = {
+  id: string;
+  token: string;
+  userId: string;
+  expiresAt: Date;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-export type { DB };
+type AccountTable = {
+  id: string;
+  userId: string;
+  accountId: string;
+  providerId: string;
+  accessToken: string | null;
+  refreshToken: string | null;
+  idToken: string | null;
+  accessTokenExpiresAt: Date | null;
+  refreshTokenExpiresAt: Date | null;
+  scope: string | null;
+  password: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-// export interface DB {
-//   account: Kyselify<DrizzleSchema["account"]>;
-//   session: Kyselify<DrizzleSchema["session"]>;
-//   user: Kyselify<DrizzleSchema["user"]>;
-//   verification: Kyselify<DrizzleSchema["verification"]>;
-//   comments: Kyselify<DrizzleSchema["comments"]>;
-//   posts: Kyselify<DrizzleSchema["posts"]>;
-//   tags: Kyselify<DrizzleSchema["tags"]>;
-//   post_tags: Kyselify<DrizzleSchema["postTags"]>;
-// }
+type VerificationTable = {
+  id: string;
+  identifier: string;
+  value: string;
+  expiresAt: Date;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+};
+
+type TagsTable = {
+  id: Generated<number>;
+  name: string;
+  createdAt: Generated<Date>;
+};
+
+type PostTagsTable = {
+  postId: number;
+  tagId: number;
+};
+
+type PostsTable = {
+  id: Generated<number>;
+  content: string;
+  createdAt: Generated<Date>;
+  relatedPostId: number | null;
+  source: string | null;
+  thumbnailKey: string;
+  title: string;
+  userId: string;
+  videoKey: string;
+  videoMetadata: string;
+};
+
+type PlaylistsTable = {
+  id: Generated<number>;
+  created_at: Generated<Date>;
+  description: string | null;
+  is_public: Generated<boolean>;
+  title: string;
+  updated_at: Generated<Date>;
+  user_id: string;
+};
+
+type PlaylistPostsTable = {
+  playlist_id: number;
+  post_id: number;
+  position: Generated<number>;
+  created_at: Generated<Date>;
+};
+
+type CommentsTable = {
+  id: Generated<number>;
+  content: string;
+  createdAt: Generated<Date>;
+  postId: number;
+  userId: string;
+};
+
+export type DB = {
+  account: AccountTable;
+  session: SessionTable;
+  user: UserTable;
+  verification: VerificationTable;
+  comments: CommentsTable;
+  post_tags: PostTagsTable;
+  posts: PostsTable;
+  tags: TagsTable;
+  playlists: PlaylistsTable;
+  playlist_posts: PlaylistPostsTable;
+};
 
 export const kysely = new Kysely<DB>({
   dialect: new PostgresDialect({

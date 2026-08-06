@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { envClient } from "src/lib/env/client";
 import { usePostsPage } from "src/lib/posts/posts.hooks";
 import { postsQueryOptions } from "src/lib/posts/posts.queries";
@@ -18,7 +19,7 @@ import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 
 export const Route = createFileRoute("/posts/")({
   component: PostsContent,
-  validateSearch: searchPostsBaseSchema,
+  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
   ssr: "data-only",
 });
 

@@ -1,28 +1,50 @@
-import { z } from "zod";
+import { Schema } from "effect";
 
-export const loginSchema = z.object({
-  email: z.email(),
-  password: z.string().min(1),
+const Email = Schema.String.pipe(
+  Schema.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+);
+
+const Url = Schema.String.pipe(
+  Schema.check(Schema.isPattern(/^https?:\/\/\S+$/)),
+);
+
+export const loginSchema = Schema.Struct({
+  email: Email,
+  password: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
 });
 
-export const signUpSchema = z
-  .object({
-    name: z.string().min(3, "You must have a length of at least 3"),
-    email: z.email(),
-    password: z.string().min(8, "You must have a length of at least 8"),
-    confirm_password: z.string(),
-  })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "Passwords do not match",
-    path: ["confirm_password"],
-  });
+const PasswordMatch = Schema.makeFilter(
+  (value: { password: string; confirm_password: string }) =>
+    value.password === value.confirm_password
+      ? undefined
+      : "Passwords do not match",
+);
 
-export const profileSchema = z.object({
-  image: z.url().or(z.literal("")),
-  name: z.string(),
+export const signUpSchema = Schema.Struct({
+  name: Schema.String.pipe(
+    Schema.check(
+      Schema.isMinLength(3, {
+        message: "You must have a length of at least 3",
+      }),
+    ),
+  ),
+  email: Email,
+  password: Schema.String.pipe(
+    Schema.check(
+      Schema.isMinLength(8, {
+        message: "You must have a length of at least 8",
+      }),
+    ),
+  ),
+  confirm_password: Schema.String,
+}).pipe(Schema.check(PasswordMatch));
+
+export const profileSchema = Schema.Struct({
+  image: Schema.Union([Url, Schema.Literal("")]),
+  name: Schema.String,
 });
 
-export const passwordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(1),
+export const passwordSchema = Schema.Struct({
+  currentPassword: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+  newPassword: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
 });

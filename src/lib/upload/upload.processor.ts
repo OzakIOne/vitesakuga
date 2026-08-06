@@ -1,5 +1,6 @@
 import type { MediaInfo, MediaInfoResult, ReadChunkFunc } from "mediainfo.js";
 
+import { parse } from "../effect/schema.utils";
 import { VideoMetadataSchema } from "../posts/posts.schema";
 import type { VideoMetadata } from "../posts/posts.schema";
 
@@ -46,7 +47,7 @@ export async function analyzeVideo(
   const rawResult = await mediaInfo.analyzeData(file.size, makeReadChunkFn);
   const parsed: MediaInfoResult = JSON.parse(rawResult);
   const videoTrack = parsed.media?.track.find((el) => el["@type"] === "Video");
-  return VideoMetadataSchema.parse(videoTrack);
+  return parse(VideoMetadataSchema)(videoTrack);
 }
 
 export async function generateThumbnails(

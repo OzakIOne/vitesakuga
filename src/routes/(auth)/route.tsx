@@ -1,8 +1,12 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
-import { z } from "zod";
+import { Schema } from "effect";
+
+const AuthSearchSchema = Schema.Struct({
+  redirect: Schema.optionalKey(Schema.String),
+});
 
 export const Route = createFileRoute("/(auth)")({
-  validateSearch: z.object({ redirect: z.string().optional() }),
+  validateSearch: Schema.toStandardSchemaV1(AuthSearchSchema),
   beforeLoad: ({ context, search }) => {
     const redirectUrl = search.redirect || "/";
     if (context.user) {

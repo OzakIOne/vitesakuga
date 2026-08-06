@@ -10,21 +10,16 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "node_modules/drizzle-orm";
-import { z } from "zod";
+import { Schema, SchemaGetter } from "effect";
 
 import { sanitize } from "../../sanitize";
-import { createInsertSchema, user } from "./auth.schema";
+import { user } from "./auth.schema";
 
 export const tags = pgTable("tags", {
   createdAt: timestamp().defaultNow().notNull(),
   id: serial("id").primaryKey(),
   name: text().notNull().unique(),
 });
-
-export const tagsRelations = relations(tags, ({ many }) => ({
-  postTags: many(postTags),
-}));
 
 // Post-Tags junction table - use integer to match serial
 export const postTags = pgTable(
@@ -55,29 +50,6 @@ export const posts = pgTable("posts", {
   videoMetadata: json().$type<string>().notNull(),
 });
 
-export const postTagsRelations = relations(postTags, ({ one }) => ({
-  post: one(posts, {
-    fields: [postTags.postId],
-    references: [posts.id],
-  }),
-  tag: one(tags, {
-    fields: [postTags.tagId],
-    references: [tags.id],
-  }),
-}));
-
-export const postsRelations = relations(posts, ({ one, many }) => ({
-  postTags: many(postTags),
-  relatedPost: one(posts, {
-    fields: [posts.relatedPostId],
-    references: [posts.id],
-  }),
-  user: one(user, {
-    fields: [posts.userId],
-    references: [user.id],
-  }),
-}));
-
 export const playlists = pgTable("playlists", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   description: text("description"),
@@ -89,14 +61,6 @@ export const playlists = pgTable("playlists", {
     .references(() => user.id, { onDelete: "cascade" })
     .notNull(),
 });
-
-export const playlistsRelations = relations(playlists, ({ one, many }) => ({
-  playlistPosts: many(playlistPosts),
-  user: one(user, {
-    fields: [playlists.userId],
-    references: [user.id],
-  }),
-}));
 
 export const playlistPosts = pgTable(
   "playlist_posts",
@@ -113,17 +77,6 @@ export const playlistPosts = pgTable(
   ],
 );
 
-export const playlistPostsRelations = relations(playlistPosts, ({ one }) => ({
-  playlist: one(playlists, {
-    fields: [playlistPosts.playlistId],
-    references: [playlists.id],
-  }),
-  post: one(posts, {
-    fields: [playlistPosts.postId],
-    references: [posts.id],
-  }),
-}));
-
 export const comments = pgTable("comments", {
   content: text().notNull(),
   createdAt: timestamp().defaultNow().notNull(),
@@ -136,6 +89,15 @@ export const comments = pgTable("comments", {
     .notNull(),
 });
 
-export const commentInsertSchema = createInsertSchema(comments, {
-  content: z.string().transform((val) => sanitize(val)),
+export const commentInsertSchema = Schema.Struct({
+  content: Schema.String.pipe(
+    Schema.decode({
+      decode: SchemaGetter.transform((val) => sanitize(val)),
+      encode: SchemaGetter.transform((val) => val),
+    }),
+  ),
+  createdAt: Schema.optionalKey(Schema.Date),
+  id: Schema.optionalKey(Schema.Number),
+  postId: Schema.Number,
+  userId: Schema.String,
 });

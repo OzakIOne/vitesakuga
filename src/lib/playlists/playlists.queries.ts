@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { z } from "zod";
+import { Schema } from "effect";
 
 import type { fetchPlaylistDetailSchema } from "./playlists.schema";
 import {
@@ -10,7 +10,7 @@ import {
 
 export const playlistsKeys = {
   all: ["playlists"] as const,
-  detail: (params: z.infer<typeof fetchPlaylistDetailSchema>) =>
+  detail: (params: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) =>
     [...playlistsKeys.all, "detail", params] as const,
   forPost: (postId: number) =>
     [...playlistsKeys.all, "forPost", postId] as const,
@@ -19,7 +19,7 @@ export const playlistsKeys = {
 } as const;
 
 const playlistsQueries = {
-  detail: (params: z.infer<typeof fetchPlaylistDetailSchema>) =>
+  detail: (params: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) =>
     queryOptions({
       gcTime: 5 * 60 * 1000,
       queryFn: async () =>
@@ -54,7 +54,7 @@ const playlistsQueries = {
 };
 
 export const playlistQueryDetail = (
-  params: z.infer<typeof fetchPlaylistDetailSchema>,
+  params: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
 ) => playlistsQueries.detail(params);
 
 export const playlistsQueryForPost = (postId: number) =>

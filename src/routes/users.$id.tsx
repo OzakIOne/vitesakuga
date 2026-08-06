@@ -6,6 +6,7 @@ import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
+import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usePostsPage } from "src/lib/posts/posts.hooks";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { userQueryOptions } from "src/lib/users/users.queries";
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/users/$id")({
   component: UserLayoutComponent,
   errorComponent: UserErrorComponent,
   notFoundComponent: () => <NotFound>User not found</NotFound>,
-  validateSearch: searchPostsBaseSchema,
+  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
   ssr: "data-only",
 });
 
