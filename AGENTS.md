@@ -1,6 +1,6 @@
 # AGENT GUIDELINES FOR ViteSakuga
 
-ViteSakuga is a fullstack web application built with React 19, TanStack Start, TanStack Router, Better Auth, Kysely, Drizzle ORM, TanStack Form, Zod, Tailwind CSS v4, Chakra UI v3, and Effect V4 emphasizing a client-first, type-safe architecture with full-stack capabilities.
+ViteSakuga is a fullstack web application built with React 19, TanStack Start, TanStack Router, Better Auth, Kysely, Drizzle ORM, TanStack Form, Effect Schema, Tailwind CSS v4, Chakra UI v3, and Effect V4 emphasizing a client-first, type-safe architecture with full-stack capabilities.
 
 ---
 

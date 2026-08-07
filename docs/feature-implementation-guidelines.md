@@ -12,5 +12,5 @@ This document provides guidelines for implementing new features within the ViteS
 - **Styling**: Use Chakra UI v3 and Tailwind CSS v4 in `src/components/`.
 - **Database**: Define Drizzle schema tables in `src/lib/db/schema/`. Use Kysely queries through the `KyselyDB` Effect context tag (never import raw Kysely directly in services).
 - **New service**: Create `<feature>.service.ts` in `src/lib/<feature>/` following the Effect service pattern: `Context.Service` → `Layer.effect` → `Effect.fn` wrappers → `createServerFn` exports.
-- **Forms**: Use TanStack Form with Zod schemas from `src/lib/<feature>/<feature>.schema.ts`.
+- **Forms**: Use TanStack Form with Effect Schema from `src/lib/<feature>/<feature>.schema.ts`.
 - **Server functions**: Embed in `*.service.ts` files using `createServerFn().validator(...).handler(createHandler(...))`.

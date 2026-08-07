@@ -14,11 +14,11 @@ The old pattern of separate `<feature>.fn.ts` files has been consolidated — se
 
 Each `*.service.ts` file follows this layered pattern (top to bottom):
 
-1. **Imports** — Effect, Zod, TanStack Start, domain schemas, layer factories, `createHandler`
+1. **Imports** — Effect, TanStack Start, domain schemas (Effect Schema), layer factories, `createHandler`
 2. **Service class** — Effect `Context.Service` defining the typed interface
 3. **Live layer** — `Layer.effect` implementing the service using `KyselyDB` and `Effect.fn`
 4. **Effect functions** — Public `Effect.fn` wrappers that pull from the service (e.g., `fetchCommentsEffect`)
-5. **Server functions** — TanStack Start `createServerFn` instances with Zod validators calling `createHandler`
+5. **Server functions** — TanStack Start `createServerFn` instances with Effect Schema validators calling `createHandler`
 
 Example pattern (from `comments.service.ts`):
 
@@ -44,15 +44,17 @@ export const fetchCommentsEffect = Effect.fn("fetchComments")(function* (postId:
 
 // 5. Server functions
 export const fetchComments = createServerFn()
-  .validator((input: unknown) => z.number().parse(input))
+  .validator((input: unknown) => parse(Schema.Number)(input))
   .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
 
 export const addComment = createServerFn({ method: "POST" })
-  .validator((input: unknown) => commentInsertSchema.parse(input))
+  .validator((input: unknown) => parse(commentInsertSchema)(input))
   .handler(createHandler(addCommentEffect, CommentsServiceLive));
 
 export const deleteComment = createServerFn({ method: "POST" })
-  .validator((input: unknown) => z.object({ commentId: z.number() }).parse(input))
+  .validator((input: unknown) =>
+    parse(Schema.Struct({ commentId: Schema.Number }))(input),
+  )
   .handler(createHandler(deleteCommentEffect, CommentsServiceLive, makeAuthLayer));
 ```
 
@@ -72,10 +74,10 @@ At runtime, it:
 
 ## Validation
 
-- Server function input must be validated with Zod schemas in `.validator()` calls
+- Server function input must be validated with Effect Schema in `.validator()` calls
 - Schemas are typically defined in `src/lib/<feature>/<feature>.schema.ts`
-- Some simple validators are inlined (e.g., `z.number().parse(input)` for single params)
-- FormData uploads require manual parsing before Zod validation (see `uploadPost` in `posts.service.ts`)
+- Some simple validators are inlined (e.g., `parse(Schema.Number)(input)` for single params)
+- FormData uploads require manual parsing before Effect Schema validation (see `uploadPost` in `posts.service.ts`)
 
 ## Auth Middleware
 

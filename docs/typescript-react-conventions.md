@@ -26,7 +26,7 @@ This document outlines the conventions and best practices for writing TypeScript
 
 ## Naming Conventions
 
-- **Files**: `PascalCase` for React components (e.g., `MyComponent.tsx`), `camelCase` for utility files (e.g., `utils.ts`), `kebab-case` for CSS files, `feature.fn.ts` for server functions, `feature.schema.ts` for Zod schemas.
+- **Files**: `PascalCase` for React components (e.g., `MyComponent.tsx`), `camelCase` for utility files (e.g., `utils.ts`), `kebab-case` for CSS files, `feature.fn.ts` for server functions, `feature.schema.ts` for Effect Schema files.
 - **Components**: `PascalCase` (e.g., `UserProfile`, `Button`).
 - **Variables/Functions**: `camelCase` (e.g., `getUserData`, `isLoading`).
 - **Types/Interfaces**: `PascalCase` (e.g., `User`, `ApiResponse`).
@@ -38,7 +38,7 @@ This document outlines the conventions and best practices for writing TypeScript
 
 ## Form Handling
 
-- Use TanStack Form with Zod for schema validation.
+- Use TanStack Form with Effect Schema for schema validation.
 
 ## Data Fetching
 

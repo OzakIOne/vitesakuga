@@ -572,33 +572,52 @@ test("API + E2E hybrid — seed via API, verify in browser", async ({
 });
 ```
 
-### Schema Validation with Zod
+### Schema Validation with Effect Schema
 
 **Use when**: Verifying API responses match a contract — field types, required fields, value constraints.
 **Avoid when**: You only need to check one or two specific fields — use `toMatchObject` instead.
 
 ```typescript
 import { test, expect } from "@playwright/test";
-import { z } from "zod";
+import { Schema } from "effect";
 
-const ItemSchema = z.object({
-  id: z.number().positive(),
-  title: z.string().min(1),
-  price: z.number().nonnegative(),
-  status: z.enum(["active", "inactive", "archived"]),
-  createdAt: z.string().datetime(),
-  metadata: z.object({
-    views: z.number().int().nonnegative(),
-    rating: z.number().min(0).max(5).nullable(),
+const PositiveInt = Schema.Int.pipe(
+  Schema.check(
+    Schema.isBetween({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER }),
+  ),
+);
+const NonNegativeInt = Schema.Int.pipe(
+  Schema.check(
+    Schema.isBetween({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+  ),
+);
+
+const ItemSchema = Schema.Struct({
+  id: PositiveInt,
+  title: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+  price: Schema.Number.pipe(
+    Schema.check(
+      Schema.isBetween({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+    ),
+  ),
+  status: Schema.Literal("active", "inactive", "archived"),
+  createdAt: Schema.DateFromString,
+  metadata: Schema.Struct({
+    views: NonNegativeInt,
+    rating: Schema.NullOr(
+      Schema.Number.pipe(
+        Schema.check(Schema.isBetween({ minimum: 0, maximum: 5 })),
+      ),
+    ),
   }),
 });
 
-const PaginatedItemsSchema = z.object({
-  items: z.array(ItemSchema),
-  pagination: z.object({
-    page: z.number().int().positive(),
-    limit: z.number().int().positive(),
-    total: z.number().int().nonnegative(),
+const PaginatedItemsSchema = Schema.Struct({
+  items: Schema.Array(ItemSchema),
+  pagination: Schema.Struct({
+    page: PositiveInt,
+    limit: PositiveInt,
+    total: NonNegativeInt,
   }),
 });
 
@@ -607,15 +626,8 @@ test("GET /api/items matches schema", async ({ request }) => {
   expect(resp.ok()).toBeTruthy();
 
   const body = await resp.json();
-  const result = PaginatedItemsSchema.safeParse(body);
-
-  if (!result.success) {
-    throw new Error(
-      `Schema validation failed:\n${result.error.issues
-        .map((i) => `  ${i.path.join(".")}: ${i.message}`)
-        .join("\n")}`
-    );
-  }
+  // Throws with a detailed message (field path + expected type) on mismatch.
+  Schema.decodeUnknownSync(PaginatedItemsSchema)(body);
 });
 ```
 

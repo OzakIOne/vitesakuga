@@ -46,7 +46,7 @@ src/
 
 - `src/routes/` — TanStack Router file-based route structure (flat layout group `(auth)/`)
 - `src/lib/<feature>/<feature>.service.ts` — Effect service with embedded TanStack server functions
-- `src/lib/<feature>/<feature>.schema.ts` — Zod schemas for validation
+- `src/lib/<feature>/<feature>.schema.ts` — Effect Schema for validation
 - `src/lib/<feature>/<feature>.queries.ts` — TanStack Query `queryOptions` factories
 - `src/lib/<feature>/<feature>.hooks.ts` — React hooks (mutations, query wrappers)
 - `src/lib/<feature>/<feature>.utils.ts` — Pure utility functions
@@ -57,7 +57,7 @@ src/
 - Client config in `src/lib/auth/client.ts` (Better Auth React client)
 - Auth middleware in `src/lib/auth/auth.middleware.ts` (Effect-based `getSessionEffect`, `requireAuthEffect`)
 - Auth hooks in `src/lib/auth/auth.hooks.ts` (TanStack Query mutations)
-- Auth schemas in `src/lib/auth/auth.schemas.ts` (Zod)
+- Auth schemas in `src/lib/auth/auth.schemas.ts` (Effect Schema)
 
 ## Database
 

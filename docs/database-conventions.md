@@ -21,7 +21,7 @@ This document outlines the conventions and best practices for database interacti
 
 - Drizzle ORM table definitions in `src/lib/db/schema/`
 - Barrel re-export from `src/lib/db/schema/index.ts`
-- Zod insert/select schemas auto-generated via `drizzle-zod` in `sakuga.utils.ts` and `auth.schema.ts`
+- Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
 
 ## Effect Layer Pattern

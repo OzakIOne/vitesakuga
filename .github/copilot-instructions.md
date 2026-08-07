@@ -14,7 +14,7 @@ applyTo: "**"
 - Use server functions in `src/lib/<feature>/<feature>.fn.ts` to interact with database.
 - Server functions can be called from loaders, queryOptions (Tanstack Query), components (with `useServerFn`) and other server-functions.
 - Compose server function into other server functions to make logical units.
-- Server functions should be validated with Zod schemas in `src/lib/<feature>/<feature>.schema.ts`.
+- Server functions should be validated with Effect Schema in `src/lib/<feature>/<feature>.schema.ts`.
 - Server functions should use typesafe middlewares for auth, roles, etc.
 - Server functions should just throw errors and avoid try-catch when possible. The caller should handle errors.
 
@@ -35,7 +35,7 @@ applyTo: "**"
 ### Form Handling
 
 - Uses TanStack Form for form state management
-- Implements Zod schemas for validation
+- Implements Effect Schema for validation
 - Provides immediate feedback on validation errors
 - Handles form submission with loading states
 
