@@ -129,10 +129,5 @@
   "127": "probe.ts",
   "128": "@effect/opentelemetry",
   "129": "media-chrome",
-  "130": "@opentelemetry/sdk-logs",
-  "131": "@emotion/react",
-  "132": "@neondatabase/serverless",
-  "133": "@opentelemetry/exporter-logs-otlp-http",
-  "134": "@opentelemetry/sdk-trace-web",
-  "135": "@opentelemetry/semantic-conventions"
+  "130": "@opentelemetry/sdk-logs"
 }

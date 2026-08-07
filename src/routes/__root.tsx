@@ -60,9 +60,11 @@ export const Route = createRootRouteWithContext<{
   },
   component: RootComponent,
   errorComponent: (props) => (
-    <RootDocument>
-      <DefaultCatchBoundary {...props} />
-    </RootDocument>
+    <Provider>
+      <RootDocument>
+        <DefaultCatchBoundary {...props} />
+      </RootDocument>
+    </Provider>
   ),
   head: () => ({
     links: [
@@ -102,7 +104,11 @@ export const Route = createRootRouteWithContext<{
       }),
     ],
   }),
-  notFoundComponent: () => <NotFound />,
+  notFoundComponent: () => (
+    <Provider>
+      <NotFound />
+    </Provider>
+  ),
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {

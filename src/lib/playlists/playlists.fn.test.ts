@@ -459,6 +459,7 @@ describe(fetchUserPlaylistsEffect, () => {
         title: "Public List",
         is_public: true,
         user_id: "user-1",
+        created_at: new Date("2024-01-01T00:00:00Z"),
       })
       .execute();
     await db
@@ -467,6 +468,7 @@ describe(fetchUserPlaylistsEffect, () => {
         title: "Private List",
         is_public: false,
         user_id: "user-1",
+        created_at: new Date("2024-01-02T00:00:00Z"),
       })
       .execute();
   });

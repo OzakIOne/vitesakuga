@@ -57,8 +57,8 @@ const RelatedPostId = Schema.Number.pipe(
 
 export const FormFileUploadTextSchema = Schema.Struct({
   content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  relatedPostId: Schema.optionalKey(RelatedPostId),
-  source: Schema.optionalKey(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  relatedPostId: Schema.optional(RelatedPostId),
+  source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   tags: Schema.Array(TagSchema),
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
@@ -72,8 +72,8 @@ const VideoFile = Schema.instanceOf(File).pipe(
 
 export const FormFileUploadSchema = Schema.Struct({
   content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  relatedPostId: Schema.optionalKey(RelatedPostId),
-  source: Schema.optionalKey(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  relatedPostId: Schema.optional(RelatedPostId),
+  source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   tags: Schema.Array(TagSchema),
   thumbnail: Schema.instanceOf(File),
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
@@ -87,8 +87,8 @@ export type FileUploadData = Schema.Schema.Type<typeof FormFileUploadSchema>;
 export const updatePostInputSchema = Schema.Struct({
   content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   postId: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
-  relatedPostId: Schema.optionalKey(RelatedPostId),
-  source: Schema.optionalKey(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  relatedPostId: Schema.optional(RelatedPostId),
+  source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   tags: Schema.Array(TagSchema),
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
