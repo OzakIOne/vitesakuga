@@ -4,7 +4,7 @@ applyTo: "**"
 
 ## Package Manager
 
-**Never use npm. Always use pnpm.** All commands (install, add, run, exec, dlx, etc.) must use `pnpm`. npm is forbidden.
+**Never use npm. Always use nub.** All commands (install, add, run, exec, dlx, etc.) must use `nub`. npm is forbidden.
 
 ## Key Patterns & Conventions
 

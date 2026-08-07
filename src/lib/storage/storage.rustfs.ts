@@ -2,13 +2,12 @@ import { Effect, Layer } from "effect";
 
 import { StorageError, StorageModule } from "./storage.module";
 
-const GARAGE_ENDPOINT = "http://localhost:3900";
-const GARAGE_ACCESS_KEY = "GK1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
-const GARAGE_SECRET_KEY =
-  "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
+const RUSTFS_ENDPOINT = "http://localhost:9000";
+const RUSTFS_ACCESS_KEY = "rustfsadmin";
+const RUSTFS_SECRET_KEY = "rustfsadmin";
 const BUCKET = "e2e-test";
 
-export const makeGarageStorageLayer = () => {
+export const makeRustFSStorageLayer = () => {
   const layer = Layer.effect(
     StorageModule,
     Effect.gen(function* () {
@@ -24,11 +23,11 @@ export const makeGarageStorageLayer = () => {
       });
 
       const client = new s3Mod.S3Client({
-        endpoint: GARAGE_ENDPOINT,
-        region: "garage",
+        endpoint: RUSTFS_ENDPOINT,
+        region: "us-east-1",
         credentials: {
-          accessKeyId: GARAGE_ACCESS_KEY,
-          secretAccessKey: GARAGE_SECRET_KEY,
+          accessKeyId: RUSTFS_ACCESS_KEY,
+          secretAccessKey: RUSTFS_SECRET_KEY,
         },
         forcePathStyle: true,
       });

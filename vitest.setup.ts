@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 
 import { Data, Duration, Effect, Schedule } from "effect";
 
-const GARAGE_ENDPOINT = "http://localhost:3900";
+const RUSTFS_ENDPOINT = "http://localhost:9000";
 
 class CommandError extends Data.TaggedError("CommandError")<{
   readonly command: string;
@@ -22,12 +22,12 @@ const curlStatus = (url: string) =>
   );
 
 const isRunning = Effect.gen(function* () {
-  const status = yield* curlStatus(`${GARAGE_ENDPOINT}/`);
-  return status !== "000";
+  const status = yield* curlStatus(`${RUSTFS_ENDPOINT}/`);
+  return status === "403" || status === "200";
 });
 
 const waitForHealth = Effect.gen(function* () {
-  yield* Effect.log("Waiting for Garage...");
+  yield* Effect.log("Waiting for RustFS...");
 
   yield* Effect.retry(
     Effect.gen(function* () {
@@ -40,31 +40,31 @@ const waitForHealth = Effect.gen(function* () {
   ).pipe(
     Effect.catch(() =>
       Effect.fail(
-        new CommandError({ command: "curl", message: "Garage not ready" }),
+        new CommandError({ command: "curl", message: "RustFS not ready" }),
       ),
     ),
   );
 
-  yield* Effect.log("Garage is ready");
+  yield* Effect.log("RustFS is ready");
 });
 
-const ensureGarage = Effect.gen(function* () {
-  yield* Effect.log("Checking Garage...");
+const ensureRustFS = Effect.gen(function* () {
+  yield* Effect.log("Checking RustFS...");
 
   const running = yield* isRunning;
   if (running) {
-    yield* Effect.log("Garage is running");
+    yield* Effect.log("RustFS is running");
     return;
   }
 
-  yield* Effect.log("Starting Garage...");
-  yield* exec("docker compose up -d garage").pipe(
+  yield* Effect.log("Starting RustFS...");
+  yield* exec("docker compose up -d rustfs").pipe(
     Effect.catch((error) =>
       Effect.gen(function* () {
         yield* Effect.logError(
-          `Failed to start Garage: ${error instanceof CommandError ? error.message : String(error)}`,
+          `Failed to start RustFS: ${error instanceof CommandError ? error.message : String(error)}`,
         );
-        return yield* Effect.die("Garage not available");
+        return yield* Effect.die("RustFS not available");
       }),
     ),
   );
@@ -72,4 +72,4 @@ const ensureGarage = Effect.gen(function* () {
   yield* waitForHealth;
 });
 
-Effect.runSync(ensureGarage);
+Effect.runSync(ensureRustFS);

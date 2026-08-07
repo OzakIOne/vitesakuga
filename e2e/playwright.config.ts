@@ -33,7 +33,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "pnpm dev",
+      command: "nub run dev",
       cwd: "..",
       port: 3000,
       reuseExistingServer: !CI,
@@ -41,12 +41,11 @@ export default defineConfig({
       env: {
         DATABASE_DRIVER: "pglite",
         DATABASE_URL: "postgresql://e2e:e2e@localhost:5432/e2e",
-        CLOUDFLARE_ACCESS_KEY: "GK1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+        CLOUDFLARE_ACCESS_KEY: "rustfsadmin",
         CLOUDFLARE_BUCKET: "e2e-test",
-        CLOUDFLARE_R2: "http://localhost:3900",
-        CLOUDFLARE_R2_PUBLIC_URL: "http://localhost:3900/e2e-test",
-        CLOUDFLARE_SECRET_KEY:
-          "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+        CLOUDFLARE_R2: "http://localhost:9000",
+        CLOUDFLARE_R2_PUBLIC_URL: "http://localhost:9000/e2e-test",
+        CLOUDFLARE_SECRET_KEY: "rustfsadmin",
       },
     },
   ],
