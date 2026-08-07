@@ -27,6 +27,9 @@ import {
 
 const PAGE_SIZE = 30;
 
+export const parsePostId = (postId: unknown) =>
+  parse(Schema.Union([Schema.Number, Schema.NumberFromString]))(postId);
+
 type PostsSearchResult = {
   data: Schema.Schema.Type<typeof postsSelectSchema>[];
   meta: {
@@ -595,7 +598,7 @@ export const searchPosts = createServerFn({ strict: { output: false } })
   });
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
-  .validator((postId: unknown) => parse(Schema.NumberFromString)(postId))
+  .validator(parsePostId)
   .handler(async ({ data }) => {
     const { makeDBLayer } = await import("../db/layer-factories.server");
     const base = await makeDBLayer();

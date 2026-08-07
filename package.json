@@ -118,13 +118,13 @@
     "vitest": "^4.1.10",
     "wrangler": "^4.119.0"
   },
-  "engines": {
-    "node": "26"
-  },
   "devEngines": {
     "runtime": {
       "name": "node",
       "onFail": "download"
     }
+  },
+  "engines": {
+    "node": "26"
   }
 }

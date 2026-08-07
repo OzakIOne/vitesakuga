@@ -7,6 +7,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { Schema } from "effect";
 
+import { TimestampSchema } from "./timestamp";
+
 export const user = pgTable("user", {
   createdAt: timestamp()
     .$defaultFn(() => /* @__PURE__ */ new Date())
@@ -24,13 +26,13 @@ export const user = pgTable("user", {
 });
 
 export const userSelectSchema = Schema.Struct({
-  createdAt: Schema.Date,
+  createdAt: TimestampSchema,
   email: Schema.String,
   emailVerified: Schema.Boolean,
   id: Schema.String,
   image: Schema.NullOr(Schema.String),
   name: Schema.String,
-  updatedAt: Schema.Date,
+  updatedAt: TimestampSchema,
 });
 
 export const userInsertSchema = Schema.Struct({

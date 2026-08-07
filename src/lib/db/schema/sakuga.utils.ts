@@ -1,9 +1,10 @@
 import { Schema } from "effect";
 
 import type { userInsertSchema, userSelectSchema } from "./auth.schema";
+import { TimestampSchema } from "./timestamp";
 
 export const tagsSelectSchema = Schema.Struct({
-  createdAt: Schema.Date,
+  createdAt: TimestampSchema,
   id: Schema.Number,
   name: Schema.String,
 });
@@ -16,7 +17,7 @@ export const tagsInsertSchema = Schema.Struct({
 
 export const postsSelectSchema = Schema.Struct({
   content: Schema.String,
-  createdAt: Schema.Date,
+  createdAt: TimestampSchema,
   id: Schema.Number,
   relatedPostId: Schema.NullOr(Schema.Number),
   source: Schema.NullOr(Schema.String),
@@ -42,7 +43,7 @@ export const postsInsertSchema = Schema.Struct({
 
 export const commentsSelectSchema = Schema.Struct({
   content: Schema.String,
-  createdAt: Schema.Date,
+  createdAt: TimestampSchema,
   id: Schema.Number,
   postId: Schema.Number,
   userId: Schema.String,
@@ -57,12 +58,12 @@ export const commentsInsertSchema = Schema.Struct({
 });
 
 export const playlistsSelectSchema = Schema.Struct({
-  created_at: Schema.Date,
+  created_at: TimestampSchema,
   description: Schema.NullOr(Schema.String),
   id: Schema.Number,
   is_public: Schema.Boolean,
   title: Schema.String,
-  updated_at: Schema.Date,
+  updated_at: TimestampSchema,
   user_id: Schema.String,
 });
 
@@ -77,7 +78,7 @@ export const playlistsInsertSchema = Schema.Struct({
 });
 
 export const playlistPostsSelectSchema = Schema.Struct({
-  created_at: Schema.Date,
+  created_at: TimestampSchema,
   playlist_id: Schema.Number,
   position: Schema.Number,
   post_id: Schema.Number,
