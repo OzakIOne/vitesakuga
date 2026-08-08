@@ -36,7 +36,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
     "@chakra-ui/react": "^3.36.1",
-    "@effect/opentelemetry": "4.0.0-beta.59",
+    "@effect/opentelemetry": "4.0.0-beta.102",
     "@emotion/react": "^11.14.0",
     "@neondatabase/serverless": "^1.1.0",
     "@opentelemetry/api": "^1.9.1",
@@ -68,7 +68,7 @@
     "better-auth": "1.7.0-rc.4",
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",
-    "effect": "4.0.0-beta.59",
+    "effect": "4.0.0-beta.105",
     "isomorphic-dompurify": "^3.22.0",
     "kysely": "^0.29.4",
     "media-chrome": "^4.19.2",
