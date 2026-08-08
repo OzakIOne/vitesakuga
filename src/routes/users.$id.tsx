@@ -1,5 +1,9 @@
 import { Box, SimpleGrid, Spinner, Stack, Text } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 import { NotFound } from "src/components/NotFound";
 import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
@@ -87,5 +91,14 @@ function UserContent() {
 }
 
 function UserLayoutComponent() {
+  const hasChildRoute = useRouterState({
+    select: (state) =>
+      state.matches.some((match) => match.id.startsWith(`${Route.id}/`)),
+  });
+
+  if (hasChildRoute) {
+    return <Outlet />;
+  }
+
   return <UserContent />;
 }

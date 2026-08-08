@@ -49,6 +49,12 @@ export type EffectKysely<DB> = {
 } & Omit<Kysely<DB>, "transaction" | "startTransaction" | "executeQuery"> &
   EffectExecutor;
 
+const EFFECT_KYSELY_MARKER = Symbol.for("vitesakuga.effectKysely");
+
+type MarkedKysely<DB> = Kysely<DB> & {
+  readonly [EFFECT_KYSELY_MARKER]?: EffectKysely<DB>;
+};
+
 const makeExecutor = <DB>(client: Kysely<DB>): EffectExecutor => ({
   executeRaw: executeRaw(client).bind(client),
   execute: execute(client).bind(client),
@@ -59,8 +65,14 @@ const makeExecutor = <DB>(client: Kysely<DB>): EffectExecutor => ({
 });
 
 export const makeFromKysely = <DB>(kysely: Kysely<DB>): EffectKysely<DB> => {
+  const existing = (kysely as MarkedKysely<DB>)[EFFECT_KYSELY_MARKER];
+  if (existing) {
+    return existing;
+  }
+
   const kyselyTransaction = kysely.transaction.bind(kysely);
-  return Object.assign(kysely, {
+
+  const wrapped = Object.assign(kysely, {
     ...makeExecutor(kysely),
     transaction: (() => {
       const builder = kyselyTransaction();
@@ -82,6 +94,15 @@ export const makeFromKysely = <DB>(kysely: Kysely<DB>): EffectKysely<DB> => {
       });
     }).bind(kysely),
   });
+
+  Object.defineProperty(kysely, EFFECT_KYSELY_MARKER, {
+    configurable: false,
+    enumerable: false,
+    value: wrapped,
+    writable: false,
+  });
+
+  return wrapped;
 };
 
 type Executable<O> = {

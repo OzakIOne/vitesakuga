@@ -16,6 +16,10 @@ test.describe("Upload page", () => {
     await expect(page.getByRole("button", { name: "Upload" })).toBeVisible({
       timeout: 15000,
     });
+    // The page is server-rendered; React hydration happens ~1s later and resets
+    // any input made before it. Wait for the app to finish loading so fills and
+    // file selection are not discarded.
+    await page.waitForLoadState("networkidle");
   });
 
   test("page loads with upload form", async ({ page }) => {
