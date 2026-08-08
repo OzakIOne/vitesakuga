@@ -22,28 +22,32 @@ overrides:
 patchedDependencies:
   "@tanstack/react-db@0.1.95": patches/@tanstack__react-db.patch
 minimumReleaseAgeExclude:
-  - "@aws-sdk/client-s3@3.1104.0"
-  - "@tanstack/react-router@1.170.20"
-  - "@tanstack/react-start@1.168.37"
-  - "@cloudflare/vite-plugin@1.51.0"
-  - "@effect/tsgo@0.32.1"
+  - '@aws-sdk/client-s3@3.1104.0 || 3.1106.0'
+  - '@tanstack/react-router@1.170.20 || 1.170.23'
+  - '@tanstack/react-start@1.168.37 || 1.168.40'
+  - '@cloudflare/vite-plugin@1.51.0 || 1.51.1'
+  - '@effect/tsgo@0.32.1 || 0.35.0'
   - taze@19.17.2
-  - wrangler@4.119.0
-  - "@tanstack/router-core@1.171.17"
-  - "@tanstack/react-start-client@1.168.18"
-  - "@tanstack/react-start-rsc@0.1.36"
-  - "@tanstack/react-start-server@1.167.25"
-  - "@tanstack/start-client-core@1.170.16"
-  - "@tanstack/start-plugin-core@1.171.28"
-  - "@tanstack/start-server-core@1.169.20"
-  - miniflare@5.20260801.0-alpha
-  - "@effect/tsgo-darwin-arm64@0.32.1"
-  - "@effect/tsgo-darwin-x64@0.32.1"
-  - "@effect/tsgo-linux-arm@0.32.1"
-  - "@effect/tsgo-linux-arm64@0.32.1"
-  - "@effect/tsgo-linux-x64@0.32.1"
-  - "@effect/tsgo-win32-arm64@0.32.1"
-  - "@effect/tsgo-win32-x64@0.32.1"
-  - "@tanstack/start-storage-context@1.167.19"
-  - "@tanstack/router-generator@1.167.23"
-  - "@tanstack/router-plugin@1.168.25"
+  - wrangler@4.119.0 || 4.120.0
+  - '@tanstack/router-core@1.171.17 || 1.171.19'
+  - '@tanstack/react-start-client@1.168.18 || 1.168.21'
+  - '@tanstack/react-start-rsc@0.1.36 || 0.1.39'
+  - '@tanstack/react-start-server@1.167.25 || 1.167.28'
+  - '@tanstack/start-client-core@1.170.16 || 1.170.19'
+  - '@tanstack/start-plugin-core@1.171.28 || 1.171.31'
+  - '@tanstack/start-server-core@1.169.20 || 1.169.23'
+  - miniflare@5.20260801.0-alpha || 5.20260801.1-alpha
+  - '@effect/tsgo-darwin-arm64@0.32.1 || 0.35.0'
+  - '@effect/tsgo-darwin-x64@0.32.1 || 0.35.0'
+  - '@effect/tsgo-linux-arm@0.32.1 || 0.35.0'
+  - '@effect/tsgo-linux-arm64@0.32.1 || 0.35.0'
+  - '@effect/tsgo-linux-x64@0.32.1 || 0.35.0'
+  - '@effect/tsgo-win32-arm64@0.32.1 || 0.35.0'
+  - '@effect/tsgo-win32-x64@0.32.1 || 0.35.0'
+  - '@tanstack/start-storage-context@1.167.19 || 1.167.21'
+  - '@tanstack/router-generator@1.167.23 || 1.167.25'
+  - '@tanstack/router-plugin@1.168.25 || 1.168.27'
+  - '@cloudflare/workers-types@5.20260808.1'
+  - '@types/node@26.2.0'
+  - '@types/pg@8.21.0'
+  - happy-dom@20.11.2
