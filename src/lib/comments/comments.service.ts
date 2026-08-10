@@ -10,6 +10,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
+import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
 export type CommentWithUser = {
   content: string;
@@ -164,59 +165,23 @@ export const deleteCommentEffect = Effect.fn("deleteComment")(function* (data: {
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => parse(Schema.Number)(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
-    const layer = CommentsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      fetchCommentsEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
 
 export const addComment = createServerFn({
   method: "POST",
   strict: { output: false },
 })
   .validator((input: unknown) => parse(commentInsertSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
-    const layer = CommentsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      addCommentEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(createHandler(addCommentEffect, CommentsServiceLive));
 
 export const deleteComment = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parse(Schema.Struct({ commentId: Schema.Number }))(input),
   )
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = CommentsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      deleteCommentEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      deleteCommentEffect,
+      CommentsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );

@@ -16,6 +16,7 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
+import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   addPostToPlaylistInputSchema,
   createPlaylistInputSchema,
@@ -678,176 +679,104 @@ export const fetchPlaylistsForPostEffect = Effect.fn("fetchPlaylistsForPost")(
 
 export const createPlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) => parseStrict(createPlaylistInputSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      createPlaylistEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      createPlaylistEffect,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const updatePlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) => parseStrict(updatePlaylistInputSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      updatePlaylistEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      updatePlaylistEffect,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const deletePlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parse(Schema.Struct({ playlistId: Schema.Number }))(input),
   )
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      deletePlaylistEffect(data.playlistId).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      (data: { playlistId: number }) => deletePlaylistEffect(data.playlistId),
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const addPostToPlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parseStrict(addPostToPlaylistInputSchema)(input),
   )
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      addPostToPlaylistEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      addPostToPlaylistEffect,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const removePostFromPlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parseStrict(removePostFromPlaylistInputSchema)(input),
   )
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      removePostFromPlaylistEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      removePostFromPlaylistEffect,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const reorderPlaylistPosts = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parseStrict(reorderPlaylistPostsInputSchema)(input),
   )
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      reorderPlaylistPostsEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      reorderPlaylistPostsEffect,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const fetchUserPlaylists = createServerFn({
   strict: { output: false },
 })
   .validator((input: unknown) => parse(Schema.String)(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      fetchUserPlaylistsEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      (data: string) => fetchUserPlaylistsEffect(data),
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const fetchPlaylistDetail = createServerFn({
   strict: { output: false },
 })
   .validator((input: unknown) => parseStrict(fetchPlaylistDetailSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      fetchPlaylistDetailEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      fetchPlaylistDetailEffect,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const fetchPlaylistsForPost = createServerFn({
   strict: { output: false },
 })
   .validator((input: unknown) => parse(Schema.Number)(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PlaylistsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      fetchPlaylistsForPostEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(
+      (data: number) => fetchPlaylistsForPostEffect(data),
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );

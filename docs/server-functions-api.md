@@ -55,7 +55,13 @@ export const deleteComment = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parse(Schema.Struct({ commentId: Schema.Number }))(input),
   )
-  .handler(createHandler(deleteCommentEffect, CommentsServiceLive, makeAuthLayer));
+  .handler(
+    createHandler(
+      deleteCommentEffect,
+      CommentsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 ```
 
 ## `createHandler` Bridge
@@ -64,7 +70,7 @@ The `createHandler` function (`src/lib/server-fn.handler.ts`) bridges TanStack S
 
 - First argument: an `Effect.fn` that takes `TParams` and returns `Effect<A, Error>`
 - Second argument: the `Layer` providing the service dependencies
-- Third argument (optional): a `makeBaseLayer` factory for additional dependencies (e.g., `makeAuthLayer` for authenticated routes)
+- Third argument (optional): the base layer factory — `baseLayerFactories.db` by default, `baseLayerFactories.auth` for authenticated routes
 
 At runtime, it:
 

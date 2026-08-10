@@ -15,6 +15,7 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
+import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { StorageModule } from "../storage/storage.module";
 import { mapPopularTags } from "../tags/tags.utils";
 import {
@@ -581,39 +582,11 @@ export const updatePostEffect = Effect.fn("updatePost")(function* (
 
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => parseStrict(searchPostsBaseSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      searchPostsEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(createHandler(searchPostsEffect, PostsServiceLive));
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
   .validator(parsePostId)
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      fetchPostDetailEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(createHandler(fetchPostDetailEffect, PostsServiceLive));
 
 export const uploadPost = createServerFn({ method: "POST" })
   .validator((data: FormData) => {
@@ -631,54 +604,14 @@ export const uploadPost = createServerFn({ method: "POST" })
     };
     return parseStrict(FormFileUploadSchema)(normalized);
   })
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      uploadPostEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(createHandler(uploadPostEffect, PostsServiceLive));
 
 export const updatePost = createServerFn({ method: "POST" })
   .validator((input: unknown) => parseStrict(updatePostInputSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeAuthLayer } = await import("../db/layer-factories.server");
-    const base = await makeAuthLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      updatePostEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(
+    createHandler(updatePostEffect, PostsServiceLive, baseLayerFactories.auth),
+  );
 
 export const getPostsByTag = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => parseStrict(postByTagSchema)(input))
-  .handler(async ({ data }) => {
-    const { makeDBLayer } = await import("../db/layer-factories.server");
-    const base = await makeDBLayer();
-    const layer = PostsServiceLive.pipe(Layer.provideMerge(base));
-    return Effect.runPromise(
-      getPostsByTagEffect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error: error }),
-          ),
-        ),
-      ),
-    );
-  });
+  .handler(createHandler(getPostsByTagEffect, PostsServiceLive));
