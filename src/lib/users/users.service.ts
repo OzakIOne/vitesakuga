@@ -41,11 +41,8 @@ export class UsersService extends Context.Service<
       Error
     >;
   }
->()("UsersService") {}
-
-export const UsersServiceLive = Layer.effect(
-  UsersService,
-  Effect.gen(function* () {
+>()("UsersService", {
+  make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
     const all = Effect.fn("UsersService.all")(function* () {
@@ -162,24 +159,26 @@ export const UsersServiceLive = Layer.effect(
 
     return { all, userPosts };
   }),
-);
+}) {
+  static readonly all = Effect.fn("UsersService.all")(function* () {
+    const svc = yield* UsersService;
+    return yield* svc.all();
+  });
 
-export const fetchUsersEffect = Effect.fn("fetchUsers")(function* () {
-  const svc = yield* UsersService;
-  return yield* svc.all();
-});
+  static readonly userPosts = Effect.fn("UsersService.userPosts")(function* (
+    data: Schema.Schema.Type<typeof fetchUserInputSchema>,
+  ) {
+    const svc = yield* UsersService;
+    return yield* svc.userPosts(data);
+  });
+}
 
-export const fetchUserPostsEffect = Effect.fn("fetchUserPosts")(function* (
-  data: Schema.Schema.Type<typeof fetchUserInputSchema>,
-) {
-  const svc = yield* UsersService;
-  return yield* svc.userPosts(data);
-});
+export const UsersServiceLive = Layer.effect(UsersService, UsersService.make);
 
 export const fetchUsers = createServerFn().handler(
-  createHandler(() => fetchUsersEffect(), UsersServiceLive),
+  createHandler(UsersService.all, UsersServiceLive),
 );
 
 export const fetchUserPosts = createServerFn()
   .validator((input: unknown) => parseStrict(fetchUserInputSchema)(input))
-  .handler(createHandler(fetchUserPostsEffect, UsersServiceLive));
+  .handler(createHandler(UsersService.userPosts, UsersServiceLive));

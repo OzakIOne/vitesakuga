@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
 import { getSessionEffect } from "../auth/auth.middleware";
+import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
 import { parse } from "../effect/schema.utils";
@@ -33,13 +34,10 @@ export class CommentsService extends Context.Service<
     ) => Effect.Effect<Schema.Schema.Type<typeof commentsSelectSchema>, Error>;
     readonly delete_: (
       commentId: number,
-    ) => Effect.Effect<{ success: boolean }, Error>;
+    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
   }
->()("CommentsService") {}
-
-export const CommentsServiceLive = Layer.effect(
-  CommentsService,
-  Effect.gen(function* () {
+>()("CommentsService", {
+  make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
     const fetch = Effect.fn("CommentsService.fetch")(function* (
@@ -138,41 +136,46 @@ export const CommentsServiceLive = Layer.effect(
       return { success: true };
     });
 
-    return { fetch, add, delete_ } as unknown as CommentsService["Service"];
+    return { fetch, add, delete_ };
   }),
-);
-
-export const fetchCommentsEffect = Effect.fn("fetchComments")(function* (
-  postId: number,
-) {
-  const svc = yield* CommentsService;
-  return yield* svc.fetch(postId);
-});
-
-export const addCommentEffect = Effect.fn("addComment")(function* (
-  data: Schema.Schema.Type<typeof commentInsertSchema>,
-) {
-  const svc = yield* CommentsService;
-  return yield* svc.add(data);
-});
-
-export const deleteCommentEffect = Effect.fn("deleteComment")(function* (data: {
-  commentId: number;
 }) {
-  const svc = yield* CommentsService;
-  return yield* svc.delete_(data.commentId);
-});
+  static readonly fetch = Effect.fn("CommentsService.fetch")(function* (
+    postId: number,
+  ) {
+    const svc = yield* CommentsService;
+    return yield* svc.fetch(postId);
+  });
+
+  static readonly add = Effect.fn("CommentsService.add")(function* (
+    data: Schema.Schema.Type<typeof commentInsertSchema>,
+  ) {
+    const svc = yield* CommentsService;
+    return yield* svc.add(data);
+  });
+
+  static readonly delete_ = Effect.fn("CommentsService.delete_")(function* (
+    commentId: number,
+  ) {
+    const svc = yield* CommentsService;
+    return yield* svc.delete_(commentId);
+  });
+}
+
+export const CommentsServiceLive = Layer.effect(
+  CommentsService,
+  CommentsService.make,
+);
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => parse(Schema.Number)(input))
-  .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
+  .handler(createHandler(CommentsService.fetch, CommentsServiceLive));
 
 export const addComment = createServerFn({
   method: "POST",
   strict: { output: false },
 })
   .validator((input: unknown) => parse(commentInsertSchema)(input))
-  .handler(createHandler(addCommentEffect, CommentsServiceLive));
+  .handler(createHandler(CommentsService.add, CommentsServiceLive));
 
 export const deleteComment = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
@@ -180,7 +183,7 @@ export const deleteComment = createServerFn({ method: "POST" })
   )
   .handler(
     createHandler(
-      deleteCommentEffect,
+      (data: { commentId: number }) => CommentsService.delete_(data.commentId),
       CommentsServiceLive,
       baseLayerFactories.auth,
     ),

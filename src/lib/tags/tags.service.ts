@@ -14,11 +14,8 @@ export class TagsService extends Context.Service<
       Error
     >;
   }
->()("TagsService") {}
-
-export const TagsServiceLive = Layer.effect(
-  TagsService,
-  Effect.gen(function* () {
+>()("TagsService", {
+  make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
     const all = Effect.fn("TagsService.all")(function* () {
@@ -41,24 +38,24 @@ export const TagsServiceLive = Layer.effect(
 
     return { all, popular };
   }),
-);
+}) {
+  static readonly all = Effect.fn("TagsService.all")(function* () {
+    const svc = yield* TagsService;
+    return yield* svc.all();
+  });
 
-export const getAllTagsEffect = Effect.fn("getAllTags")(function* () {
-  const svc = yield* TagsService;
-  return yield* svc.all();
-});
-
-export const getAllPopularTagsEffect = Effect.fn("getAllPopularTags")(
-  function* () {
+  static readonly popular = Effect.fn("TagsService.popular")(function* () {
     const svc = yield* TagsService;
     return yield* svc.popular();
-  },
-);
+  });
+}
+
+export const TagsServiceLive = Layer.effect(TagsService, TagsService.make);
 
 export const getAllTags = createServerFn().handler(
-  createHandler(() => getAllTagsEffect(), TagsServiceLive),
+  createHandler(TagsService.all, TagsServiceLive),
 );
 
 export const getAllPopularTags = createServerFn().handler(
-  createHandler(() => getAllPopularTagsEffect(), TagsServiceLive),
+  createHandler(TagsService.popular, TagsServiceLive),
 );

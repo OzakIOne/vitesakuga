@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
-import { getAllTagsEffect, getAllPopularTagsEffect } from "./tags.service";
-import { TagsServiceLive } from "./tags.service";
+import { TagsService, TagsServiceLive } from "./tags.service";
 
 let db: Kysely<DB>;
 let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
@@ -15,9 +14,9 @@ beforeEach(async () => {
   runEffect = ctx.runEffect;
 });
 
-describe(getAllTagsEffect, () => {
+describe("TagsService.all", () => {
   it("returns empty array when no tags", async () => {
-    const result = await runEffect(getAllTagsEffect());
+    const result = await runEffect(TagsService.all());
     expect(result).toEqual([]);
   });
 
@@ -25,7 +24,7 @@ describe(getAllTagsEffect, () => {
     await db.insertInto("tags").values({ name: "anime" }).execute();
     await db.insertInto("tags").values({ name: "sakuga" }).execute();
 
-    const result = await runEffect(getAllTagsEffect());
+    const result = await runEffect(TagsService.all());
 
     expect(result).toHaveLength(2);
     expect(result.map((t) => t.name).sort()).toEqual(["anime", "sakuga"]);
@@ -34,9 +33,9 @@ describe(getAllTagsEffect, () => {
   });
 });
 
-describe(getAllPopularTagsEffect, () => {
+describe("TagsService.popular", () => {
   it("returns empty when no tags", async () => {
-    const result = await runEffect(getAllPopularTagsEffect());
+    const result = await runEffect(TagsService.popular());
     expect(result).toEqual([]);
   });
 
@@ -87,7 +86,7 @@ describe(getAllPopularTagsEffect, () => {
       .values({ postId: post.id, tagId: tag.id })
       .execute();
 
-    const result = await runEffect(getAllPopularTagsEffect());
+    const result = await runEffect(TagsService.popular());
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("anime");

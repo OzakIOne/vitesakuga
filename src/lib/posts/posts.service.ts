@@ -3,6 +3,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 
 import { getSessionEffect } from "../auth/auth.middleware";
+import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -28,11 +29,22 @@ import {
 
 const PAGE_SIZE = 30;
 
+const computeStartDate = (dateRange: "today" | "week" | "month") => {
+  const now = new Date();
+  if (dateRange === "today") {
+    return new Date(now.setHours(0, 0, 0, 0));
+  }
+  if (dateRange === "week") {
+    return new Date(now.setDate(now.getDate() - 7));
+  }
+  return new Date(now.setMonth(now.getMonth() - 1));
+};
+
 export const parsePostId = (postId: unknown) =>
   parse(Schema.Union([Schema.Number, Schema.NumberFromString]))(postId);
 
 type PostsSearchResult = {
-  data: Schema.Schema.Type<typeof postsSelectSchema>[];
+  readonly data: readonly Schema.Schema.Type<typeof postsSelectSchema>[];
   meta: {
     pagination: PaginationMeta;
     popularTags: ReturnType<typeof mapPopularTags>;
@@ -73,47 +85,17 @@ export class PostsService extends Context.Service<
     ) => Effect.Effect<Schema.Schema.Type<typeof postsSelectSchema>, Error>;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
-    ) => Effect.Effect<Schema.Schema.Type<typeof postsSelectSchema>, Error>;
+    ) => Effect.Effect<
+      Schema.Schema.Type<typeof postsSelectSchema>,
+      Error,
+      AuthServices
+    >;
     readonly getByTag: (
       data: Schema.Schema.Type<typeof postByTagSchema>,
     ) => Effect.Effect<PostsSearchResult, Error>;
   }
->()("PostsService") {}
-
-const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
-  db: KyselyDB["Service"],
-  postId: number,
-  tags: ReadonlyArray<{ id?: number | undefined; name: string }>,
-) {
-  const allTagIds: number[] = [];
-
-  for (const tag of tags) {
-    if (tag.id === undefined) {
-      const newTag = yield* db.executeTakeFirstOrError(
-        db
-          .insertInto("tags")
-          .values({ name: tag.name })
-          .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
-          .returning("id"),
-      );
-      allTagIds.push(newTag.id);
-    } else {
-      allTagIds.push(tag.id);
-    }
-  }
-
-  if (allTagIds.length > 0) {
-    yield* db.execute(
-      db
-        .insertInto("post_tags")
-        .values(allTagIds.map((tagId) => ({ postId, tagId }))),
-    );
-  }
-});
-
-export const PostsServiceLive = Layer.effect(
-  PostsService,
-  Effect.gen(function* () {
+>()("PostsService", {
+  make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
 
@@ -145,23 +127,11 @@ export const PostsServiceLive = Layer.effect(
       }
 
       if (dateRange !== "all") {
-        const now = new Date();
-        let startDate: Date;
-        switch (dateRange) {
-          case "today": {
-            startDate = new Date(now.setHours(0, 0, 0, 0));
-            break;
-          }
-          case "week": {
-            startDate = new Date(now.setDate(now.getDate() - 7));
-            break;
-          }
-          case "month": {
-            startDate = new Date(now.setMonth(now.getMonth() - 1));
-            break;
-          }
-        }
-        query = query.where("posts.createdAt", ">=", startDate!);
+        query = query.where(
+          "posts.createdAt",
+          ">=",
+          computeStartDate(dateRange),
+        );
       }
 
       const countQuery = query
@@ -208,26 +178,10 @@ export const PostsServiceLive = Layer.effect(
       }
 
       if (dateRange !== "all") {
-        const now = new Date();
-        let startDate: Date;
-        switch (dateRange) {
-          case "today": {
-            startDate = new Date(now.setHours(0, 0, 0, 0));
-            break;
-          }
-          case "week": {
-            startDate = new Date(now.setDate(now.getDate() - 7));
-            break;
-          }
-          case "month": {
-            startDate = new Date(now.setMonth(now.getMonth() - 1));
-            break;
-          }
-        }
         popularTagsQuery = popularTagsQuery.where(
           "posts.createdAt",
           ">=",
-          startDate!,
+          computeStartDate(dateRange),
         );
       }
 
@@ -375,6 +329,15 @@ export const PostsServiceLive = Layer.effect(
           .returningAll(),
       );
 
+      const post = yield* Effect.try({
+        try: () => parse(postsSelectSchema)(newPost),
+        catch: (error) =>
+          new ValidationError({
+            message: "There was an error processing the upload result",
+            cause: error,
+          }),
+      });
+
       if (tags.length > 0) {
         yield* resolveAndLinkTags(db, newPost.id, tags);
         yield* Effect.logInfo("Tags linked to post").pipe(
@@ -389,7 +352,7 @@ export const PostsServiceLive = Layer.effect(
         Effect.annotateLogs("postId", String(newPost.id)),
       );
 
-      return newPost;
+      return post;
     });
 
     const getByTag = Effect.fn("PostsService.getByTag")(function* (
@@ -517,6 +480,15 @@ export const PostsServiceLive = Layer.effect(
           .returningAll(),
       );
 
+      const updatedPostParsed = yield* Effect.try({
+        try: () => parse(postsSelectSchema)(updatedPost),
+        catch: (error) =>
+          new ValidationError({
+            message: "There was an error processing the update result",
+            cause: error,
+          }),
+      });
+
       if (tags && tags.length > 0) {
         yield* db.execute(
           db.deleteFrom("post_tags").where("postId", "=", postId),
@@ -532,7 +504,7 @@ export const PostsServiceLive = Layer.effect(
         Effect.annotateLogs("postId", String(postId)),
       );
 
-      return updatedPost;
+      return updatedPostParsed;
     });
 
     return {
@@ -541,52 +513,85 @@ export const PostsServiceLive = Layer.effect(
       upload,
       getByTag,
       update,
-    } as unknown as PostsService["Service"];
+    };
   }),
-);
+}) {
+  static readonly search = Effect.fn("PostsService.search")(function* (
+    data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
+  ) {
+    const svc = yield* PostsService;
+    return yield* svc.search(data);
+  });
 
-export const searchPostsEffect = Effect.fn("searchPosts")(function* (
-  data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
-) {
-  const svc = yield* PostsService;
-  return yield* svc.search(data);
-});
+  static readonly fetchDetail = Effect.fn("PostsService.fetchDetail")(
+    function* (postId: number) {
+      const svc = yield* PostsService;
+      return yield* svc.fetchDetail(postId);
+    },
+  );
 
-export const fetchPostDetailEffect = Effect.fn("fetchPostDetail")(function* (
+  static readonly upload = Effect.fn("PostsService.upload")(function* (
+    data: Schema.Schema.Type<typeof FormFileUploadSchema>,
+  ) {
+    const svc = yield* PostsService;
+    return yield* svc.upload(data);
+  });
+
+  static readonly getByTag = Effect.fn("PostsService.getByTag")(function* (
+    data: Schema.Schema.Type<typeof postByTagSchema>,
+  ) {
+    const svc = yield* PostsService;
+    return yield* svc.getByTag(data);
+  });
+
+  static readonly update = Effect.fn("PostsService.update")(function* (
+    data: Schema.Schema.Type<typeof updatePostInputSchema>,
+  ) {
+    const svc = yield* PostsService;
+    return yield* svc.update(data);
+  });
+}
+
+const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
+  db: KyselyDB["Service"],
   postId: number,
+  tags: ReadonlyArray<{ id?: number | undefined; name: string }>,
 ) {
-  const svc = yield* PostsService;
-  return yield* svc.fetchDetail(postId);
+  const allTagIds: number[] = [];
+
+  for (const tag of tags) {
+    if (tag.id === undefined) {
+      const newTag = yield* db.executeTakeFirstOrError(
+        db
+          .insertInto("tags")
+          .values({ name: tag.name })
+          .onConflict((oc) => oc.column("name").doUpdateSet({ name: tag.name }))
+          .returning("id"),
+      );
+      allTagIds.push(newTag.id);
+    } else {
+      allTagIds.push(tag.id);
+    }
+  }
+
+  if (allTagIds.length > 0) {
+    yield* db.execute(
+      db
+        .insertInto("post_tags")
+        .values(allTagIds.map((tagId) => ({ postId, tagId }))),
+    );
+  }
 });
 
-const uploadPostEffect = Effect.fn("uploadPost")(function* (
-  data: Schema.Schema.Type<typeof FormFileUploadSchema>,
-) {
-  const svc = yield* PostsService;
-  return yield* svc.upload(data);
-});
-
-export const getPostsByTagEffect = Effect.fn("getPostsByTag")(function* (
-  data: Schema.Schema.Type<typeof postByTagSchema>,
-) {
-  const svc = yield* PostsService;
-  return yield* svc.getByTag(data);
-});
-
-export const updatePostEffect = Effect.fn("updatePost")(function* (
-  data: Schema.Schema.Type<typeof updatePostInputSchema>,
-) {
-  const svc = yield* PostsService;
-  return yield* svc.update(data);
-});
+export const PostsServiceLive = Layer.effect(PostsService, PostsService.make);
 
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => parseStrict(searchPostsBaseSchema)(input))
-  .handler(createHandler(searchPostsEffect, PostsServiceLive));
+  .handler(createHandler(PostsService.search, PostsServiceLive));
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
   .validator(parsePostId)
-  .handler(createHandler(fetchPostDetailEffect, PostsServiceLive));
+  .handler(createHandler(PostsService.fetchDetail, PostsServiceLive));
 
 export const uploadPost = createServerFn({ method: "POST" })
   .validator((data: FormData) => {
@@ -604,14 +609,18 @@ export const uploadPost = createServerFn({ method: "POST" })
     };
     return parseStrict(FormFileUploadSchema)(normalized);
   })
-  .handler(createHandler(uploadPostEffect, PostsServiceLive));
+  .handler(createHandler(PostsService.upload, PostsServiceLive));
 
 export const updatePost = createServerFn({ method: "POST" })
   .validator((input: unknown) => parseStrict(updatePostInputSchema)(input))
   .handler(
-    createHandler(updatePostEffect, PostsServiceLive, baseLayerFactories.auth),
+    createHandler(
+      PostsService.update,
+      PostsServiceLive,
+      baseLayerFactories.auth,
+    ),
   );
 
 export const getPostsByTag = createServerFn({ strict: { output: false } })
   .validator((input: unknown) => parseStrict(postByTagSchema)(input))
-  .handler(createHandler(getPostsByTagEffect, PostsServiceLive));
+  .handler(createHandler(PostsService.getByTag, PostsServiceLive));

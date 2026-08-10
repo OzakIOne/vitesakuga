@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
-import { fetchUsersEffect, fetchUserPostsEffect } from "./users.service";
-import { UsersServiceLive } from "./users.service";
+import { UsersService, UsersServiceLive } from "./users.service";
 
 let db: Kysely<DB>;
 let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
@@ -24,16 +23,16 @@ beforeEach(async () => {
     .execute();
 });
 
-describe(fetchUsersEffect, () => {
+describe("UsersService.all", () => {
   it("returns all users", async () => {
-    const result = await runEffect(fetchUsersEffect());
+    const result = await runEffect(UsersService.all());
 
     expect(result).toHaveLength(2);
     expect(result.map((u) => u.name).sort()).toEqual(["Alice", "Bob"]);
   });
 
   it("returns validated user objects", async () => {
-    const result = await runEffect(fetchUsersEffect());
+    const result = await runEffect(UsersService.all());
 
     expect(result[0]).toHaveProperty("id");
     expect(result[0]).toHaveProperty("name");
@@ -41,10 +40,10 @@ describe(fetchUsersEffect, () => {
   });
 });
 
-describe(fetchUserPostsEffect, () => {
+describe("UsersService.userPosts", () => {
   it("returns empty posts for user with no posts", async () => {
     const result = await runEffect(
-      fetchUserPostsEffect({ userId: "user-1", tags: [], q: "", page: 0 }),
+      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
     );
 
     expect(result.data).toEqual([]);
@@ -82,7 +81,7 @@ describe(fetchUserPostsEffect, () => {
       .execute();
 
     const result = await runEffect(
-      fetchUserPostsEffect({ userId: "user-1", tags: [], q: "", page: 0 }),
+      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
     );
 
     expect(result.data).toHaveLength(1);
@@ -122,7 +121,7 @@ describe(fetchUserPostsEffect, () => {
     }
 
     const result = await runEffect(
-      fetchUserPostsEffect({ userId: "user-1", tags: [], q: "", page: 0 }),
+      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
     );
 
     expect(result.meta.pagination.total).toBe(5);

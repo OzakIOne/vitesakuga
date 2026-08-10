@@ -3,12 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
-import {
-  addCommentEffect,
-  deleteCommentEffect,
-  fetchCommentsEffect,
-} from "./comments.service";
-import { CommentsServiceLive } from "./comments.service";
+import { CommentsService, CommentsServiceLive } from "./comments.service";
 
 let db: Kysely<DB>;
 let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
@@ -47,9 +42,9 @@ beforeEach(async () => {
   postId = post.id;
 });
 
-describe(fetchCommentsEffect, () => {
+describe("CommentsService.fetch", () => {
   it("returns empty array when no comments", async () => {
-    const result = await runEffect(fetchCommentsEffect(postId));
+    const result = await runEffect(CommentsService.fetch(postId));
     expect(result).toEqual([]);
   });
 
@@ -63,7 +58,7 @@ describe(fetchCommentsEffect, () => {
       })
       .execute();
 
-    const result = await runEffect(fetchCommentsEffect(postId));
+    const result = await runEffect(CommentsService.fetch(postId));
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe("Great post!");
@@ -93,7 +88,7 @@ describe(fetchCommentsEffect, () => {
       })
       .execute();
 
-    const result = await runEffect(fetchCommentsEffect(postId));
+    const result = await runEffect(CommentsService.fetch(postId));
 
     expect(result).toHaveLength(2);
     expect(result[0].content).toBe("Second");
@@ -101,10 +96,10 @@ describe(fetchCommentsEffect, () => {
   });
 });
 
-describe(addCommentEffect, () => {
+describe("CommentsService.add", () => {
   it("creates a comment and returns it", async () => {
     const result = await runEffect(
-      addCommentEffect({
+      CommentsService.add({
         content: "Nice!",
         postId,
         userId: "user-1",
@@ -128,7 +123,7 @@ describe(addCommentEffect, () => {
   it("throws on database error for missing post", async () => {
     await expect(
       runEffect(
-        addCommentEffect({
+        CommentsService.add({
           content: "Bad",
           postId: 999,
           userId: "user-1",
@@ -138,7 +133,7 @@ describe(addCommentEffect, () => {
   });
 });
 
-describe(deleteCommentEffect, () => {
+describe("CommentsService.delete_", () => {
   let commentId: number;
 
   beforeEach(async () => {
@@ -158,7 +153,7 @@ describe(deleteCommentEffect, () => {
   it("throws unauthorized when no session", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    await expect(runEffect(deleteCommentEffect({ commentId }))).rejects.toThrow(
+    await expect(runEffect(CommentsService.delete_(commentId))).rejects.toThrow(
       "You must be logged in",
     );
   });
@@ -166,7 +161,7 @@ describe(deleteCommentEffect, () => {
   it("throws forbidden when user does not own the comment", async () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-2" } });
 
-    await expect(runEffect(deleteCommentEffect({ commentId }))).rejects.toThrow(
+    await expect(runEffect(CommentsService.delete_(commentId))).rejects.toThrow(
       "can only delete your own",
     );
   });
@@ -174,15 +169,15 @@ describe(deleteCommentEffect, () => {
   it("throws not found when comment does not exist", async () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
 
-    await expect(
-      runEffect(deleteCommentEffect({ commentId: 9999 })),
-    ).rejects.toThrow("Comment 9999 not found");
+    await expect(runEffect(CommentsService.delete_(9999))).rejects.toThrow(
+      "Comment 9999 not found",
+    );
   });
 
   it("deletes own comment successfully", async () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
 
-    const result = await runEffect(deleteCommentEffect({ commentId }));
+    const result = await runEffect(CommentsService.delete_(commentId));
 
     expect(result).toEqual({ success: true });
 

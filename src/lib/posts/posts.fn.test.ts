@@ -3,13 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
-import {
-  fetchPostDetailEffect,
-  getPostsByTagEffect,
-  searchPostsEffect,
-  updatePostEffect,
-} from "./posts.service";
-import { PostsServiceLive } from "./posts.service";
+import { PostsService, PostsServiceLive } from "./posts.service";
 
 let db: Kysely<DB>;
 let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
@@ -108,10 +102,10 @@ const linkTags = async (postId: number, tagIds: number[]) => {
     .execute();
 };
 
-describe(searchPostsEffect, () => {
+describe("PostsService.search", () => {
   it("returns empty results when no posts exist", async () => {
     const result = await runEffect(
-      searchPostsEffect({
+      PostsService.search({
         q: "",
         tags: [],
         page: 0,
@@ -130,7 +124,7 @@ describe(searchPostsEffect, () => {
     await insertPost({ title: "Post 2", content: "Content 2" });
 
     const result = await runEffect(
-      searchPostsEffect({
+      PostsService.search({
         q: "",
         tags: [],
         page: 0,
@@ -151,7 +145,7 @@ describe(searchPostsEffect, () => {
     await insertPost({ title: "Regular Post", content: "Nothing here" });
 
     const result = await runEffect(
-      searchPostsEffect({
+      PostsService.search({
         q: "anime",
         tags: [],
         page: 0,
@@ -171,7 +165,7 @@ describe(searchPostsEffect, () => {
     await linkTags(postId1, [tagId]);
 
     const result = await runEffect(
-      searchPostsEffect({
+      PostsService.search({
         q: "",
         tags: ["anime"],
         page: 0,
@@ -190,7 +184,7 @@ describe(searchPostsEffect, () => {
     }
 
     const result = await runEffect(
-      searchPostsEffect({
+      PostsService.search({
         q: "",
         tags: [],
         page: 0,
@@ -211,7 +205,7 @@ describe(searchPostsEffect, () => {
     await linkTags(postId, [tagId]);
 
     const result = await runEffect(
-      searchPostsEffect({
+      PostsService.search({
         q: "",
         tags: [],
         page: 0,
@@ -226,7 +220,7 @@ describe(searchPostsEffect, () => {
   });
 });
 
-describe(fetchPostDetailEffect, () => {
+describe("PostsService.fetchDetail", () => {
   it("returns post details with user and empty tags", async () => {
     const postId = await insertPost({
       title: "Detail Post",
@@ -234,7 +228,7 @@ describe(fetchPostDetailEffect, () => {
       source: "https://example.com",
     });
 
-    const result = await runEffect(fetchPostDetailEffect(postId));
+    const result = await runEffect(PostsService.fetchDetail(postId));
 
     expect(result.post.title).toBe("Detail Post");
     expect(result.post.content).toBe("<p>Rich content</p>");
@@ -250,20 +244,20 @@ describe(fetchPostDetailEffect, () => {
     const tagId = await insertTag("sakuga");
     await linkTags(postId, [tagId]);
 
-    const result = await runEffect(fetchPostDetailEffect(postId));
+    const result = await runEffect(PostsService.fetchDetail(postId));
 
     expect(result.tags).toHaveLength(1);
     expect(result.tags[0].name).toBe("sakuga");
   });
 
   it("throws when post is not found", async () => {
-    await expect(runEffect(fetchPostDetailEffect(999))).rejects.toThrow(
+    await expect(runEffect(PostsService.fetchDetail(999))).rejects.toThrow(
       "Post 999 not found",
     );
   });
 });
 
-describe(getPostsByTagEffect, () => {
+describe("PostsService.getByTag", () => {
   it("returns posts filtered by tag", async () => {
     const postId1 = await insertPost({
       title: "Anime Post",
@@ -277,7 +271,7 @@ describe(getPostsByTagEffect, () => {
     await linkTags(postId1, [tagId]);
 
     const result = await runEffect(
-      getPostsByTagEffect({ tag: "anime", page: 0 }),
+      PostsService.getByTag({ tag: "anime", page: 0 }),
     );
 
     expect(result.data).toHaveLength(1);
@@ -290,7 +284,7 @@ describe(getPostsByTagEffect, () => {
     await insertPost({ title: "Some Post" });
 
     const result = await runEffect(
-      getPostsByTagEffect({ tag: "empty-tag", page: 0 }),
+      PostsService.getByTag({ tag: "empty-tag", page: 0 }),
     );
 
     expect(result.data).toHaveLength(0);
@@ -298,14 +292,14 @@ describe(getPostsByTagEffect, () => {
   });
 });
 
-describe(updatePostEffect, () => {
+describe("PostsService.update", () => {
   it("throws unauthorized when no session", async () => {
     mockGetSession.mockResolvedValueOnce(null);
     const postId = await insertPost();
 
     await expect(
       runEffect(
-        updatePostEffect({
+        PostsService.update({
           postId,
           title: "Hacked",
           content: "Bad",
@@ -323,7 +317,7 @@ describe(updatePostEffect, () => {
 
     await expect(
       runEffect(
-        updatePostEffect({
+        PostsService.update({
           postId,
           title: "Hacked",
           content: "Bad",
@@ -340,7 +334,7 @@ describe(updatePostEffect, () => {
     const postId = await insertPost({ title: "Old Title" });
 
     const result = await runEffect(
-      updatePostEffect({
+      PostsService.update({
         postId,
         title: "Updated",
         content: "New content",
@@ -361,7 +355,7 @@ describe(updatePostEffect, () => {
     const existingTag = await insertTag("existing");
 
     const result = await runEffect(
-      updatePostEffect({
+      PostsService.update({
         postId,
         title: "Tagged",
         content: "Content",

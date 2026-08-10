@@ -15,37 +15,40 @@ The old pattern of separate `<feature>.fn.ts` files has been consolidated — se
 Each `*.service.ts` file follows this layered pattern (top to bottom):
 
 1. **Imports** — Effect, TanStack Start, domain schemas (Effect Schema), layer factories, `createHandler`
-2. **Service class** — Effect `Context.Service` defining the typed interface
-3. **Live layer** — `Layer.effect` implementing the service using `KyselyDB` and `Effect.fn`
-4. **Effect functions** — Public `Effect.fn` wrappers that pull from the service (e.g., `fetchCommentsEffect`)
+2. **Service class** — Effect `Context.Service<Self, Shape>()("Name", { make })` with the typed interface as `Shape` and the implementation as `make`
+3. **Static accessors** — `Effect.fn` static methods on the service class (e.g., `CommentsService.fetch`) that pull the service from the context
+4. **Live layer** — `Layer.effect(Service, Service.make)` providing the service
 5. **Server functions** — TanStack Start `createServerFn` instances with Effect Schema validators calling `createHandler`
 
 Example pattern (from `comments.service.ts`):
 
 ```typescript
-// 2. Service class
+// 2. Service class + 3. static accessors
 export class CommentsService extends Context.Service<CommentsService, {
   readonly fetch: (postId: number) => Effect.Effect<unknown, Error>;
   readonly add: (data: ...) => Effect.Effect<unknown, Error>;
-  readonly delete_: (commentId: number) => Effect.Effect<{ success: boolean }, Error>;
-}>()("CommentsService") {}
+  readonly delete_: (commentId: number) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
+}>()("CommentsService", {
+  make: Effect.gen(function* () {
+    const db = yield* KyselyDB;
+    // ... implementation
+    return { fetch, add, delete_ };
+  }),
+}) {
+  static readonly fetch = Effect.fn("CommentsService.fetch")(function* (postId: number) {
+    const svc = yield* CommentsService;
+    return yield* svc.fetch(postId);
+  });
+  // ... other static accessors
+}
 
-// 3. Live layer
-export const CommentsServiceLive = Layer.effect(CommentsService, Effect.gen(function* () {
-  const db = yield* KyselyDB;
-  // ... implementation
-}));
-
-// 4. Effect functions
-export const fetchCommentsEffect = Effect.fn("fetchComments")(function* (postId: number) {
-  const svc = yield* CommentsService;
-  return yield* svc.fetch(postId);
-});
+// 4. Live layer
+export const CommentsServiceLive = Layer.effect(CommentsService, CommentsService.make);
 
 // 5. Server functions
 export const fetchComments = createServerFn()
   .validator((input: unknown) => parse(Schema.Number)(input))
-  .handler(createHandler(fetchCommentsEffect, CommentsServiceLive));
+  .handler(createHandler(CommentsService.fetch, CommentsServiceLive));
 
 export const addComment = createServerFn({ method: "POST" })
   .validator((input: unknown) => parse(commentInsertSchema)(input))

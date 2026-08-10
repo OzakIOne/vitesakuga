@@ -3,18 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
-import {
-  addPostToPlaylistEffect,
-  createPlaylistEffect,
-  deletePlaylistEffect,
-  fetchPlaylistDetailEffect,
-  fetchPlaylistsForPostEffect,
-  fetchUserPlaylistsEffect,
-  removePostFromPlaylistEffect,
-  reorderPlaylistPostsEffect,
-  updatePlaylistEffect,
-} from "./playlists.service";
-import { PlaylistsServiceLive } from "./playlists.service";
+import { PlaylistsService, PlaylistsServiceLive } from "./playlists.service";
 
 let db: Kysely<DB>;
 let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
@@ -82,12 +71,12 @@ beforeEach(async () => {
   });
 });
 
-describe(createPlaylistEffect, () => {
+describe(PlaylistsService.create, () => {
   it("creates a playlist for the authenticated user", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      createPlaylistEffect({
+      PlaylistsService.create({
         title: "My Favs",
         description: "Best sakuga",
         isPublic: false,
@@ -107,7 +96,7 @@ describe(createPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      createPlaylistEffect({ title: "Private", isPublic: false }),
+      PlaylistsService.create({ title: "Private", isPublic: false }),
     );
 
     expect(result.is_public).toBe(false);
@@ -117,12 +106,12 @@ describe(createPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     await expect(
-      runEffect(createPlaylistEffect({ title: "Nope", isPublic: false })),
+      runEffect(PlaylistsService.create({ title: "Nope", isPublic: false })),
     ).rejects.toThrow("You must be logged in");
   });
 });
 
-describe(updatePlaylistEffect, () => {
+describe(PlaylistsService.update, () => {
   let playlistId: number;
 
   beforeEach(async () => {
@@ -143,7 +132,7 @@ describe(updatePlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      updatePlaylistEffect({
+      PlaylistsService.update({
         playlistId,
         title: "Updated",
         description: "New desc",
@@ -165,7 +154,7 @@ describe(updatePlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      updatePlaylistEffect({ playlistId, isPublic: true }),
+      PlaylistsService.update({ playlistId, isPublic: true }),
     );
 
     expect(result.is_public).toBe(true);
@@ -175,7 +164,7 @@ describe(updatePlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     await expect(
-      runEffect(updatePlaylistEffect({ playlistId, title: "Hack" })),
+      runEffect(PlaylistsService.update({ playlistId, title: "Hack" })),
     ).rejects.toThrow("You must be logged in");
   });
 
@@ -183,7 +172,7 @@ describe(updatePlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
     await expect(
-      runEffect(updatePlaylistEffect({ playlistId, title: "Hack" })),
+      runEffect(PlaylistsService.update({ playlistId, title: "Hack" })),
     ).rejects.toThrow("can only modify your own");
   });
 
@@ -191,12 +180,12 @@ describe(updatePlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     await expect(
-      runEffect(updatePlaylistEffect({ playlistId: 9999, title: "X" })),
+      runEffect(PlaylistsService.update({ playlistId: 9999, title: "X" })),
     ).rejects.toThrow("Playlist 9999 not found");
   });
 });
 
-describe(deletePlaylistEffect, () => {
+describe(PlaylistsService.delete_, () => {
   let playlistId: number;
 
   beforeEach(async () => {
@@ -215,7 +204,7 @@ describe(deletePlaylistEffect, () => {
   it("deletes the playlist", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    const result = await runEffect(deletePlaylistEffect(playlistId));
+    const result = await runEffect(PlaylistsService.delete_(playlistId));
 
     expect(result).toEqual({ success: true });
 
@@ -235,7 +224,7 @@ describe(deletePlaylistEffect, () => {
 
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    await runEffect(deletePlaylistEffect(playlistId));
+    await runEffect(PlaylistsService.delete_(playlistId));
 
     const remainingPosts = await db
       .selectFrom("playlist_posts")
@@ -247,13 +236,13 @@ describe(deletePlaylistEffect, () => {
   it("throws forbidden when not the owner", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
-    await expect(runEffect(deletePlaylistEffect(playlistId))).rejects.toThrow(
-      "can only modify your own",
-    );
+    await expect(
+      runEffect(PlaylistsService.delete_(playlistId)),
+    ).rejects.toThrow("can only modify your own");
   });
 });
 
-describe(addPostToPlaylistEffect, () => {
+describe(PlaylistsService.addPost, () => {
   let playlistId: number;
 
   beforeEach(async () => {
@@ -275,7 +264,7 @@ describe(addPostToPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      addPostToPlaylistEffect({ playlistId, postId }),
+      PlaylistsService.addPost({ playlistId, postId }),
     );
 
     expect(result.playlist_id).toBe(playlistId);
@@ -289,12 +278,12 @@ describe(addPostToPlaylistEffect, () => {
   it("increments position for subsequent posts", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    await runEffect(addPostToPlaylistEffect({ playlistId, postId }));
+    await runEffect(PlaylistsService.addPost({ playlistId, postId }));
 
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      addPostToPlaylistEffect({ playlistId, postId: postId2 }),
+      PlaylistsService.addPost({ playlistId, postId: postId2 }),
     );
 
     expect(result.position).toBe(1);
@@ -302,12 +291,12 @@ describe(addPostToPlaylistEffect, () => {
 
   it("throws when adding a duplicate post", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
-    await runEffect(addPostToPlaylistEffect({ playlistId, postId }));
+    await runEffect(PlaylistsService.addPost({ playlistId, postId }));
 
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     await expect(
-      runEffect(addPostToPlaylistEffect({ playlistId, postId })),
+      runEffect(PlaylistsService.addPost({ playlistId, postId })),
     ).rejects.toThrow("already in playlist");
   });
 
@@ -315,7 +304,7 @@ describe(addPostToPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     await expect(
-      runEffect(addPostToPlaylistEffect({ playlistId, postId: 9999 })),
+      runEffect(PlaylistsService.addPost({ playlistId, postId: 9999 })),
     ).rejects.toThrow("Post 9999 not found");
   });
 
@@ -323,12 +312,12 @@ describe(addPostToPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
     await expect(
-      runEffect(addPostToPlaylistEffect({ playlistId, postId })),
+      runEffect(PlaylistsService.addPost({ playlistId, postId })),
     ).rejects.toThrow("can only modify your own");
   });
 });
 
-describe(removePostFromPlaylistEffect, () => {
+describe(PlaylistsService.removePost, () => {
   let playlistId: number;
 
   beforeEach(async () => {
@@ -353,7 +342,7 @@ describe(removePostFromPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      removePostFromPlaylistEffect({ playlistId, postId }),
+      PlaylistsService.removePost({ playlistId, postId }),
     );
 
     expect(result).toEqual({ success: true });
@@ -366,7 +355,7 @@ describe(removePostFromPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      removePostFromPlaylistEffect({
+      PlaylistsService.removePost({
         playlistId,
         postId: postId2,
       }),
@@ -379,12 +368,12 @@ describe(removePostFromPlaylistEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
     await expect(
-      runEffect(removePostFromPlaylistEffect({ playlistId, postId })),
+      runEffect(PlaylistsService.removePost({ playlistId, postId })),
     ).rejects.toThrow("can only modify your own");
   });
 });
 
-describe(reorderPlaylistPostsEffect, () => {
+describe(PlaylistsService.reorder, () => {
   let playlistId: number;
 
   beforeEach(async () => {
@@ -417,7 +406,7 @@ describe(reorderPlaylistPostsEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      reorderPlaylistPostsEffect({
+      PlaylistsService.reorder({
         playlistId,
         items: [
           { postId, position: 1 },
@@ -442,7 +431,7 @@ describe(reorderPlaylistPostsEffect, () => {
 
     await expect(
       runEffect(
-        reorderPlaylistPostsEffect({
+        PlaylistsService.reorder({
           playlistId,
           items: [{ postId, position: 0 }],
         }),
@@ -451,7 +440,7 @@ describe(reorderPlaylistPostsEffect, () => {
   });
 });
 
-describe(fetchUserPlaylistsEffect, () => {
+describe(PlaylistsService.fetchUserPlaylists, () => {
   beforeEach(async () => {
     await db
       .insertInto("playlists")
@@ -476,7 +465,9 @@ describe(fetchUserPlaylistsEffect, () => {
   it("returns all playlists for the owner", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    const result = await runEffect(fetchUserPlaylistsEffect("user-1"));
+    const result = await runEffect(
+      PlaylistsService.fetchUserPlaylists("user-1"),
+    );
 
     expect(result).toHaveLength(2);
     expect(result[0].title).toBe("Private List");
@@ -486,7 +477,9 @@ describe(fetchUserPlaylistsEffect, () => {
   it("returns only public playlists for non-owner", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
-    const result = await runEffect(fetchUserPlaylistsEffect("user-1"));
+    const result = await runEffect(
+      PlaylistsService.fetchUserPlaylists("user-1"),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe("Public List");
@@ -521,7 +514,9 @@ describe(fetchUserPlaylistsEffect, () => {
     mockGetSession.mockReset();
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    const result = await runEffect(fetchUserPlaylistsEffect("user-1"));
+    const result = await runEffect(
+      PlaylistsService.fetchUserPlaylists("user-1"),
+    );
 
     const publicList = result.find(
       (p: (typeof result)[number]) => p.title === "Public List",
@@ -555,7 +550,9 @@ describe(fetchUserPlaylistsEffect, () => {
     mockGetSession.mockReset();
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    const result = await runEffect(fetchUserPlaylistsEffect("user-1"));
+    const result = await runEffect(
+      PlaylistsService.fetchUserPlaylists("user-1"),
+    );
 
     const publicList = result.find(
       (p: (typeof result)[number]) => p.title === "Public List",
@@ -564,7 +561,7 @@ describe(fetchUserPlaylistsEffect, () => {
   });
 });
 
-describe(fetchPlaylistDetailEffect, () => {
+describe(PlaylistsService.fetchDetail, () => {
   let playlistId: number;
 
   beforeEach(async () => {
@@ -601,7 +598,7 @@ describe(fetchPlaylistDetailEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      fetchPlaylistDetailEffect({ playlistId, page: 0 }),
+      PlaylistsService.fetchDetail({ playlistId, page: 0 }),
     );
 
     expect(result.playlist.title).toBe("Detail List");
@@ -621,7 +618,7 @@ describe(fetchPlaylistDetailEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
     const result = await runEffect(
-      fetchPlaylistDetailEffect({ playlistId, page: 0 }),
+      PlaylistsService.fetchDetail({ playlistId, page: 0 }),
     );
 
     expect(result.playlist.title).toBe("Detail List");
@@ -643,7 +640,7 @@ describe(fetchPlaylistDetailEffect, () => {
 
     await expect(
       runEffect(
-        fetchPlaylistDetailEffect({
+        PlaylistsService.fetchDetail({
           playlistId: row.id,
           page: 0,
         }),
@@ -672,7 +669,7 @@ describe(fetchPlaylistDetailEffect, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     const result = await runEffect(
-      fetchPlaylistDetailEffect({ playlistId, page: 0 }),
+      PlaylistsService.fetchDetail({ playlistId, page: 0 }),
     );
 
     const orphan = result.data.find(
@@ -694,7 +691,7 @@ describe(fetchPlaylistDetailEffect, () => {
   });
 });
 
-describe(fetchPlaylistsForPostEffect, () => {
+describe(PlaylistsService.fetchForPost, () => {
   let playlistId: number;
   let playlistId2: number;
 
@@ -734,7 +731,7 @@ describe(fetchPlaylistsForPostEffect, () => {
 
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
-    const result = await runEffect(fetchPlaylistsForPostEffect(postId));
+    const result = await runEffect(PlaylistsService.fetchForPost(postId));
 
     expect(result).toHaveLength(2);
 
@@ -752,7 +749,7 @@ describe(fetchPlaylistsForPostEffect, () => {
   it("returns empty array when user has no playlists", async () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser2 });
 
-    const result = await runEffect(fetchPlaylistsForPostEffect(postId));
+    const result = await runEffect(PlaylistsService.fetchForPost(postId));
 
     expect(result).toHaveLength(0);
   });
@@ -761,7 +758,7 @@ describe(fetchPlaylistsForPostEffect, () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     await expect(
-      runEffect(fetchPlaylistsForPostEffect(postId)),
+      runEffect(PlaylistsService.fetchForPost(postId)),
     ).rejects.toThrow("You must be logged in");
   });
 });
@@ -784,7 +781,7 @@ describe("PlaylistsService.delete_ cascading", () => {
       .execute();
 
     mockGetSession.mockResolvedValueOnce({ user: testUser });
-    await runEffect(deletePlaylistEffect(row.id));
+    await runEffect(PlaylistsService.delete_(row.id));
 
     const posts = await db
       .selectFrom("posts")

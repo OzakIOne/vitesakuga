@@ -19,3 +19,5 @@ export class RequestHeadersService extends Context.Service<
   RequestHeadersService,
   () => Headers
 >()("RequestHeadersService") {}
+
+export type AuthServices = AuthService | RequestHeadersService;

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
 import { getSessionEffect } from "../auth/auth.middleware";
+import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -91,40 +92,38 @@ export class PlaylistsService extends Context.Service<
   {
     readonly create: (
       data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
-    ) => Effect.Effect<PlaylistRow, Error>;
+    ) => Effect.Effect<PlaylistRow, Error, AuthServices>;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
-    ) => Effect.Effect<PlaylistRow, Error>;
+    ) => Effect.Effect<PlaylistRow, Error, AuthServices>;
     readonly delete_: (
       playlistId: number,
-    ) => Effect.Effect<{ success: boolean }, Error>;
+    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
     readonly addPost: (
       data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
     ) => Effect.Effect<
       { playlist_id: number; post_id: number; position: number },
-      Error
+      Error,
+      AuthServices
     >;
     readonly removePost: (
       data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
-    ) => Effect.Effect<{ success: boolean }, Error>;
+    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
     readonly reorder: (
       data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
-    ) => Effect.Effect<{ success: boolean }, Error>;
+    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
     readonly fetchUserPlaylists: (
       userId: string,
-    ) => Effect.Effect<readonly PlaylistWithMeta[], Error>;
+    ) => Effect.Effect<readonly PlaylistWithMeta[], Error, AuthServices>;
     readonly fetchDetail: (
       data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
-    ) => Effect.Effect<PlaylistDetailResult, Error>;
+    ) => Effect.Effect<PlaylistDetailResult, Error, AuthServices>;
     readonly fetchForPost: (
       postId: number,
-    ) => Effect.Effect<readonly PlaylistForPostCheck[], Error>;
+    ) => Effect.Effect<readonly PlaylistForPostCheck[], Error, AuthServices>;
   }
->()("PlaylistsService") {}
-
-export const PlaylistsServiceLive = Layer.effect(
-  PlaylistsService,
-  Effect.gen(function* () {
+>()("PlaylistsService", {
+  make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
     const requireAuth = Effect.fn("PlaylistsService.requireAuth")(function* () {
@@ -608,80 +607,85 @@ export const PlaylistsServiceLive = Layer.effect(
       fetchUserPlaylists,
       fetchDetail,
       fetchForPost,
-    } as unknown as PlaylistsService["Service"];
+    };
   }),
-);
-
-export const createPlaylistEffect = Effect.fn("createPlaylist")(function* (
-  data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
-) {
-  const svc = yield* PlaylistsService;
-  return yield* svc.create(data);
-});
-
-export const updatePlaylistEffect = Effect.fn("updatePlaylist")(function* (
-  data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
-) {
-  const svc = yield* PlaylistsService;
-  return yield* svc.update(data);
-});
-
-export const deletePlaylistEffect = Effect.fn("deletePlaylist")(function* (
-  playlistId: number,
-) {
-  const svc = yield* PlaylistsService;
-  return yield* svc.delete_(playlistId);
-});
-
-export const addPostToPlaylistEffect = Effect.fn("addPostToPlaylist")(
-  function* (data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.addPost(data);
-  },
-);
-
-export const removePostFromPlaylistEffect = Effect.fn("removePostFromPlaylist")(
-  function* (
-    data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
+}) {
+  static readonly create = Effect.fn("PlaylistsService.create")(function* (
+    data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
   ) {
     const svc = yield* PlaylistsService;
-    return yield* svc.removePost(data);
-  },
-);
+    return yield* svc.create(data);
+  });
 
-export const reorderPlaylistPostsEffect = Effect.fn("reorderPlaylistPosts")(
-  function* (data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>) {
+  static readonly update = Effect.fn("PlaylistsService.update")(function* (
+    data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
+  ) {
+    const svc = yield* PlaylistsService;
+    return yield* svc.update(data);
+  });
+
+  static readonly delete_ = Effect.fn("PlaylistsService.delete_")(function* (
+    playlistId: number,
+  ) {
+    const svc = yield* PlaylistsService;
+    return yield* svc.delete_(playlistId);
+  });
+
+  static readonly addPost = Effect.fn("PlaylistsService.addPost")(function* (
+    data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
+  ) {
+    const svc = yield* PlaylistsService;
+    return yield* svc.addPost(data);
+  });
+
+  static readonly removePost = Effect.fn("PlaylistsService.removePost")(
+    function* (
+      data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
+    ) {
+      const svc = yield* PlaylistsService;
+      return yield* svc.removePost(data);
+    },
+  );
+
+  static readonly reorder = Effect.fn("PlaylistsService.reorder")(function* (
+    data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
+  ) {
     const svc = yield* PlaylistsService;
     return yield* svc.reorder(data);
-  },
-);
+  });
 
-export const fetchUserPlaylistsEffect = Effect.fn("fetchUserPlaylists")(
-  function* (userId: string) {
+  static readonly fetchUserPlaylists = Effect.fn(
+    "PlaylistsService.fetchUserPlaylists",
+  )(function* (userId: string) {
     const svc = yield* PlaylistsService;
     return yield* svc.fetchUserPlaylists(userId);
-  },
-);
+  });
 
-export const fetchPlaylistDetailEffect = Effect.fn("fetchPlaylistDetail")(
-  function* (data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.fetchDetail(data);
-  },
-);
+  static readonly fetchDetail = Effect.fn("PlaylistsService.fetchDetail")(
+    function* (data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) {
+      const svc = yield* PlaylistsService;
+      return yield* svc.fetchDetail(data);
+    },
+  );
 
-export const fetchPlaylistsForPostEffect = Effect.fn("fetchPlaylistsForPost")(
-  function* (postId: number) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.fetchForPost(postId);
-  },
+  static readonly fetchForPost = Effect.fn("PlaylistsService.fetchForPost")(
+    function* (postId: number) {
+      const svc = yield* PlaylistsService;
+      return yield* svc.fetchForPost(postId);
+    },
+  );
+}
+
+export const PlaylistsServiceLive = Layer.effect(
+  PlaylistsService,
+  PlaylistsService.make,
 );
 
 export const createPlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) => parseStrict(createPlaylistInputSchema)(input))
   .handler(
     createHandler(
-      createPlaylistEffect,
+      PlaylistsService.create,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -691,7 +695,7 @@ export const updatePlaylist = createServerFn({ method: "POST" })
   .validator((input: unknown) => parseStrict(updatePlaylistInputSchema)(input))
   .handler(
     createHandler(
-      updatePlaylistEffect,
+      PlaylistsService.update,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -703,7 +707,8 @@ export const deletePlaylist = createServerFn({ method: "POST" })
   )
   .handler(
     createHandler(
-      (data: { playlistId: number }) => deletePlaylistEffect(data.playlistId),
+      (data: { playlistId: number }) =>
+        PlaylistsService.delete_(data.playlistId),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -715,7 +720,7 @@ export const addPostToPlaylist = createServerFn({ method: "POST" })
   )
   .handler(
     createHandler(
-      addPostToPlaylistEffect,
+      PlaylistsService.addPost,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -727,7 +732,7 @@ export const removePostFromPlaylist = createServerFn({ method: "POST" })
   )
   .handler(
     createHandler(
-      removePostFromPlaylistEffect,
+      PlaylistsService.removePost,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -739,7 +744,7 @@ export const reorderPlaylistPosts = createServerFn({ method: "POST" })
   )
   .handler(
     createHandler(
-      reorderPlaylistPostsEffect,
+      PlaylistsService.reorder,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -751,7 +756,7 @@ export const fetchUserPlaylists = createServerFn({
   .validator((input: unknown) => parse(Schema.String)(input))
   .handler(
     createHandler(
-      (data: string) => fetchUserPlaylistsEffect(data),
+      (data: string) => PlaylistsService.fetchUserPlaylists(data),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -763,7 +768,7 @@ export const fetchPlaylistDetail = createServerFn({
   .validator((input: unknown) => parseStrict(fetchPlaylistDetailSchema)(input))
   .handler(
     createHandler(
-      fetchPlaylistDetailEffect,
+      PlaylistsService.fetchDetail,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
@@ -775,7 +780,7 @@ export const fetchPlaylistsForPost = createServerFn({
   .validator((input: unknown) => parse(Schema.Number)(input))
   .handler(
     createHandler(
-      (data: number) => fetchPlaylistsForPostEffect(data),
+      (data: number) => PlaylistsService.fetchForPost(data),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     ),
