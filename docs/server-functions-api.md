@@ -105,7 +105,7 @@ At runtime, it:
 
 ## Error Handling
 
-- Services throw typed `Data.TaggedError` classes from `src/lib/errors.ts`
+- Services throw typed `Schema.TaggedError` classes from `src/lib/errors.ts`
 - Errors propagate through Effect's error channel and are caught by `createHandler` which logs them via `Effect.logError`
 - Callers (client-side) should use React Query's `onError` / `.catch()` for error handling
 - Avoid `try-catch` within service methods — use Effect's `Effect.try`, `Option.match`, and tagged errors

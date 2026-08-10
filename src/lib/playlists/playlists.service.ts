@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
-import { getSessionEffect } from "../auth/auth.middleware";
+import { getSessionEffect, SessionFetchError } from "../auth/auth.middleware";
 import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
+import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
@@ -92,35 +93,92 @@ export class PlaylistsService extends Context.Service<
   {
     readonly create: (
       data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
-    ) => Effect.Effect<PlaylistRow, Error, AuthServices>;
+    ) => Effect.Effect<
+      PlaylistRow,
+      UnauthorizedError | SessionFetchError | SqlError | SqlNoFirstResult,
+      AuthServices
+    >;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
-    ) => Effect.Effect<PlaylistRow, Error, AuthServices>;
+    ) => Effect.Effect<
+      PlaylistRow,
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | SessionFetchError
+      | SqlError
+      | SqlNoFirstResult,
+      AuthServices
+    >;
     readonly delete_: (
       playlistId: number,
-    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
+    ) => Effect.Effect<
+      { success: boolean },
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | SessionFetchError
+      | SqlError,
+      AuthServices
+    >;
     readonly addPost: (
       data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
     ) => Effect.Effect<
       { playlist_id: number; post_id: number; position: number },
-      Error,
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | PostNotFoundError
+      | PostAlreadyInPlaylistError
+      | SessionFetchError
+      | SqlError
+      | SqlNoFirstResult,
       AuthServices
     >;
     readonly removePost: (
       data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
-    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
+    ) => Effect.Effect<
+      { success: boolean },
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | SessionFetchError
+      | SqlError,
+      AuthServices
+    >;
     readonly reorder: (
       data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
-    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
+    ) => Effect.Effect<
+      { success: boolean },
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | SessionFetchError
+      | SqlError
+      | ValidationError,
+      AuthServices
+    >;
     readonly fetchUserPlaylists: (
       userId: string,
-    ) => Effect.Effect<readonly PlaylistWithMeta[], Error, AuthServices>;
+    ) => Effect.Effect<
+      readonly PlaylistWithMeta[],
+      SessionFetchError | SqlError,
+      AuthServices
+    >;
     readonly fetchDetail: (
       data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
-    ) => Effect.Effect<PlaylistDetailResult, Error, AuthServices>;
+    ) => Effect.Effect<
+      PlaylistDetailResult,
+      PlaylistNotFoundError | SessionFetchError | SqlError | SqlNoFirstResult,
+      AuthServices
+    >;
     readonly fetchForPost: (
       postId: number,
-    ) => Effect.Effect<readonly PlaylistForPostCheck[], Error, AuthServices>;
+    ) => Effect.Effect<
+      readonly PlaylistForPostCheck[],
+      UnauthorizedError | SessionFetchError | SqlError,
+      AuthServices
+    >;
   }
 >()("PlaylistsService", {
   make: Effect.gen(function* () {

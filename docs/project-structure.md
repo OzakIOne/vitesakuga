@@ -35,7 +35,7 @@ src/
 
 **Key files at `src/lib/` root:**
 
-- `errors.ts` — Effect `Data.TaggedError` domain error classes
+- `errors.ts` — Effect `Schema.TaggedError` domain error classes
 - `ids.ts` — Branded nominal ID types (PostId, UserId, etc.)
 - `polyfills.ts` — crypto.randomUUID polyfill
 - `query-client.ts` — Singleton TanStack Query client

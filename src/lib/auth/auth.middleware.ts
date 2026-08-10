@@ -1,14 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { User } from "better-auth";
-import { Data, Effect } from "effect";
+import { Effect, Schema } from "effect";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { resolveMiddlewareLayer } from "../server-fn.handler";
 
-export class SessionFetchError extends Data.TaggedError("SessionFetchError")<{
-  readonly message: string;
-  readonly cause: unknown;
-}> {}
+export class SessionFetchError extends Schema.TaggedError<SessionFetchError>()(
+  "SessionFetchError",
+  {
+    message: Schema.String,
+    cause: Schema.Unknown,
+  },
+) {}
 
 export const getSessionEffect = Effect.fn("getSession")(function* () {
   const authSvc = yield* AuthService;

@@ -2,9 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 
-import { getSessionEffect } from "../auth/auth.middleware";
+import { getSessionEffect, SessionFetchError } from "../auth/auth.middleware";
 import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
+import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
@@ -17,7 +18,7 @@ import {
   type PaginationMeta,
 } from "../pagination/pagination";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
-import { StorageModule } from "../storage/storage.module";
+import { StorageError, StorageModule } from "../storage/storage.module";
 import { mapPopularTags } from "../tags/tags.utils";
 import {
   FormFileUploadSchema,
@@ -76,23 +77,32 @@ export class PostsService extends Context.Service<
   {
     readonly search: (
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
-    ) => Effect.Effect<PostsSearchResult, Error>;
+    ) => Effect.Effect<PostsSearchResult, SqlError | ValidationError>;
     readonly fetchDetail: (
       postId: number,
-    ) => Effect.Effect<PostDetailResult, Error>;
+    ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
     readonly upload: (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
-    ) => Effect.Effect<Schema.Schema.Type<typeof postsSelectSchema>, Error>;
+    ) => Effect.Effect<
+      Schema.Schema.Type<typeof postsSelectSchema>,
+      SqlError | SqlNoFirstResult | StorageError | ValidationError
+    >;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
     ) => Effect.Effect<
       Schema.Schema.Type<typeof postsSelectSchema>,
-      Error,
+      | UnauthorizedError
+      | ForbiddenError
+      | PostNotFoundError
+      | SessionFetchError
+      | SqlError
+      | SqlNoFirstResult
+      | ValidationError,
       AuthServices
     >;
     readonly getByTag: (
       data: Schema.Schema.Type<typeof postByTagSchema>,
-    ) => Effect.Effect<PostsSearchResult, Error>;
+    ) => Effect.Effect<PostsSearchResult, SqlError | ValidationError>;
   }
 >()("PostsService", {
   make: Effect.gen(function* () {

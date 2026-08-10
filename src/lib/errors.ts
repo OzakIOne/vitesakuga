@@ -1,46 +1,64 @@
-import { Data } from "effect";
+import { Schema } from "effect";
 
-export class PostNotFoundError extends Data.TaggedError("PostNotFoundError")<{
-  readonly message: string;
-  readonly postId: number;
-}> {}
+export class PostNotFoundError extends Schema.TaggedError<PostNotFoundError>()(
+  "PostNotFoundError",
+  {
+    message: Schema.String,
+    postId: Schema.Number,
+  },
+) {}
 
-export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
-  readonly message: string;
-}> {}
+export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
+  "UnauthorizedError",
+  {
+    message: Schema.String,
+  },
+) {}
 
-export class ForbiddenError extends Data.TaggedError("ForbiddenError")<{
-  readonly message: string;
-}> {}
+export class ForbiddenError extends Schema.TaggedError<ForbiddenError>()(
+  "ForbiddenError",
+  {
+    message: Schema.String,
+  },
+) {}
 
-export class CommentNotFoundError extends Data.TaggedError(
+export class CommentNotFoundError extends Schema.TaggedError<CommentNotFoundError>()(
   "CommentNotFoundError",
-)<{
-  readonly commentId: number;
-  readonly message: string;
-}> {}
+  {
+    commentId: Schema.Number,
+    message: Schema.String,
+  },
+) {}
 
-export class UserNotFoundError extends Data.TaggedError("UserNotFoundError")<{
-  readonly message: string;
-  readonly userId: string;
-}> {}
+export class UserNotFoundError extends Schema.TaggedError<UserNotFoundError>()(
+  "UserNotFoundError",
+  {
+    message: Schema.String,
+    userId: Schema.String,
+  },
+) {}
 
-export class ValidationError extends Data.TaggedError("ValidationError")<{
-  readonly message: string;
-  readonly cause?: unknown;
-}> {}
+export class ValidationError extends Schema.TaggedError<ValidationError>()(
+  "ValidationError",
+  {
+    message: Schema.String,
+    cause: Schema.optionalKey(Schema.Unknown),
+  },
+) {}
 
-export class PlaylistNotFoundError extends Data.TaggedError(
+export class PlaylistNotFoundError extends Schema.TaggedError<PlaylistNotFoundError>()(
   "PlaylistNotFoundError",
-)<{
-  readonly message: string;
-  readonly playlistId: number;
-}> {}
+  {
+    message: Schema.String,
+    playlistId: Schema.Number,
+  },
+) {}
 
-export class PostAlreadyInPlaylistError extends Data.TaggedError(
+export class PostAlreadyInPlaylistError extends Schema.TaggedError<PostAlreadyInPlaylistError>()(
   "PostAlreadyInPlaylistError",
-)<{
-  readonly message: string;
-  readonly playlistId: number;
-  readonly postId: number;
-}> {}
+  {
+    message: Schema.String,
+    playlistId: Schema.Number,
+    postId: Schema.Number,
+  },
+) {}

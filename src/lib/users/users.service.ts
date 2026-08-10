@@ -3,6 +3,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
 
 import { KyselyDB } from "../db/context";
+import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { UserNotFoundError, ValidationError } from "../errors";
 import { computePagination } from "../pagination/pagination";
@@ -17,7 +18,7 @@ export class UsersService extends Context.Service<
   {
     readonly all: () => Effect.Effect<
       readonly Schema.Schema.Type<typeof userSelectSchema>[],
-      Error
+      SqlError | ValidationError
     >;
     readonly userPosts: (
       data: Schema.Schema.Type<typeof fetchUserInputSchema>,
@@ -38,7 +39,7 @@ export class UsersService extends Context.Service<
         };
         user: { id: string; image: string | null; name: string };
       },
-      Error
+      SqlError | ValidationError | UserNotFoundError
     >;
   }
 >()("UsersService", {

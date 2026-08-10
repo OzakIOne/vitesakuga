@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
-import { getSessionEffect } from "../auth/auth.middleware";
+import { getSessionEffect, SessionFetchError } from "../auth/auth.middleware";
 import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
+import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
 import {
   CommentNotFoundError,
@@ -28,13 +29,24 @@ export class CommentsService extends Context.Service<
   {
     readonly fetch: (
       postId: number,
-    ) => Effect.Effect<readonly CommentWithUser[], Error>;
+    ) => Effect.Effect<readonly CommentWithUser[], SqlError>;
     readonly add: (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
-    ) => Effect.Effect<Schema.Schema.Type<typeof commentsSelectSchema>, Error>;
+    ) => Effect.Effect<
+      Schema.Schema.Type<typeof commentsSelectSchema>,
+      SqlError | SqlNoFirstResult
+    >;
     readonly delete_: (
       commentId: number,
-    ) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
+    ) => Effect.Effect<
+      { success: boolean },
+      | UnauthorizedError
+      | ForbiddenError
+      | CommentNotFoundError
+      | SessionFetchError
+      | SqlError,
+      AuthServices
+    >;
   }
 >()("CommentsService", {
   make: Effect.gen(function* () {

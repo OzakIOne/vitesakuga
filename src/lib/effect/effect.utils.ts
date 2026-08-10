@@ -1,4 +1,4 @@
-import { Data, Effect, Option } from "effect";
+import { Effect, Option, Schema } from "effect";
 // oxlint-disable no-extra-bind
 import type {
   Compilable,
@@ -12,10 +12,10 @@ import type {
 
 // taken from https://github.com/Effect-TS/effect/pull/5156
 
-export class SqlError extends Data.TaggedError("SqlError")<{
-  readonly cause: unknown;
-  readonly message: string;
-}> {}
+export class SqlError extends Schema.TaggedError<SqlError>()("SqlError", {
+  cause: Schema.Unknown,
+  message: Schema.String,
+}) {}
 
 type EffectExecutor = {
   executeRaw: <O>(
@@ -185,9 +185,10 @@ const executeTakeFirstOption =
   <DB>(client: Kysely<DB>) =>
   <O>(query: Query<O>) =>
     execute(client)(query).pipe(
-      Effect.map((result) =>
-        result.length > 0 ? Option.some(result[0]) : Option.none(),
-      ),
+      Effect.map((result) => {
+        const first = result[0];
+        return first === undefined ? Option.none() : Option.some(first);
+      }),
     );
 
 const executeTakeFirstOrUndefined =
@@ -200,7 +201,10 @@ const executeTakeFirstOrUndefined =
 /**
  * An error that occurs when attempting to access the first returned row of a query result that is empty.
  */
-export class SqlNoFirstResult extends Data.TaggedError(`SqlNoFirstResult`)<{}> {
+export class SqlNoFirstResult extends Schema.TaggedError<SqlNoFirstResult>()(
+  "SqlNoFirstResult",
+  {},
+) {
   override toString(): string {
     return `SqlNoFirstResult: query result is empty, no first row available`;
   }

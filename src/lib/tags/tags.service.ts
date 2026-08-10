@@ -2,16 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
+import { SqlError } from "../effect/effect.utils";
 import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "./tags.utils";
 
 export class TagsService extends Context.Service<
   TagsService,
   {
-    readonly all: () => Effect.Effect<{ id: number; name: string }[], Error>;
+    readonly all: () => Effect.Effect<{ id: number; name: string }[], SqlError>;
     readonly popular: () => Effect.Effect<
       ReturnType<typeof mapPopularTags>,
-      Error
+      SqlError
     >;
   }
 >()("TagsService", {

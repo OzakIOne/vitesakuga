@@ -1,11 +1,14 @@
-import { Context, Data, Effect } from "effect";
+import { Context, Effect, Schema } from "effect";
 
-export class StorageError extends Data.TaggedError("StorageError")<{
-  readonly message: string;
-  readonly operation: "upload" | "delete";
-  readonly key: string;
-  readonly cause: unknown;
-}> {}
+export class StorageError extends Schema.TaggedError<StorageError>()(
+  "StorageError",
+  {
+    message: Schema.String,
+    operation: Schema.Literals(["upload", "delete"]),
+    key: Schema.String,
+    cause: Schema.Unknown,
+  },
+) {}
 
 export class StorageModule extends Context.Service<
   StorageModule,

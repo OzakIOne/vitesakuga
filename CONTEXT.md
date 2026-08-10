@@ -74,6 +74,6 @@ Terms used consistently across the codebase. Update this file when new concepts 
 
 **Query Options** — TanStack Query `queryOptions` factories in `*.queries.ts` files. Keyed by domain + params. Used by routes via `useQuery`/`useSuspenseQuery`.
 
-**Tagged Errors** — Effect `Data.TaggedError` classes in `errors.ts`. Pattern: `{ readonly message: string }` plus domain-specific fields. Used for typed error handling in Effect programs.
+**Tagged Errors** — Effect `Schema.TaggedError` classes in `errors.ts` (schema-backed, serializable). Pattern: `{ readonly message: string }` plus domain-specific fields. Used for typed error handling in Effect programs, with precise error unions in service interfaces.
 
 **TanStack DB Collections** — Client-side reactive collections in `src/lib/db/collections.ts`. `tagsCollection` and `usersCollection` sync server data eagerly via `@tanstack/query-db-collection`. `commentDraftsCollection` and `uploadDraftCollection` use localStorage for draft persistence.
