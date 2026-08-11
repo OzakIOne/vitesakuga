@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Redacted } from "effect";
 
 import { StorageError, StorageModule } from "./storage.module";
 
@@ -29,8 +29,8 @@ export const StorageLive = Layer.effect(
 
     const client = new s3Mod.S3Client({
       credentials: {
-        accessKeyId: envServer.CLOUDFLARE_ACCESS_KEY,
-        secretAccessKey: envServer.CLOUDFLARE_SECRET_KEY,
+        accessKeyId: Redacted.value(envServer.CLOUDFLARE_ACCESS_KEY),
+        secretAccessKey: Redacted.value(envServer.CLOUDFLARE_SECRET_KEY),
       },
       endpoint: envServer.CLOUDFLARE_R2,
       region: "auto",

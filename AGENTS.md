@@ -39,6 +39,7 @@ The project uses `vitest` for testing.
 - **Generate Migrations**: `nub run db generate` (runs `drizzle-kit generate`)
 - **Push Schema Changes**: `nub run db push` (runs `drizzle-kit push`)
 - **Apply Migrations**: `nub run db migrate` (runs `drizzle-kit migrate`)
+- **Stage-specific**: `STAGE=local|dev|prod nub run db <command>` loads the matching env file (`.env`, `.env.test`, `.env.production`). Shorthand scripts: `nub run db:local <command>`, `nub run db:prod <command>`
 - **Upgrade Migration Folder**: `drizzle-kit up` (v0 → v1 structure)
 
 ## General Code Style Principles

@@ -38,6 +38,19 @@ pnpm i
 pnpm dev
 ```
 
+## Environments
+
+Three stages, each with its own gitignored env file:
+
+| Stage | Env file | DB / storage | Command |
+| --- | --- | --- | --- |
+| local | `.env.test` | Docker Postgres + rustfs | `nub run dev:local` |
+| dev | `.env` | Neon dev branch + R2 dev | `nub run dev` |
+| prod | `.env.production` | Neon prod + R2 prod | `nub run dev:prod` |
+
+The DB CLI is stage-aware: `STAGE=prod nub run db migrate` loads
+`.env.production` (shortcuts: `nub run db:local <command>`, `nub run db:prod <command>`).
+
 ## Infrastructure Setup
 
 This project uses **Alchemy** to automate the creation of Cloudflare R2 buckets.
@@ -60,13 +73,16 @@ npx alchemy login
 # Set your Cloudflare Account ID
 export CLOUDFLARE_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
-# Deploy the resources
+# Deploy the resources (dev stage keeps the existing vitesakuga-media bucket)
 pnpm run infra:deploy
+
+# Deploy the production bucket (creates vitesakuga-media-production)
+pnpm run infra:deploy:prod
 ```
 
 ### 3. Sync to Environment
 
-Follow the console output from the deploy script to manually update your `.env` file with the newly created bucket name and your account ID.
+Follow the console output from the deploy script to manually update the matching env file (`.env` for dev, `.env.production` for prod) with the newly created bucket name and your account ID.
 
 You also need to manually add the **S3 API Token** from the Cloudflare R2 dashboard to your `.env` file to set `CLOUDFLARE_ACCESS_KEY` and `CLOUDFLARE_SECRET_KEY`:
 

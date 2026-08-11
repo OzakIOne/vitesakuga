@@ -3,6 +3,7 @@ import type { User } from "better-auth";
 import { Effect, Schema } from "effect";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
+import { envServer } from "../env/server";
 import { resolveMiddlewareLayer } from "../server-fn.handler";
 
 export class SessionFetchError extends Schema.TaggedError<SessionFetchError>()(
@@ -20,10 +21,7 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
   const headers = getHeaders();
   const cookie = headers.get("cookie") ?? "";
 
-  if (
-    process.env.NODE_ENV !== "production" &&
-    cookie.includes("e2e-test-auth=bypass")
-  ) {
+  if (envServer.NODE_ENV !== "production" && cookie.includes("e2e-test-auth=bypass")) {
     return {
       session: {
         createdAt: new Date(),

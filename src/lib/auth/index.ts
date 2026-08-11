@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { Redacted } from "effect";
 import { envServer } from "src/lib/env/server";
 
 import { db } from "../db/pool";
@@ -8,6 +9,7 @@ import * as schema from "../db/schema";
 
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,
+  secret: Redacted.value(envServer.BETTER_AUTH_SECRET),
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
