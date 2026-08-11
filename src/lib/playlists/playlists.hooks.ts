@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useContext } from "react";
-import { toaster } from "src/components/ui/toaster";
 
+import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { PlaylistsFnsContext } from "./playlists.fn-context";
 import { playlistsKeys } from "./playlists.queries";
 
@@ -9,7 +9,9 @@ export function useCreatePlaylist(userId: string) {
   const queryClient = useQueryClient();
   const { createPlaylist } = useContext(PlaylistsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to create playlist",
+    errorTitle: "Error creating playlist",
     mutationFn: async (data: {
       title: string;
       description?: string;
@@ -19,24 +21,9 @@ export function useCreatePlaylist(userId: string) {
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
-      toaster.create({
-        closable: true,
-        description: "Your playlist has been created.",
-        duration: 3000,
-        title: "Playlist created",
-        type: "success",
-      });
     },
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to create playlist",
-        duration: 5000,
-        title: "Error creating playlist",
-        type: "error",
-      });
-    },
+    successDescription: "Your playlist has been created.",
+    successTitle: "Playlist created",
   });
 }
 
@@ -44,7 +31,9 @@ export function useUpdatePlaylist(userId: string) {
   const queryClient = useQueryClient();
   const { updatePlaylist } = useContext(PlaylistsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to update playlist",
+    errorTitle: "Error updating playlist",
     mutationFn: async (data: {
       playlistId: number;
       title?: string;
@@ -55,24 +44,9 @@ export function useUpdatePlaylist(userId: string) {
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
-      toaster.create({
-        closable: true,
-        description: "Your playlist has been updated.",
-        duration: 3000,
-        title: "Playlist updated",
-        type: "success",
-      });
     },
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to update playlist",
-        duration: 5000,
-        title: "Error updating playlist",
-        type: "error",
-      });
-    },
+    successDescription: "Your playlist has been updated.",
+    successTitle: "Playlist updated",
   });
 }
 
@@ -80,7 +54,9 @@ export function useDeletePlaylist(userId: string) {
   const queryClient = useQueryClient();
   const { deletePlaylist } = useContext(PlaylistsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to delete playlist",
+    errorTitle: "Error deleting playlist",
     mutationFn: async (data: { playlistId: number }) =>
       deletePlaylist({ data }),
     onMutate: async ({ playlistId }) => {
@@ -106,86 +82,39 @@ export function useDeletePlaylist(userId: string) {
           context.previous,
         );
       }
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to delete playlist",
-        duration: 5000,
-        title: "Error deleting playlist",
-        type: "error",
-      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
-      toaster.create({
-        closable: true,
-        description: "Your playlist has been deleted.",
-        duration: 3000,
-        title: "Playlist deleted",
-        type: "success",
-      });
     },
+    successDescription: "Your playlist has been deleted.",
+    successTitle: "Playlist deleted",
   });
 }
 
 export function useAddPostToPlaylist() {
   const { addPostToPlaylist } = useContext(PlaylistsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to add post to playlist",
+    errorTitle: "Error adding to playlist",
     mutationFn: async (data: { playlistId: number; postId: number }) =>
       addPostToPlaylist({ data }),
-    onSuccess: () => {
-      toaster.create({
-        closable: true,
-        description: "Post added to playlist.",
-        duration: 3000,
-        title: "Added to playlist",
-        type: "success",
-      });
-    },
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to add post to playlist",
-        duration: 5000,
-        title: "Error adding to playlist",
-        type: "error",
-      });
-    },
+    successDescription: "Post added to playlist.",
+    successTitle: "Added to playlist",
   });
 }
 
 export function useRemovePostFromPlaylist() {
   const { removePostFromPlaylist } = useContext(PlaylistsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to remove post from playlist",
+    errorTitle: "Error removing from playlist",
     mutationFn: async (data: { playlistId: number; postId: number }) =>
       removePostFromPlaylist({ data }),
-    onSuccess: () => {
-      toaster.create({
-        closable: true,
-        description: "Post removed from playlist.",
-        duration: 3000,
-        title: "Removed from playlist",
-        type: "success",
-      });
-    },
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to remove post from playlist",
-        duration: 5000,
-        title: "Error removing from playlist",
-        type: "error",
-      });
-    },
+    successDescription: "Post removed from playlist.",
+    successTitle: "Removed from playlist",
   });
 }

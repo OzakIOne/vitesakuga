@@ -37,6 +37,7 @@ src/
 
 - `errors.ts` — Effect `Schema.TaggedError` domain error classes
 - `ids.ts` — Branded nominal ID types (PostId, UserId, etc.)
+- `mutations/mutation-feedback.ts` — Shared mutation feedback (`useMutationWithFeedback`, `toastError`/`toastSuccess`, `errorMessage`)
 - `polyfills.ts` — crypto.randomUUID polyfill
 - `query-client.ts` — Singleton TanStack Query client
 - `sanitize.ts` — Regex-based HTML sanitizer

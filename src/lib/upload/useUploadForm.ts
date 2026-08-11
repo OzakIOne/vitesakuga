@@ -1,9 +1,9 @@
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 
-import { toaster } from "../../components/ui/toaster";
 import { safeParseStrict } from "../effect/schema.utils";
+import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { postsKeys } from "../posts/posts.queries";
 import { FormFileUploadSchema } from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
@@ -26,29 +26,18 @@ export function useUploadForm(params: UseUploadFormParams) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const uploadPostMutation = useMutation({
+  const uploadPostMutation = useMutationWithFeedback({
+    errorFallback: "There was an error uploading your post.",
+    errorTitle: "Upload failed",
     mutationFn: async (data: FormData) => uploadPost({ data }),
-    onError: (error) => {
-      console.error("Upload failed:", error);
-      toaster.create({
-        description: "There was an error uploading your post.",
-        duration: 5000,
-        title: "Upload failed",
-        type: "error",
-      });
-    },
     onSuccess: (newPost) => {
       form.reset();
       onDraftClear();
       void queryClient.invalidateQueries({ queryKey: postsKeys.all });
       void navigate({ to: `/posts/${newPost.id}` });
-      toaster.create({
-        description: "Your post has been uploaded successfully.",
-        duration: 5000,
-        title: "Upload successful",
-        type: "success",
-      });
     },
+    successDescription: "Your post has been uploaded successfully.",
+    successTitle: "Upload successful",
   });
 
   const form = useForm({

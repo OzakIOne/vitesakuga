@@ -1,13 +1,13 @@
 import { Box, Button, Text } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
+import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 import { updatePost } from "src/lib/posts/posts.service";
 
 import { FormTextWrapper } from "../form/FieldText";
-import { toaster } from "../ui/toaster";
 
 type PostEditFormProps = {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
@@ -20,7 +20,7 @@ type PostEditFormProps = {
 export function PostEditForm({
   post,
   initialTags,
-  onSuccess,
+  onSuccess: onSaved,
   postId,
 }: PostEditFormProps) {
   const queryClient = useQueryClient();
@@ -50,7 +50,9 @@ export function PostEditForm({
     },
   });
 
-  const updatePostMutation = useMutation({
+  const updatePostMutation = useMutationWithFeedback({
+    errorFallback: "Failed to update post",
+    errorTitle: "Error updating post",
     mutationFn: async (data: {
       postId: number;
       title: string;
@@ -59,29 +61,14 @@ export function PostEditForm({
       relatedPostId: number | undefined;
       tags: { id?: number; name: string }[];
     }) => updatePost({ data }),
-    onError: (error) => {
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to update post",
-        duration: 5000,
-        title: "Error updating post",
-        type: "error",
-      });
-    },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: postsKeys.detail(postId),
       });
-      toaster.create({
-        closable: true,
-        description: "Your post has been successfully updated.",
-        duration: 3000,
-        title: "Post updated",
-        type: "success",
-      });
-      onSuccess();
+      onSaved();
     },
+    successDescription: "Your post has been successfully updated.",
+    successTitle: "Post updated",
   });
 
   useBlocker({

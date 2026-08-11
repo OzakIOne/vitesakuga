@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
-import { toaster } from "src/components/ui/toaster";
+import { toastError, toastSuccess } from "src/lib/mutations/mutation-feedback";
 import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
 import {
   playlistsKeys,
@@ -39,59 +39,21 @@ export function PlaylistAddModal({
   const [newTitle, setNewTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const showErrorToast = ({
-    error,
-    retry,
-    title,
-  }: {
-    error: unknown;
-    retry?: () => void;
-    title: string;
-  }) => {
-    toaster.create({
-      action: retry ? { label: "Retry", onClick: retry } : undefined,
-      closable: true,
-      description:
-        error instanceof Error ? error.message : "Something went wrong",
-      duration: 8000,
-      title,
-      type: "error",
-    });
-  };
-
-  const showSuccessToast = ({
-    description,
-    title,
-  }: {
-    description: string;
-    title: string;
-  }) => {
-    toaster.create({
-      closable: true,
-      description,
-      duration: 3000,
-      title,
-      type: "success",
-    });
-  };
-
   const runAdd = async (playlistId: number, onRetry: () => void) => {
     try {
       await addPostToPlaylist({ data: { playlistId, postId } });
     } catch (error) {
       void queryClient.invalidateQueries({ queryKey });
-      showErrorToast({
+      toastError(
+        "Error adding to playlist",
         error,
-        retry: onRetry,
-        title: "Error adding to playlist",
-      });
+        "Something went wrong",
+        onRetry,
+      );
       return;
     }
 
-    showSuccessToast({
-      description: "The post was added to the playlist.",
-      title: "Added to playlist",
-    });
+    toastSuccess("Added to playlist", "The post was added to the playlist.");
     void queryClient.invalidateQueries({
       queryKey: playlistsKeys.userPlaylists(userId),
     });
@@ -102,18 +64,19 @@ export function PlaylistAddModal({
       await removePostFromPlaylist({ data: { playlistId, postId } });
     } catch (error) {
       void queryClient.invalidateQueries({ queryKey });
-      showErrorToast({
+      toastError(
+        "Error removing from playlist",
         error,
-        retry: onRetry,
-        title: "Error removing from playlist",
-      });
+        "Something went wrong",
+        onRetry,
+      );
       return;
     }
 
-    showSuccessToast({
-      description: "The post was removed from the playlist.",
-      title: "Removed from playlist",
-    });
+    toastSuccess(
+      "Removed from playlist",
+      "The post was removed from the playlist.",
+    );
     void queryClient.invalidateQueries({
       queryKey: playlistsKeys.userPlaylists(userId),
     });
@@ -158,22 +121,23 @@ export function PlaylistAddModal({
       const retry = createdPlaylistId
         ? () => void handleToggle(createdPlaylistId as number, false)
         : undefined;
-      showErrorToast({
-        error,
-        ...(retry ? { retry } : {}),
-        title: createdPlaylistId
+      toastError(
+        createdPlaylistId
           ? "Error adding to playlist"
           : "Error creating playlist",
-      });
+        error,
+        "Something went wrong",
+        retry,
+      );
       return;
     } finally {
       setIsCreating(false);
     }
 
-    showSuccessToast({
-      description: "The playlist was created and the post was added.",
-      title: "Playlist created",
-    });
+    toastSuccess(
+      "Playlist created",
+      "The playlist was created and the post was added.",
+    );
     await queryClient.invalidateQueries({ queryKey });
     void queryClient.invalidateQueries({
       queryKey: playlistsKeys.userPlaylists(userId),

@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "drizzle.config.ts": {
-    "mtime": 1786401342.9201162,
-    "ast_hash": "9e1d15b3dd65d4bebdf53667437e1af3",
+    "mtime": 1786102633.0476263,
+    "ast_hash": "acd73385a993691b6f208f97074e1332",
     "semantic_hash": ""
   },
   "e2e/auth.spec.ts": {
@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786401342.9202914,
-    "ast_hash": "09a12496f2634d8a95f4d82003bdcc64",
+    "mtime": 1786151851.5039167,
+    "ast_hash": "848a53a1a9e9bddc32938e70cb595cc3",
     "semantic_hash": ""
   },
   "skills-lock.json": {
@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   "src/components/PlaylistAddModal.tsx": {
-    "mtime": 1786459652.496891,
-    "ast_hash": "7f675c362024c9e9d4d578a73b0893c4",
+    "mtime": 1786149849.9162633,
+    "ast_hash": "58566993abaf5d6326aaf95eb93260c8",
     "semantic_hash": ""
   },
   "src/components/PopularTagsSection.tsx": {
@@ -130,8 +130,8 @@
     "semantic_hash": ""
   },
   "src/components/PostDetail/PostEditForm.tsx": {
-    "mtime": 1786459652.497075,
-    "ast_hash": "ecadd9d926f4daa13e9960c72173c71d",
+    "mtime": 1784186322.417105,
+    "ast_hash": "b392b15ea2c3f6902dbcf06db404f9fa",
     "semantic_hash": ""
   },
   "src/components/PostError.tsx": {
@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "src/lib/auth/auth.hooks.ts": {
-    "mtime": 1786459652.4972358,
-    "ast_hash": "2bc723124ce0055f646fac309b627e49",
+    "mtime": 1778842686.1695945,
+    "ast_hash": "1ed82583d9f11c9623c414aaacbcc29d",
     "semantic_hash": ""
   },
   "src/lib/auth/auth.middleware.test.ts": {
@@ -245,8 +245,8 @@
     "semantic_hash": ""
   },
   "src/lib/auth/auth.middleware.ts": {
-    "mtime": 1786401342.9203634,
-    "ast_hash": "28d6ff403d03a005ed959959f25ae273",
+    "mtime": 1786390219.142685,
+    "ast_hash": "214eb234c91fc3782b9839e8b062b2f0",
     "semantic_hash": ""
   },
   "src/lib/auth/auth.schemas.test.ts": {
@@ -275,8 +275,8 @@
     "semantic_hash": ""
   },
   "src/lib/auth/index.ts": {
-    "mtime": 1786401342.9204168,
-    "ast_hash": "3ade7210ac614fe5c92001541b143718",
+    "mtime": 1778842686.1702602,
+    "ast_hash": "91a936fcd8bd1950f5bfc07f9b048d6b",
     "semantic_hash": ""
   },
   "src/lib/comments/comments.fn-context.tsx": {
@@ -295,8 +295,8 @@
     "semantic_hash": ""
   },
   "src/lib/comments/comments.hooks.ts": {
-    "mtime": 1786459652.497386,
-    "ast_hash": "f6beb38edcef887539d2f6f723ba2e9d",
+    "mtime": 1782389777.5183716,
+    "ast_hash": "ec467f503f62d9836c46a4c56252c7c0",
     "semantic_hash": ""
   },
   "src/lib/comments/comments.queries.ts": {
@@ -410,8 +410,8 @@
     "semantic_hash": ""
   },
   "src/lib/playlists/playlists.hooks.ts": {
-    "mtime": 1786459652.4975207,
-    "ast_hash": "9e777a01103fc102923d0a3d7e9f6cae",
+    "mtime": 1784248663.1290536,
+    "ast_hash": "df37f0df077e546e2cc1ea471ffe4c0d",
     "semantic_hash": ""
   },
   "src/lib/playlists/playlists.queries.ts": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "src/lib/storage/storage.s3.ts": {
-    "mtime": 1786401342.9206114,
-    "ast_hash": "3e671c00a7b766e13ccc5ecadd7ffc0c",
+    "mtime": 1784186322.4181726,
+    "ast_hash": "1db1bb26f6de1c7f4cfad205373bb121",
     "semantic_hash": ""
   },
   "src/lib/storage/storage.test.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   "src/lib/upload/useUploadForm.ts": {
-    "mtime": 1786459652.4976625,
-    "ast_hash": "a67ce443891edf7182ae7302cdd507c0",
+    "mtime": 1786062542.0599651,
+    "ast_hash": "7a617061c2c042ce55995c321f8fd9c5",
     "semantic_hash": ""
   },
   "src/lib/upload/useVideoProcessing.ts": {
@@ -710,18 +710,18 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1786401342.9199855,
-    "ast_hash": "43a98092f74ba73fa2a071c50abca431",
+    "mtime": 1786109384.9864235,
+    "ast_hash": "2c6176d4f8dab58907c6625b3d94a7be",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1786459652.496491,
-    "ast_hash": "a4a3d4c249c409dd413d6c94f5daadc7",
+    "mtime": 1786390488.774695,
+    "ast_hash": "7960dcfa9bb36f05287f91ad3040b7d7",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1786401342.9200585,
-    "ast_hash": "cd3006af583a944e3e5bd3d265c57f48",
+    "mtime": 1782389777.5007002,
+    "ast_hash": "9698800db4ee5f8696c71b1df26b7f62",
     "semantic_hash": ""
   },
   "docker-compose.signoz.yml": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "docs/project-structure.md": {
-    "mtime": 1786459652.4966953,
-    "ast_hash": "b243e7fa594aec54fba914e1d20f3e17",
+    "mtime": 1786390488.7759032,
+    "ast_hash": "a1e840c8df1cbedf80645f48bdda7294",
     "semantic_hash": ""
   },
   "docs/server-functions-api.md": {
@@ -899,6 +899,16 @@
     "ast_hash": "d9ffbedc5cb03ec9f9195dd856fe7f8f",
     "semantic_hash": ""
   },
+  ".debug-browser-connect.mjs": {
+    "mtime": 1786148193.3981936,
+    "ast_hash": "bb363d889d09dee7804af09f82cb0e1f",
+    "semantic_hash": ""
+  },
+  ".debug-playlist-repro.cjs": {
+    "mtime": 1786148260.6948802,
+    "ast_hash": "ef1fbd364614d54fbb8d6d29a757e140",
+    "semantic_hash": ""
+  },
   "src/lib/effect/effect.utils.test.ts": {
     "mtime": 1786148793.318988,
     "ast_hash": "47c2298c9397d72a67f5eaf044227dcd",
@@ -907,16 +917,6 @@
   "src/lib/errors.test.ts": {
     "mtime": 1786390272.5256717,
     "ast_hash": "b7f6139756a11bd6506e88d437207015",
-    "semantic_hash": ""
-  },
-  "src/lib/mutations/mutation-feedback.test.tsx": {
-    "mtime": 1786459663.8191247,
-    "ast_hash": "f697dc74b450cfc71a321f90dc3d2207",
-    "semantic_hash": ""
-  },
-  "src/lib/mutations/mutation-feedback.ts": {
-    "mtime": 1786459637.230817,
-    "ast_hash": "04f4dc759d78ac843c59e0765fa708f1",
     "semantic_hash": ""
   }
 }

@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useCallback, useContext } from "react";
-import { toaster } from "src/components/ui/toaster";
 import { usersKeys } from "src/lib/users/users.queries";
 
+import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { AuthClientContext } from "./client-context";
 
 export function useLogin(redirectUrl: string) {
@@ -66,35 +66,25 @@ export function useUpdateProfile() {
   const router = useRouter();
   const authClient = useContext(AuthClientContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to update profile",
+    errorTitle: "Error updating profile",
     mutationFn: async ({ name, image }: { name: string; image: string }) =>
       authClient.updateUser({ name, image }),
-    onError: (error: Error) => {
-      toaster.create({
-        closable: true,
-        description: String(error),
-        duration: 5000,
-        title: "Error updating profile",
-        type: "error",
-      });
-    },
     onSuccess: async () => {
       await router.invalidate();
-      toaster.create({
-        closable: true,
-        description: "Your profile has been successfully updated.",
-        duration: 3000,
-        title: "Profile updated",
-        type: "success",
-      });
     },
+    successDescription: "Your profile has been successfully updated.",
+    successTitle: "Profile updated",
   });
 }
 
 export function useChangePassword() {
   const authClient = useContext(AuthClientContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to change password",
+    errorTitle: "Error changing password",
     mutationFn: async ({
       currentPassword,
       newPassword,
@@ -107,24 +97,8 @@ export function useChangePassword() {
         newPassword,
         revokeOtherSessions: true,
       }),
-    onError: (error: Error) => {
-      toaster.create({
-        closable: true,
-        description: String(error),
-        duration: 5000,
-        title: "Error changing password",
-        type: "error",
-      });
-    },
-    onSuccess: () => {
-      toaster.create({
-        closable: true,
-        description: "Your password has been successfully changed.",
-        duration: 3000,
-        title: "Password updated",
-        type: "success",
-      });
-    },
+    successDescription: "Your password has been successfully changed.",
+    successTitle: "Password updated",
   });
 }
 
@@ -132,27 +106,15 @@ export function useDeleteAccount() {
   const navigate = useNavigate();
   const authClient = useContext(AuthClientContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to delete account",
+    errorTitle: "Error deleting account",
     mutationFn: async () => authClient.deleteUser(),
-    onError: (error: Error) => {
-      toaster.create({
-        closable: true,
-        description: String(error),
-        duration: 5000,
-        title: "Error deleting account",
-        type: "error",
-      });
-    },
     onSuccess: () => {
-      toaster.create({
-        closable: true,
-        description: "Your account has been successfully deleted.",
-        duration: 3000,
-        title: "Account deleted",
-        type: "success",
-      });
       void navigate({ to: "/" });
     },
+    successDescription: "Your account has been successfully deleted.",
+    successTitle: "Account deleted",
   });
 }
 

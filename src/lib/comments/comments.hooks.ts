@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useContext } from "react";
-import { toaster } from "src/components/ui/toaster";
 
+import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { CommentsFnsContext } from "./comments.fn-context";
 import { commentsKeys } from "./comments.queries";
 
@@ -9,7 +9,9 @@ export function useAddComment(postId: number, userId: string) {
   const queryClient = useQueryClient();
   const { addComment } = useContext(CommentsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to add comment",
+    errorTitle: "Error adding comment",
     mutationFn: async (content: string) =>
       addComment({ data: { postId, content, userId } }),
     onMutate: async (content) => {
@@ -33,27 +35,14 @@ export function useAddComment(postId: number, userId: string) {
       if (context?.previous) {
         queryClient.setQueryData(commentsKeys.post(postId), context.previous);
       }
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to add comment",
-        duration: 5000,
-        title: "Error adding comment",
-        type: "error",
-      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: commentsKeys.post(postId),
       });
-      toaster.create({
-        closable: true,
-        description: "Your comment has been successfully posted.",
-        duration: 3000,
-        title: "Comment added",
-        type: "success",
-      });
     },
+    successDescription: "Your comment has been successfully posted.",
+    successTitle: "Comment added",
   });
 }
 
@@ -61,7 +50,9 @@ export function useDeleteComment(postId: number) {
   const queryClient = useQueryClient();
   const { deleteComment } = useContext(CommentsFnsContext);
 
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Failed to delete comment",
+    errorTitle: "Error deleting comment",
     mutationFn: async (data: { commentId: number }) => deleteComment({ data }),
     onMutate: async ({ commentId }) => {
       await queryClient.cancelQueries({ queryKey: commentsKeys.post(postId) });
@@ -77,26 +68,13 @@ export function useDeleteComment(postId: number) {
       if (context?.previous) {
         queryClient.setQueryData(commentsKeys.post(postId), context.previous);
       }
-      toaster.create({
-        closable: true,
-        description:
-          error instanceof Error ? error.message : "Failed to delete comment",
-        duration: 5000,
-        title: "Error deleting comment",
-        type: "error",
-      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: commentsKeys.post(postId),
       });
-      toaster.create({
-        closable: true,
-        description: "Your comment has been successfully deleted.",
-        duration: 3000,
-        title: "Comment deleted",
-        type: "success",
-      });
     },
+    successDescription: "Your comment has been successfully deleted.",
+    successTitle: "Comment deleted",
   });
 }
