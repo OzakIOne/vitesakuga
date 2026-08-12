@@ -27,7 +27,6 @@ export default Alchemy.Stack(
     });
 
     const bucket = yield* SakugaBucket;
-    const resolvedBucketName = yield* bucket.bucketName;
     const accountId = yield* Config.string("CLOUDFLARE_ACCOUNT_ID");
 
     yield* Console.log("\n✅ Deployment successfully orchestrated!");
@@ -35,7 +34,7 @@ export default Alchemy.Stack(
     yield* Console.log(
       "Please ensure the following values are updated in your env file:",
     );
-    yield* Console.log(`\nCLOUDFLARE_BUCKET="${String(resolvedBucketName)}"`);
+    yield* Console.log(`\nCLOUDFLARE_BUCKET="${bucketName}"`);
     yield* Console.log(`CLOUDFLARE_R2="${accountId}"`);
     yield* Console.log("-----------------------\n");
     yield* Console.log(
