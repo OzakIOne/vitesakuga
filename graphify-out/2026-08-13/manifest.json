@@ -5,7 +5,7 @@
     "semantic_hash": ""
   },
   ".wrangler/deploy/config.json": {
-    "mtime": 1786642003.9166324,
+    "mtime": 1786644329.4549417,
     "ast_hash": "5f1dbab534773e1ff0b9dc7737990b3e",
     "semantic_hash": ""
   },
@@ -85,13 +85,13 @@
     "semantic_hash": ""
   },
   "src/components/GlobalShortcuts.tsx": {
-    "mtime": 1786634814.2135599,
-    "ast_hash": "b2fe8a4e48c270cc5239d3c1362c219a",
+    "mtime": 1786644054.092259,
+    "ast_hash": "0a7eeaf9222ed155e2b5aae3312a0d1a",
     "semantic_hash": ""
   },
   "src/components/KeyboardShortcutsDialog.tsx": {
-    "mtime": 1786633923.9570422,
-    "ast_hash": "065ac91eb6f9aca2f9f903a896f826fc",
+    "mtime": 1786644188.5330408,
+    "ast_hash": "da8b99c28ab9946834c7017da2fc950f",
     "semantic_hash": ""
   },
   "src/components/NotFound.tsx": {

@@ -2,9 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 
-import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import type { AuthServices } from "../auth/context";
+import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { postWithVotesSelectSchema, type PostWithVotes } from "../db/schema";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -20,6 +21,7 @@ import {
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { mapPopularTags } from "../tags/tags.utils";
+import { fetchPostVoteCounts } from "../votes/votes.utils";
 import {
   FormFileUploadSchema,
   postByTagSchema,
@@ -45,7 +47,7 @@ export const parsePostId = (postId: unknown) =>
   parse(Schema.Union([Schema.Number, Schema.NumberFromString]))(postId);
 
 type PostsSearchResult = {
-  readonly data: readonly Schema.Schema.Type<typeof postsSelectSchema>[];
+  readonly data: readonly PostWithVotes[];
   meta: {
     pagination: PaginationMeta;
     popularTags: ReturnType<typeof mapPopularTags>;
@@ -108,6 +110,28 @@ export class PostsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
+
+    const parseWithVotes = Effect.fn("PostsService.parseWithVotes")(function* (
+      parsed: readonly Schema.Schema.Type<typeof postsSelectSchema>[],
+    ) {
+      const voteCounts = yield* fetchPostVoteCounts(
+        db,
+        parsed.map((post) => post.id),
+      );
+      const withVotes = parsed.map((post) => {
+        const counts = voteCounts.get(post.id) ?? { dislikes: 0, likes: 0 };
+        return { ...post, dislikes: counts.dislikes, likes: counts.likes };
+      });
+
+      return yield* Effect.try({
+        try: () => parse(Schema.Array(postWithVotesSelectSchema))(withVotes),
+        catch: (error) =>
+          new ValidationError({
+            message: `Error processing vote counts: ${String(error)}`,
+            cause: error,
+          }),
+      });
+    });
 
     const search = Effect.fn("PostsService.search")(function* (
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
@@ -172,6 +196,8 @@ export class PostsService extends Context.Service<
           }),
       });
 
+      const parsedWithVotes = yield* parseWithVotes(parsed);
+
       let popularTagsQuery = db
         .selectFrom("tags")
         .innerJoin("post_tags", "tags.id", "post_tags.tagId")
@@ -208,7 +234,7 @@ export class PostsService extends Context.Service<
       );
 
       return {
-        data: parsed,
+        data: parsedWithVotes,
         meta: {
           pagination,
           popularTags: mapPopularTags(popularTagsResult),
@@ -402,6 +428,8 @@ export class PostsService extends Context.Service<
           }),
       });
 
+      const parsedWithVotes = yield* parseWithVotes(parsed);
+
       const popularTagsResult = yield* db.execute(
         db
           .selectFrom("tags")
@@ -426,7 +454,7 @@ export class PostsService extends Context.Service<
       );
 
       return {
-        data: parsed,
+        data: parsedWithVotes,
         meta: {
           pagination,
           popularTags: mapPopularTags(popularTagsResult),

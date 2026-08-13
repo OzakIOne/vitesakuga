@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef } from "react";
 
-import type { DbSchemaSelect } from "../db/schema";
+import type { PostWithVotes } from "../db/schema";
 import type { PaginationMeta } from "../pagination/pagination";
 
 type PopularTag = {
@@ -13,7 +13,7 @@ type PopularTag = {
 };
 
 export type PostListingData = {
-  data: readonly DbSchemaSelect["posts"][];
+  data: readonly PostWithVotes[];
   meta: {
     pagination: PaginationMeta;
     popularTags: PopularTag[];

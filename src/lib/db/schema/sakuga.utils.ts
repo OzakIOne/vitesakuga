@@ -41,6 +41,32 @@ export const postsInsertSchema = Schema.Struct({
   videoMetadata: Schema.Json,
 });
 
+export const postVoteSchema = Schema.Literals(["like", "dislike"]);
+
+export type PostVote = Schema.Schema.Type<typeof postVoteSchema>;
+
+export const postVotesSelectSchema = Schema.Struct({
+  createdAt: TimestampSchema,
+  postId: Schema.Number,
+  userId: Schema.String,
+  vote: postVoteSchema,
+});
+
+export const postVotesInsertSchema = Schema.Struct({
+  createdAt: Schema.optionalKey(Schema.Date),
+  postId: Schema.Number,
+  userId: Schema.String,
+  vote: postVoteSchema,
+});
+
+export const postWithVotesSelectSchema = Schema.Struct({
+  ...postsSelectSchema.fields,
+  dislikes: Schema.Number,
+  likes: Schema.Number,
+});
+
+export type PostWithVotes = Schema.Schema.Type<typeof postWithVotesSelectSchema>;
+
 export const commentsSelectSchema = Schema.Struct({
   content: Schema.String,
   createdAt: TimestampSchema,
@@ -99,6 +125,7 @@ type TagsSelect = Schema.Schema.Type<typeof tagsSelectSchema>;
 export type DbSchemaSelect = {
   user: UserSelect;
   posts: PostsSelect;
+  postVotes: Schema.Schema.Type<typeof postVotesSelectSchema>;
   comments: CommentsSelect;
   tags: TagsSelect;
   playlists: Schema.Schema.Type<typeof playlistsSelectSchema>;
@@ -113,6 +140,7 @@ type TagsInsert = Schema.Schema.Type<typeof tagsInsertSchema>;
 export type DbSchemaInsert = {
   user: UserInsert;
   posts: PostsInsert;
+  postVotes: Schema.Schema.Type<typeof postVotesInsertSchema>;
   comments: CommentsInsert;
   tags: TagsInsert;
   playlists: Schema.Schema.Type<typeof playlistsInsertSchema>;

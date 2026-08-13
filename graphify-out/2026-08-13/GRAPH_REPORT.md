@@ -1,11 +1,11 @@
 # Graph Report - vitesakuga  (2026-08-13)
 
 ## Corpus Check
-- 185 files · ~73,081 words
+- 185 files · ~73,288 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1198 nodes · 2272 edges · 143 communities (61 shown, 82 thin omitted)
+- 1198 nodes · 2273 edges · 150 communities (68 shown, 82 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 33 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
@@ -150,6 +150,13 @@
 - neonctl
 - @opentelemetry/sdk-trace-web
 - safelist.ts
+- feedback.tsx
+- comments.service.ts
+- storage.module.ts
+- probe.ts
+- server-fn.handler.ts
+- playlists.fn.test.ts
+- @cloudflare/workers-types
 
 ## God Nodes (most connected - your core abstractions)
 1. `cx()` - 38 edges
@@ -172,29 +179,29 @@
   src/components/PostCard.tsx → src/lib/assets/url.ts
 - `Spinner()` --calls--> `cx()`  [EXTRACTED]
   src/components/ui/button.tsx → src/components/ui/ui-utils.ts
-- `getRouter()` --indirect_call--> `DefaultCatchBoundary()`  [INFERRED]
-  src/router.tsx → src/components/DefaultCatchBoundary.tsx
+- `makeTestLayer()` --indirect_call--> `AuthService`  [INFERRED]
+  src/lib/db/test-utils.ts → src/lib/auth/context.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (143 total, 82 thin omitted)
+## Communities (150 total, 82 thin omitted)
 
 ### Community 0 - "posts.schema.ts"
-Cohesion: 0.11
-Nodes (25): PostCard, PostCardComponent(), PostListProps, PostDetailDisplay(), PostErrorComponent(), PostsPageLayout(), GridItem(), Stack() (+17 more)
+Cohesion: 0.13
+Nodes (22): Pagination(), PaginationProps, PostCard, PostCardComponent(), PostListProps, GridItem(), HStack(), Stack() (+14 more)
 
 ### Community 1 - "test-utils.ts"
-Cohesion: 0.18
-Nodes (17): AuthService, AuthSessionProvider, RequestHeadersService, getSessionEffect, getUserSessionEffect, SessionFetchError, KyselyDB, LOG_LAYER (+9 more)
+Cohesion: 0.26
+Nodes (9): AuthService, RequestHeadersService, getSessionEffect, getUserSessionEffect, LOG_LAYER, makeAuthLayer(), makeMiddlewareLayer(), LogLevel (+1 more)
 
 ### Community 2 - "upload.lazy.tsx"
-Cohesion: 0.09
-Nodes (20): AccountTable, CommentsTable, kysely, PlaylistPostsTable, PlaylistsTable, PostsTable, PostTagsTable, SessionTable (+12 more)
+Cohesion: 0.15
+Nodes (13): AccountTable, CommentsTable, kysely, PlaylistPostsTable, PlaylistsTable, PostsTable, PostTagsTable, SessionTable (+5 more)
 
 ### Community 3 - "playlists.service.ts"
-Cohesion: 0.10
-Nodes (23): SearchBox(), SearchBoxProps, Collapsible, Combobox, Dialog, FileUpload, Menu, Popover (+15 more)
+Cohesion: 0.15
+Nodes (13): Collapsible, FileUpload, Menu, Popover, Select, Slider, HEADING_SIZES, Link() (+5 more)
 
 ### Community 4 - "rules"
 Cohesion: 0.10
@@ -202,7 +209,7 @@ Nodes (20): rules, @effect/dprint, @effect/no-import-from-barrel-package, jsx-a1
 
 ### Community 5 - "__root.tsx"
 Cohesion: 0.06
-Nodes (41): CommentsContent(), CommentsProps, GlobalShortcuts(), KeyboardShortcutsDialog(), KeyboardShortcutsDialogProps, Shortcut, SHORTCUTS, ButtonProps (+33 more)
+Nodes (41): CommentsContent(), CommentsProps, GlobalShortcuts(), getShortcuts(), KeyboardShortcutsDialog(), KeyboardShortcutsDialogProps, Shortcut, ButtonProps (+33 more)
 
 ### Community 6 - "posts.service.ts"
 Cohesion: 0.29
@@ -210,7 +217,7 @@ Nodes (7): DefaultCatchBoundary(), getQueryClient(), getRouter(), Register, @tan
 
 ### Community 7 - "sakuga.utils.ts"
 Cohesion: 0.06
-Nodes (33): account, session, user, userInsertSchema, userSelectSchema, verification, commentInsertSchema, comments (+25 more)
+Nodes (31): account, session, user, userInsertSchema, verification, commentInsertSchema, comments, playlistPosts (+23 more)
 
 ### Community 8 - "TypeScript & React Conventions"
 Cohesion: 0.20
@@ -226,7 +233,7 @@ Nodes (38): @cloudflare/workers-types, DOM, DOM.Iterable, ES2022, **/*.ts, **/*.
 
 ### Community 11 - "auth.hooks.ts"
 Cohesion: 0.06
-Nodes (41): react, react, PlaylistAddModal(), PlaylistAddModalProps, Checkbox, INPUT_SIZES, InputGroupProps, InputProps (+33 more)
+Nodes (46): react, react, PlaylistAddModal(), PlaylistAddModalProps, Checkbox, INPUT_SIZES, InputGroupProps, InputProps (+38 more)
 
 ### Community 12 - "routeTree.gen.ts"
 Cohesion: 0.08
@@ -241,7 +248,7 @@ Cohesion: 0.08
 Nodes (23): File Analysis: `src/` Directory, Form Components (`src/components/form/`), Main Components (`src/components/`), Post Detail Components (`src/components/PostDetail/`), Root Files (`src/`), `src/components/`, `src/db/`, `src/lib/` (+15 more)
 
 ### Community 15 - "effect.utils.ts"
-Cohesion: 0.18
+Cohesion: 0.19
 Nodes (19): EFFECT_KYSELY_MARKER, EffectExecutor, EffectKysely, EffectTransition, Executable, ExecutableRaw, execute(), executeRaw() (+11 more)
 
 ### Community 16 - "opencode.json"
@@ -257,8 +264,8 @@ Cohesion: 0.15
 Nodes (13): alchemy, @ark-ui/react, effect, isomorphic-dompurify, @opentelemetry/exporter-logs-otlp-http, @opentelemetry/sdk-trace-base, dependencies, alchemy (+5 more)
 
 ### Community 19 - "FileRoutesByPath"
-Cohesion: 0.07
-Nodes (40): DbSchemaSelect, CommentNotFoundError, ForbiddenError, PlaylistNotFoundError, PostAlreadyInPlaylistError, PostNotFoundError, UnauthorizedError, UserNotFoundError (+32 more)
+Cohesion: 0.14
+Nodes (16): SqlNoFirstResult, defaultPlaylistsFns, PlaylistsFnsContext, removePostFromPlaylistInputSchema, addPostToPlaylist, createPlaylist, deletePlaylist, PlaylistDetailResult (+8 more)
 
 ### Community 20 - "Domain Glossary"
 Cohesion: 0.17
@@ -274,7 +281,7 @@ Nodes (7): CommandError, createBucket, curlStatus(), exec(), setup, startRustFS,
 
 ### Community 23 - "devDependencies"
 Cohesion: 0.22
-Nodes (9): @cloudflare/workers-types, devDependencies, @cloudflare/workers-types, tailwindcss, @tanstack/eslint-plugin-router, vite, tailwindcss, @tanstack/eslint-plugin-router (+1 more)
+Nodes (9): drizzle-seed, devDependencies, drizzle-seed, tailwindcss, @tanstack/eslint-plugin-router, vite, tailwindcss, @tanstack/eslint-plugin-router (+1 more)
 
 ### Community 24 - "ViteSakuga"
 Cohesion: 0.20
@@ -289,8 +296,8 @@ Cohesion: 0.25
 Nodes (7): entry, ignore, project, $schema, **/*.d.ts, src/**/*.{js,ts,tsx}, src/router.tsx
 
 ### Community 27 - "index.tsx"
-Cohesion: 0.17
-Nodes (11): getUserSession, SessionUser, createHandler(), LayerShape, resolveMiddlewareLayer(), tagsKeys, tagsQueries, getAllPopularTags (+3 more)
+Cohesion: 0.20
+Nodes (9): KyselyDB, SqlError, tagsKeys, tagsQueries, getAllPopularTags, getAllTags, TagsService, TagsServiceLive (+1 more)
 
 ### Community 28 - "vitest.setup.ts"
 Cohesion: 0.33
@@ -309,16 +316,16 @@ Cohesion: 0.50
 Nodes (3): ImportMeta, ImportMetaEnv, ViteTypeOptions
 
 ### Community 33 - "tooltip.tsx"
-Cohesion: 0.24
-Nodes (19): Skeleton(), InputGroup(), Textarea(), BoxProps, Center(), Container(), Flex(), Grid() (+11 more)
+Cohesion: 0.21
+Nodes (22): Button(), buttonClasses(), Skeleton(), Spinner(), InputGroup(), Textarea(), BoxProps, Center() (+14 more)
 
 ### Community 34 - "schema.utils.ts"
 Cohesion: 0.16
 Nodes (16): FieldInfo(), FormTextareaFieldProps, FormTextWrapper(), InputProps, TextareaProps, Field, Input(), Avatar (+8 more)
 
 ### Community 35 - "route.tsx"
-Cohesion: 0.11
-Nodes (21): PopularTag, PopularTagsSection(), PopularTagsSectionProps, PostFilters(), PostFiltersProps, PostsPageLayoutProps, RegisteredRoutes, Alert (+13 more)
+Cohesion: 0.15
+Nodes (18): PopularTag, PopularTagsSection(), PopularTagsSectionProps, PostFilters(), PostFiltersProps, PostsPageLayoutProps, RegisteredRoutes, SearchBox() (+10 more)
 
 ### Community 37 - "PGliteDriver"
 Cohesion: 0.20
@@ -337,20 +344,24 @@ Cohesion: 0.67
 Nodes (3): ignorePatterns, scripts/, *.test.*
 
 ### Community 43 - "dotenv"
-Cohesion: 0.06
-Nodes (52): CommentDraft, queryClient, tagsCollection, UploadDraft, uploadDraftCollection, usersCollection, parse(), parseStrict() (+44 more)
+Cohesion: 0.05
+Nodes (48): toaster, CommentDraft, queryClient, tagsCollection, UploadDraft, uploadDraftCollection, usersCollection, safeParseStrict() (+40 more)
 
 ### Community 44 - "drizzle-orm"
 Cohesion: 0.15
 Nodes (3): DB, PGliteConnection, PGliteDialect
+
+### Community 45 - "drizzle-seed"
+Cohesion: 0.20
+Nodes (11): AuthServices, SessionFetchError, postRow, parse(), parseStrict(), updatePostInputSchema, getPostsByTag, parsePostId() (+3 more)
 
 ### Community 46 - "users.service.ts"
 Cohesion: 0.18
 Nodes (11): Route, Route, Route, Route, Route, Route, Route, Route (+3 more)
 
 ### Community 52 - "isomorphic-dompurify"
-Cohesion: 0.22
-Nodes (11): Comments(), Post(), PostDetailDisplayProps, PostEditForm(), PostEditFormProps, TODO: replace with a proper unsaved-changes dialog, Button(), buttonClasses() (+3 more)
+Cohesion: 0.15
+Nodes (15): Comments(), Post(), PostDetailDisplay(), PostDetailDisplayProps, PostEditForm(), PostEditFormProps, TODO: replace with a proper unsaved-changes dialog, PostErrorComponent() (+7 more)
 
 ### Community 53 - "users.index.tsx"
 Cohesion: 0.25
@@ -361,20 +372,20 @@ Cohesion: 0.25
 Nodes (8): Auth Middleware, `createHandler` Bridge, Effective Service Files, Error Handling, Location, Server Functions & API Design, Structure of a Service File, Validation
 
 ### Community 55 - "@emotion/react"
-Cohesion: 0.12
-Nodes (10): createTestKysely(), makeServiceTestLayer(), testUser, testUser2, PlaylistsService, PlaylistsServiceLive, defaultVideoMetadata, testUser (+2 more)
+Cohesion: 0.25
+Nodes (4): defaultVideoMetadata, testUser, PostsService, PostsServiceLive
 
 ### Community 58 - "@neondatabase/serverless"
 Cohesion: 0.33
 Nodes (6): Authentication, Database, File Structure Conventions, Project Structure & File Conventions, Source Directory Layout, Upload & Storage
 
 ### Community 72 - "react"
-Cohesion: 0.20
-Nodes (10): SqlError, mapPopularTags(), usersKeys, usersQueries, FetchUserInput, fetchUserInputSchema, fetchUserPosts, fetchUsers (+2 more)
+Cohesion: 0.15
+Nodes (13): userSelectSchema, DbSchemaSelect, postsSelectSchema, computePagination(), PaginationInput, PaginationMeta, PopularTag, PostListingData (+5 more)
 
 ### Community 106 - "users.$id.playlists.$playlistId.tsx"
-Cohesion: 0.19
-Nodes (13): NotFound(), Pagination(), PaginationProps, Spinner(), HStack(), Video, VideoProps, assetUrl() (+5 more)
+Cohesion: 0.25
+Nodes (9): NotFound(), Video, VideoProps, assetUrl(), playlistQueryDetail(), playlistsQueryUserPlaylists(), PlaylistsContent(), PlaylistDetailContent() (+1 more)
 
 ### Community 110 - "upload.lazy.tsx"
 Cohesion: 0.23
@@ -385,15 +396,39 @@ Cohesion: 0.50
 Nodes (4): Agent skills, Domain docs, Issue tracker, Triage labels
 
 ### Community 121 - "comments.service.ts"
-Cohesion: 0.22
-Nodes (8): AuthServices, testUser, CommentsService, CommentsServiceLive, CommentWithUser, deleteComment, commentsSelectSchema, SqlNoFirstResult
+Cohesion: 0.17
+Nodes (13): AuthSessionProvider, testUser, CommentsService, CommentsServiceLive, makeDBLayer(), createTestKysely(), LOG_LAYER, makeServiceTestLayer() (+5 more)
 
 ### Community 122 - "index.tsx"
 Cohesion: 0.33
 Nodes (7): Email, loginSchema, PasswordMatch, passwordSchema, profileSchema, signUpSchema, Url
 
+### Community 143 - "feedback.tsx"
+Cohesion: 0.15
+Nodes (12): Alert, AlertProps, BADGE_SIZES, BadgeProps, DataList, OUTLINE_BADGE, Palette, Progress (+4 more)
+
+### Community 144 - "comments.service.ts"
+Cohesion: 0.33
+Nodes (9): CommentWithUser, CommentNotFoundError, ForbiddenError, PlaylistNotFoundError, PostAlreadyInPlaylistError, PostNotFoundError, UnauthorizedError, UserNotFoundError (+1 more)
+
+### Community 145 - "storage.module.ts"
+Cohesion: 0.50
+Nodes (5): StorageError, StorageModule, makeRustFSStorageLayer(), StorageLive, runTest()
+
+### Community 146 - "probe.ts"
+Cohesion: 0.25
+Nodes (7): a, b, c, d, PlaylistKeys, PlaylistPostsKeys, PostsKeys
+
+### Community 147 - "server-fn.handler.ts"
+Cohesion: 0.38
+Nodes (5): getUserSession, SessionUser, createHandler(), LayerShape, resolveMiddlewareLayer()
+
+### Community 148 - "playlists.fn.test.ts"
+Cohesion: 0.33
+Nodes (4): testUser, testUser2, PlaylistsService, PlaylistsServiceLive
+
 ## Knowledge Gaps
-- **522 isolated node(s):** `$schema`, `./node_modules/@effect/tsgo/oxlint-presets/correctness.json`, `./node_modules/@effect/tsgo/oxlint-presets/effect-native.json`, `eslint`, `typescript` (+517 more)
+- **521 isolated node(s):** `$schema`, `./node_modules/@effect/tsgo/oxlint-presets/correctness.json`, `./node_modules/@effect/tsgo/oxlint-presets/effect-native.json`, `eslint`, `typescript` (+516 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **82 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -407,10 +442,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `InputGroup()` connect `tooltip.tsx` to `schema.utils.ts`, `auth.hooks.ts`?**
   _High betweenness centrality (0.212) - this node is a cross-community bridge._
 - **What connects `$schema`, `./node_modules/@effect/tsgo/oxlint-presets/correctness.json`, `./node_modules/@effect/tsgo/oxlint-presets/effect-native.json` to the rest of the system?**
-  _522 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _521 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `posts.schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.10953058321479374 - nodes in this community are weakly interconnected._
-- **Should `upload.lazy.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.09486166007905138 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1265597147950089 - nodes in this community are weakly interconnected._
 - **Should `playlists.service.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.10344827586206896 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.14705882352941177 - nodes in this community are weakly interconnected._
+- **Should `rules` be split into smaller, more focused modules?**
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._

@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { postsSelectSchema, userSelectSchema } from "src/lib/db/schema";
+import {
+  postsSelectSchema,
+  postWithVotesSelectSchema,
+  userSelectSchema,
+  type PostWithVotes,
+} from "src/lib/db/schema";
 
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../effect/effect.utils";
@@ -9,6 +14,7 @@ import { UserNotFoundError, ValidationError } from "../errors";
 import { computePagination } from "../pagination/pagination";
 import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
+import { fetchPostVoteCounts } from "../votes/votes.utils";
 import { fetchUserInputSchema } from "./users.schema";
 
 const PAGE_SIZE = 30;
@@ -24,7 +30,7 @@ export class UsersService extends Context.Service<
       data: Schema.Schema.Type<typeof fetchUserInputSchema>,
     ) => Effect.Effect<
       {
-        data: readonly Schema.Schema.Type<typeof postsSelectSchema>[];
+        data: readonly PostWithVotes[];
         meta: {
           pagination: {
             currentPage: number;
@@ -132,6 +138,32 @@ export class UsersService extends Context.Service<
           }),
       });
 
+      const voteCounts = yield* fetchPostVoteCounts(
+        db,
+        posts.map((post) => post.id),
+      );
+      const postsWithVotes = yield* Effect.try({
+        try: () =>
+          parse(Schema.Array(postWithVotesSelectSchema))(
+            posts.map((post) => {
+              const counts = voteCounts.get(post.id) ?? {
+                dislikes: 0,
+                likes: 0,
+              };
+              return {
+                ...post,
+                dislikes: counts.dislikes,
+                likes: counts.likes,
+              };
+            }),
+          ),
+        catch: (error) =>
+          new ValidationError({
+            message: "Error processing user post vote counts",
+            cause: error,
+          }),
+      });
+
       const popularTagsResult = yield* db.execute(
         db
           .selectFrom("tags")
@@ -149,7 +181,7 @@ export class UsersService extends Context.Service<
       );
 
       return {
-        data: posts,
+        data: postsWithVotes,
         meta: {
           pagination,
           popularTags: mapPopularTags(popularTagsResult),

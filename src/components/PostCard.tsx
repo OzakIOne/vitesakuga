@@ -1,14 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
+import { LuThumbsDown, LuThumbsUp } from "react-icons/lu";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
-import type { DbSchemaSelect } from "src/lib/db/schema";
+import type { PostWithVotes } from "src/lib/db/schema";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 
 type PostListProps = {
-  post: DbSchemaSelect["posts"];
+  post: PostWithVotes;
   searchParams?: PostsSearchParams;
 };
 
@@ -64,6 +65,16 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
             <Text color="gray.500" fontSize="xs">
               {new Date(post.createdAt).toLocaleDateString()}
             </Text>
+            <HStack gap={3}>
+              <Text color="gray.500" fontSize="xs">
+                <LuThumbsUp aria-hidden className="mr-1 inline" />
+                {post.likes}
+              </Text>
+              <Text color="gray.500" fontSize="xs">
+                <LuThumbsDown aria-hidden className="mr-1 inline" />
+                {post.dislikes}
+              </Text>
+            </HStack>
           </VStack>
         </HStack>
       </VStack>

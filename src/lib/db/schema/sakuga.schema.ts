@@ -50,6 +50,21 @@ export const posts = pgTable("posts", {
   videoMetadata: json().$type<string>().notNull(),
 });
 
+export const postVotes = pgTable(
+  "post_votes",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    postId: integer()
+      .references(() => posts.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+    vote: text().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+);
+
 export const playlists = pgTable("playlists", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   description: text("description"),

@@ -99,12 +99,20 @@ type CommentsTable = {
   userId: string;
 };
 
+type PostVotesTable = {
+  createdAt: Generated<Date>;
+  postId: number;
+  userId: string;
+  vote: "like" | "dislike";
+};
+
 export type DB = {
   account: AccountTable;
   session: SessionTable;
   user: UserTable;
   verification: VerificationTable;
   comments: CommentsTable;
+  post_votes: PostVotesTable;
   post_tags: PostTagsTable;
   posts: PostsTable;
   tags: TagsTable;
