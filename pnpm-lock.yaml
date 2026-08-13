@@ -109,8 +109,8 @@ importers:
         specifier: ^1.168.42
         version: 1.168.42(react@19.2.8)(react-dom@19.2.8(react@19.2.8))(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       '@xstate/react':
-        specifier: ^6.1.0
-        version: 6.1.0(@types/react@19.2.18)(react@19.2.8)(xstate@5.32.5)
+        specifier: ^7.0.0-alpha.1
+        version: 7.0.0-alpha.1(@types/react@19.2.18)(react@19.2.8)(xstate@6.0.0-alpha.36)
       alchemy:
         specifier: 2.0.0-beta.72
         version: 2.0.0-beta.72(@effect/platform-node@4.0.0-beta.107(effect@4.0.0-rc.108)(ioredis@5.11.1))(@types/react@19.2.18)(effect@4.0.0-rc.108)(pg@8.23.0)(typescript@7.0.2)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))(vitest@4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)))(ws@8.21.0)
@@ -163,8 +163,8 @@ importers:
         specifier: ^5.7.0
         version: 5.7.0(react@19.2.8)
       xstate:
-        specifier: ^5.32.5
-        version: 5.32.5
+        specifier: ^6.0.0-alpha.36
+        version: 6.0.0-alpha.36
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: ^1.51.3
@@ -3767,11 +3767,11 @@ packages:
   '@vitest/utils@4.1.10':
     resolution: {integrity: sha512-fy9am/HWxbaGt/Sawrp90vt6Y6jQwf1RX77cz3uwoJwJVMli/e1IEwRPnMNJ7vKfPTwo0diXifkpPvwH9v7nGA==}
 
-  '@xstate/react@6.1.0':
-    resolution: {integrity: sha512-ep9F0jGTI63B/jE8GHdMpUqtuz7yRebNaKv8EMUaiSi29NOglywc2X2YSOV/ygbIK+LtmgZ0q9anoEA2iBSEOw==}
+  '@xstate/react@7.0.0-alpha.1':
+    resolution: {integrity: sha512-GRUEqHlbp0Jf0gheJnO+WS90JkJlilRt3wTud84UuAErVrpQpBD1YCGQ1/DySrXK/JKUuRi5p7CbPeZlXV4pxA==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      xstate: ^5.28.0
+      xstate: ^6.0.0-alpha.1
     peerDependenciesMeta:
       xstate:
         optional: true
@@ -6737,8 +6737,9 @@ packages:
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
-  xstate@5.32.5:
-    resolution: {integrity: sha512-ULazi1oe6wGrXl0Frb6otSlkm5HLifbbVTkMk5kkSKqz4TkxJaVpnl6jOJwKeid3ORPxYyZQgNLUSYX9q65SIA==}
+  xstate@6.0.0-alpha.36:
+    resolution: {integrity: sha512-8zXcB9BU/o0j3NTrOLovqMr9h0Ni0Y06Dz1BW6g7ZHTg/C64RcTqZkkLdR1KywhMdTN44DzTbNwqgdY3rQz6DA==}
+    hasBin: true
 
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
@@ -9901,12 +9902,12 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.1
 
-  '@xstate/react@6.1.0(@types/react@19.2.18)(react@19.2.8)(xstate@5.32.5)':
+  '@xstate/react@7.0.0-alpha.1(@types/react@19.2.18)(react@19.2.8)(xstate@6.0.0-alpha.36)':
     dependencies:
       react: 19.2.8
       use-isomorphic-layout-effect: 1.2.1(@types/react@19.2.18)(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
-      xstate: 5.32.5
+      xstate: 6.0.0-alpha.36
 
   '@zag-js/accordion@1.41.2':
     dependencies:
@@ -12983,7 +12984,7 @@ snapshots:
 
   xmlchars@2.2.0: {}
 
-  xstate@5.32.5: {}
+  xstate@6.0.0-alpha.36: {}
 
   xtend@4.0.2: {}
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthService, RequestHeadersService } from "../auth/context";
 import { withMinimumLogLevel } from "../effect/logger";
-import { getSessionEffect, getUserSessionEffect } from "./auth.middleware";
+import { getSessionEffect, getUserSessionEffect } from "./session.effect";
 
 let mockGetSession: ReturnType<typeof vi.fn>;
 let mockGetHeaders: ReturnType<typeof vi.fn>;

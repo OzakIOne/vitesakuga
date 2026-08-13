@@ -46,6 +46,35 @@ test.describe("Convert page", () => {
     ).toBeVisible();
   });
 
+  test("encoding quality control appears for transcode formats only", async ({
+    page,
+  }) => {
+    const formatSelect = page.getByRole("combobox", {
+      name: "Output Format",
+    });
+
+    await formatSelect.click();
+    await page.getByRole("option", { name: /MP4.*Transcode/ }).click();
+
+    await expect(page.getByText("Encoding Quality")).toBeVisible();
+    await expect(
+      page.getByText(/Lower CRF = higher quality, larger file/),
+    ).toBeVisible();
+    const qualitySlider = page.getByRole("slider");
+    await expect(qualitySlider).toHaveAttribute("aria-valuemin", "2");
+    await expect(qualitySlider).toHaveAttribute("aria-valuemax", "51");
+    await expect(qualitySlider).toHaveAttribute("aria-valuenow", "18");
+
+    await formatSelect.click();
+    await page.getByRole("option", { name: /WebM.*Transcode/ }).click();
+    await expect(qualitySlider).toHaveAttribute("aria-valuemax", "63");
+
+    await formatSelect.click();
+    await page.getByRole("option", { name: /MP4.*Passthrough\/Copy/ }).click();
+
+    await expect(page.getByText("Encoding Quality")).toBeHidden();
+  });
+
   test("file upload shows filename in list", async ({ page }) => {
     await page.locator('input[type="file"]').setInputFiles(TEST_VIDEO);
 

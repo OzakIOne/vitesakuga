@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
-import { getSessionEffect, SessionFetchError } from "../auth/auth.middleware";
+import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import type { AuthServices } from "../auth/context";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";

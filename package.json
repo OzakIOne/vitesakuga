@@ -10,9 +10,9 @@
     "db:prod": "STAGE=prod drizzle-kit",
     "dcd": "docker compose down",
     "dcu": "docker compose up -d",
-    "dev": "vite dev --mode development --host",
-    "dev:local": "DATABASE_DRIVER=local vite dev --mode test --host",
-    "dev:prod": "vite dev --mode production",
+    "dev": "VITE_BASE_URL=http://localhost:3000 NODE_ENV=development vite dev --mode development --host",
+    "dev:local": "NODE_ENV=test DATABASE_DRIVER=local vite dev --mode test --host",
+    "dev:prod": "NODE_ENV=production vite dev --mode production",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "infra:deploy": "alchemy deploy infra/alchemy.run.ts --stage dev",
@@ -67,7 +67,7 @@
     "@tanstack/react-router-devtools": "^1.167.1",
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.42",
-    "@xstate/react": "^6.1.0",
+    "@xstate/react": "^7.0.0-alpha.1",
     "alchemy": "2.0.0-beta.72",
     "better-auth": "1.7.0-rc.4",
     "drizzle-kit": "1.0.0-rc.4",
@@ -85,7 +85,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
-    "xstate": "^5.32.5"
+    "xstate": "^6.0.0-alpha.36"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.51.3",

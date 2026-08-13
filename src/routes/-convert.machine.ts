@@ -1,15 +1,49 @@
-import { assertEvent, assign, fromCallback, fromPromise, setup } from "xstate";
+import {
+  createAsyncLogic,
+  createCallbackLogic,
+  createMachine,
+  types,
+} from "xstate";
+import type { AnyActorLogic } from "xstate";
 
 export type OutputFormat = {
   label: string;
   container: "mp4" | "webm" | "mkv";
   videoCodec?: "avc" | "vp9";
   audioCodec?: "aac" | "opus";
-  /** Custom video bitrate in bps. Falls back to QUALITY_VERY_HIGH if unset and transcoding. */
-  videoBitrate?: number;
-  /** Custom audio bitrate in bps. Falls back to QUALITY_VERY_HIGH if unset and transcoding. */
-  audioBitrate?: number;
 };
+
+/**
+ * Lowest CRF/quantizer users may select (lower = higher quality). Keeps near-lossless
+ * settings like CRF 0 or 1 out of reach, since they produce impractically large files.
+ */
+export const VIDEO_QUALITY_MIN = 2;
+
+/** Highest CRF/quantizer users may select, per video codec. */
+const VIDEO_QUALITY_MAX: Record<
+  NonNullable<OutputFormat["videoCodec"]>,
+  number
+> = {
+  avc: 51,
+  vp9: 63,
+};
+
+/** Default CRF/quantizer used when transcoding. */
+export const DEFAULT_VIDEO_QUALITY = 18;
+
+export function getVideoQualityRange(
+  codec: NonNullable<OutputFormat["videoCodec"]>,
+): { min: number; max: number } {
+  return { min: VIDEO_QUALITY_MIN, max: VIDEO_QUALITY_MAX[codec] };
+}
+
+export function clampVideoQuality(
+  quality: number,
+  codec: NonNullable<OutputFormat["videoCodec"]>,
+): number {
+  const { min, max } = getVideoQualityRange(codec);
+  return Math.min(max, Math.max(min, Math.round(quality)));
+}
 
 export const SUPPORTED_OUTPUTS: OutputFormat[] = [
   {
@@ -79,110 +113,141 @@ type ConvertDoneEvent = {
 };
 type ConvertErrorEvent = { type: "conversion.error"; message: string };
 
-export const convertMachine = setup({
-  types: {
-    context: {} as {
-      file: File | null;
-      output: OutputFormat | null;
-      progress: number;
-      error: string | null;
-      downloadUrl: string | null;
-      convertedName: string;
-      inputVideoCodec: string | null;
-      inputAudioCodec: string | null;
+type ConvertContext = {
+  file: File | null;
+  output: OutputFormat | null;
+  progress: number;
+  error: string | null;
+  downloadUrl: string | null;
+  convertedName: string;
+  inputVideoCodec: string | null;
+  inputAudioCodec: string | null;
+  videoQuality: number;
+};
+
+function resetOnNewFile(file: File): Partial<ConvertContext> {
+  return {
+    file,
+    output: null,
+    progress: 0,
+    error: null,
+    downloadUrl: null,
+    convertedName: "",
+    inputVideoCodec: null,
+    inputAudioCodec: null,
+    videoQuality: DEFAULT_VIDEO_QUALITY,
+  };
+}
+
+function setOutput(
+  context: ConvertContext,
+  output: OutputFormat,
+): Partial<ConvertContext> {
+  return {
+    output,
+    videoQuality:
+      output.videoCodec === undefined
+        ? context.videoQuality
+        : clampVideoQuality(context.videoQuality, output.videoCodec),
+  };
+}
+
+function setQuality(
+  context: ConvertContext,
+  quality: number,
+): Partial<ConvertContext> {
+  return {
+    videoQuality: clampVideoQuality(
+      quality,
+      context.output?.videoCodec ?? "avc",
+    ),
+  };
+}
+
+function setCodecs(
+  videoCodec: string | null,
+  audioCodec: string | null,
+): Partial<ConvertContext> {
+  return { inputVideoCodec: videoCodec, inputAudioCodec: audioCodec };
+}
+
+function setProgress(percent: number): Partial<ConvertContext> {
+  return { progress: percent };
+}
+
+function completeConversion(
+  downloadUrl: string,
+  convertedName: string,
+): Partial<ConvertContext> {
+  return { downloadUrl, convertedName, progress: 100 };
+}
+
+function setConversionError(message: string): Partial<ConvertContext> {
+  return { error: message };
+}
+
+function resetAll(): Partial<ConvertContext> {
+  return {
+    file: null,
+    output: null,
+    progress: 0,
+    error: null,
+    downloadUrl: null,
+    convertedName: "",
+    inputVideoCodec: null,
+    inputAudioCodec: null,
+    videoQuality: DEFAULT_VIDEO_QUALITY,
+  };
+}
+
+export const convertMachine = createMachine({
+  id: "convert",
+  schemas: {
+    context: types<ConvertContext>(),
+    events: {
+      "file.selected": types<{ file: File }>(),
+      "output.selected": types<{ output: OutputFormat }>(),
+      "quality.selected": types<{ quality: number }>(),
+      convert: types<Record<string, never>>(),
+      progress: types<{ percent: number }>(),
+      "conversion.done": types<{
+        downloadUrl: string;
+        convertedName: string;
+      }>(),
+      "conversion.error": types<{ message: string }>(),
+      reset: types<Record<string, never>>(),
     },
-    events: {} as
-      | { type: "file.selected"; file: File }
-      | { type: "output.selected"; output: OutputFormat }
-      | { type: "convert" }
-      | ConvertProgressEvent
-      | ConvertDoneEvent
-      | ConvertErrorEvent
-      | { type: "reset" },
-  },
-  guards: {
-    canConvert: ({ context }) =>
-      context.file !== null && context.output !== null,
-  },
-  actions: {
-    resetOnNewFile: assign({
-      file: (_, params: { file: File }) => params.file,
-      output: () => null,
-      inputVideoCodec: () => null,
-      inputAudioCodec: () => null,
-      error: () => null,
-      downloadUrl: () => null,
-      convertedName: () => "",
-      progress: () => 0,
-    }),
-    setOutput: assign({
-      output: (_, params: { output: OutputFormat }) => params.output,
-    }),
-    setCodecs: assign({
-      inputVideoCodec: (
-        _,
-        params: { videoCodec: string | null; audioCodec: string | null },
-      ) => params.videoCodec,
-      inputAudioCodec: (
-        _,
-        params: { videoCodec: string | null; audioCodec: string | null },
-      ) => params.audioCodec,
-    }),
-    setProgress: assign({
-      progress: (_, params: { percent: number }) => params.percent,
-    }),
-    completeConversion: assign({
-      downloadUrl: (
-        _,
-        params: { downloadUrl: string; convertedName: string },
-      ) => params.downloadUrl,
-      convertedName: (
-        _,
-        params: { downloadUrl: string; convertedName: string },
-      ) => params.convertedName,
-      progress: () => 100,
-    }),
-    setConversionError: assign({
-      error: (_, params: { message: string }) => params.message,
-    }),
-    resetAll: assign({
-      file: () => null,
-      output: () => null,
-      progress: () => 0,
-      error: () => null,
-      downloadUrl: () => null,
-      convertedName: () => "",
-      inputVideoCodec: () => null,
-      inputAudioCodec: () => null,
-    }),
   },
   actors: {
-    probeFile: fromPromise(async ({ input }: { input: { file: File } }) => {
-      const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
-      const mediainput = new Input({
-        formats: ALL_FORMATS,
-        source: new BlobSource(input.file),
-      });
-      try {
-        const [videoTrack, audioTrack] = await Promise.all([
-          mediainput.getPrimaryVideoTrack(),
-          mediainput.getPrimaryAudioTrack(),
-        ]);
-        const [videoConfig, audioConfig] = await Promise.all([
-          videoTrack?.getDecoderConfig(),
-          audioTrack?.getDecoderConfig(),
-        ]);
-        return {
-          videoCodec: videoConfig?.codec ?? null,
-          audioCodec: audioConfig?.codec ?? null,
-        };
-      } finally {
-        mediainput.dispose();
-      }
+    probeFile: createAsyncLogic({
+      id: "probeFile",
+      run: async ({ input }: { input: { file: File } }) => {
+        const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
+        const mediainput = new Input({
+          formats: ALL_FORMATS,
+          source: new BlobSource(input.file),
+        });
+        try {
+          const [videoTrack, audioTrack] = await Promise.all([
+            mediainput.getPrimaryVideoTrack(),
+            mediainput.getPrimaryAudioTrack(),
+          ]);
+          const [videoConfig, audioConfig] = await Promise.all([
+            videoTrack?.getDecoderConfig(),
+            audioTrack?.getDecoderConfig(),
+          ]);
+          return {
+            videoCodec: videoConfig?.codec ?? null,
+            audioCodec: audioConfig?.codec ?? null,
+          };
+        } finally {
+          mediainput.dispose();
+        }
+      },
     }),
-    runConversion: fromCallback<
+    runConversion: createCallbackLogic<
       ConvertProgressEvent | ConvertDoneEvent | ConvertErrorEvent,
-      { file: File; output: OutputFormat }
+      { file: File; output: OutputFormat; videoQuality: number }
     >(({ sendBack, input }) => {
       void (async () => {
         try {
@@ -195,7 +260,7 @@ export const convertMachine = setup({
             MkvOutputFormat,
             Mp4OutputFormat,
             Output,
-            QUALITY_VERY_HIGH,
+            Quality,
             WebMOutputFormat,
           } = await import("mediabunny");
 
@@ -223,14 +288,14 @@ export const convertMachine = setup({
           const videoOptions = input.output.videoCodec
             ? {
                 codec: input.output.videoCodec,
-                bitrate: input.output.videoBitrate ?? QUALITY_VERY_HIGH,
+                quality: new Quality({ quantizer: input.videoQuality }),
               }
             : undefined;
 
           const audioOptions = input.output.audioCodec
             ? {
                 codec: input.output.audioCodec,
-                bitrate: input.output.audioBitrate ?? QUALITY_VERY_HIGH,
+                quality: new Quality("very-high"),
               }
             : undefined;
 
@@ -293,8 +358,6 @@ export const convertMachine = setup({
       return () => {};
     }),
   },
-}).createMachine({
-  id: "convert",
   initial: "idle",
   context: {
     file: null,
@@ -305,22 +368,21 @@ export const convertMachine = setup({
     convertedName: "",
     inputVideoCodec: null,
     inputAudioCodec: null,
+    videoQuality: DEFAULT_VIDEO_QUALITY,
   },
   states: {
     idle: {
       on: {
-        "file.selected": {
+        "file.selected": ({ event }) => ({
           target: "ready",
-          actions: [
-            {
-              type: "resetOnNewFile",
-              params: ({ event }) => {
-                assertEvent(event, "file.selected");
-                return { file: event.file };
-              },
-            },
-          ],
-        },
+          context: resetOnNewFile(event.file),
+        }),
+        "output.selected": ({ context, event }) => ({
+          context: setOutput(context, event.output),
+        }),
+        "quality.selected": ({ context, event }) => ({
+          context: setQuality(context, event.quality),
+        }),
       },
     },
     ready: {
@@ -328,57 +390,27 @@ export const convertMachine = setup({
         src: "probeFile",
         // oxlint-disable-next-line
         input: ({ context }) => ({ file: context.file! }),
-        onDone: {
-          actions: [
-            {
-              type: "setCodecs",
-              params: ({ event }) => ({
-                // oxlint-disable-next-line
-                videoCodec: event.output.videoCodec!,
-                // oxlint-disable-next-line
-                audioCodec: event.output.audioCodec!,
-              }),
-            },
-          ],
-        },
-        onError: {
-          actions: [
-            {
-              type: "setCodecs",
-              params: { videoCodec: null, audioCodec: null },
-            },
-          ],
-        },
+        onDone: ({ event }) => ({
+          context: setCodecs(event.output.videoCodec, event.output.audioCodec),
+        }),
+        onError: () => ({ context: setCodecs(null, null) }),
       },
       on: {
-        "file.selected": {
+        "file.selected": ({ event }) => ({
           target: "ready",
           reenter: true,
-          actions: [
-            {
-              type: "resetOnNewFile",
-              params: ({ event }) => {
-                assertEvent(event, "file.selected");
-                return { file: event.file };
-              },
-            },
-          ],
-        },
-        "output.selected": {
-          actions: [
-            {
-              type: "setOutput",
-              params: ({ event }) => {
-                assertEvent(event, "output.selected");
-                return { output: event.output };
-              },
-            },
-          ],
-        },
-        convert: {
-          target: "converting",
-          guard: { type: "canConvert" },
-        },
+          context: resetOnNewFile(event.file),
+        }),
+        "output.selected": ({ context, event }) => ({
+          context: setOutput(context, event.output),
+        }),
+        "quality.selected": ({ context, event }) => ({
+          context: setQuality(context, event.quality),
+        }),
+        convert: ({ context }) =>
+          context.file !== null && context.output !== null
+            ? { target: "converting" }
+            : undefined,
       },
     },
     converting: {
@@ -390,114 +422,65 @@ export const convertMachine = setup({
           file: context.file!,
           // oxlint-disable-next-line
           output: context.output!,
+          videoQuality: context.videoQuality,
         }),
       },
       on: {
-        progress: {
-          actions: [
-            {
-              type: "setProgress",
-              params: ({ event }) => {
-                assertEvent(event, "progress");
-                return { percent: event.percent };
-              },
-            },
-          ],
-        },
-        "conversion.done": {
+        progress: ({ event }) => ({ context: setProgress(event.percent) }),
+        "conversion.done": ({ event }) => ({
           target: "success",
-          actions: [
-            {
-              type: "completeConversion",
-              params: ({ event }) => {
-                assertEvent(event, "conversion.done");
-                return {
-                  downloadUrl: event.downloadUrl,
-                  convertedName: event.convertedName,
-                };
-              },
-            },
-          ],
-        },
-        "conversion.error": {
+          context: completeConversion(event.downloadUrl, event.convertedName),
+        }),
+        "conversion.error": ({ event }) => ({
           target: "error",
-          actions: [
-            {
-              type: "setConversionError",
-              params: ({ event }) => {
-                assertEvent(event, "conversion.error");
-                return { message: event.message };
-              },
-            },
-          ],
-        },
+          context: setConversionError(event.message),
+        }),
       },
     },
     success: {
       on: {
-        "file.selected": {
+        "file.selected": ({ event }) => ({
           target: "ready",
-          actions: [
-            {
-              type: "resetOnNewFile",
-              params: ({ event }) => {
-                assertEvent(event, "file.selected");
-                return { file: event.file };
-              },
-            },
-          ],
-        },
-        "output.selected": {
-          actions: [
-            {
-              type: "setOutput",
-              params: ({ event }) => {
-                assertEvent(event, "output.selected");
-                return { output: event.output };
-              },
-            },
-          ],
-        },
-        reset: {
-          target: "idle",
-          actions: [{ type: "resetAll" }],
-        },
+          context: resetOnNewFile(event.file),
+        }),
+        "output.selected": ({ context, event }) => ({
+          context: setOutput(context, event.output),
+        }),
+        "quality.selected": ({ context, event }) => ({
+          context: setQuality(context, event.quality),
+        }),
+        reset: () => ({ target: "idle", context: resetAll() }),
       },
     },
     error: {
       on: {
-        "file.selected": {
+        "file.selected": ({ event }) => ({
           target: "ready",
-          actions: [
-            {
-              type: "resetOnNewFile",
-              params: ({ event }) => {
-                assertEvent(event, "file.selected");
-                return { file: event.file };
-              },
-            },
-          ],
-        },
-        "output.selected": {
-          actions: [
-            {
-              type: "setOutput",
-              params: ({ event }) => {
-                assertEvent(event, "output.selected");
-                return { output: event.output };
-              },
-            },
-          ],
-        },
-        convert: {
-          target: "converting",
-          guard: { type: "canConvert" },
-        },
-        reset: {
-          target: "idle",
-          actions: [{ type: "resetAll" }],
-        },
+          context: resetOnNewFile(event.file),
+        }),
+        "output.selected": ({ context, event }) => ({
+          context: setOutput(context, event.output),
+        }),
+        "quality.selected": ({ context, event }) => ({
+          context: setQuality(context, event.quality),
+        }),
+        convert: ({ context }) =>
+          context.file !== null && context.output !== null
+            ? { target: "converting" }
+            : undefined,
+        reset: () => ({ target: "idle", context: resetAll() }),
       },
     },
   },
 });
+
+/**
+ * `StateMachine` in xstate@6.0.0-alpha.36 declares
+ * `validator?: ActorLogicValidator | undefined`, which is not assignable to
+ * `AnyActorLogic` under `exactOptionalPropertyTypes`. This alias keeps the full
+ * machine type while fixing only that variance, so the machine can be passed to
+ * `createActor` / `useActorRef`.
+ */
+export type ConvertMachineLogic = Omit<typeof convertMachine, "validator"> & {
+  validator?: NonNullable<AnyActorLogic["validator"]>;
+};

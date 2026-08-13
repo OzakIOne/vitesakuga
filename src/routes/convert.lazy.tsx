@@ -10,6 +10,7 @@ import {
   Portal,
   Progress,
   Select,
+  Slider,
   Text,
   createListCollection,
 } from "@chakra-ui/react";
@@ -23,8 +24,10 @@ import type { AnyActorRef } from "xstate";
 import {
   SUPPORTED_OUTPUTS,
   convertMachine,
+  getVideoQualityRange,
   isPassthroughCompatible,
 } from "./-convert.machine";
+import type { ConvertMachineLogic } from "./-convert.machine";
 
 const outputFormats = createListCollection({
   items: SUPPORTED_OUTPUTS.map((format) => ({
@@ -63,7 +66,12 @@ function ConversionProgress({ actor }: { actor: ActorLike }) {
 }
 
 function RouteComponent() {
-  const actorRef = useActorRef(convertMachine);
+  // xstate@6.0.0-alpha.36 types `StateMachine.validator` with an explicit
+  // `| undefined`, which fails the `AnyActorLogic` constraint of `useActorRef`
+  // under `exactOptionalPropertyTypes`. `ConvertMachineLogic` fixes only that.
+  const actorRef = useActorRef(
+    convertMachine as unknown as ConvertMachineLogic,
+  );
 
   const file = useSelector(actorRef, (s) => s.context.file);
   const output = useSelector(actorRef, (s) => s.context.output);
@@ -74,6 +82,7 @@ function RouteComponent() {
     actorRef,
     (s) => s.context.inputVideoCodec,
   );
+  const videoQuality = useSelector(actorRef, (s) => s.context.videoQuality);
   const isConverting = useSelector(actorRef, (s) => s.matches("converting"));
   const isSuccess = useSelector(actorRef, (s) => s.matches("success"));
 
@@ -192,6 +201,42 @@ function RouteComponent() {
             </Select.Root>
           </Box>
         </Box>
+
+        {output?.videoCodec && (
+          <Box mb={4}>
+            <Text mb={2}>Encoding Quality</Text>
+            <Slider.Root
+              disabled={isConverting}
+              max={getVideoQualityRange(output.videoCodec).max}
+              min={getVideoQualityRange(output.videoCodec).min}
+              onValueChange={(details) => {
+                const quality = details.value[0];
+                if (quality !== undefined) {
+                  actorRef.send({ type: "quality.selected", quality });
+                }
+              }}
+              step={1}
+              value={[videoQuality]}
+              width="full"
+            >
+              <Slider.Label>Quality (CRF)</Slider.Label>
+              <Slider.ValueText>{videoQuality}</Slider.ValueText>
+              <Slider.Control>
+                <Slider.Track>
+                  <Slider.Range />
+                </Slider.Track>
+                <Slider.Thumb index={0}>
+                  <Slider.HiddenInput />
+                </Slider.Thumb>
+              </Slider.Control>
+            </Slider.Root>
+            <Text color="fg.subtle" fontSize="sm">
+              Lower CRF = higher quality, larger file. Range:{" "}
+              {getVideoQualityRange(output.videoCodec).min}–
+              {getVideoQualityRange(output.videoCodec).max}.
+            </Text>
+          </Box>
+        )}
 
         <Button
           colorScheme="blue"

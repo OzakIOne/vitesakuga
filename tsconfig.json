@@ -14,8 +14,8 @@
       "*": ["./*"]
     },
     "resolveJsonModule": true,
-    "verbatimModuleSyntax": true,
-
+    // Do not put verbatimModuleSyntax to true, it can result in server bundles leaking into client bundles
+    "verbatimModuleSyntax": false,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -33,35 +33,9 @@
     "target": "ES2022",
     "types": ["vite/client", "@cloudflare/workers-types"],
     "plugins": [
-      { "name": "effect/language-service" },
       {
         "name": "@effect/language-service",
-        "diagnosticSeverity": {
-          "abortControllerInEffect": "warning",
-          "asyncFunction": "warning",
-          "cryptoRandomUUID": "warning",
-          "cryptoRandomUUIDInEffect": "warning",
-          "extendsNativeError": "warning",
-          "globalConsole": "warning",
-          "globalConsoleInEffect": "warning",
-          "globalDate": "warning",
-          "globalDateInEffect": "warning",
-          "globalFetch": "warning",
-          "globalFetchInEffect": "warning",
-          "globalRandom": "warning",
-          "globalRandomInEffect": "warning",
-          "globalTimers": "warning",
-          "globalTimersInEffect": "warning",
-          "instanceOfSchema": "warning",
-          "nestedEffectGenYield": "error",
-          "newPromise": "warning",
-          "nodeBuiltinImport": "warning",
-          "preferSchemaOverJson": "warning",
-          "preferTypedSchemaDecoder": "error",
-          "processEnv": "warning",
-          "processEnvInEffect": "warning",
-          "unsafeEffectTypeAssertion": "warning"
-        }
+        "diagnostics": false
       }
     ]
   },

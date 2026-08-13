@@ -1,12 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { createActor, fromCallback, fromPromise } from "xstate";
+import { createActor, createAsyncLogic, createCallbackLogic } from "xstate";
 
 import {
+  clampVideoQuality,
   convertMachine,
+  type ConvertMachineLogic,
+  DEFAULT_VIDEO_QUALITY,
   getCodecFamily,
+  getVideoQualityRange,
   isPassthroughCompatible,
+  type OutputFormat,
   SUPPORTED_OUTPUTS,
 } from "../routes/-convert.machine";
+
+describe(getVideoQualityRange, () => {
+  it("caps quality so near-lossless CRF 0 and 1 are unreachable", () => {
+    expect(getVideoQualityRange("avc").min).toBe(2);
+    expect(getVideoQualityRange("vp9").min).toBe(2);
+  });
+
+  it("uses the legal quantizer maxima per codec", () => {
+    expect(getVideoQualityRange("avc").max).toBe(51);
+    expect(getVideoQualityRange("vp9").max).toBe(63);
+  });
+});
+
+describe(clampVideoQuality, () => {
+  it("clamps values below the floor to the floor", () => {
+    expect(clampVideoQuality(0, "avc")).toBe(2);
+    expect(clampVideoQuality(1, "vp9")).toBe(2);
+  });
+
+  it("clamps values above the codec maximum", () => {
+    expect(clampVideoQuality(99, "avc")).toBe(51);
+    expect(clampVideoQuality(99, "vp9")).toBe(63);
+  });
+
+  it("rounds fractional values", () => {
+    expect(clampVideoQuality(18.4, "avc")).toBe(18);
+    expect(clampVideoQuality(18.6, "avc")).toBe(19);
+  });
+});
 
 describe(getCodecFamily, () => {
   it("returns avc for AVC codecs", () => {
@@ -91,21 +125,30 @@ describe("convertMachine", () => {
   const dummyFile = new File(["dummy"], "test.mp4", { type: "video/mp4" });
   const mp4Transcode = SUPPORTED_OUTPUTS[0]!;
 
+  /**
+   * xstate@6.0.0-alpha.36 types `StateMachine.validator` with an explicit
+   * `| undefined`, which fails the `AnyActorLogic` constraint of `createActor`
+   * under `exactOptionalPropertyTypes`. `ConvertMachineLogic` fixes only that.
+   */
+  function createActorFor(provided: unknown) {
+    return createActor(provided as ConvertMachineLogic);
+  }
+
   /** Creates an actor with mocked probe that sets codecs to known values. */
   function createConvertActor() {
-    return createActor(
+    return createActorFor(
       convertMachine.provide({
         actors: {
-          probeFile: fromPromise(
-            async (): Promise<{
+          probeFile: createAsyncLogic({
+            run: async (): Promise<{
               videoCodec: string | null;
               audioCodec: string | null;
             }> => ({
               videoCodec: "avc1",
               audioCodec: "aac",
             }),
-          ),
-          runConversion: fromCallback(() => () => {}),
+          }),
+          runConversion: createCallbackLogic(() => () => {}),
         },
       }),
     );
@@ -139,12 +182,14 @@ describe("convertMachine", () => {
       // probe should have set codecs
       expect(actor.getSnapshot().context.inputVideoCodec).toBe("avc1");
       actor.send({ type: "output.selected", output: mp4Transcode });
+      actor.send({ type: "quality.selected", quality: 30 });
       actor.send({ type: "file.selected", file: dummyFile });
 
       const ctx = actor.getSnapshot().context;
       expect(ctx.output).toBeNull();
       expect(ctx.inputVideoCodec).toBeNull();
       expect(ctx.inputAudioCodec).toBeNull();
+      expect(ctx.videoQuality).toBe(DEFAULT_VIDEO_QUALITY);
       expect(ctx.downloadUrl).toBeNull();
       expect(ctx.error).toBeNull();
     });
@@ -164,17 +209,17 @@ describe("convertMachine", () => {
     });
 
     it("clears codecs on probe failure", async () => {
-      const actor = createActor(
+      const actor = createActorFor(
         convertMachine.provide({
           actors: {
-            probeFile: fromPromise(
-              async (): Promise<{
+            probeFile: createAsyncLogic({
+              run: async (): Promise<{
                 videoCodec: string | null;
                 audioCodec: string | null;
               }> => {
                 throw new Error("probe failed");
               },
-            ),
+            }),
           },
         }),
       );
@@ -190,18 +235,18 @@ describe("convertMachine", () => {
 
     it("restarts probe on new file selection in ready state", async () => {
       let callCount = 0;
-      const actor = createActor(
+      const actor = createActorFor(
         convertMachine.provide({
           actors: {
-            probeFile: fromPromise(
-              async (): Promise<{
+            probeFile: createAsyncLogic({
+              run: async (): Promise<{
                 videoCodec: string | null;
                 audioCodec: string | null;
               }> => {
                 callCount++;
                 return { videoCodec: null, audioCodec: null };
               },
-            ),
+            }),
           },
         }),
       );
@@ -220,6 +265,15 @@ describe("convertMachine", () => {
   });
 
   describe("output.selected event", () => {
+    it("sets output from idle state", () => {
+      const actor = createConvertActor();
+      actor.start();
+      actor.send({ type: "output.selected", output: mp4Transcode });
+
+      expect(actor.getSnapshot().value).toBe("idle");
+      expect(actor.getSnapshot().context.output).toBe(mp4Transcode);
+    });
+
     it("sets output while staying in ready", () => {
       const actor = createConvertActor();
       actor.start();
@@ -241,6 +295,67 @@ describe("convertMachine", () => {
 
       actor.send({ type: "output.selected", output: mp4Transcode });
       expect(actor.getSnapshot().context.output).toBe(mp4Transcode);
+    });
+  });
+
+  describe("quality.selected event", () => {
+    it("updates video quality in ready state", () => {
+      const actor = createConvertActor();
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      actor.send({ type: "output.selected", output: mp4Transcode });
+      actor.send({ type: "quality.selected", quality: 24 });
+
+      expect(actor.getSnapshot().context.videoQuality).toBe(24);
+    });
+
+    it("clamps quality to the selected output's codec range", () => {
+      const actor = createConvertActor();
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      actor.send({ type: "output.selected", output: mp4Transcode }); // avc
+      actor.send({ type: "quality.selected", quality: 0 });
+      expect(actor.getSnapshot().context.videoQuality).toBe(2);
+
+      actor.send({ type: "quality.selected", quality: 99 });
+      expect(actor.getSnapshot().context.videoQuality).toBe(51);
+    });
+
+    it("passes the selected quality to the conversion", () => {
+      let receivedQuality: number | undefined;
+      const actor = createActorFor(
+        convertMachine.provide({
+          actors: {
+            probeFile: createAsyncLogic({
+              run: async (): Promise<{
+                videoCodec: string | null;
+                audioCodec: string | null;
+              }> => ({ videoCodec: "avc1", audioCodec: "aac" }),
+            }),
+            runConversion: createCallbackLogic(
+              ({
+                input,
+              }: {
+                input: {
+                  file: File;
+                  output: OutputFormat;
+                  videoQuality: number;
+                };
+              }) => {
+                receivedQuality = input.videoQuality;
+                return () => {};
+              },
+            ),
+          },
+        }),
+      );
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      actor.send({ type: "output.selected", output: mp4Transcode });
+      actor.send({ type: "quality.selected", quality: 24 });
+      actor.send({ type: "convert" });
+
+      expect(receivedQuality).toBe(24);
     });
   });
 
@@ -354,6 +469,7 @@ describe("convertMachine", () => {
       expect(ctx.convertedName).toBe("");
       expect(ctx.inputVideoCodec).toBeNull();
       expect(ctx.inputAudioCodec).toBeNull();
+      expect(ctx.videoQuality).toBe(DEFAULT_VIDEO_QUALITY);
     });
 
     it("transitions error → idle and clears context", () => {
@@ -370,6 +486,21 @@ describe("convertMachine", () => {
 
       expect(actor.getSnapshot().value).toBe("idle");
       expect(actor.getSnapshot().context.error).toBeNull();
+    });
+
+    it("resets video quality to the default", () => {
+      const actor = createConvertActor();
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      actor.send({ type: "output.selected", output: mp4Transcode });
+      actor.send({ type: "quality.selected", quality: 30 });
+      actor.send({ type: "convert" });
+      actor.send({ type: "conversion.error", message: "fail" });
+      actor.send({ type: "reset" });
+
+      expect(actor.getSnapshot().context.videoQuality).toBe(
+        DEFAULT_VIDEO_QUALITY,
+      );
     });
   });
 
