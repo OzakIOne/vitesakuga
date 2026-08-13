@@ -1,5 +1,13 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
+export const userPublicSchema = Schema.Struct({
+  id: Schema.String,
+  image: Schema.NullOr(Schema.String),
+  name: Schema.String,
+});
+
+export type UserPublic = Schema.Schema.Type<typeof userPublicSchema>;
+
 export const fetchUserInputSchema = Schema.Struct({
   page: Schema.Number.pipe(
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),

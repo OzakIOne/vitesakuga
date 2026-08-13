@@ -1,8 +1,19 @@
-import { Link } from "@tanstack/react-router";
-import { memo } from "react";
-import { LuThumbsDown, LuThumbsUp } from "react-icons/lu";
+import { Portal } from "@ark-ui/react";
+import { Link, useRouteContext } from "@tanstack/react-router";
+import { memo, useState } from "react";
+import {
+  LuEllipsisVertical,
+  LuListPlus,
+  LuShare2,
+  LuThumbsDown,
+  LuThumbsUp,
+} from "react-icons/lu";
+import { PlaylistAddModal } from "src/components/PlaylistAddModal";
+import { IconButton } from "src/components/ui/button";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
+import { Menu } from "src/components/ui/overlay";
+import { toaster } from "src/components/ui/toaster";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import type { PostWithVotes } from "src/lib/db/schema";
@@ -12,6 +23,80 @@ type PostListProps = {
   post: PostWithVotes;
   searchParams?: PostsSearchParams;
 };
+
+function PostCardMenu({ post }: { post: PostWithVotes }) {
+  const { user } = useRouteContext({ from: "__root__" });
+  const currentUserId = user?.id;
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/posts/${post.id}`;
+    void navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        toaster.create({
+          description: url,
+          duration: 2000,
+          title: "Link copied",
+          type: "success",
+        });
+      })
+      .catch(() => {
+        toaster.create({
+          description: "Could not copy the link.",
+          duration: 2000,
+          title: "Copy failed",
+          type: "error",
+        });
+      });
+  };
+
+  return (
+    <>
+      <Menu.Root>
+        <Menu.Trigger asChild>
+          <IconButton
+            aria-label={`Post actions for ${post.title}`}
+            className="bg-black/30 text-white backdrop-blur-sm hover:bg-black/40"
+            size="xs"
+          >
+            <LuEllipsisVertical />
+          </IconButton>
+        </Menu.Trigger>
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content>
+              <Menu.Item onClick={handleShare} value="share">
+                <LuShare2 />
+                Share
+              </Menu.Item>
+              {currentUserId && (
+                <Menu.Item
+                  onClick={() => {
+                    setShowPlaylistModal(true);
+                  }}
+                  value="playlist"
+                >
+                  <LuListPlus />
+                  Add to playlist
+                </Menu.Item>
+              )}
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
+      {showPlaylistModal && currentUserId && (
+        <PlaylistAddModal
+          onCancel={() => {
+            setShowPlaylistModal(false);
+          }}
+          postId={post.id}
+          userId={currentUserId}
+        />
+      )}
+    </>
+  );
+}
 
 function PostCardComponent({ post, searchParams }: PostListProps) {
   return (
@@ -42,6 +127,18 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
             src={assetUrl(post.thumbnailKey)}
             w="full"
           />
+          <Box
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            position="absolute"
+            right={2}
+            top={2}
+            zIndex={10}
+          >
+            <PostCardMenu post={post} />
+          </Box>
         </Box>
 
         {/* Content Container */}

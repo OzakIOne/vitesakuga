@@ -132,10 +132,12 @@ export function PostsPageLayout({
                                   </Popover.Trigger>
                                   <Portal>
                                     <Popover.Positioner>
-                                      <Popover.Content>
+                                      <Popover.Content maxW="sm">
                                         <Popover.Arrow />
                                         <Popover.Body>
-                                          <Text>{value}</Text>
+                                          <Text className="max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
+                                            {value}
+                                          </Text>
                                         </Popover.Body>
                                       </Popover.Content>
                                     </Popover.Positioner>

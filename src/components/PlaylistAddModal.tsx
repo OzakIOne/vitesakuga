@@ -50,6 +50,9 @@ export function PlaylistAddModal({
 
     toastSuccess("Added to playlist", "The post was added to the playlist.");
     void queryClient.invalidateQueries({
+      queryKey: playlistsKeys.detailForPlaylist(playlistId),
+    });
+    void queryClient.invalidateQueries({
       queryKey: playlistsKeys.userPlaylists(userId),
     });
   };
@@ -72,6 +75,9 @@ export function PlaylistAddModal({
       "Removed from playlist",
       "The post was removed from the playlist.",
     );
+    void queryClient.invalidateQueries({
+      queryKey: playlistsKeys.detailForPlaylist(playlistId),
+    });
     void queryClient.invalidateQueries({
       queryKey: playlistsKeys.userPlaylists(userId),
     });

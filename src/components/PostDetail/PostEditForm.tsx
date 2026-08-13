@@ -2,7 +2,9 @@ import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import { Button } from "src/components/ui/button";
+import { Field } from "src/components/ui/field";
 import { Box } from "src/components/ui/layout";
+import { TagInput } from "src/components/ui/tag-input";
 import { Text } from "src/components/ui/typography";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { postsKeys } from "src/lib/posts/posts.queries";
@@ -23,6 +25,7 @@ export function PostEditForm({
   post,
   initialTags,
   onSuccess: onSaved,
+  onCancel,
   postId,
 }: PostEditFormProps) {
   const queryClient = useQueryClient();
@@ -100,7 +103,7 @@ export function PostEditForm({
       >
         <editForm.Field name="title">
           {(field) => (
-            <Box mb={2}>
+            <Box mb={4}>
               <FormTextWrapper field={field} isRequired label="Title" />
             </Box>
           )}
@@ -108,7 +111,7 @@ export function PostEditForm({
 
         <editForm.Field name="content">
           {(field) => (
-            <Box mb={2}>
+            <Box mb={4}>
               <FormTextWrapper
                 asTextarea
                 field={field}
@@ -121,13 +124,32 @@ export function PostEditForm({
 
         <editForm.Field name="source">
           {(field) => (
-            <Box mb={2}>
+            <Box mb={4}>
               <FormTextWrapper
                 asTextarea
                 field={field}
                 helper="Link to the original source (Twitter, YouTube, etc.)"
                 label="Source URL"
               />
+            </Box>
+          )}
+        </editForm.Field>
+
+        <editForm.Field name="tags">
+          {(field) => (
+            <Box mb={4}>
+              <Field.Root>
+                <Field.Label>Tags</Field.Label>
+                <TagInput
+                  onChange={(newTags) => {
+                    field.handleChange(
+                      newTags as { id: number; name: string }[],
+                    );
+                  }}
+                  onBlur={field.handleBlur}
+                  value={field.state.value}
+                />
+              </Field.Root>
             </Box>
           )}
         </editForm.Field>
@@ -140,13 +162,18 @@ export function PostEditForm({
           ]}
         >
           {([canSubmit, isSubmitting, isPristine]) => (
-            <Button
-              disabled={!canSubmit || isPristine}
-              loading={isSubmitting === true}
-              type="submit"
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
+            <div className="mt-2 flex items-center gap-2">
+              <Button
+                disabled={!canSubmit || isPristine}
+                loading={isSubmitting === true}
+                type="submit"
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </Button>
+              <Button onClick={onCancel} variant="ghost">
+                Cancel
+              </Button>
+            </div>
           )}
         </editForm.Subscribe>
       </form>

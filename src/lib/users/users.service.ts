@@ -3,7 +3,6 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import {
   postsSelectSchema,
   postWithVotesSelectSchema,
-  userSelectSchema,
   type PostWithVotes,
 } from "src/lib/db/schema";
 
@@ -15,7 +14,7 @@ import { computePagination } from "../pagination/pagination";
 import { createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchPostVoteCounts } from "../votes/votes.utils";
-import { fetchUserInputSchema } from "./users.schema";
+import { fetchUserInputSchema, userPublicSchema } from "./users.schema";
 
 const PAGE_SIZE = 30;
 
@@ -23,7 +22,7 @@ export class UsersService extends Context.Service<
   UsersService,
   {
     readonly all: () => Effect.Effect<
-      readonly Schema.Schema.Type<typeof userSelectSchema>[],
+      readonly Schema.Schema.Type<typeof userPublicSchema>[],
       SqlError | ValidationError
     >;
     readonly userPosts: (
@@ -53,9 +52,11 @@ export class UsersService extends Context.Service<
     const db = yield* KyselyDB;
 
     const all = Effect.fn("UsersService.all")(function* () {
-      const data = yield* db.execute(db.selectFrom("user").selectAll());
+      const data = yield* db.execute(
+        db.selectFrom("user").select(["id", "name", "image"]),
+      );
       return yield* Effect.try({
-        try: () => parse(Schema.Array(userSelectSchema))(data),
+        try: () => parse(Schema.Array(userPublicSchema))(data),
         catch: (error) =>
           new ValidationError({
             message: "There was an error processing the search results",

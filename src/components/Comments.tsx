@@ -73,7 +73,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   };
 
   return (
-    <Box borderRadius="md" padding="4" shadow="md">
+    <Box borderRadius="md" padding="4">
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Comments
       </Text>
@@ -114,7 +114,6 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
             key={comment.id}
             mb={3}
             p={3}
-            shadow="sm"
           >
             <Box flex="1">
               <Text color="gray.600" fontSize="sm" mb={1}>

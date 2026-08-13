@@ -6,9 +6,9 @@ import {
 } from "@tanstack/react-db";
 import type { Tag } from "src/lib/posts/posts.schema";
 
-import type { DbSchemaSelect } from "../db/schema";
 import { getQueryClient } from "../query-client";
 import { getAllTags } from "../tags/tags.service";
+import type { UserPublic } from "../users/users.schema";
 import { fetchUsers } from "../users/users.service";
 
 const queryClient = getQueryClient();
@@ -24,7 +24,7 @@ export const tagsCollection = createCollection(
 );
 
 export const usersCollection = createCollection(
-  queryCollectionOptions<DbSchemaSelect["user"]>({
+  queryCollectionOptions<UserPublic>({
     queryKey: ["users", "collection"],
     queryFn: async () => [...(await fetchUsers())],
     queryClient,

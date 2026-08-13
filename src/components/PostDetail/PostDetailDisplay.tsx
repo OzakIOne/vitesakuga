@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Comments } from "src/components/Comments";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
-import { Button } from "src/components/ui/button";
 import { Box, VStack } from "src/components/ui/layout";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 
@@ -13,7 +12,6 @@ type PostDetailDisplayProps = {
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
   currentUserId?: string | undefined;
   onEditClick?: (() => void) | undefined;
-  onBack: () => void;
 };
 
 export function PostDetailDisplay({
@@ -23,16 +21,11 @@ export function PostDetailDisplay({
   relatedPost,
   currentUserId,
   onEditClick,
-  onBack,
 }: PostDetailDisplayProps) {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   return (
     <VStack align="stretch" gap={4}>
-      <Button alignSelf="flex-start" onClick={onBack}>
-        Back
-      </Button>
-
       <Box border="1px" borderRadius="md" p={4} shadow="md">
         <Post
           currentUserId={currentUserId}
@@ -49,7 +42,9 @@ export function PostDetailDisplay({
 
       {showPlaylistModal && currentUserId && (
         <PlaylistAddModal
-          onCancel={() => setShowPlaylistModal(false)}
+          onCancel={() => {
+            setShowPlaylistModal(false);
+          }}
           postId={post.id}
           userId={currentUserId}
         />

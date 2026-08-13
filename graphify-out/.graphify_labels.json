@@ -68,6 +68,7 @@
   "66": "@opentelemetry/sdk-trace-node",
   "67": "probe.ts",
   "68": "oxfmt",
+  "69": "playlists.schema.ts",
   "70": "pg",
   "71": "postgres",
   "72": "react",
@@ -146,9 +147,15 @@
   "145": "storage.module.ts",
   "146": "probe.ts",
   "147": "server-fn.handler.ts",
+  "148": "@ark-ui/react",
   "149": "@cloudflare/workers-types",
   "150": "tailwindcss",
   "151": "@tanstack/eslint-plugin-router",
   "152": "vite",
-  "153": "triage-labels.md"
+  "153": "triage-labels.md",
+  "154": "@opentelemetry/sdk-trace-base",
+  "155": "oxlint",
+  "156": "knip",
+  "157": "@types/react",
+  "158": "typescript"
 }

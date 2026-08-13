@@ -36,7 +36,9 @@ describe("UsersService.all", () => {
 
     expect(result[0]).toHaveProperty("id");
     expect(result[0]).toHaveProperty("name");
-    expect(result[0]).toHaveProperty("email");
+    expect(result[0]).toHaveProperty("image");
+    expect(result[0]).not.toHaveProperty("email");
+    expect(result[0]).not.toHaveProperty("emailVerified");
   });
 });
 

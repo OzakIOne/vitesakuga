@@ -62,7 +62,7 @@ export const Avatar = {
     return (
       <ArkAvatar.Fallback
         className={cx(
-          "flex h-full w-full items-center justify-center bg-gray-200 font-medium text-gray-700",
+          "flex h-full w-full items-center justify-center bg-gray-200 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200",
           className,
         )}
         style={style}
@@ -91,7 +91,7 @@ export const Card = {
     return (
       <div
         className={cx(
-          "rounded-lg border border-gray-200 bg-white shadow-sm",
+          "rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
         style={style}

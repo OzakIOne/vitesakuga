@@ -2397,8 +2397,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "package_dependencies_effect",
-      "community": 148,
-      "community_name": "playlists.fn.test.ts",
+      "community": 18,
+      "community_name": "dependencies",
       "norm_label": "effect"
     },
     {
@@ -2408,8 +2408,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "effect",
-      "community": 148,
-      "community_name": "playlists.fn.test.ts",
+      "community": 18,
+      "community_name": "dependencies",
       "norm_label": "effect"
     },
     {
@@ -2463,8 +2463,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "package_dependencies_media_chrome",
-      "community": 18,
-      "community_name": "dependencies",
+      "community": 3,
+      "community_name": "playlists.service.ts",
       "norm_label": "media-chrome"
     },
     {
@@ -2474,8 +2474,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "media_chrome",
-      "community": 18,
-      "community_name": "dependencies",
+      "community": 3,
+      "community_name": "playlists.service.ts",
       "norm_label": "media-chrome"
     },
     {
@@ -3662,8 +3662,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_notfound",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "notfound.tsx"
     },
     {
@@ -3673,8 +3673,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_notfound_notfound",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "notfound()"
     },
     {
@@ -3684,8 +3684,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_pagination",
-      "community": 0,
-      "community_name": "posts.schema.ts",
+      "community": 106,
+      "community_name": "users.$id.playlists.$playlistId.tsx",
       "norm_label": "pagination.tsx"
     },
     {
@@ -3695,8 +3695,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_components_pagination_paginationprops",
-      "community": 0,
-      "community_name": "posts.schema.ts",
+      "community": 106,
+      "community_name": "users.$id.playlists.$playlistId.tsx",
       "norm_label": "paginationprops"
     },
     {
@@ -3706,8 +3706,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_pagination_pagination",
-      "community": 0,
-      "community_name": "posts.schema.ts",
+      "community": 106,
+      "community_name": "users.$id.playlists.$playlistId.tsx",
       "norm_label": "pagination()"
     },
     {
@@ -3794,15 +3794,15 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_post",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 13,
+      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
       "norm_label": "post.tsx"
     },
     {
       "label": "Post()",
       "file_type": "code",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L11",
+      "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_post_post",
       "community": 13,
@@ -3816,8 +3816,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_postcard",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "postcard.tsx"
     },
     {
@@ -3827,8 +3827,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_components_postcard_postlistprops",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "postlistprops"
     },
     {
@@ -3868,7 +3868,7 @@
       "label": "PostDetailDisplayProps",
       "file_type": "code",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L10",
+      "source_location": "L9",
       "_origin": "ast",
       "id": "src_components_postdetail_postdetaildisplay_postdetaildisplayprops",
       "community": 13,
@@ -3879,7 +3879,7 @@
       "label": "PostDetailDisplay()",
       "file_type": "code",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L20",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "src_components_postdetail_postdetaildisplay_postdetaildisplay",
       "community": 13,
@@ -4025,8 +4025,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "src_components_postvotebuttons_postvotebuttons",
-      "community": 13,
-      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
+      "community": 24,
+      "community_name": "ViteSakuga",
       "norm_label": "postvotebuttons"
     },
     {
@@ -4091,8 +4091,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_searchbox",
-      "community": 33,
-      "community_name": "tooltip.tsx",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "searchbox.tsx"
     },
     {
@@ -4102,8 +4102,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_components_searchbox_searchboxprops",
-      "community": 33,
-      "community_name": "tooltip.tsx",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "searchboxprops"
     },
     {
@@ -4124,8 +4124,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_user",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 42,
+      "community_name": "triage-labels.md",
       "norm_label": "user.tsx"
     },
     {
@@ -4135,8 +4135,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_components_user_user",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "user()"
     },
     {
@@ -4168,8 +4168,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_video",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 13,
+      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
       "norm_label": "video.tsx"
     },
     {
@@ -4179,8 +4179,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_components_video_videoprops",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 13,
+      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
       "norm_label": "videoprops"
     },
     {
@@ -4190,8 +4190,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_components_video_video",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 13,
+      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
       "norm_label": "video"
     },
     {
@@ -4432,8 +4432,8 @@
       "source_location": "L205",
       "_origin": "ast",
       "id": "src_components_ui_button_closebutton",
-      "community": 42,
-      "community_name": "triage-labels.md",
+      "community": 13,
+      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
       "norm_label": "closebutton()"
     },
     {
@@ -4883,8 +4883,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_components_ui_layout_flex",
-      "community": 35,
-      "community_name": "route.tsx",
+      "community": 33,
+      "community_name": "tooltip.tsx",
       "norm_label": "flex()"
     },
     {
@@ -4927,8 +4927,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_components_ui_layout_stack",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "stack()"
     },
     {
@@ -4938,8 +4938,8 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "src_components_ui_layout_hstack",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 106,
+      "community_name": "users.$id.playlists.$playlistId.tsx",
       "norm_label": "hstack()"
     },
     {
@@ -4949,8 +4949,8 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "src_components_ui_layout_vstack",
-      "community": 35,
-      "community_name": "route.tsx",
+      "community": 13,
+      "community_name": "AGENT GUIDELINES FOR ViteSakuga",
       "norm_label": "vstack()"
     },
     {
@@ -5059,8 +5059,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_components_ui_media_image",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 33,
+      "community_name": "tooltip.tsx",
       "norm_label": "image()"
     },
     {
@@ -5433,8 +5433,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_ui_typography",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "typography.tsx"
     },
     {
@@ -5444,8 +5444,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_components_ui_typography_textprops",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "textprops"
     },
     {
@@ -5455,8 +5455,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_components_ui_typography_heading_sizes",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "heading_sizes"
     },
     {
@@ -5466,8 +5466,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_components_ui_typography_text",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 106,
+      "community_name": "users.$id.playlists.$playlistId.tsx",
       "norm_label": "text()"
     },
     {
@@ -5488,8 +5488,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_components_ui_typography_linkprops",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 35,
+      "community_name": "route.tsx",
       "norm_label": "linkprops"
     },
     {
@@ -5499,8 +5499,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_components_ui_typography_link",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 33,
+      "community_name": "tooltip.tsx",
       "norm_label": "link()"
     },
     {
@@ -5653,8 +5653,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "src_components_ui_ui_utils_chakrastyleprops",
-      "community": 42,
-      "community_name": "triage-labels.md",
+      "community": 33,
+      "community_name": "tooltip.tsx",
       "norm_label": "chakrastyleprops"
     },
     {
@@ -6082,8 +6082,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_lib_auth_session_effect_sessionfetcherror",
-      "community": 121,
-      "community_name": "comments.service.ts",
+      "community": 1,
+      "community_name": "test-utils.ts",
       "norm_label": "sessionfetcherror"
     },
     {
@@ -7523,8 +7523,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_lib_db_test_utils_createtestkysely",
-      "community": 55,
-      "community_name": "@emotion/react",
+      "community": 1,
+      "community_name": "test-utils.ts",
       "norm_label": "createtestkysely()"
     },
     {
@@ -7556,8 +7556,8 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "src_lib_db_test_utils_makeservicetestlayer",
-      "community": 55,
-      "community_name": "@emotion/react",
+      "community": 1,
+      "community_name": "test-utils.ts",
       "norm_label": "makeservicetestlayer()"
     },
     {
@@ -7600,8 +7600,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_lib_effect_effect_utils_sqlerror",
-      "community": 30,
-      "community_name": "Issue tracker: GitHub",
+      "community": 121,
+      "community_name": "comments.service.ts",
       "norm_label": "sqlerror"
     },
     {
@@ -7930,8 +7930,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_lib_effect_schema_utils_tostandardschemav1strict",
-      "community": 42,
-      "community_name": "triage-labels.md",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "tostandardschemav1strict()"
     },
     {
@@ -9063,8 +9063,8 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "src_lib_posts_posts_schema_postssearchparams",
-      "community": 106,
-      "community_name": "users.$id.playlists.$playlistId.tsx",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "postssearchparams"
     },
     {
@@ -9965,8 +9965,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_votes_votes_fn_context",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 29,
+      "community_name": "Domain Docs",
       "norm_label": "votes.fn-context.tsx"
     },
     {
@@ -9976,8 +9976,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_lib_votes_votes_fn_context_defaultvotesfns",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 29,
+      "community_name": "Domain Docs",
       "norm_label": "defaultvotesfns"
     },
     {
@@ -9987,8 +9987,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_lib_votes_votes_fn_context_votesfnscontext",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 24,
+      "community_name": "ViteSakuga",
       "norm_label": "votesfnscontext"
     },
     {
@@ -10020,8 +10020,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_votes_votes_hooks_test",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 24,
+      "community_name": "ViteSakuga",
       "norm_label": "votes.hooks.test.tsx"
     },
     {
@@ -10031,8 +10031,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_lib_votes_votes_hooks_test_summary",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 24,
+      "community_name": "ViteSakuga",
       "norm_label": "summary"
     },
     {
@@ -10042,8 +10042,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_lib_votes_votes_hooks_test_createwrapper",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 24,
+      "community_name": "ViteSakuga",
       "norm_label": "createwrapper()"
     },
     {
@@ -10251,8 +10251,8 @@
       "source_location": "L201",
       "_origin": "ast",
       "id": "src_lib_votes_votes_service_fetchpostvotes",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 24,
+      "community_name": "ViteSakuga",
       "norm_label": "fetchpostvotes"
     },
     {
@@ -10262,8 +10262,8 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "src_lib_votes_votes_service_setpostvote",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 29,
+      "community_name": "Domain Docs",
       "norm_label": "setpostvote"
     },
     {
@@ -10273,8 +10273,8 @@
       "source_location": "L221",
       "_origin": "ast",
       "id": "src_lib_votes_votes_service_removepostvote",
-      "community": 69,
-      "community_name": "oxlint",
+      "community": 29,
+      "community_name": "Domain Docs",
       "norm_label": "removepostvote"
     },
     {
@@ -11582,8 +11582,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_routes_users_index",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "users.index.tsx"
     },
     {
@@ -11604,8 +11604,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_routes_users_index_userscontent",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "userscontent()"
     },
     {
@@ -11615,8 +11615,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_routes_users_index_userslayoutcomponent",
-      "community": 3,
-      "community_name": "playlists.service.ts",
+      "community": 0,
+      "community_name": "posts.schema.ts",
       "norm_label": "userslayoutcomponent()"
     },
     {
@@ -18712,7 +18712,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L11",
+      "source_location": "L12",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18728,7 +18728,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
-      "target": "src_components_ui_button",
+      "target": "src_components_postvotebuttons",
       "confidence_score": 1.0
     },
     {
@@ -18740,7 +18740,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
-      "target": "src_components_ui_button_button",
+      "target": "src_components_postvotebuttons_postvotebuttons",
       "confidence_score": 1.0
     },
     {
@@ -18749,6 +18749,30 @@
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
       "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_components_post",
+      "target": "src_components_ui_button",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/Post.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_components_post",
+      "target": "src_components_ui_button_button",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/Post.tsx",
+      "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18760,7 +18784,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L3",
+      "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18772,7 +18796,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18784,7 +18808,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18796,7 +18820,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18808,7 +18832,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18820,7 +18844,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18832,7 +18856,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18844,7 +18868,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18856,7 +18880,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18868,7 +18892,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18880,7 +18904,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L9",
+      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18892,7 +18916,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L9",
+      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18904,7 +18928,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -18916,7 +18940,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/Post.tsx",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_post",
@@ -19249,7 +19273,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L20",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
@@ -19260,7 +19284,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L10",
+      "source_location": "L9",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
@@ -19276,7 +19300,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
-      "target": "src_components_postvotebuttons",
+      "target": "src_components_ui_button",
       "confidence_score": 1.0
     },
     {
@@ -19288,30 +19312,6 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
-      "target": "src_components_postvotebuttons_postvotebuttons",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_components_postdetail_postdetaildisplay",
-      "target": "src_components_ui_button",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_components_postdetail_postdetaildisplay",
       "target": "src_components_ui_button_button",
       "confidence_score": 1.0
     },
@@ -19320,7 +19320,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
@@ -19332,7 +19332,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
@@ -19344,7 +19344,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
@@ -19356,7 +19356,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L8",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",
@@ -19368,7 +19368,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/components/PostDetail/PostDetailDisplay.tsx",
-      "source_location": "L8",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_postdetail_postdetaildisplay",

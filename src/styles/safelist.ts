@@ -23,6 +23,7 @@ export const tailwindSafelist = [
   "flex", "block", "grid", "hidden", "inline-block",
   "items-start", "items-center", "items-end", "items-stretch",
   "justify-start", "justify-center", "justify-end", "justify-between",
+  "self-start", "self-end", "self-center", "self-stretch", "self-auto",
   "flex-row", "flex-col", "flex-wrap",
   "md:block", "md:flex", "md:hidden",
   "grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4", "grid-cols-5",

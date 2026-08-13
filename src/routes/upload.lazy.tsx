@@ -176,6 +176,7 @@ function RouteComponent() {
                     border="1px"
                     borderColor="gray.200"
                     borderRadius="md"
+                    className="dark:border-gray-700"
                     maxH="200px"
                     mt={2}
                     overflowY="auto"
@@ -190,6 +191,7 @@ function RouteComponent() {
                         <Box
                           _hover={{ bg: "gray.100" }}
                           borderRadius="sm"
+                          className="dark:hover:bg-gray-800"
                           cursor="pointer"
                           key={post.id}
                           onClick={() => {
@@ -199,7 +201,11 @@ function RouteComponent() {
                           p={2}
                         >
                           <Text fontWeight="medium">{post.title}</Text>
-                          <Text color="gray.600" fontSize="sm">
+                          <Text
+                            className="dark:text-gray-400"
+                            color="gray.600"
+                            fontSize="sm"
+                          >
                             {post.content.slice(0, 60)}...
                           </Text>
                         </Box>
@@ -213,6 +219,7 @@ function RouteComponent() {
                     border="1px"
                     borderColor="green.200"
                     borderRadius="md"
+                    className="dark:border-green-800 dark:bg-green-900/30"
                     cursor="pointer"
                     mt={2}
                     onClick={() => {
@@ -221,11 +228,19 @@ function RouteComponent() {
                     }}
                     p={2}
                   >
-                    <Text color="green.600" fontSize="sm">
+                    <Text
+                      className="dark:text-green-400"
+                      color="green.600"
+                      fontSize="sm"
+                    >
                       Post #{postById.post.id} found
                     </Text>
                     <Text fontWeight="medium">{postById.post.title}</Text>
-                    <Text color="gray.600" fontSize="sm">
+                    <Text
+                      className="dark:text-gray-400"
+                      color="gray.600"
+                      fontSize="sm"
+                    >
                       {postById.post.content.slice(0, 60)}...
                     </Text>
                   </Box>
@@ -235,12 +250,23 @@ function RouteComponent() {
                   numericId !== null &&
                   numericId > 0 &&
                   !postById && (
-                    <Text color="gray.500" fontSize="sm" mt={2}>
+                    <Text
+                      className="dark:text-gray-400"
+                      color="gray.500"
+                      fontSize="sm"
+                      mt={2}
+                    >
                       No post found with ID #{numericId}
                     </Text>
                   )}
                 {field.state.value && (
-                  <Box bg="blue.50" borderRadius="md" mt={2} p={2}>
+                  <Box
+                    bg="blue.50"
+                    borderRadius="md"
+                    className="dark:bg-blue-900/30"
+                    mt={2}
+                    p={2}
+                  >
                     <Text fontSize="sm">
                       Selected Post ID: {field.state.value}
                     </Text>

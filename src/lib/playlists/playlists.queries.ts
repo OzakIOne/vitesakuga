@@ -8,10 +8,17 @@ import {
   fetchUserPlaylists,
 } from "./playlists.service";
 
+const PLAYLIST_QUERY_CACHE = {
+  gcTime: Infinity,
+  staleTime: Infinity,
+} as const;
+
 export const playlistsKeys = {
   all: ["playlists"] as const,
   detail: (params: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) =>
     [...playlistsKeys.all, "detail", params] as const,
+  detailForPlaylist: (playlistId: number) =>
+    [...playlistsKeys.all, "detail", { playlistId }] as const,
   forPost: (postId: number) =>
     [...playlistsKeys.all, "forPost", postId] as const,
   userPlaylists: (userId: string) =>
@@ -21,35 +28,32 @@ export const playlistsKeys = {
 const playlistsQueries = {
   detail: (params: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) =>
     queryOptions({
-      gcTime: 5 * 60 * 1000,
+      ...PLAYLIST_QUERY_CACHE,
       queryFn: async () =>
         fetchPlaylistDetail({
           data: params,
         }),
       queryKey: playlistsKeys.detail(params),
-      staleTime: 60 * 1000,
     }),
 
   forPost: (postId: number) =>
     queryOptions({
-      gcTime: 5 * 60 * 1000,
+      ...PLAYLIST_QUERY_CACHE,
       queryFn: async () =>
         fetchPlaylistsForPost({
           data: postId,
         }),
       queryKey: playlistsKeys.forPost(postId),
-      staleTime: 30 * 1000,
     }),
 
   userPlaylists: (userId: string) =>
     queryOptions({
-      gcTime: 5 * 60 * 1000,
+      ...PLAYLIST_QUERY_CACHE,
       queryFn: async () =>
         fetchUserPlaylists({
           data: userId,
         }),
       queryKey: playlistsKeys.userPlaylists(userId),
-      staleTime: 60 * 1000,
     }),
 };
 

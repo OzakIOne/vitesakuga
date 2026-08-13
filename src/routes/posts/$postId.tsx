@@ -1,9 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  useNavigate,
-  useRouteContext,
-} from "@tanstack/react-router";
+import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { Schema } from "effect";
 import { Suspense, useState } from "react";
 import { NotFound } from "src/components/NotFound";
@@ -34,20 +30,16 @@ export const Route = createFileRoute("/posts/$postId")({
 function PostComponent() {
   const { postId } = Route.useParams();
   const { dateRange, q, sortBy, tags } = Route.useSearch();
-  const navigate = useNavigate();
   const context = useRouteContext({ from: "/posts/$postId" });
 
   const {
     data: { post, user, tags: initialTags, relatedPost },
   } = useSuspenseQuery(postQueryDetail(postId));
 
-  const [isEditMode, setIsEditMode] = useState(false);
-
   const currentUserId = context.user?.id;
   const isOwner = currentUserId === user.id;
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  const handleBack = () =>
-    window.history.length > 1 ? window.history.back() : navigate({ to: ".." });
   const handleEditClick = () => {
     setIsEditMode(true);
   };
@@ -88,7 +80,6 @@ function PostComponent() {
             <PostDetailDisplay
               currentUserId={currentUserId}
               initialTags={initialTags}
-              onBack={handleBack}
               onEditClick={handleEditClick}
               post={post}
               relatedPost={relatedPost}

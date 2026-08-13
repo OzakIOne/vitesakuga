@@ -255,11 +255,16 @@ function RouteComponent() {
             <Heading as="h2" mb={1} size="md">
               Danger zone
             </Heading>
-            <Text color="gray.500" fontSize="sm" mb={4}>
+            <Text
+              className="dark:text-gray-400"
+              color="gray.500"
+              fontSize="sm"
+              mb={4}
+            >
               Deleting your account is permanent.
             </Text>
-            <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-red-100 bg-red-50 p-4 sm:flex-row sm:items-center">
-              <Text color="red.700" fontSize="sm">
+            <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-red-100 bg-red-50 p-4 sm:flex-row sm:items-center dark:border-red-900 dark:bg-red-950/40">
+              <Text className="dark:text-red-300" color="red.700" fontSize="sm">
                 This removes your account and all associated data for good.
               </Text>
               <Dialog.Root role="alertdialog">

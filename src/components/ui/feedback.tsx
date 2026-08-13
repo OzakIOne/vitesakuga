@@ -7,11 +7,12 @@ import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
 type Palette = "blue" | "gray" | "red" | "green" | "orange";
 
 const SUBTLE_BADGE: Record<Palette, string> = {
-  blue: "bg-blue-100 text-blue-800",
-  gray: "bg-gray-100 text-gray-800",
-  red: "bg-red-100 text-red-800",
-  green: "bg-green-100 text-green-800",
-  orange: "bg-orange-100 text-orange-800",
+  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
+  gray: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
+  red: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
+  green: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
+  orange:
+    "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200",
 };
 
 const SOLID_BADGE: Record<Palette, string> = {
@@ -23,11 +24,13 @@ const SOLID_BADGE: Record<Palette, string> = {
 };
 
 const OUTLINE_BADGE: Record<Palette, string> = {
-  blue: "border border-blue-300 text-blue-700",
-  gray: "border border-gray-300 text-gray-700",
-  red: "border border-red-300 text-red-700",
-  green: "border border-green-300 text-green-700",
-  orange: "border border-orange-300 text-orange-700",
+  blue: "border border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300",
+  gray: "border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300",
+  red: "border border-red-300 text-red-700 dark:border-red-800 dark:text-red-300",
+  green:
+    "border border-green-300 text-green-700 dark:border-green-800 dark:text-green-300",
+  orange:
+    "border border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-300",
 };
 
 const BADGE_SIZES: Record<string, string> = {

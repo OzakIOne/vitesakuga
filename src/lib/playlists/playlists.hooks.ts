@@ -40,9 +40,12 @@ export function useUpdatePlaylist(userId: string) {
       description?: string;
       isPublic?: boolean;
     }) => updatePlaylist({ data }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.detailForPlaylist(variables.playlistId),
       });
     },
     successDescription: "Your playlist has been updated.",
@@ -85,7 +88,7 @@ export function useDeletePlaylist(userId: string) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: playlistsKeys.userPlaylists(userId),
+        queryKey: playlistsKeys.all,
       });
     },
     successDescription: "Your playlist has been deleted.",
@@ -93,7 +96,8 @@ export function useDeletePlaylist(userId: string) {
   });
 }
 
-export function useAddPostToPlaylist() {
+export function useAddPostToPlaylist(userId: string) {
+  const queryClient = useQueryClient();
   const { addPostToPlaylist } = useContext(PlaylistsFnsContext);
 
   return useMutationWithFeedback({
@@ -101,12 +105,24 @@ export function useAddPostToPlaylist() {
     errorTitle: "Error adding to playlist",
     mutationFn: async (data: { playlistId: number; postId: number }) =>
       addPostToPlaylist({ data }),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.forPost(variables.postId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.detailForPlaylist(variables.playlistId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.userPlaylists(userId),
+      });
+    },
     successDescription: "Post added to playlist.",
     successTitle: "Added to playlist",
   });
 }
 
-export function useRemovePostFromPlaylist() {
+export function useRemovePostFromPlaylist(userId: string) {
+  const queryClient = useQueryClient();
   const { removePostFromPlaylist } = useContext(PlaylistsFnsContext);
 
   return useMutationWithFeedback({
@@ -114,6 +130,17 @@ export function useRemovePostFromPlaylist() {
     errorTitle: "Error removing from playlist",
     mutationFn: async (data: { playlistId: number; postId: number }) =>
       removePostFromPlaylist({ data }),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.forPost(variables.postId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.detailForPlaylist(variables.playlistId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.userPlaylists(userId),
+      });
+    },
     successDescription: "Post removed from playlist.",
     successTitle: "Removed from playlist",
   });

@@ -143,6 +143,8 @@ export function useChakraProps<P extends ChakraStyleProps>(
   const classes: string[] = [];
   const rest: Record<string, unknown> = {};
   let style = props.style;
+  let hasBorderWidth = false;
+  let hasBorderColor = false;
 
   for (const [key, rawValue] of Object.entries(props)) {
     const value: StyleValue | StyleObject | undefined = rawValue as
@@ -300,6 +302,16 @@ export function useChakraProps<P extends ChakraStyleProps>(
         );
         break;
       }
+      case "alignSelf": {
+        classes.push(
+          ...mapResponsive(value, (v) => {
+            if (v === "flex-start") return "self-start";
+            if (v === "flex-end") return "self-end";
+            return `self-${v}`;
+          }),
+        );
+        break;
+      }
       case "direction": {
         classes.push(
           ...mapResponsive(value, (v) =>
@@ -408,17 +420,47 @@ export function useChakraProps<P extends ChakraStyleProps>(
           classes.push("border-0");
         } else if (String(value).includes("4")) {
           classes.push("border-4");
+          hasBorderWidth = true;
         } else {
           classes.push("border");
+          hasBorderWidth = true;
         }
         break;
       }
       case "borderTop": {
         if (value === "0" || value === "none") classes.push("border-t-0");
-        else classes.push("border-t");
+        else {
+          classes.push("border-t");
+          hasBorderWidth = true;
+        }
+        break;
+      }
+      case "borderBottom": {
+        if (value === "0" || value === "none") classes.push("border-b-0");
+        else {
+          classes.push("border-b");
+          hasBorderWidth = true;
+        }
+        break;
+      }
+      case "borderLeft": {
+        if (value === "0" || value === "none") classes.push("border-l-0");
+        else {
+          classes.push("border-l");
+          hasBorderWidth = true;
+        }
+        break;
+      }
+      case "borderRight": {
+        if (value === "0" || value === "none") classes.push("border-r-0");
+        else {
+          classes.push("border-r");
+          hasBorderWidth = true;
+        }
         break;
       }
       case "borderColor": {
+        hasBorderColor = true;
         classes.push(
           ...mapResponsive(
             value,
@@ -512,6 +554,10 @@ export function useChakraProps<P extends ChakraStyleProps>(
         rest[key] = rawValue;
       }
     }
+  }
+
+  if (hasBorderWidth && !hasBorderColor) {
+    classes.push("border-gray-200 dark:border-gray-700");
   }
 
   return { className: cx(classes), style, rest };

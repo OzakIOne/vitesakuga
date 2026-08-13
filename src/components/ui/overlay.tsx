@@ -354,7 +354,7 @@ export const Combobox = {
     const { className, style, rest } = useChakraProps(props);
     return (
       <ArkCombobox.Positioner
-        className={cx("z-50 w-full", className)}
+        className={cx("z-50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Positioner>)}
       />
@@ -367,7 +367,7 @@ export const Combobox = {
     return (
       <ArkCombobox.Content
         className={cx(
-          "mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
+          "mt-1 max-h-60 w-[var(--reference-width)] overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
         style={style}
@@ -498,7 +498,7 @@ export const Select = {
     const { className, style, rest } = useChakraProps(props);
     return (
       <ArkSelect.Positioner
-        className={cx("z-50 w-full", className)}
+        className={cx("z-50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSelect.Positioner>)}
       />
@@ -511,7 +511,7 @@ export const Select = {
     return (
       <ArkSelect.Content
         className={cx(
-          "mt-1 max-h-60 overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
+          "mt-1 max-h-60 w-[var(--reference-width)] overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
         style={style}
@@ -665,7 +665,7 @@ export const FileUpload = {
     return (
       <ArkFileUpload.Dropzone
         className={cx(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-colors hover:border-gray-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500",
+          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-colors hover:border-gray-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500 dark:hover:bg-gray-700",
           className,
         )}
         style={style}

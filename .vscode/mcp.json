@@ -21,6 +21,10 @@
     },
     "tanstack": {
       "url": "https://tanstack.com/api/mcp"
+    },
+    "ark-ui": {
+      "command": "npx",
+      "args": ["-y", "@ark-ui/mcp"]
     }
   }
 }

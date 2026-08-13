@@ -5,7 +5,12 @@
       "type": "remote",
       "url": "http://localhost:8000/mcp",
       "enabled": true
+    },
+    "ark-ui": {
+      "type": "local",
+      "command": ["bunx", "-y", "@ark-ui/mcp"]
     }
+
   },
   "references": {
     "effect": {
