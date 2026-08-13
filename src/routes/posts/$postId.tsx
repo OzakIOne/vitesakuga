@@ -1,10 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { Schema } from "effect";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { NotFound } from "src/components/NotFound";
 import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
-import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { Spinner } from "src/components/ui/feedback";
@@ -37,57 +36,33 @@ function PostComponent() {
   } = useSuspenseQuery(postQueryDetail(postId));
 
   const currentUserId = context.user?.id;
-  const isOwner = currentUserId === user.id;
-  const [isEditMode, setIsEditMode] = useState(false);
-
-  const handleEditClick = () => {
-    setIsEditMode(true);
-  };
-  const handleCancelEdit = () => {
-    setIsEditMode(false);
-  };
 
   return (
-    <>
-      {isEditMode && isOwner ? (
-        <PostEditForm
+    <PostsPageLayout
+      dateRange={dateRange}
+      fromRoute="/posts/$postId"
+      popularTags={[]}
+      searchQuery={q}
+      selectedTags={tags}
+      sortBy={sortBy}
+      videoMetadata={post.videoMetadata}
+    >
+      <Suspense
+        fallback={
+          <Stack align="center" justify="center" minH="600px">
+            <Spinner size="lg" />
+            <Text>Loading post...</Text>
+          </Stack>
+        }
+      >
+        <PostDetailDisplay
+          currentUserId={currentUserId}
           initialTags={initialTags}
-          onCancel={handleCancelEdit}
-          onSuccess={() => {
-            setIsEditMode(false);
-          }}
           post={post}
-          postId={postId}
+          relatedPost={relatedPost}
+          user={user}
         />
-      ) : (
-        <PostsPageLayout
-          dateRange={dateRange}
-          fromRoute="/posts/$postId"
-          popularTags={[]}
-          searchQuery={q}
-          selectedTags={tags}
-          sortBy={sortBy}
-          videoMetadata={post.videoMetadata}
-        >
-          <Suspense
-            fallback={
-              <Stack align="center" justify="center" minH="600px">
-                <Spinner size="lg" />
-                <Text>Loading post...</Text>
-              </Stack>
-            }
-          >
-            <PostDetailDisplay
-              currentUserId={currentUserId}
-              initialTags={initialTags}
-              onEditClick={handleEditClick}
-              post={post}
-              relatedPost={relatedPost}
-              user={user}
-            />
-          </Suspense>
-        </PostsPageLayout>
-      )}
-    </>
+      </Suspense>
+    </PostsPageLayout>
   );
 }
