@@ -1,5 +1,7 @@
-import { Avatar, Card, HStack, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
+import { HStack, Stack } from "src/components/ui/layout";
+import { Avatar, Card } from "src/components/ui/media";
+import { Text } from "src/components/ui/typography";
 
 export function User({
   name,

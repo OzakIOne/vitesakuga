@@ -1,8 +1,9 @@
-import { Box, Button, VStack } from "@chakra-ui/react";
 import { useState } from "react";
 import { Comments } from "src/components/Comments";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
+import { Button } from "src/components/ui/button";
+import { Box, VStack } from "src/components/ui/layout";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 
 type PostDetailDisplayProps = {

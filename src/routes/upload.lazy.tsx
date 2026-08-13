@@ -1,23 +1,18 @@
-import {
-  Box,
-  Button,
-  Field,
-  FileUpload,
-  Grid,
-  Icon,
-  Image,
-  Input,
-  Spinner,
-  Text,
-} from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { LuCamera, LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
+import { Button } from "src/components/ui/button";
+import { Spinner } from "src/components/ui/feedback";
+import { Field, Input } from "src/components/ui/field";
+import { Box, Grid } from "src/components/ui/layout";
+import { Image } from "src/components/ui/media";
+import { FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
+import { Text } from "src/components/ui/typography";
 import { Video } from "src/components/Video";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
 import { searchPosts } from "src/lib/posts/posts.service";
@@ -303,9 +298,7 @@ function RouteComponent() {
                     {!video.videoFile && (
                       <>
                         <FileUpload.Dropzone minHeight="32">
-                          <Icon color="fg.muted" size="md">
-                            <LuUpload />
-                          </Icon>
+                          <LuUpload className="h-5 w-5 text-neutral-400" />
                           <FileUpload.DropzoneContent>
                             <Box>Drag and drop files here</Box>
                             <Box color="fg.muted">.mp4, .mov, .mkv</Box>
@@ -410,7 +403,7 @@ function RouteComponent() {
             <Button
               colorScheme="blue"
               disabled={!canSubmit || isPristine || !video.videoFile}
-              loading={isSubmitting}
+              loading={isSubmitting === true}
               style={{ width: "100%" }}
               type="submit"
             >

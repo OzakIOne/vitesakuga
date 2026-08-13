@@ -1,16 +1,16 @@
-import {
-  Box,
-  GridItem,
-  SimpleGrid,
-  Spinner,
-  Stack,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { Spinner } from "src/components/ui/feedback";
+import {
+  Box,
+  GridItem,
+  SimpleGrid,
+  Stack,
+  VStack,
+} from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { envClient } from "src/lib/env/client";
 import { usePostsPage } from "src/lib/posts/posts.hooks";

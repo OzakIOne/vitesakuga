@@ -34,7 +34,7 @@ This document outlines the conventions and best practices for writing TypeScript
 
 ## Styling
 
-- Use Tailwind CSS v4 and Chakra UI v3.
+- Use Tailwind CSS v4 and Ark UI v5.
 
 ## Form Handling
 

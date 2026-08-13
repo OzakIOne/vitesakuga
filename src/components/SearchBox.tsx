@@ -1,20 +1,14 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Combobox,
-  Field,
-  Group,
-  Heading,
-  Icon,
-  Input,
-  Portal,
-  Wrap,
-} from "@chakra-ui/react";
+import { Portal, type ComboboxValueChangeDetails } from "@ark-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { LuX } from "react-icons/lu";
+import { Button } from "src/components/ui/button";
+import { Badge } from "src/components/ui/feedback";
+import { Field, Input } from "src/components/ui/field";
+import { Box, Group, Wrap } from "src/components/ui/layout";
+import { Combobox } from "src/components/ui/overlay";
+import { Heading } from "src/components/ui/typography";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 type SearchBoxProps = {
@@ -43,7 +37,7 @@ export function SearchBox({
     exclude: tags,
   });
 
-  const handleAddTag = (details: Combobox.ValueChangeDetails) => {
+  const handleAddTag = (details: ComboboxValueChangeDetails) => {
     const newValues = details.value;
     const addedValue = newValues.at(-1);
 
@@ -130,15 +124,12 @@ export function SearchBox({
                   py={1}
                 >
                   {tag}
-                  <Icon
-                    _hover={{ color: "red.500" }}
-                    cursor="pointer"
+                  <LuX
+                    className="cursor-pointer transition-colors hover:text-red-500"
                     onClick={() => {
                       handleRemoveTag(tag);
                     }}
-                  >
-                    <LuX />
-                  </Icon>
+                  />
                 </Badge>
               ))}
             </Wrap>

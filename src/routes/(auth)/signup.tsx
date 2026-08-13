@@ -1,10 +1,11 @@
-import { Button, Field, Input } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { FieldInfo } from "src/components/form/FieldInfo";
+import { Button } from "src/components/ui/button";
+import { Field, Input } from "src/components/ui/field";
 import { PasswordInput } from "src/components/ui/password-input";
 import { useSignUp, useSocialLogin } from "src/lib/auth/auth.hooks";
 import { signUpSchema } from "src/lib/auth/auth.schemas";

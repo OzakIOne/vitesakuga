@@ -1,22 +1,15 @@
-import {
-  Avatar,
-  AvatarGroup,
-  Box,
-  Button,
-  CloseButton,
-  Dialog,
-  Field,
-  Heading,
-  Input,
-  InputGroup,
-  Portal,
-  Text,
-} from "@chakra-ui/react";
+import { Portal } from "@ark-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
+import { Button, CloseButton } from "src/components/ui/button";
+import { Field, Input, InputGroup } from "src/components/ui/field";
+import { Box } from "src/components/ui/layout";
+import { Avatar, AvatarGroup } from "src/components/ui/media";
+import { Dialog } from "src/components/ui/overlay";
 import { PasswordInput } from "src/components/ui/password-input";
+import { Heading, Text } from "src/components/ui/typography";
 import {
   useChangePassword,
   useDeleteAccount,
@@ -174,7 +167,7 @@ function RouteComponent() {
                   <div className="flex justify-end pt-2">
                     <Button
                       disabled={!canSubmit}
-                      loading={isSubmitting}
+                      loading={isSubmitting === true}
                       fontWeight="medium"
                       px={6}
                       type="submit"
@@ -244,7 +237,7 @@ function RouteComponent() {
                   <div className="flex justify-end pt-2">
                     <Button
                       disabled={!canSubmit}
-                      loading={isSubmitting}
+                      loading={isSubmitting === true}
                       colorPalette="orange"
                       fontWeight="medium"
                       px={6}

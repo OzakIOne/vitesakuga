@@ -15,7 +15,7 @@ import {
   MediaPlaybackRateMenu,
   MediaPlaybackRateMenuButton,
 } from "media-chrome/react/menu";
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { assetUrl } from "src/lib/assets/url";
 
 type VideoProps = {
@@ -34,30 +34,76 @@ export const Video = React.forwardRef<any, VideoProps>(
 
     const seekOffset = frameRate ? 1 / frameRate : 0.04;
 
+    const pauseVideo = () => {
+      videoRef.current?.pause();
+    };
+
+    const isInteractiveTarget = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      return (
+        target?.closest(
+          "button, a, input, textarea, select, [role='button'], [role='link'], [contenteditable='true']",
+        ) != null
+      );
+    };
+
+    const togglePlay = (event: KeyboardEvent) => {
+      if (
+        isInteractiveTarget(event) ||
+        document.activeElement === videoRef.current
+      ) {
+        return;
+      }
+      const video = videoRef.current;
+      if (!video) {
+        return;
+      }
+      event.preventDefault();
+      if (video.paused) {
+        void video.play();
+      } else {
+        video.pause();
+      }
+    };
+
     useHotkeys(
       [
         {
-          callback: () => {
-            const video = videoRef.current;
-            if (video)
-              video.currentTime = Math.max(0, video.currentTime - seekOffset);
-          },
-          hotkey: ",",
-        },
-        {
-          callback: () => {
-            const video = videoRef.current;
-            if (video)
-              video.currentTime = Math.min(
-                video.duration,
-                video.currentTime + seekOffset,
-              );
-          },
-          hotkey: ".",
+          callback: togglePlay,
+          hotkey: "Space",
         },
       ],
       { conflictBehavior: "allow" },
     );
+
+    // Frame stepping matches the typed character ("," / ".") instead of a
+    // hotkey combination, so it works on any keyboard layout (e.g. AZERTY,
+    // where "." requires Shift+;).
+    useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (isInteractiveTarget(event)) {
+          return;
+        }
+        const video = videoRef.current;
+        if (!video) {
+          return;
+        }
+        if (event.key === ",") {
+          event.preventDefault();
+          video.pause();
+          video.currentTime = Math.max(0, video.currentTime - seekOffset);
+        } else if (event.key === ".") {
+          event.preventDefault();
+          video.pause();
+          video.currentTime = Math.min(
+            video.duration,
+            video.currentTime + seekOffset,
+          );
+        }
+      };
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [seekOffset]);
 
     return (
       <div className="flex w-full flex-col">
@@ -84,6 +130,7 @@ export const Video = React.forwardRef<any, VideoProps>(
         <MediaControlBar mediacontroller={controllerId}>
           <MediaPlayButton />
           <MediaSeekBackwardButton
+            onClick={pauseVideo}
             seekOffset={frameRate ? 1 / frameRate : 0.04}
           >
             <span
@@ -93,7 +140,10 @@ export const Video = React.forwardRef<any, VideoProps>(
               &#60;1f
             </span>
           </MediaSeekBackwardButton>
-          <MediaSeekForwardButton seekOffset={frameRate ? 1 / frameRate : 0.04}>
+          <MediaSeekForwardButton
+            onClick={pauseVideo}
+            seekOffset={frameRate ? 1 / frameRate : 0.04}
+          >
             <span
               className="mx-1 border-1 border-white px-1 text-xs"
               slot="icon"

@@ -5,7 +5,7 @@ This document provides links to comprehensive documentation and best practices f
 ---
 
 - **TanStack**: For comprehensive Tanstack guidance and best practices, see the official TanStack llms.txt file: https://tanstack.com/llms.txt every page has its markdown version just add .md to the url
-- **ChakraUI**: For comprehensive ChakraUI guidance and best practices, see the official ChakraUI llms.txt file: https://chakra-ui.com/llms.txt
+- **Ark UI**: For comprehensive Ark UI guidance and best practices, see the official Ark UI llms.txt file: https://ark-ui.com/llms.txt
 - **Drizzle**: For comprehensive Drizzle guidance and best practices, see the official Drizzle llms.txt file: https://orm.drizzle.team/llms.txt
 - **Effect**: For comprehensive Effect guidance and best practices, see the official Effect llms.txt file: https://effect.website/llms.txt
 - **Kysely**: For comprehensive Kysely guidance and best practices, see the official Kysely llms.txt file: https://kysely.dev/llms.txt

@@ -1,20 +1,19 @@
-import {
-  Badge,
-  Box,
-  HStack,
-  Image,
-  SimpleGrid,
-  Spinner,
-  Stack,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Effect, Schema } from "effect";
 import { useCallback } from "react";
 import { NotFound } from "src/components/NotFound";
 import { Pagination } from "src/components/Pagination";
+import { Badge, Spinner } from "src/components/ui/feedback";
+import {
+  Box,
+  HStack,
+  SimpleGrid,
+  Stack,
+  VStack,
+} from "src/components/ui/layout";
+import { Image } from "src/components/ui/media";
+import { Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { parse } from "src/lib/effect/schema.utils";
 import { playlistQueryDetail } from "src/lib/playlists/playlists.queries";

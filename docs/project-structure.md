@@ -9,7 +9,7 @@ This document details the expected project structure and file conventions within
 ```
 src/
 ├── components/   # Reusable React components
-│   ├── form/     # Form field components (TanStack Form + Chakra UI)
+│   ├── form/     # Form field components (TanStack Form + Ark UI)
 │   ├── PostDetail/ # Post-specific display/edit components
 │   └── ui/       # UI primitives (provider, color-mode, toaster, etc.)
 ├── db/           # Drizzle Kit migration files (auto-generated)

@@ -1,5 +1,5 @@
 import "src/lib/polyfills";
-import { createListCollection } from "@chakra-ui/react";
+import { createListCollection } from "@ark-ui/react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
 import { tagsCollection } from "src/lib/db/collections";

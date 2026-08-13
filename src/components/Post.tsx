@@ -1,13 +1,8 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Heading,
-  HStack,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
+import { Button } from "src/components/ui/button";
+import { Badge } from "src/components/ui/feedback";
+import { Box, HStack, Stack } from "src/components/ui/layout";
+import { Heading, Text } from "src/components/ui/typography";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 
 import { User } from "./User";

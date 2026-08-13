@@ -1,6 +1,8 @@
-import { Box, HStack, Heading, Image, Text, VStack } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
+import { Box, HStack, VStack } from "src/components/ui/layout";
+import { Image } from "src/components/ui/media";
+import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import type { DbSchemaSelect } from "src/lib/db/schema";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
@@ -13,6 +15,7 @@ type PostListProps = {
 function PostCardComponent({ post, searchParams }: PostListProps) {
   return (
     <Link
+      className="group"
       params={{ postId: post.id }}
       to="/posts/$postId"
       {...(searchParams ? { search: searchParams } : {})}

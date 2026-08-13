@@ -34,19 +34,19 @@ Generated on 2026-06-02. Describes the purpose and contents of every file in `sr
 
 | File                 | Description                                                                                                                                                                                  |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `color-mode.tsx`     | Chakra UI color mode provider and utilities. Wraps `next-themes`' `ThemeProvider`, exports `useColorMode`, `useColorModeValue`, `ColorModeIcon`, and `ColorModeButton` (toggle button).      |
+| `color-mode.tsx`     | Color mode provider and utilities. Wraps `next-themes`' `ThemeProvider`, exports `useColorMode`, `useColorModeValue`, `ColorModeIcon`, and `ColorModeButton` (toggle button).      |
 | `password-input.tsx` | Password input with visibility toggle. Renders an `InputGroup` with an eye icon button to show/hide the password text.                                                                       |
-| `provider.tsx`       | Root UI provider. Composes `ChakraProvider` with `ColorModeProvider` using `defaultSystem`.                                                                                                  |
+| `provider.tsx`       | Root UI provider. Wraps `next-themes`' `ThemeProvider`.                                                                                                  |
 | `tag-input.tsx`      | Tag selection/creation combobox. Allows selecting existing tags (fetched via query) or creating new ones, rendered as removable `Badge` elements.                                            |
-| `toaster.tsx`        | Chakra UI toast notification system. Renders a `ChakraToaster` in a portal with indicators, descriptions, and action buttons. Exports `Toaster` component and imperative `toaster` instance. |
-| `tooltip.tsx`        | Chakra UI tooltip wrapper. Renders `Tooltip.Root` with optional arrow and portal, or just children when `disabled` is true.                                                                  |
+| `toaster.tsx`        | Ark UI toast notification system. Renders an Ark `Toaster` in a portal with indicators, descriptions, and action buttons. Exports `Toaster` component and imperative `toaster` instance. |
+| `tooltip.tsx`        | Ark UI tooltip wrapper. Renders `Tooltip.Root` with optional arrow and portal, or just children when `disabled` is true.                                                                  |
 
 ### Form Components (`src/components/form/`)
 
 | File            | Description                                                                                                                                                            |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FieldInfo.tsx` | Form field error display for TanStack Form. Shows error messages in red when touched and invalid, or "Validating..." during validation.                                |
-| `FieldText.tsx` | Reusable text/textarea field wrapper for Chakra UI + TanStack Form. Renders label, required indicator, helper text, `Input` or `Textarea`, and `FieldInfo` for errors. |
+| `FieldText.tsx` | Reusable text/textarea field wrapper for Ark UI + TanStack Form. Renders label, required indicator, helper text, `Input` or `Textarea`, and `FieldInfo` for errors. |
 
 ### Post Detail Components (`src/components/PostDetail/`)
 
@@ -214,7 +214,7 @@ Generated on 2026-06-02. Describes the purpose and contents of every file in `sr
 
 | File                       | Description                                                                                                                                                                                                                                                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `__root.tsx`               | Root layout route. Wraps every page with the document shell (head, CSS), Chakra UI `Provider`, devtools panels, `AuthClientContext`, `CommentsFnsContext`, nav bar, global shortcuts, and error/not-found boundaries. Pre-fetches the authenticated user session. |
+| `__root.tsx`               | Root layout route. Wraps every page with the document shell (head, CSS), Ark UI `Provider`, devtools panels, `AuthClientContext`, `CommentsFnsContext`, nav bar, global shortcuts, and error/not-found boundaries. Pre-fetches the authenticated user session. |
 | `-convert.machine.ts`      | XState v5 state machine for video conversion. Defines output formats, codec family detection, passthrough compatibility, and states for idle, file probing, ready, converting (WebCodecs with progress), success, and error.                                      |
 | `-convert.machine.test.ts` | Tests for the video conversion state machine. Tests `getCodecFamily`, `isPassthroughCompatible`, and actor states for probing, conversion, and error handling.                                                                                                    |
 | `account.tsx`              | `GET /account` — authenticated user settings page. Renders profile update form (name, avatar) and password change form using TanStack Form with Effect Schema validation, plus delete account with confirmation dialog.                                                     |

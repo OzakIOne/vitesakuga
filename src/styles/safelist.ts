@@ -1,0 +1,62 @@
+/**
+ * Tailwind v4 scans source text for class names; classes built dynamically
+ * by the Chakra-compat layer in `src/components/ui/` (e.g. `max-w-xl`,
+ * `grid-cols-5`, `min-h-[calc(100vh-4rem)]`) never appear as literals and
+ * would be purged. Listing them here keeps them in the compiled CSS.
+ */
+export const tailwindSafelist = [
+  // spacing
+  "p-2", "p-3", "p-4", "p-6",
+  "px-1", "px-1.5", "px-2", "px-2.5", "px-3", "px-4", "px-6",
+  "py-0.5", "py-1", "py-1.5", "py-2", "py-8",
+  "pt-3", "pt-16",
+  "pb-2",
+  "mx-auto",
+  "mt-1", "mt-2", "mt-4", "mt-8",
+  "mb-1", "mb-2", "mb-3", "mb-4", "mb-5", "mb-6", "mb-8",
+  "ms-2",
+  "-me-2",
+  "gap-1", "gap-2", "gap-3", "gap-4", "gap-5", "gap-6",
+  "top-0", "left-0", "right-0", "bottom-4", "left-4",
+  "z-10", "z-50",
+  // layout
+  "flex", "block", "grid", "hidden", "inline-block",
+  "items-start", "items-center", "items-end", "items-stretch",
+  "justify-start", "justify-center", "justify-end", "justify-between",
+  "flex-row", "flex-col", "flex-wrap",
+  "md:block", "md:flex", "md:hidden",
+  "grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4", "grid-cols-5",
+  "sm:grid-cols-2", "md:grid-cols-3", "lg:grid-cols-4", "xl:grid-cols-5",
+  "lg:grid-cols-[1fr_3fr]",
+  // sizing
+  "w-auto", "w-1/12", "w-8", "h-8",
+  "h-[200px]", "h-[400px]",
+  "min-h-32", "min-h-[200px]", "min-h-[400px]", "min-h-[600px]",
+  "min-h-[calc(100vh-4rem)]",
+  "max-h-[200px]",
+  "max-w-sm", "max-w-md", "max-w-lg", "max-w-xl",
+  "min-w-0",
+  "aspect-video",
+  "object-contain",
+  "overflow-hidden", "overflow-y-auto",
+  // visual
+  "cursor-pointer",
+  "transition-all", "transition-colors", "transition-transform",
+  "duration-200", "duration-300",
+  "rounded-sm", "rounded-md", "rounded-lg", "rounded-full",
+  "border", "border-4", "border-t",
+  "border-gray-100", "border-gray-200", "border-green-200",
+  "bg-gray-800", "bg-gray-900", "bg-green-50", "bg-blue-50",
+  "shadow-sm", "shadow-md",
+  "text-gray-400", "text-gray-500", "text-gray-600", "text-gray-700",
+  "text-neutral-400", "text-neutral-500",
+  "text-blue-600", "text-green-600", "text-orange-600",
+  "text-xs", "text-sm", "text-base", "text-lg", "text-xl", "text-2xl",
+  "font-bold",
+  "italic",
+  "text-right", "text-left",
+  "line-clamp-1", "line-clamp-2",
+  "opacity-50",
+  // hover / group-hover
+  "group-hover:brightness-75", "group-hover:text-gray-600",
+] as const;

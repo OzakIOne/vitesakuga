@@ -1,5 +1,5 @@
-import { Button } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
+import { Button } from "src/components/ui/button";
 
 export function NotFound({ children }: { children?: any }) {
   return (

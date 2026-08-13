@@ -1,5 +1,7 @@
-import { Badge, Heading, Stack, Text } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
+import { Badge } from "src/components/ui/feedback";
+import { Stack } from "src/components/ui/layout";
+import { Heading, Text } from "src/components/ui/typography";
 
 export type PopularTag = {
   id: number;

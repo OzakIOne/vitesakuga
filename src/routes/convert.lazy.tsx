@@ -1,24 +1,13 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Container,
-  FileUpload,
-  Heading,
-  Icon,
-  Link,
-  Portal,
-  Progress,
-  Select,
-  Slider,
-  Text,
-  createListCollection,
-} from "@chakra-ui/react";
+import { Portal, createListCollection } from "@ark-ui/react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
-import type React from "react";
 import { useEffect } from "react";
 import { LuUpload } from "react-icons/lu";
+import { Button } from "src/components/ui/button";
+import { Alert, Progress } from "src/components/ui/feedback";
+import { Box, Container, Flex } from "src/components/ui/layout";
+import { FileUpload, Select, Slider } from "src/components/ui/overlay";
+import { Heading, Link, Text } from "src/components/ui/typography";
 import type { AnyActorRef } from "xstate";
 
 import {
@@ -86,13 +75,9 @@ function RouteComponent() {
   const isConverting = useSelector(actorRef, (s) => s.matches("converting"));
   const isSuccess = useSelector(actorRef, (s) => s.matches("success"));
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { files } = e.target;
-    if (files && files.length > 0) {
-      const selected = files[0];
-      if (selected) {
-        actorRef.send({ type: "file.selected", file: selected });
-      }
+  const handleFileChange = (file: File | null) => {
+    if (file) {
+      actorRef.send({ type: "file.selected", file });
     }
   };
 
@@ -106,230 +91,240 @@ function RouteComponent() {
   );
 
   return (
-    <Container maxW="xl" py={8}>
-      <Box borderRadius="lg" p={6} shadow="md">
-        <Heading mb={4} size="lg">
-          Video/Audio Converter
-        </Heading>
-        <Text mb={4}>
-          Convert your video or audio file to another format directly in your
-          browser using WebCodecs. Powered by{" "}
-          <Link color="blue.500" href="https://mediabunny.dev">
-            Mediabunny
-          </Link>
-          .
-        </Text>
+    <Flex
+      align="center"
+      direction="column"
+      justify="center"
+      minH="calc(100vh - 4rem)"
+      p={4}
+    >
+      <Container maxW="xl" py={8}>
+        <Box borderRadius="lg" p={6} shadow="md">
+          <Heading mb={4} size="lg">
+            Video/Audio Converter
+          </Heading>
+          <Text mb={4}>
+            Convert your video or audio file to another format directly in your
+            browser using WebCodecs. Powered by{" "}
+            <Link color="blue.500" href="https://mediabunny.dev">
+              Mediabunny
+            </Link>
+            .
+          </Text>
 
-        <Box mb={4}>
-          <FileUpload.Root
-            accept={["video/*", "audio/*", ".mkv"]}
-            alignItems="stretch"
-            maxW="xl"
-            onChange={handleFileChange}
-          >
-            <FileUpload.HiddenInput />
-            <FileUpload.Dropzone>
-              <Icon as={LuUpload} boxSize={6} color="gray.500" mb={2} />
-              <FileUpload.DropzoneContent>
-                <Text>Drag and drop files here</Text>
-                <Text color="gray.500" fontSize="sm">
-                  .mp4, .mov, .mkv, .webm, .avi, .ts, .wav, .mp3, .flac
-                </Text>
-              </FileUpload.DropzoneContent>
-            </FileUpload.Dropzone>
-            <FileUpload.List clearable showSize />
-          </FileUpload.Root>
-        </Box>
-
-        <Box mb={4}>
-          <Box>
-            <Text mb={2}>Output Format</Text>
-            <Select.Root
-              collection={outputFormats}
-              disabled={isConverting}
-              onSelect={(details) => {
-                const o = SUPPORTED_OUTPUTS.find(
-                  (opt) => opt.label === details.value,
-                );
-                if (o) {
-                  actorRef.send({ type: "output.selected", output: o });
-                }
-              }}
-              size="md"
-              value={output ? [output.label] : []}
-              width="full"
-            >
-              <Select.Label>Output Format</Select.Label>
-              <Select.Control>
-                <Select.Trigger>
-                  <Select.ValueText placeholder="Select format" />
-                </Select.Trigger>
-                <Select.IndicatorGroup>
-                  <Select.Indicator />
-                </Select.IndicatorGroup>
-              </Select.Control>
-              <Portal>
-                <Select.Positioner>
-                  <Select.Content>
-                    {SUPPORTED_OUTPUTS.map((format) => {
-                      const compatible = isPassthroughCompatible(
-                        format,
-                        inputVideoCodec,
-                      );
-                      return (
-                        <Select.Item
-                          item={{
-                            label: format.label,
-                            value: format.label,
-                            disabled: !compatible,
-                          }}
-                          key={format.label}
-                        >
-                          {format.label}
-                          {!compatible && format.videoCodec === undefined && (
-                            <Text as="span" color="fg.subtle">
-                              {" "}
-                              — codec incompatible
-                            </Text>
-                          )}
-                        </Select.Item>
-                      );
-                    })}
-                  </Select.Content>
-                </Select.Positioner>
-              </Portal>
-            </Select.Root>
-          </Box>
-        </Box>
-
-        {output?.videoCodec && (
           <Box mb={4}>
-            <Text mb={2}>Encoding Quality</Text>
-            <Slider.Root
-              disabled={isConverting}
-              max={getVideoQualityRange(output.videoCodec).max}
-              min={getVideoQualityRange(output.videoCodec).min}
-              onValueChange={(details) => {
-                const quality = details.value[0];
-                if (quality !== undefined) {
-                  actorRef.send({ type: "quality.selected", quality });
-                }
+            <FileUpload.Root
+              accept={["video/*", "audio/*", ".mkv"]}
+              alignItems="stretch"
+              maxW="xl"
+              onFileChange={(details) => {
+                handleFileChange(details.acceptedFiles[0] ?? null);
               }}
-              step={1}
-              value={[videoQuality]}
-              width="full"
             >
-              <Slider.Label>Quality (CRF)</Slider.Label>
-              <Slider.ValueText>{videoQuality}</Slider.ValueText>
-              <Slider.Control>
-                <Slider.Track>
-                  <Slider.Range />
-                </Slider.Track>
-                <Slider.Thumb index={0}>
-                  <Slider.HiddenInput />
-                </Slider.Thumb>
-              </Slider.Control>
-            </Slider.Root>
-            <Text color="fg.subtle" fontSize="sm">
-              Lower CRF = higher quality, larger file. Range:{" "}
-              {getVideoQualityRange(output.videoCodec).min}–
-              {getVideoQualityRange(output.videoCodec).max}.
-            </Text>
+              <FileUpload.HiddenInput />
+              <FileUpload.Dropzone>
+                <LuUpload className="mb-2 h-6 w-6 text-gray-500" />
+                <FileUpload.DropzoneContent>
+                  <Text>Drag and drop files here</Text>
+                  <Text color="gray.500" fontSize="sm">
+                    .mp4, .mov, .mkv, .webm, .avi, .ts, .wav, .mp3, .flac
+                  </Text>
+                </FileUpload.DropzoneContent>
+              </FileUpload.Dropzone>
+              <FileUpload.List clearable showSize />
+            </FileUpload.Root>
           </Box>
-        )}
 
-        <Button
-          colorScheme="blue"
-          disabled={!file || !output || isConverting}
-          loading={isConverting}
-          loadingText="Converting"
-          mb={2}
-          onClick={() => actorRef.send({ type: "convert" })}
-        >
-          Convert
-        </Button>
+          <Box mb={4}>
+            <Box>
+              <Text mb={2}>Output Format</Text>
+              <Select.Root
+                collection={outputFormats}
+                disabled={isConverting}
+                onSelect={(details) => {
+                  const o = SUPPORTED_OUTPUTS.find(
+                    (opt) => opt.label === details.value,
+                  );
+                  if (o) {
+                    actorRef.send({ type: "output.selected", output: o });
+                  }
+                }}
+                size="md"
+                value={output ? [output.label] : []}
+                width="full"
+              >
+                <Select.Label>Output Format</Select.Label>
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Select format" />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {SUPPORTED_OUTPUTS.map((format) => {
+                        const compatible = isPassthroughCompatible(
+                          format,
+                          inputVideoCodec,
+                        );
+                        return (
+                          <Select.Item
+                            item={{
+                              label: format.label,
+                              value: format.label,
+                              disabled: !compatible,
+                            }}
+                            key={format.label}
+                          >
+                            {format.label}
+                            {!compatible && format.videoCodec === undefined && (
+                              <Text as="span" color="fg.subtle">
+                                {" "}
+                                — codec incompatible
+                              </Text>
+                            )}
+                          </Select.Item>
+                        );
+                      })}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+            </Box>
+          </Box>
 
-        <ConversionProgress actor={actorRef} />
+          {output?.videoCodec && (
+            <Box mb={4}>
+              <Text mb={2}>Encoding Quality</Text>
+              <Slider.Root
+                disabled={isConverting}
+                max={getVideoQualityRange(output.videoCodec).max}
+                min={getVideoQualityRange(output.videoCodec).min}
+                onValueChange={(details) => {
+                  const quality = details.value[0];
+                  if (quality !== undefined) {
+                    actorRef.send({ type: "quality.selected", quality });
+                  }
+                }}
+                step={1}
+                value={[videoQuality]}
+                width="full"
+              >
+                <Slider.Label>Quality (CRF)</Slider.Label>
+                <Slider.ValueText>{videoQuality}</Slider.ValueText>
+                <Slider.Control>
+                  <Slider.Track>
+                    <Slider.Range />
+                  </Slider.Track>
+                  <Slider.Thumb index={0}>
+                    <Slider.HiddenInput />
+                  </Slider.Thumb>
+                </Slider.Control>
+              </Slider.Root>
+              <Text color="fg.subtle" fontSize="sm">
+                Lower CRF = higher quality, larger file. Range:{" "}
+                {getVideoQualityRange(output.videoCodec).min}–
+                {getVideoQualityRange(output.videoCodec).max}.
+              </Text>
+            </Box>
+          )}
 
-        {error && (
-          <Alert.Root mb={4} status="error">
-            <Alert.Content>
-              <Alert.Indicator />
-              <Alert.Title>Error</Alert.Title>
-              <Alert.Description>
-                {error}
-                <Button
-                  colorScheme="gray"
-                  mt={2}
-                  onClick={() => actorRef.send({ type: "reset" })}
-                  size="sm"
-                  variant="outline"
-                >
-                  Clear
-                </Button>
-              </Alert.Description>
-            </Alert.Content>
-          </Alert.Root>
-        )}
+          <Button
+            colorScheme="blue"
+            disabled={!file || !output || isConverting}
+            loading={isConverting}
+            loadingText="Converting"
+            mb={2}
+            onClick={() => actorRef.send({ type: "convert" })}
+          >
+            Convert
+          </Button>
 
-        {downloadUrl && isSuccess && (
-          <Alert.Root mb={4} status="success">
-            <Alert.Content>
-              <Alert.Indicator />
-              <Alert.Title>Success</Alert.Title>
-              <Alert.Description>
-                <Text>Conversion complete!</Text>
-                <Button asChild colorScheme="green" mt={2} size="sm">
-                  <a download={convertedName} href={downloadUrl}>
-                    Download
-                  </a>
-                </Button>
-                <Button
-                  colorScheme="gray"
-                  ml={2}
-                  mt={2}
-                  onClick={() => actorRef.send({ type: "reset" })}
-                  size="sm"
-                  variant="outline"
-                >
-                  Convert Another
-                </Button>
-                {output?.container === "mp4" ? (
-                  <video
-                    controls
-                    src={downloadUrl}
-                    style={{
-                      borderRadius: "0.5rem",
-                      marginTop: "1rem",
-                      maxHeight: "256px",
-                      width: "100%",
-                    }}
-                  />
-                ) : (
-                  <audio
-                    controls
-                    src={downloadUrl}
-                    style={{
-                      marginTop: "1rem",
-                      width: "100%",
-                    }}
-                  />
-                )}
-              </Alert.Description>
-            </Alert.Content>
-          </Alert.Root>
-        )}
+          <ConversionProgress actor={actorRef} />
 
-        <Text fontSize="sm">
-          Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac,
-          aac, m3u8
-        </Text>
-        <Text fontSize="sm">
-          Transcode: MP4 (H.264/AAC), WebM (VP9/Opus). Passthrough (no quality
-          loss): MP4, WebM, MKV — copies codecs if compatible with target
-          container.
-        </Text>
-      </Box>
-    </Container>
+          {error && (
+            <Alert.Root mb={4} status="error">
+              <Alert.Content>
+                <Alert.Indicator />
+                <Alert.Title>Error</Alert.Title>
+                <Alert.Description>
+                  {error}
+                  <Button
+                    colorScheme="gray"
+                    mt={2}
+                    onClick={() => actorRef.send({ type: "reset" })}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Clear
+                  </Button>
+                </Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          )}
+
+          {downloadUrl && isSuccess && (
+            <Alert.Root mb={4} status="success">
+              <Alert.Content>
+                <Alert.Indicator />
+                <Alert.Title>Success</Alert.Title>
+                <Alert.Description>
+                  <Text>Conversion complete!</Text>
+                  <Button asChild colorScheme="green" mt={2} size="sm">
+                    <a download={convertedName} href={downloadUrl}>
+                      Download
+                    </a>
+                  </Button>
+                  <Button
+                    colorScheme="gray"
+                    ml={2}
+                    mt={2}
+                    onClick={() => actorRef.send({ type: "reset" })}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Convert Another
+                  </Button>
+                  {output?.container === "mp4" ? (
+                    <video
+                      controls
+                      src={downloadUrl}
+                      style={{
+                        borderRadius: "0.5rem",
+                        marginTop: "1rem",
+                        maxHeight: "256px",
+                        width: "100%",
+                      }}
+                    />
+                  ) : (
+                    <audio
+                      controls
+                      src={downloadUrl}
+                      style={{
+                        marginTop: "1rem",
+                        width: "100%",
+                      }}
+                    />
+                  )}
+                </Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          )}
+
+          <Text fontSize="sm">
+            Supported input: mp4, mov, m4a, mkv, webm, avi, ts, wav, mp3, flac,
+            aac, m3u8
+          </Text>
+          <Text fontSize="sm">
+            Transcode: MP4 (H.264/AAC), WebM (VP9/Opus). Passthrough (no quality
+            loss): MP4, WebM, MKV — copies codecs if compatible with target
+            container.
+          </Text>
+        </Box>
+      </Container>
+    </Flex>
   );
 }

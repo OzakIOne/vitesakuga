@@ -1,16 +1,17 @@
 import {
-  Badge,
-  Box,
-  Combobox,
-  Icon,
   Portal,
-  Wrap,
   createListCollection,
-} from "@chakra-ui/react";
+  type ComboboxInputValueChangeDetails,
+  type ComboboxValueChangeDetails,
+} from "@ark-ui/react";
 import { useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
 import type { Tag } from "src/lib/posts/posts.schema";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
+
+import { Badge } from "./feedback";
+import { Box, Wrap } from "./layout";
+import { Combobox } from "./overlay";
 
 type TagInputProps = {
   value: Tag[];
@@ -46,7 +47,7 @@ export function TagInput({ value, onChange, onBlur }: TagInputProps) {
 
   const collection = useMemo(() => createListCollection({ items }), [items]);
 
-  const handleValueChange = (details: Combobox.ValueChangeDetails) => {
+  const handleValueChange = (details: ComboboxValueChangeDetails) => {
     const newValues = details.value;
     const addedValue = newValues.at(-1);
 
@@ -54,12 +55,10 @@ export function TagInput({ value, onChange, onBlur }: TagInputProps) {
       return;
     }
 
-    // Check if it's a create action
     if (addedValue.startsWith("Create: ")) {
       const newTagName = addedValue.replace("Create: ", "").trim();
       onChange([...value, { name: newTagName }]);
     } else {
-      // Find the tag from allTags
       const selectedTag = allTags.find(
         (tag: { name: string }) => tag.name === addedValue,
       );
@@ -76,20 +75,19 @@ export function TagInput({ value, onChange, onBlur }: TagInputProps) {
   };
 
   return (
-    <Box>
+    <Box w="full">
       <Combobox.Root
         closeOnSelect
         collection={collection}
         multiple
-        onInputValueChange={(details) => {
+        onInputValueChange={(details: ComboboxInputValueChangeDetails) => {
           setSearchValue(details.inputValue);
         }}
         onValueChange={handleValueChange}
         value={value.map((tag) => tag.name)}
-        width="full"
       >
         {value.length > 0 && (
-          <Wrap gap="2" mb={2}>
+          <Wrap className="mb-2">
             {value.map((tag) => (
               <Badge
                 alignItems="center"
@@ -100,16 +98,13 @@ export function TagInput({ value, onChange, onBlur }: TagInputProps) {
                 py={1}
               >
                 {tag.name}
-                <Icon
-                  _hover={{ color: "red.500" }}
-                  cursor="pointer"
+                <LuX
+                  className="cursor-pointer transition-colors hover:text-red-500"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemoveTag(tag);
                   }}
-                >
-                  <LuX />
-                </Icon>
+                />
               </Badge>
             ))}
           </Wrap>

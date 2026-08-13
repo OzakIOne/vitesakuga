@@ -1,16 +1,24 @@
-import { Box, IconButton } from "@chakra-ui/react";
 import { useHotkey, useHotkeySequences } from "@tanstack/react-hotkeys";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { KeyboardShortcutsDialog } from "src/components/KeyboardShortcutsDialog";
+import { IconButton } from "src/components/ui/button";
+import { Box } from "src/components/ui/layout";
 
 export function GlobalShortcuts() {
   const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
+  const focusSearchInput = () => {
+    const searchInput = document.getElementById("search-input");
+    searchInput?.focus();
+  };
+
   useHotkey({ key: "/", shift: true }, () => {
     setShortcutsOpen((open) => !open);
   });
+
+  useHotkey("Mod+K", focusSearchInput);
 
   useHotkeySequences([
     {
@@ -26,10 +34,7 @@ export function GlobalShortcuts() {
       sequence: ["G", "U"],
     },
     {
-      callback: () => {
-        const searchInput = document.getElementById("search-input");
-        searchInput?.focus();
-      },
+      callback: focusSearchInput,
       sequence: ["G", "S"],
     },
   ]);

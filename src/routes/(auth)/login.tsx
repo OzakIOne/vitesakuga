@@ -1,8 +1,9 @@
-import { Button, Field, Input } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
+import { Button } from "src/components/ui/button";
+import { Field, Input } from "src/components/ui/field";
 import { PasswordInput } from "src/components/ui/password-input";
 import { useLogin, useSocialLogin } from "src/lib/auth/auth.hooks";
 

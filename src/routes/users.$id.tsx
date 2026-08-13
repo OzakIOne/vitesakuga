@@ -1,4 +1,3 @@
-import { Box, SimpleGrid, Spinner, Stack, Text } from "@chakra-ui/react";
 import {
   createFileRoute,
   Outlet,
@@ -8,6 +7,9 @@ import { NotFound } from "src/components/NotFound";
 import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { Spinner } from "src/components/ui/feedback";
+import { Box, SimpleGrid, Stack } from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";

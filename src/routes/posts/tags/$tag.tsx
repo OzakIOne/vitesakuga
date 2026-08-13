@@ -1,8 +1,10 @@
-import { Box, Heading, SimpleGrid, Spinner, Stack } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Pagination } from "src/components/Pagination";
 import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { Spinner } from "src/components/ui/feedback";
+import { Box, SimpleGrid, Stack } from "src/components/ui/layout";
+import { Heading } from "src/components/ui/typography";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usePostsPage } from "src/lib/posts/posts.hooks";
 import { postsQueryByTag } from "src/lib/posts/posts.queries";

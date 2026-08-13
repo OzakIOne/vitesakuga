@@ -1,5 +1,7 @@
-import { Badge, Box, Stack, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
+import { Badge } from "src/components/ui/feedback";
+import { Box, Stack, VStack } from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 
 import type { PostsPageLayoutProps } from "./PostsPageLayout";
 

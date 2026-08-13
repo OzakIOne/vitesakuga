@@ -1,4 +1,3 @@
-import { Spinner, Stack, Text } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -12,6 +11,9 @@ import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
 import { PostEditForm } from "src/components/PostDetail/PostEditForm";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { Spinner } from "src/components/ui/feedback";
+import { Stack } from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { parse } from "src/lib/effect/schema.utils";
 import { postQueryDetail } from "src/lib/posts/posts.queries";

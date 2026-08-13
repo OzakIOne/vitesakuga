@@ -1,8 +1,10 @@
 import "src/lib/polyfills";
-import { Spinner, Stack, Text } from "@chakra-ui/react";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
+import { Spinner } from "src/components/ui/feedback";
+import { Stack } from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 import { User } from "src/components/User";
 import { usersCollection } from "src/lib/db/collections";
 

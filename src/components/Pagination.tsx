@@ -1,5 +1,7 @@
-import { Button, HStack, IconButton, Text } from "@chakra-ui/react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { Button, IconButton } from "src/components/ui/button";
+import { HStack } from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 
 type PaginationProps = {
   currentPage: number;

@@ -1,9 +1,10 @@
-import { Box, Flex, Heading } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { SearchBox } from "src/components/SearchBox";
+import { Box, Flex } from "src/components/ui/layout";
+import { Heading } from "src/components/ui/typography";
 import { tagsQueryGetPopularTags } from "src/lib/tags/tags.queries";
 
 export const Route = createFileRoute("/")({

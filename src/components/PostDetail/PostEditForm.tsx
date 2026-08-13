@@ -1,7 +1,9 @@
-import { Box, Button, Text } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
+import { Button } from "src/components/ui/button";
+import { Box } from "src/components/ui/layout";
+import { Text } from "src/components/ui/typography";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
@@ -77,7 +79,7 @@ export function PostEditForm({
       if (!editForm.state.isDirty) {
         return false;
       }
-      // TODO replace with chakra ui thing i use
+      // TODO: replace with a proper unsaved-changes dialog
       const shouldLeave = confirm(
         "You have unsaved changes. Do you want to leave?",
       );
@@ -140,7 +142,7 @@ export function PostEditForm({
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button
               disabled={!canSubmit || isPristine}
-              loading={isSubmitting}
+              loading={isSubmitting === true}
               type="submit"
             >
               {isSubmitting ? "Saving..." : "Save"}
