@@ -1,11 +1,11 @@
-# Graph Report - vitesakuga-posts-likes  (2026-08-14)
+# Graph Report - vitesakuga-posts-likes  (2026-08-13)
 
 ## Corpus Check
 - 196 files · ~78,402 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1242 nodes · 2393 edges · 152 communities (71 shown, 81 thin omitted)
+- 1242 nodes · 2393 edges · 154 communities (73 shown, 81 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 35 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
@@ -79,6 +79,7 @@
 - @opentelemetry/sdk-trace-node
 - probe.ts
 - oxfmt
+- oxlint
 - pg
 - postgres
 - react
@@ -149,6 +150,7 @@
 - storage.module.ts
 - probe.ts
 - server-fn.handler.ts
+- playlists.fn.test.ts
 - @cloudflare/workers-types
 - tailwindcss
 - @tanstack/eslint-plugin-router
@@ -182,19 +184,23 @@
 ## Import Cycles
 - None detected.
 
-## Communities (152 total, 81 thin omitted)
+## Communities (154 total, 81 thin omitted)
 
 ### Community 0 - "posts.schema.ts"
-Cohesion: 0.11
-Nodes (22): NotFound(), PostCard, PostListProps, PostErrorComponent(), PostsPageLayout(), Spinner(), GridItem(), User() (+14 more)
+Cohesion: 0.14
+Nodes (19): Pagination(), PaginationProps, PostCard, PostErrorComponent(), PostsPageLayout(), Spinner(), GridItem(), UserErrorComponent() (+11 more)
 
 ### Community 1 - "test-utils.ts"
-Cohesion: 0.16
-Nodes (19): AuthService, AuthSessionProvider, RequestHeadersService, getSessionEffect, getUserSessionEffect, SessionFetchError, KyselyDB, LOG_LAYER (+11 more)
+Cohesion: 0.19
+Nodes (16): AuthService, AuthSessionProvider, RequestHeadersService, getSessionEffect, getUserSessionEffect, KyselyDB, LOG_LAYER, makeAuthLayer() (+8 more)
 
 ### Community 2 - "upload.lazy.tsx"
 Cohesion: 0.14
 Nodes (14): AccountTable, CommentsTable, kysely, PlaylistPostsTable, PlaylistsTable, PostsTable, PostTagsTable, PostVotesTable (+6 more)
+
+### Community 3 - "playlists.service.ts"
+Cohesion: 0.25
+Nodes (8): HStack(), Stack(), HEADING_SIZES, Link(), LinkProps, Text(), TextProps, User()
 
 ### Community 4 - "rules"
 Cohesion: 0.08
@@ -233,8 +239,8 @@ Cohesion: 0.08
 Nodes (25): AccountRoute, ApiAuthSplatRoute, authLoginRoute, authRouteRoute, authRouteRouteChildren, authRouteRouteWithChildren, authSignupRoute, ConvertRoute (+17 more)
 
 ### Community 13 - "AGENT GUIDELINES FOR ViteSakuga"
-Cohesion: 0.10
-Nodes (21): Comments(), Post(), PostDetailDisplay(), PostDetailDisplayProps, Button(), buttonClasses(), ButtonProps, CloseButton() (+13 more)
+Cohesion: 0.11
+Nodes (18): Comments(), Post(), PostDetailDisplay(), PostDetailDisplayProps, PostVoteButtons, Button(), buttonClasses(), ButtonProps (+10 more)
 
 ### Community 14 - "`src/lib/`"
 Cohesion: 0.10
@@ -254,7 +260,7 @@ Nodes (28): Collapsible, Dialog, FileUpload, Menu, Popover, Select, Slider, Acto
 
 ### Community 18 - "dependencies"
 Cohesion: 0.15
-Nodes (13): alchemy, @ark-ui/react, effect, isomorphic-dompurify, @opentelemetry/exporter-logs-otlp-http, @opentelemetry/sdk-trace-base, dependencies, alchemy (+5 more)
+Nodes (13): alchemy, @ark-ui/react, isomorphic-dompurify, media-chrome, @opentelemetry/exporter-logs-otlp-http, @opentelemetry/sdk-trace-base, dependencies, alchemy (+5 more)
 
 ### Community 19 - "FileRoutesByPath"
 Cohesion: 0.05
@@ -273,8 +279,8 @@ Cohesion: 0.25
 Nodes (7): CommandError, createBucket, curlStatus(), exec(), setup, startRustFS, waitForHealth
 
 ### Community 24 - "ViteSakuga"
-Cohesion: 0.18
-Nodes (14): PostVoteButtons, PostVoteButtonsComponent(), PostVoteButtonsProps, PostVote, VotesFnsContext, applyVote(), PostVotesSummary, summary (+6 more)
+Cohesion: 0.27
+Nodes (10): PostVoteButtonsComponent(), PostVoteButtonsProps, PostVote, applyVote(), PostVotesSummary, usePostVotes(), useSetVote(), votesKeys (+2 more)
 
 ### Community 25 - "DB"
 Cohesion: 0.17
@@ -293,28 +299,28 @@ Cohesion: 0.33
 Nodes (6): CommandError, curlStatus(), ensureRustFS, exec(), isRunning, waitForHealth
 
 ### Community 29 - "Domain Docs"
-Cohesion: 0.18
-Nodes (12): postVoteSchema, defaultVotesFns, testUser, RemovePostVoteInput, removePostVoteSchema, SetPostVoteInput, setPostVoteSchema, PostVotesService (+4 more)
+Cohesion: 0.24
+Nodes (9): postVoteSchema, testUser, RemovePostVoteInput, removePostVoteSchema, SetPostVoteInput, setPostVoteSchema, PostVotesService, PostVotesServiceLive (+1 more)
 
 ### Community 30 - "Issue tracker: GitHub"
-Cohesion: 0.25
-Nodes (7): postWithVotesSelectSchema, EffectKysely, mapPopularTags(), UsersService, UsersServiceLive, fetchPostVoteCounts, VoteCountsMap
+Cohesion: 0.23
+Nodes (8): postWithVotesSelectSchema, EffectKysely, SqlError, mapPopularTags(), UsersService, UsersServiceLive, fetchPostVoteCounts, VoteCountsMap
 
 ### Community 32 - "vite-env.d.ts"
 Cohesion: 0.50
 Nodes (3): ImportMeta, ImportMetaEnv, ViteTypeOptions
 
 ### Community 33 - "tooltip.tsx"
-Cohesion: 0.17
-Nodes (25): Checkbox, Input(), INPUT_SIZES, InputGroup(), InputGroupProps, InputProps, Textarea(), TextareaProps (+17 more)
+Cohesion: 0.18
+Nodes (22): SearchBoxProps, Checkbox, Input(), INPUT_SIZES, InputGroup(), InputGroupProps, InputProps, Textarea() (+14 more)
 
 ### Community 34 - "schema.utils.ts"
 Cohesion: 0.21
 Nodes (12): FieldInfo(), FormTextareaFieldProps, FormTextWrapper(), InputProps, TextareaProps, Field, postQueryDetail(), searchPosts (+4 more)
 
 ### Community 35 - "route.tsx"
-Cohesion: 0.16
-Nodes (18): PopularTag, PopularTagsSection(), PopularTagsSectionProps, PostFilters(), PostFiltersProps, PostsPageLayoutProps, RegisteredRoutes, SearchBox() (+10 more)
+Cohesion: 0.17
+Nodes (15): PopularTag, PopularTagsSection(), PopularTagsSectionProps, PostFilters(), PostFiltersProps, PostsPageLayoutProps, RegisteredRoutes, SearchBox() (+7 more)
 
 ### Community 37 - "PGliteDriver"
 Cohesion: 0.17
@@ -337,8 +343,8 @@ Cohesion: 0.20
 Nodes (8): commentInsertSchema, comments, playlistPosts, playlists, posts, postTags, postVotes, tags
 
 ### Community 42 - "triage-labels.md"
-Cohesion: 0.39
-Nodes (5): Avatar, AVATAR_SIZES, AvatarGroup(), Card, ImageProps
+Cohesion: 0.24
+Nodes (8): CloseButton(), Avatar, AVATAR_SIZES, AvatarGroup(), Card, ImageProps, ChakraStyleProps, toStandardSchemaV1Strict()
 
 ### Community 43 - "dotenv"
 Cohesion: 0.24
@@ -369,12 +375,16 @@ Cohesion: 0.20
 Nodes (10): Component Structure, Data Fetching, Form Handling, Hooks, Imports, JSX, Naming Conventions, Props (+2 more)
 
 ### Community 55 - "@emotion/react"
-Cohesion: 0.25
-Nodes (4): defaultVideoMetadata, testUser, PostsService, PostsServiceLive
+Cohesion: 0.20
+Nodes (6): createTestKysely(), makeServiceTestLayer(), defaultVideoMetadata, testUser, PostsService, PostsServiceLive
 
 ### Community 58 - "@neondatabase/serverless"
 Cohesion: 0.20
 Nodes (9): 1. Prerequisites, 2. Deploy the Bucket, 3. Sync to Environment, Dev, Environments, Infrastructure Setup, Patches, Secondary (+1 more)
+
+### Community 69 - "oxlint"
+Cohesion: 0.28
+Nodes (6): defaultVotesFns, VotesFnsContext, summary, fetchPostVotes, removePostVote, setPostVote
 
 ### Community 72 - "react"
 Cohesion: 0.20
@@ -389,8 +399,8 @@ Cohesion: 0.25
 Nodes (8): Auth Middleware, `createHandler` Bridge, Effective Service Files, Error Handling, Location, Server Functions & API Design, Structure of a Service File, Validation
 
 ### Community 106 - "users.$id.playlists.$playlistId.tsx"
-Cohesion: 0.24
-Nodes (11): Pagination(), PaginationProps, PostCardComponent(), HStack(), Text(), assetUrl(), playlistQueryDetail(), playlistsQueryUserPlaylists() (+3 more)
+Cohesion: 0.19
+Nodes (13): NotFound(), PostCardComponent(), PostListProps, Image(), Video, VideoProps, assetUrl(), playlistQueryDetail() (+5 more)
 
 ### Community 110 - "upload.lazy.tsx"
 Cohesion: 0.23
@@ -402,7 +412,7 @@ Nodes (7): Database Conventions (Drizzle ORM & Kysely), Drizzle Schemas, Effect 
 
 ### Community 121 - "comments.service.ts"
 Cohesion: 0.22
-Nodes (8): AuthServices, testUser, CommentsService, CommentsServiceLive, CommentWithUser, commentsSelectSchema, SqlError, SqlNoFirstResult
+Nodes (8): AuthServices, SessionFetchError, testUser, CommentsService, CommentsServiceLive, CommentWithUser, commentsSelectSchema, SqlNoFirstResult
 
 ### Community 122 - "index.tsx"
 Cohesion: 0.29
@@ -444,7 +454,7 @@ Nodes (3): ./node_modules/@effect/tsgo/oxlint-presets/correctness.json, ./node_m
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dependencies` connect `dependencies` to `@opentelemetry/sdk-logs`, `kysely`, `playlists.service.ts`, `@opentelemetry/sdk-trace-base`, `@neondatabase/serverless`, `tailwind-merge`, `scripts`, `better-auth`, `@effect/opentelemetry`, `neonctl`, `@opentelemetry/sdk-trace-web`, `auth.hooks.ts`, `@emotion/react`, `mediainfo.js`, `next-themes`, `@opentelemetry/api`, `users.service.ts`, `@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/resources`, `useUploadForm.ts`, `@opentelemetry/sdk-trace-node`, `pg`, `postgres`, `react-dom`, `react-icons`, `@tailwindcss/vite`, `@tanstack/db`, `@tanstack/query-db-collection`, `@tanstack/react-db`, `@tanstack/react-form`, `@tanstack/react-form-devtools`, `@tanstack/react-hotkeys`, `@tanstack/react-pacer`, `@tanstack/react-pacer-devtools`, `@tanstack/react-query`, `@tanstack/react-query-devtools`, `@tanstack/react-router`, `@tanstack/react-router-devtools`, `@tanstack/react-router-ssr-query`, `@tanstack/react-start`, `xstate`, `@xstate/react`, `errors.ts`, `layer-factories.server.ts`, `PGliteConnection`?**
+- **Why does `dependencies` connect `dependencies` to `@opentelemetry/sdk-logs`, `kysely`, `@neondatabase/serverless`, `@opentelemetry/sdk-trace-base`, `tailwind-merge`, `scripts`, `better-auth`, `@effect/opentelemetry`, `neonctl`, `@opentelemetry/sdk-trace-web`, `auth.hooks.ts`, `playlists.fn.test.ts`, `@emotion/react`, `mediainfo.js`, `next-themes`, `@opentelemetry/api`, `users.service.ts`, `@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/resources`, `useUploadForm.ts`, `@opentelemetry/sdk-trace-node`, `pg`, `postgres`, `react-dom`, `react-icons`, `@tailwindcss/vite`, `@tanstack/db`, `@tanstack/query-db-collection`, `@tanstack/react-db`, `@tanstack/react-form`, `@tanstack/react-form-devtools`, `@tanstack/react-hotkeys`, `@tanstack/react-pacer`, `@tanstack/react-pacer-devtools`, `@tanstack/react-query`, `@tanstack/react-query-devtools`, `@tanstack/react-router`, `@tanstack/react-router-devtools`, `@tanstack/react-router-ssr-query`, `@tanstack/react-start`, `xstate`, `@xstate/react`, `errors.ts`, `layer-factories.server.ts`, `PGliteConnection`?**
   _High betweenness centrality (0.222) - this node is a cross-community bridge._
 - **Why does `react` connect `auth.hooks.ts` to `tooltip.tsx`, `dependencies`?**
   _High betweenness centrality (0.207) - this node is a cross-community bridge._
@@ -453,7 +463,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `$schema`, `./node_modules/@effect/tsgo/oxlint-presets/correctness.json`, `./node_modules/@effect/tsgo/oxlint-presets/effect-native.json` to the rest of the system?**
   _533 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `posts.schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.11092436974789915 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1402116402116402 - nodes in this community are weakly interconnected._
 - **Should `upload.lazy.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected._
 - **Should `rules` be split into smaller, more focused modules?**

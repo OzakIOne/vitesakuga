@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { PostVoteButtons } from "src/components/PostVoteButtons";
 import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Box, HStack, Stack } from "src/components/ui/layout";
@@ -33,16 +34,19 @@ export function Post({
       {post.title && (
         <HStack justify="space-between">
           <Heading as="h3">{post.title}</Heading>
-          {currentUserId && onAddToPlaylist && (
-            <Button
-              colorPalette="blue"
-              onClick={onAddToPlaylist}
-              size="sm"
-              variant="outline"
-            >
-              Add to playlist
-            </Button>
-          )}
+          <HStack gap={2}>
+            <PostVoteButtons currentUserId={currentUserId} postId={post.id} />
+            {currentUserId && onAddToPlaylist && (
+              <Button
+                colorPalette="blue"
+                onClick={onAddToPlaylist}
+                size="sm"
+                variant="outline"
+              >
+                Add to playlist
+              </Button>
+            )}
+          </HStack>
         </HStack>
       )}
       {post.content && <Text mb={4}>{post.content}</Text>}

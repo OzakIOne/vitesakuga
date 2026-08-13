@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Comments } from "src/components/Comments";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
-import { PostVoteButtons } from "src/components/PostVoteButtons";
 import { Button } from "src/components/ui/button";
 import { Box, VStack } from "src/components/ui/layout";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
@@ -46,9 +45,6 @@ export function PostDetailDisplay({
           tags={initialTags}
           user={user}
         />
-        <Box mt={4}>
-          <PostVoteButtons currentUserId={currentUserId} postId={post.id} />
-        </Box>
       </Box>
 
       {showPlaylistModal && currentUserId && (
