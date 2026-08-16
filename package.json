@@ -66,6 +66,7 @@
     "@tanstack/react-router-devtools": "^1.167.1",
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.42",
+    "@tanstack/react-virtual": "^3.14.9",
     "@xstate/react": "^7.0.0-alpha.1",
     "alchemy": "2.0.0-beta.72",
     "better-auth": "1.7.0-rc.4",
