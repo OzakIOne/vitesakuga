@@ -127,5 +127,3 @@ export const postByTagSchema = Schema.Struct({
   ),
   tag: Schema.String,
 });
-
-export type PostByTagParams = Schema.Schema.Type<typeof postByTagSchema>;

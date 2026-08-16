@@ -1,13 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Pagination } from "src/components/Pagination";
-import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { Spinner } from "src/components/ui/feedback";
-import { Box, SimpleGrid, Stack } from "src/components/ui/layout";
+import { Box } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
+import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
-import { usePostsPage } from "src/lib/posts/posts.hooks";
-import { postsQueryByTag } from "src/lib/posts/posts.queries";
+import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
+import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 
 export const Route = createFileRoute("/posts/tags/$tag")({
@@ -19,10 +17,27 @@ export const Route = createFileRoute("/posts/tags/$tag")({
 
 function RouteComponent() {
   const { tag } = Route.useParams();
-  const { sortBy, dateRange, page } = Route.useSearch();
+  const searchParams = Route.useSearch();
+  const { sortBy, dateRange } = searchParams;
 
-  const { posts, popularTags, totalPages, handlePageChange, isFetching } =
-    usePostsPage(postsQueryByTag({ page, tag }));
+  const {
+    allPosts,
+    anchorPostIndex,
+    anchorScrollKey,
+    fetchNextPage,
+    fetchPreviousPage,
+    hasNextPage,
+    hasPreviousPage,
+    isFetchingNextPage,
+    isFetchingPreviousPage,
+    pageParams,
+    pageSize,
+    popularTags,
+    syncPageToUrl,
+  } = usePostsInfiniteScroll(
+    "/posts/tags/$tag",
+    postsInfiniteQueryOptions({ ...searchParams, tags: [tag] }),
+  );
 
   return (
     <PostsPageLayout
@@ -30,6 +45,7 @@ function RouteComponent() {
       fromRoute="/posts/tags/$tag"
       popularTags={popularTags}
       searchQuery={undefined}
+      selectedTags={[tag]}
       sortBy={sortBy}
     >
       <Box border="1px" borderRadius="md" p={4}>
@@ -37,33 +53,21 @@ function RouteComponent() {
           Posts tagged with "{tag}"
         </Heading>
 
-        {isFetching && (
-          <Stack align="center" justify="center" pb={2}>
-            <Spinner size="sm" />
-          </Stack>
-        )}
-        {posts.length === 0 ? (
-          <Box p={4}>No posts found with this tag.</Box>
-        ) : (
-          <>
-            <SimpleGrid
-              columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }}
-              gap={4}
-              mb={8}
-            >
-              {posts.map((post) => (
-                <Box key={post.id}>
-                  <PostCard post={post} />
-                </Box>
-              ))}
-            </SimpleGrid>
-            <Pagination
-              currentPage={page}
-              onPageChange={handlePageChange}
-              totalPages={totalPages}
-            />
-          </>
-        )}
+        <VirtualPostsGrid
+          allPosts={allPosts}
+          anchorPostIndex={anchorPostIndex}
+          anchorScrollKey={anchorScrollKey}
+          fetchNextPage={fetchNextPage}
+          fetchPreviousPage={fetchPreviousPage}
+          hasNextPage={hasNextPage}
+          hasPreviousPage={hasPreviousPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isFetchingPreviousPage={isFetchingPreviousPage}
+          pageParams={pageParams}
+          pageSize={pageSize}
+          searchParams={{ ...searchParams, tags: [tag] }}
+          syncPageToUrl={syncPageToUrl}
+        />
       </Box>
     </PostsPageLayout>
   );

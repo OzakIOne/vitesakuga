@@ -2,13 +2,11 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
 import type { PostWithVotes } from "../db/schema";
 import type { PaginationMeta } from "../pagination/pagination";
-import type { PostByTagParams, PostsSearchParams } from "./posts.schema";
-import { fetchPostDetail, getPostsByTag, searchPosts } from "./posts.service";
+import type { PostsSearchParams } from "./posts.schema";
+import { fetchPostDetail, searchPosts } from "./posts.service";
 
 export const postsKeys = {
   all: ["posts"] as const,
-  byTag: ({ page, tag }: PostByTagParams) =>
-    [...postsKeys.all, "byTag", page, tag] as const,
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
   search: (params: PostsSearchParams) =>
     [...postsKeys.all, "search", params] as const,
@@ -55,16 +53,6 @@ export const computeAnchorPostIndex = (
 
 // Centralized queryOptions factories for posts feature
 const postsQueries = {
-  byTag: (params: PostByTagParams) =>
-    queryOptions({
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      queryFn: async () =>
-        getPostsByTag({
-          data: params,
-        }),
-      queryKey: postsKeys.byTag(params),
-      staleTime: 60 * 1000, // 1 minute
-    }),
   // Single post detail
   detail: (postId: number) =>
     queryOptions({
@@ -93,6 +81,3 @@ export const postsInfiniteQueryOptions = (params: PostsSearchParams) =>
   });
 
 export const postQueryDetail = (postId: number) => postsQueries.detail(postId);
-
-export const postsQueryByTag = (params: PostByTagParams) =>
-  postsQueries.byTag(params);

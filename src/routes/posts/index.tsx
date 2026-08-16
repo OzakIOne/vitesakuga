@@ -4,6 +4,7 @@ import { Box } from "src/components/ui/layout";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
+import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 
 export const Route = createFileRoute("/posts/")({
@@ -30,7 +31,10 @@ function PostsContent() {
     pageSize,
     popularTags,
     syncPageToUrl,
-  } = usePostsInfiniteScroll(searchParams);
+  } = usePostsInfiniteScroll(
+    "/posts/",
+    postsInfiniteQueryOptions(searchParams),
+  );
 
   return (
     <Box p={4} w="full">

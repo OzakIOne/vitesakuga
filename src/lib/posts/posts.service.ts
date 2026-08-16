@@ -658,7 +658,3 @@ export const updatePost = createServerFn({ method: "POST" })
       baseLayerFactories.auth,
     ),
   );
-
-export const getPostsByTag = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => parseStrict(postByTagSchema)(input))
-  .handler(createHandler(PostsService.getByTag, PostsServiceLive));

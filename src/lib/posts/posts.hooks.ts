@@ -1,19 +1,15 @@
-import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
+import type {
+  InfiniteData,
+  QueryKey,
+  UseInfiniteQueryOptions,
 } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, type RegisteredRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PostWithVotes } from "../db/schema";
 import type { PaginationMeta } from "../pagination/pagination";
-import {
-  computeAnchorPostIndex,
-  postsInfiniteQueryOptions,
-} from "./posts.queries";
-import type { PostsSearchParams } from "./posts.schema";
+import { computeAnchorPostIndex } from "./posts.queries";
 
 type PopularTag = {
   id: number;
@@ -21,20 +17,26 @@ type PopularTag = {
   postCount: number;
 };
 
-export type PostListingData = {
-  data: readonly PostWithVotes[];
+type InfinitePostsPage = {
+  readonly data: readonly PostWithVotes[];
   meta: {
     pagination: PaginationMeta;
     popularTags: PopularTag[];
   };
 };
 
-export type PostsInfiniteState = {
+type RegisteredFullPaths =
+  RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
+
+export type PostsInfiniteState<
+  TData extends InfinitePostsPage = InfinitePostsPage,
+> = {
   allPosts: readonly PostWithVotes[];
   anchorPostIndex: number | null;
   anchorScrollKey: number;
   fetchNextPage: () => void;
   fetchPreviousPage: () => void;
+  firstPage: TData | undefined;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
   isFetching: boolean;
@@ -47,14 +49,22 @@ export type PostsInfiniteState = {
   syncPageToUrl: (page: number) => void;
 };
 
-export function usePostsInfiniteScroll(
-  searchParams: PostsSearchParams,
-): PostsInfiniteState {
-  const navigate = useNavigate({ from: "/posts/" });
+export function usePostsInfiniteScroll<
+  TData extends InfinitePostsPage,
+  TQueryKey extends QueryKey,
+>(
+  from: RegisteredFullPaths,
+  infiniteOptions: UseInfiniteQueryOptions<
+    TData,
+    Error,
+    InfiniteData<TData, unknown>,
+    TQueryKey,
+    number
+  >,
+): PostsInfiniteState<TData> {
+  const navigate = useNavigate({ from });
   const queryClient = useQueryClient();
-  const { page } = searchParams;
-
-  const infiniteOptions = postsInfiniteQueryOptions(searchParams);
+  const page = infiniteOptions.initialPageParam;
 
   const {
     data,
@@ -79,9 +89,7 @@ export function usePostsInfiniteScroll(
     if (page === lastWrittenPageRef.current) return;
     lastWrittenPageRef.current = page;
     setAnchorScrollKey((key) => key + 1);
-    void queryClient.resetQueries({
-      queryKey: postsInfiniteQueryOptions(searchParams).queryKey,
-    });
+    void queryClient.resetQueries({ queryKey: infiniteOptions.queryKey });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey identity is unstable; only page drives resets
   }, [page, queryClient]);
 
@@ -167,6 +175,7 @@ export function usePostsInfiniteScroll(
     anchorScrollKey,
     fetchNextPage,
     fetchPreviousPage,
+    firstPage: data?.pages[0],
     hasNextPage,
     hasPreviousPage,
     isFetching,
@@ -177,48 +186,5 @@ export function usePostsInfiniteScroll(
     pageSize: pageSize ?? 30,
     popularTags,
     syncPageToUrl,
-  };
-}
-
-export function usePostsPage<
-  TData extends PostListingData,
-  TQueryKey extends QueryKey = QueryKey,
->(queryOptions: UseQueryOptions<TData, Error, TData, TQueryKey>) {
-  const navigate = useNavigate();
-  const previousDataRef = useRef<TData | undefined>(undefined);
-
-  const { placeholderData: _placeholderData, ...restOptions } = queryOptions;
-
-  const { data, isFetching } = useQuery({
-    ...restOptions,
-    ...(previousDataRef.current !== undefined
-      ? { placeholderData: previousDataRef.current }
-      : {}),
-  } as UseQueryOptions<TData, Error, TData, TQueryKey>);
-
-  if (data) {
-    previousDataRef.current = data;
-  }
-
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      void navigate({
-        search: ((prev: Record<string, unknown>) => ({
-          ...prev,
-          page: newPage,
-        })) as never,
-      });
-      window.scrollTo({ behavior: "smooth", top: 0 });
-    },
-    [navigate],
-  );
-
-  return {
-    data,
-    handlePageChange,
-    isFetching,
-    popularTags: data?.meta?.popularTags ?? [],
-    posts: data?.data ?? [],
-    totalPages: data?.meta?.pagination?.totalPages ?? 0,
   };
 }

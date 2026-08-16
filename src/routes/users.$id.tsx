@@ -4,18 +4,15 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { NotFound } from "src/components/NotFound";
-import { Pagination } from "src/components/Pagination";
-import { PostCard } from "src/components/PostCard";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { Spinner } from "src/components/ui/feedback";
-import { Box, SimpleGrid, Stack } from "src/components/ui/layout";
-import { Text } from "src/components/ui/typography";
+import { Box } from "src/components/ui/layout";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
+import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
-import { usePostsPage } from "src/lib/posts/posts.hooks";
+import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
-import { userQueryOptions } from "src/lib/users/users.queries";
+import { userPostsInfiniteQueryOptions } from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
   component: UserLayoutComponent,
@@ -27,10 +24,33 @@ export const Route = createFileRoute("/users/$id")({
 
 function UserContent() {
   const { id } = Route.useParams();
-  const { sortBy, dateRange, tags, q, page } = Route.useSearch();
+  const searchParams = Route.useSearch();
+  const { sortBy, dateRange, tags, q } = searchParams;
 
-  const { posts, popularTags, totalPages, handlePageChange, data, isFetching } =
-    usePostsPage(userQueryOptions({ page, q, tags, userId: id }));
+  const {
+    allPosts,
+    anchorPostIndex,
+    anchorScrollKey,
+    fetchNextPage,
+    fetchPreviousPage,
+    firstPage,
+    hasNextPage,
+    hasPreviousPage,
+    isFetchingNextPage,
+    isFetchingPreviousPage,
+    pageParams,
+    pageSize,
+    popularTags,
+    syncPageToUrl,
+  } = usePostsInfiniteScroll(
+    "/users/$id",
+    userPostsInfiniteQueryOptions({
+      page: searchParams.page,
+      q,
+      tags,
+      userId: id,
+    }),
+  );
 
   return (
     <Box p={4}>
@@ -42,51 +62,29 @@ function UserContent() {
         selectedTags={tags}
         sortBy={sortBy}
       >
-        {data && (
+        {firstPage?.user && (
           <User
-            id={data.user.id}
-            image={data.user.image}
-            name={data.user.name}
+            id={firstPage.user.id}
+            image={firstPage.user.image}
+            name={firstPage.user.name}
           />
         )}
 
-        {isFetching && (
-          <Stack align="center" justify="center" pb={2}>
-            <Spinner size="sm" />
-          </Stack>
-        )}
-        {posts.length === 0 ? (
-          <Box
-            alignItems="center"
-            border="1px solid"
-            borderColor="gray.200"
-            borderRadius="md"
-            display="flex"
-            h="200px"
-            justifyContent="center"
-          >
-            <Text color="gray.500">No posts found</Text>
-          </Box>
-        ) : (
-          <>
-            <SimpleGrid
-              columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }}
-              gap={4}
-              mb={8}
-            >
-              {posts.map((post) => (
-                <Box key={post.id}>
-                  <PostCard post={post} />
-                </Box>
-              ))}
-            </SimpleGrid>
-            <Pagination
-              currentPage={page}
-              onPageChange={handlePageChange}
-              totalPages={totalPages}
-            />
-          </>
-        )}
+        <VirtualPostsGrid
+          allPosts={allPosts}
+          anchorPostIndex={anchorPostIndex}
+          anchorScrollKey={anchorScrollKey}
+          fetchNextPage={fetchNextPage}
+          fetchPreviousPage={fetchPreviousPage}
+          hasNextPage={hasNextPage}
+          hasPreviousPage={hasPreviousPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isFetchingPreviousPage={isFetchingPreviousPage}
+          pageParams={pageParams}
+          pageSize={pageSize}
+          searchParams={searchParams}
+          syncPageToUrl={syncPageToUrl}
+        />
       </PostsPageLayout>
     </Box>
   );
@@ -95,7 +93,11 @@ function UserContent() {
 function UserLayoutComponent() {
   const hasChildRoute = useRouterState({
     select: (state) =>
-      state.matches.some((match) => match.id.startsWith(`${Route.id}/`)),
+      state.matches.some(
+        (match) =>
+          match.routeId !== Route.id &&
+          match.routeId.startsWith(`${Route.id}/`),
+      ),
   });
 
   if (hasChildRoute) {
