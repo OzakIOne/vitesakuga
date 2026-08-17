@@ -1,10 +1,10 @@
 import { neon } from "@neondatabase/serverless";
 import type { Generated } from "kysely";
 import { Kysely, PostgresDialect } from "kysely";
-import { NeonDialect } from "kysely-neon";
 import { Pool as PgPool } from "pg";
 
 import { envServer } from "../env/server";
+import { NeonTransactionDialect } from "./neon-transaction-dialect";
 import { getKyselyPool, isLocal } from "./pool";
 
 type UserTable = {
@@ -130,7 +130,8 @@ export const kysely = isLocal
       }),
     })
   : new Kysely<DB>({
-      dialect: new NeonDialect({
+      dialect: new NeonTransactionDialect({
         neon: neon(envServer.DATABASE_URL),
+        connectionString: envServer.DATABASE_URL,
       }),
     });

@@ -107,9 +107,6 @@ importers:
       kysely:
         specifier: ^0.29.5
         version: 0.29.5
-      kysely-neon:
-        specifier: ^3.0.0
-        version: 3.0.0(@neondatabase/serverless@1.1.0)(kysely@0.29.5)
       media-chrome:
         specifier: ^4.19.2
         version: 4.19.2(react@19.2.8)
@@ -5397,13 +5394,6 @@ packages:
 
   kubernetes-types@1.30.0:
     resolution: {integrity: sha512-Dew1okvhM/SQcIa2rcgujNndZwU8VnSapDgdxlYoB84ZlpAD43U6KLAFqYo17ykSFGHNPrg0qry0bP+GJd9v7Q==}
-
-  kysely-neon@3.0.0:
-    resolution: {integrity: sha512-bITWBC3toKBqSHU9DkeJb62q8+i1LT8XtUPLZxQVzcWaGSUui/3mL90XNtCFivAJPZ3l+Rbl4AhfSc28GbDNag==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@neondatabase/serverless': ^1
-      kysely: ^0.29
 
   kysely@0.29.5:
     resolution: {integrity: sha512-ooa+eSbBNPTo3MycPEuW5jdrxQdQwdtB3LC3h43FiXQbIry5tR0C5lDG7eealK0E4D7XjrnOP5DIUg/LyjRMYQ==}
@@ -11792,11 +11782,6 @@ snapshots:
       zod: 4.4.3
 
   kubernetes-types@1.30.0: {}
-
-  kysely-neon@3.0.0(@neondatabase/serverless@1.1.0)(kysely@0.29.5):
-    dependencies:
-      '@neondatabase/serverless': 1.1.0
-      kysely: 0.29.5
 
   kysely@0.29.5: {}
 

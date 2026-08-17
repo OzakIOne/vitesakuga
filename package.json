@@ -70,7 +70,6 @@
     "effect": "^4.0.0-rc.108",
     "isomorphic-dompurify": "^3.22.0",
     "kysely": "^0.29.5",
-    "kysely-neon": "^3.0.0",
     "media-chrome": "^4.19.2",
     "mediabunny": "^1.54.0",
     "mediainfo.js": "^0.3.7",
