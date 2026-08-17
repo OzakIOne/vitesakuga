@@ -150,6 +150,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Avoid done callbacks in async tests - use async/await instead
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
+- Avoid mocking
 
 ## When Oxlint + Oxfmt Can't Help
 

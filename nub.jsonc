@@ -1,0 +1,15 @@
+{
+  "$schema": "https://nubjs.com/schema/latest.json",
+
+  // ── runtime — file runs, scripts, and watch mode ──
+  // "envFile": [".env", ".env.local"],       // true = cascade | false = none | "varlock"
+
+  // text | jsonc | json5 | toml | yaml | ts | tsx | jsx
+  "verifyDeps": "warn",                    // warn | error | true | false
+
+  // ── installs — layout everywhere; release gates under Nub identity ──
+  "install": {
+    "linker": "global-virtual-store",      // global-virtual-store | isolated | hoisted
+    "minimumReleaseAge": "1d"            // <int><s|m|h|d|w>; default 24h, "0s" off
+  }
+}
