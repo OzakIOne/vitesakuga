@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
+import { sql } from "kysely";
 
 import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import type { AuthServices } from "../auth/context";
@@ -305,59 +306,57 @@ export class PlaylistsService extends Context.Service<
         onSome: () => Effect.succeed(undefined),
       });
 
-      const inserted = yield* db.transaction().execute((trx) =>
-        Effect.gen(function* () {
-          yield* trx.executeTakeFirstOrError(
-            trx
-              .selectFrom("playlists")
-              .select(["id"])
-              .where("id", "=", data.playlistId)
-              .forUpdate(),
-          );
-
-          const existing = yield* trx.executeTakeFirstOption(
-            trx
-              .selectFrom("playlist_posts")
-              .selectAll()
-              .where("playlist_id", "=", data.playlistId)
-              .where("post_id", "=", data.postId),
-          );
-
-          if (Option.isSome(existing)) {
-            return yield* new PostAlreadyInPlaylistError({
-              message: `Post ${data.postId} is already in playlist ${data.playlistId}`,
-              playlistId: data.playlistId,
-              postId: data.postId,
-            });
-          }
-
-          const maxResults = yield* trx.execute(
-            trx
-              .selectFrom("playlist_posts")
-              .select(trx.fn.max("playlist_posts.position").as("max_pos"))
-              .where("playlist_id", "=", data.playlistId),
-          );
-          const maxPos =
-            maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
-          const nextPosition = (maxPos != null ? Number(maxPos) : -1) + 1;
-
-          return yield* trx.executeTakeFirstOrError(
-            trx
-              .insertInto("playlist_posts")
-              .values({
-                playlist_id: data.playlistId,
-                position: nextPosition,
-                post_id: data.postId,
-              })
-              .returningAll(),
-          );
-        }),
+      const existing = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("playlist_posts")
+          .selectAll()
+          .where("playlist_id", "=", data.playlistId)
+          .where("post_id", "=", data.postId),
       );
 
+      if (Option.isSome(existing)) {
+        return yield* new PostAlreadyInPlaylistError({
+          message: `Post ${data.postId} is already in playlist ${data.playlistId}`,
+          playlistId: data.playlistId,
+          postId: data.postId,
+        });
+      }
+
+      const maxResults = yield* db.execute(
+        db
+          .selectFrom("playlist_posts")
+          .select(db.fn.max("playlist_posts.position").as("max_pos"))
+          .where("playlist_id", "=", data.playlistId),
+      );
+      const maxPos = maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
+      const nextPosition = (maxPos != null ? Number(maxPos) : -1) + 1;
+
+      const inserted = yield* db.executeTakeFirstOption(
+        db
+          .insertInto("playlist_posts")
+          .values({
+            playlist_id: data.playlistId,
+            position: nextPosition,
+            post_id: data.postId,
+          })
+          .onConflict((oc) =>
+            oc.columns(["playlist_id", "post_id"]).doNothing(),
+          )
+          .returningAll(),
+      );
+
+      if (Option.isNone(inserted)) {
+        return yield* new PostAlreadyInPlaylistError({
+          message: `Post ${data.postId} is already in playlist ${data.playlistId}`,
+          playlistId: data.playlistId,
+          postId: data.postId,
+        });
+      }
+
       return {
-        playlist_id: inserted.playlist_id,
-        post_id: inserted.post_id,
-        position: inserted.position,
+        playlist_id: inserted.value.playlist_id,
+        post_id: inserted.value.post_id,
+        position: inserted.value.position,
       };
     });
 
@@ -367,37 +366,33 @@ export class PlaylistsService extends Context.Service<
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
 
-      yield* db.transaction().execute((trx) =>
-        Effect.gen(function* () {
-          yield* trx.execute(
-            trx
-              .deleteFrom("playlist_posts")
-              .where("playlist_id", "=", data.playlistId)
-              .where("post_id", "=", data.postId),
-          );
-
-          const remaining = yield* trx.execute(
-            trx
-              .selectFrom("playlist_posts")
-              .select(["post_id"])
-              .where("playlist_id", "=", data.playlistId)
-              .orderBy("position", "asc")
-              .orderBy("created_at", "asc"),
-          );
-
-          let position = 0;
-          for (const row of remaining) {
-            yield* trx.execute(
-              trx
-                .updateTable("playlist_posts")
-                .set({ position })
-                .where("playlist_id", "=", data.playlistId)
-                .where("post_id", "=", row.post_id),
-            );
-            position++;
-          }
-        }),
+      yield* db.execute(
+        db
+          .deleteFrom("playlist_posts")
+          .where("playlist_id", "=", data.playlistId)
+          .where("post_id", "=", data.postId),
       );
+
+      const remaining = yield* db.execute(
+        db
+          .selectFrom("playlist_posts")
+          .select(["post_id"])
+          .where("playlist_id", "=", data.playlistId)
+          .orderBy("position", "asc")
+          .orderBy("created_at", "asc"),
+      );
+
+      let position = 0;
+      for (const row of remaining) {
+        yield* db.execute(
+          db
+            .updateTable("playlist_posts")
+            .set({ position })
+            .where("playlist_id", "=", data.playlistId)
+            .where("post_id", "=", row.post_id),
+        );
+        position++;
+      }
 
       return { success: true };
     });
@@ -428,18 +423,23 @@ export class PlaylistsService extends Context.Service<
         });
       }
 
-      yield* db.transaction().execute((trx) =>
-        Effect.gen(function* () {
-          for (const item of data.items) {
-            yield* trx.execute(
-              trx
-                .updateTable("playlist_posts")
-                .set({ position: item.position })
-                .where("playlist_id", "=", data.playlistId)
-                .where("post_id", "=", item.postId),
-            );
-          }
-        }),
+      yield* db.execute(
+        sql`
+          update playlist_posts
+          set position = np.position
+          from (
+            values
+              ${sql.join(
+                data.items.map(
+                  (item) =>
+                    sql`(${item.postId}::integer, ${item.position}::integer)`,
+                ),
+                sql`, `,
+              )}
+          ) as np(post_id, position)
+          where playlist_posts.playlist_id = ${data.playlistId}
+            and playlist_posts.post_id = np.post_id
+        `,
       );
 
       return { success: true };
