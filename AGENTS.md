@@ -6,7 +6,7 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 ## Package Manager
 
-**Never use npm or nub. Always use `nub`** (`nub install`, `nub add`, `nub run <script>`, `nub exec <bin>`). npm and pnpm are forbidden in this project. `nub` respects the existing `pnpm-lock.yaml` and resolves the right Node version from `package.json#engines`.
+**Never use npm or pnpm. Always use `nub`** (`nub install`, `nub add`, `nub run <script>`, `nub exec <bin>`). npm and pnpm are forbidden in this project. `nub` respects the existing `pnpm-lock.yaml` and resolves the right Node version from `package.json#engines`.
 
 ## Build, Lint, and Test Commands
 
@@ -19,11 +19,11 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 - format: oxfmt --write .
 - format:check: oxfmt --check .
 - lint: oxlint . --fix
-- lint:check: oxlint .
+- lint:check: oxlint . --type-check --type-aware
 - server: vite preview
 - start: node .output/server/index.mjs
 - test: vitest -w
-- test:e2e: playwright test --config=e2e/playwright.config.ts
+- test:ee: playwright test --config=e2e/playwright.config.ts
 
 ### Testing
 

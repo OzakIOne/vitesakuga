@@ -63,6 +63,7 @@ export function useSignUp(redirectUrl: string) {
 }
 
 export function useUpdateProfile() {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const authClient = useContext(AuthClientContext);
 
@@ -72,6 +73,9 @@ export function useUpdateProfile() {
     mutationFn: async ({ name, image }: { name: string; image: string }) =>
       authClient.updateUser({ name, image }),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: usersKeys.userInfo,
+      });
       await router.invalidate();
     },
     successDescription: "Your profile has been successfully updated.",

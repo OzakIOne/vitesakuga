@@ -91,7 +91,8 @@ At runtime, it:
 ## Auth Middleware
 
 - Auth-protected mutations import `makeAuthLayer` from `src/lib/db/layer-factories.server` and pass it as the third argument to `createHandler`
-- Auth middleware uses `getSessionEffect()`/`requireAuthEffect()` from `src/lib/auth/auth.middleware.ts`
+- Session effects live in `src/lib/auth/session.effect.ts`: `getSessionEffect()` (Better Auth session via `AuthService` + `RequestHeadersService`) and `getUserSessionEffect()` (returns user or null)
+- `src/lib/auth/auth.middleware.ts` exposes the client-safe TanStack server function `getUserSession`, which dynamically imports `getUserSessionEffect` and runs it with the middleware layer
 - Ownership checks are performed within the Effect service method using `Effect.fail(new UnauthorizedError({...}))` or `Effect.fail(new ForbiddenError({...}))`
 
 ## Effective Service Files
@@ -99,9 +100,11 @@ At runtime, it:
 | Feature  | Service file                           |
 | -------- | -------------------------------------- |
 | Comments | `src/lib/comments/comments.service.ts` |
+| Playlists | `src/lib/playlists/playlists.service.ts` |
 | Posts    | `src/lib/posts/posts.service.ts`       |
 | Tags     | `src/lib/tags/tags.service.ts`         |
 | Users    | `src/lib/users/users.service.ts`       |
+| Votes    | `src/lib/votes/votes.service.ts`       |
 
 ## Error Handling
 

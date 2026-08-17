@@ -62,7 +62,11 @@ function LoginForm() {
               <Field.Label>
                 Password <Field.RequiredIndicator />
               </Field.Label>
-              <PasswordInput id="password" name="password" type="password" />
+              <PasswordInput
+                autoComplete="current-password"
+                id="password"
+                name="password"
+              />
             </Field.Root>
 
             <Button disabled={loginMutation.isPending} type="submit">

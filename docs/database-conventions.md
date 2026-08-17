@@ -7,12 +7,12 @@ This document outlines the conventions and best practices for database interacti
 ## Location
 
 - Drizzle ORM table schemas: `src/lib/db/schema/` (auth tables in `auth.schema.ts`, domain tables in `sakuga.schema.ts`)
-- Drizzle Kit migration files: `src/db/drizzle/` (auto-generated SQL and metadata)
-- Database configuration: `src/lib/db/pool.ts` (Neon serverless), `src/lib/db/kysely.ts` (Kysely setup)
+- Drizzle Kit migration files: `drizzle/` at the repo root (timestamped folders with auto-generated SQL, snapshots, and journal)
+- Database configuration: `src/lib/db/pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`), `src/lib/db/kysely.ts` (Kysely setup)
 
 ## Kysely Client
 
-- Raw Kysely instance in `src/lib/db/kysely.ts` using Neon `PostgresDialect`
+- Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over the pool from `pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`)
 - `DB` type derived from Drizzle schema definitions via `Kyselify`
 - Effect wrapper via `KyselyDB` context tag in `src/lib/db/context.ts` — all domain services inject this
 - EffectKysely utility (`src/lib/effect/effect.utils.ts`) adapts Kysely queries into Effect programs with `SqlError` and `SqlNoFirstResult` tagged errors
@@ -23,20 +23,20 @@ This document outlines the conventions and best practices for database interacti
 - Barrel re-export from `src/lib/db/schema/index.ts`
 - Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
+- Domain tables: `tags`, `posts`, `postTags`, `postVotes`, `playlists`, `playlistPosts`, and `comments`
 
 ## Effect Layer Pattern
 
 - All database access flows through `KyselyDB` Effect context tag
 - Layer factories in `src/lib/db/layer-factories.server.ts`:
-  - `makeDBLayer()` — provides `KyselyDB` + logging + tracing
+  - `makeDBLayer()` — provides `KyselyDB` + `StorageLive` + logging + tracing (uses PGlite when `DATABASE_DRIVER=pglite`)
   - `makeAuthLayer()` — provides `KyselyDB` + `AuthService` + `RequestHeadersService`
   - `makeMiddlewareLayer()` — resolves headers from request context
-- Test layer via `PGliteDialect` (`src/lib/db/pglite-driver.ts`) and `makeServiceTestLayer` in test utils
-- E2E test layer via `createE2EKysely` in `src/lib/db/e2e-db.ts` (runs Drizzle migrations against in-memory PGlite)
+- Test layer via `PGliteDialect` (`src/lib/db/pglite-driver.ts`), `makeServiceTestLayer` in test utils (includes rustfs storage), and `createE2EKysely` in `src/lib/db/e2e-db.ts` — both run Drizzle migrations from root `drizzle/` against in-memory PGlite
 
 ## Migrations
 
-- Follow Drizzle Kit migration workflow (`pnpm db generate`, `pnpm db push`, `pnpm db migrate`)
+- Follow Drizzle Kit migration workflow via `nub run db generate`, `nub run db push`, `nub run db migrate` (stage-aware: `STAGE=local|dev|prod nub run db <command>`)
 
 ## TanStack DB Collections
 

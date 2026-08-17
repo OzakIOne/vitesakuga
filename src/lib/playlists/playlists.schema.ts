@@ -46,7 +46,10 @@ export const addPostToPlaylistInputSchema = Schema.Struct({
   postId: Schema.Number,
 });
 
-export const removePostFromPlaylistInputSchema = addPostToPlaylistInputSchema;
+export const removePostFromPlaylistInputSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  postId: Schema.Number,
+});
 
 export const reorderPlaylistPostsInputSchema = Schema.Struct({
   playlistId: Schema.Number,

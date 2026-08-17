@@ -16,12 +16,16 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type * as React from "react";
-import { LuMenu } from "react-icons/lu";
+import { LuCheck, LuMenu } from "react-icons/lu";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { GlobalShortcuts } from "src/components/GlobalShortcuts";
 import { NotFound } from "src/components/NotFound";
 import { Button, IconButton } from "src/components/ui/button";
-import { ColorModeButton, useColorMode } from "src/components/ui/color-mode";
+import {
+  COLOR_MODE_OPTIONS,
+  ColorModeButton,
+  useColorMode,
+} from "src/components/ui/color-mode";
 import { Box, Center } from "src/components/ui/layout";
 import { Menu } from "src/components/ui/overlay";
 import { Provider } from "src/components/ui/provider";
@@ -100,13 +104,23 @@ export const Route = createRootRouteWithContext<{
   notFoundComponent: () => <NotFound />,
 });
 
-function ThemeMenuItem() {
-  const { toggleColorMode } = useColorMode();
+function ThemeMenuItems() {
+  const { theme, setColorMode } = useColorMode();
 
   return (
-    <Menu.Item onClick={toggleColorMode} value="theme">
-      Toggle Theme
-    </Menu.Item>
+    <>
+      {COLOR_MODE_OPTIONS.map(({ value, label, icon }) => (
+        <Menu.Item
+          key={value}
+          onClick={() => setColorMode(value)}
+          value={`theme-${value}`}
+        >
+          {icon}
+          <span className="flex-1">{label}</span>
+          <ClientOnly>{theme === value && <LuCheck aria-hidden="true" />}</ClientOnly>
+        </Menu.Item>
+      ))}
+    </>
   );
 }
 
@@ -289,7 +303,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                       </>
                     )}
                     <Menu.Separator />
-                    <ThemeMenuItem />
+                    <ThemeMenuItems />
                     <Menu.Separator />
                     <Menu.Item asChild value="otelite">
                       <a

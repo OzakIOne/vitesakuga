@@ -18,11 +18,26 @@ export function ColorModeProvider(props: ColorModeProviderProps) {
   );
 }
 
-export type ColorMode = "light" | "dark";
+type ColorMode = "light" | "dark";
+
+type ColorModeSelection = ColorMode | "system";
+
+export const COLOR_MODE_OPTIONS: ReadonlyArray<{
+  value: ColorModeSelection;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  { value: "light", label: "Light", icon: <LuSun /> },
+  { value: "dark", label: "Dark", icon: <LuMoon /> },
+  { value: "system", label: "System", icon: <LuMonitor /> },
+];
 
 export type UseColorModeReturn = {
+  /** The resolved color mode ("system" resolves to light or dark). */
   colorMode: ColorMode;
-  setColorMode: (colorMode: ColorMode) => void;
+  /** The raw user selection: "light" | "dark" | "system". */
+  theme: ColorModeSelection;
+  setColorMode: (colorMode: ColorModeSelection) => void;
   toggleColorMode: () => void;
 };
 
@@ -40,17 +55,13 @@ export function useColorMode(): UseColorModeReturn {
   };
   return {
     colorMode,
+    theme: (theme ?? "system") as ColorModeSelection,
     setColorMode: setTheme,
     toggleColorMode,
   };
 }
 
-export function useColorModeValue<T>(light: T, dark: T) {
-  const { colorMode } = useColorMode();
-  return colorMode === "dark" ? dark : light;
-}
-
-export function ColorModeIcon() {
+function ColorModeIcon() {
   const { theme } = useTheme();
   if (theme === "system") {
     return <LuMonitor />;

@@ -6,7 +6,11 @@ import { IoLogoGithub } from "react-icons/io";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { Button } from "src/components/ui/button";
 import { Field, Input } from "src/components/ui/field";
-import { PasswordInput } from "src/components/ui/password-input";
+import {
+  PasswordInput,
+  PasswordStrengthMeter,
+  getPasswordStrength,
+} from "src/components/ui/password-input";
 import { useSignUp, useSocialLogin } from "src/lib/auth/auth.hooks";
 import { signUpSchema } from "src/lib/auth/auth.schemas";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
@@ -96,26 +100,38 @@ function SignupForm() {
             </form.Field>
 
             <form.Field name="password">
-              {(field) => (
-                <>
-                  <Field.Root required>
-                    <Field.Label>
-                      Password <Field.RequiredIndicator />
-                    </Field.Label>
-                    <PasswordInput
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => {
-                        field.handleChange(e.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                  </Field.Root>
-                  <FieldInfo field={field} />
-                </>
-              )}
+              {(field) => {
+                const strength = getPasswordStrength(field.state.value);
+                return (
+                  <>
+                    <Field.Root required>
+                      <Field.Label>
+                        Password <Field.RequiredIndicator />
+                      </Field.Label>
+                      <PasswordInput
+                        autoComplete="new-password"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                        }}
+                        value={field.state.value}
+                      />
+                      {field.state.value.length > 0 && (
+                        <PasswordStrengthMeter
+                          label={
+                            strength.level.charAt(0).toUpperCase() +
+                            strength.level.slice(1)
+                          }
+                          value={strength.score}
+                        />
+                      )}
+                    </Field.Root>
+                    <FieldInfo field={field} />
+                  </>
+                );
+              }}
             </form.Field>
 
             <form.Field
@@ -131,13 +147,13 @@ function SignupForm() {
                       Confirm password <Field.RequiredIndicator />
                     </Field.Label>
                     <PasswordInput
+                      autoComplete="new-password"
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => {
                         field.handleChange(e.target.value);
                       }}
-                      type="password"
                       value={field.state.value}
                     />
                   </Field.Root>

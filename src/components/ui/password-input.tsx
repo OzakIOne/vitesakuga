@@ -2,45 +2,11 @@
 
 import * as React from "react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
+import { PasswordInput as ArkPasswordInput } from "@ark-ui/react/password-input";
+import { passwordStrength, type Options } from "check-password-strength";
 
-import { IconButton } from "./button";
-import { Input } from "./field";
+import { INPUT_BASE, INPUT_SIZES } from "./field";
 import { cx } from "./ui-utils";
-
-function mergeRefs<T>(
-  ...refs: Array<React.Ref<T> | undefined>
-): React.RefCallback<T> {
-  return (node) => {
-    for (const ref of refs) {
-      if (typeof ref === "function") {
-        ref(node);
-      } else if (ref) {
-        ref.current = node;
-      }
-    }
-  };
-}
-
-function useControllableState<T>({
-  value,
-  defaultValue,
-  onChange,
-}: {
-  value: T | undefined;
-  defaultValue: T | undefined;
-  onChange: ((value: T) => void) | undefined;
-}): [T, (value: T) => void] {
-  const [internal, setInternal] = React.useState(defaultValue);
-  const isControlled = value !== undefined;
-  const current = isControlled ? value : internal;
-  const setValue = (next: T) => {
-    if (!isControlled) {
-      setInternal(next);
-    }
-    onChange?.(next);
-  };
-  return [current as T, setValue];
-}
 
 export type PasswordVisibilityProps = {
   defaultVisible?: boolean;
@@ -51,7 +17,9 @@ export type PasswordVisibilityProps = {
 
 export type PasswordInputProps = {
   rootProps?: React.HTMLAttributes<HTMLDivElement>;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> &
+  /** Marks the input as invalid (sets `aria-invalid` and `data-invalid`). */
+  invalid?: boolean;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "type"> &
   PasswordVisibilityProps;
 
 export const PasswordInput = React.forwardRef<
@@ -64,65 +32,86 @@ export const PasswordInput = React.forwardRef<
     visible: visibleProp,
     onVisibleChange,
     visibilityIcon = { off: <LuEyeOff />, on: <LuEye /> },
+    autoComplete,
     className,
     disabled,
+    invalid,
+    readOnly,
+    required,
     ...rest
   } = props;
 
-  const [visible, setVisible] = useControllableState({
-    defaultValue: defaultVisible,
-    onChange: onVisibleChange,
-    value: visibleProp,
-  });
-
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
   return (
-    <div className={cx("relative w-full", rootProps?.className)} {...rootProps}>
-      <Input
-        {...rest}
-        className={cx("pe-10", className)}
-        disabled={disabled}
-        ref={mergeRefs(ref, inputRef)}
-        type={visible ? "text" : "password"}
-      />
-      <IconButton
-        aria-label="Toggle password visibility"
-        className="absolute top-1/2 right-1 -translate-y-1/2"
-        disabled={disabled}
-        onPointerDown={(e) => {
-          if (disabled) {
-            return;
-          }
-          if (e.button !== 0) {
-            return;
-          }
-          e.preventDefault();
-          setVisible(!visible);
-        }}
-        size="sm"
-        tabIndex={-1}
-        type="button"
-        variant="ghost"
-      >
-        {visible ? visibilityIcon.off : visibilityIcon.on}
-      </IconButton>
-    </div>
+    <ArkPasswordInput.Root
+      {...(rootProps as React.ComponentProps<typeof ArkPasswordInput.Root>)}
+      autoComplete={
+        autoComplete as "current-password" | "new-password" | undefined
+      }
+      className={cx("relative w-full", rootProps?.className)}
+      defaultVisible={defaultVisible}
+      disabled={disabled}
+      invalid={invalid}
+      onVisibilityChange={
+        onVisibleChange ? ({ visible }) => onVisibleChange(visible) : undefined
+      }
+      readOnly={readOnly}
+      required={required}
+      visible={visibleProp}
+    >
+      <ArkPasswordInput.Control>
+        <ArkPasswordInput.Input
+          {...rest}
+          className={cx(INPUT_BASE, INPUT_SIZES["md"], "pe-10", className)}
+          ref={ref}
+        />
+        <ArkPasswordInput.VisibilityTrigger
+          aria-label="Toggle password visibility"
+          className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-400/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        >
+          <ArkPasswordInput.Indicator fallback={visibilityIcon.on}>
+            {visibilityIcon.off}
+          </ArkPasswordInput.Indicator>
+        </ArkPasswordInput.VisibilityTrigger>
+      </ArkPasswordInput.Control>
+    </ArkPasswordInput.Root>
   );
 });
+
+const STRENGTH_OPTIONS: Options<string> = [
+  { id: 0, value: "weak", minDiversity: 0, minLength: 0 },
+  { id: 1, value: "fair", minDiversity: 2, minLength: 6 },
+  { id: 2, value: "good", minDiversity: 3, minLength: 8 },
+  { id: 3, value: "strong", minDiversity: 4, minLength: 12 },
+];
+
+export type PasswordStrengthResult = {
+  /** 0 for an empty password, otherwise 1 (weak) to 4 (strong). */
+  score: number;
+  level: string;
+};
+
+export function getPasswordStrength(password: string): PasswordStrengthResult {
+  if (password.length === 0) {
+    return { score: 0, level: "weak" };
+  }
+  const { id, value } = passwordStrength(password, STRENGTH_OPTIONS);
+  return { score: id + 1, level: value };
+}
 
 type PasswordStrengthMeterProps = {
   max?: number;
   value: number;
+  /** Overrides the computed label (e.g. a specific tier name). */
+  label?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
 
 export const PasswordStrengthMeter = React.forwardRef<
   HTMLDivElement,
   PasswordStrengthMeterProps
 >(function PasswordStrengthMeter(props, ref) {
-  const { max = 4, value, ...rest } = props;
+  const { max = 4, value, label, ...rest } = props;
   const percent = (value / max) * 100;
-  const { colorClass, label } = getColorPalette(percent);
+  const { colorClass, label: defaultLabel } = getColorPalette(percent);
 
   return (
     <div className="flex w-full flex-col gap-1" ref={ref} {...rest}>
@@ -137,7 +126,7 @@ export const PasswordStrengthMeter = React.forwardRef<
           />
         ))}
       </div>
-      {label && <div className="text-xs">{label}</div>}
+      {label && <div className="text-xs">{label ?? defaultLabel}</div>}
     </div>
   );
 });

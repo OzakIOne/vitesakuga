@@ -1,11 +1,19 @@
 import { Schema } from "effect";
 
 const Email = Schema.String.pipe(
-  Schema.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+  Schema.check(
+    Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+      message: "Please enter a valid email address",
+    }),
+  ),
 );
 
 const Url = Schema.String.pipe(
-  Schema.check(Schema.isPattern(/^https?:\/\/\S+$/)),
+  Schema.check(
+    Schema.isPattern(/^https?:\/\/\S+$/, {
+      message: "Please enter a valid URL starting with http(s)://",
+    }),
+  ),
 );
 
 export const loginSchema = Schema.Struct({

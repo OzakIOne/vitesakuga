@@ -22,11 +22,11 @@ This document outlines the conventions and best practices for writing TypeScript
 
 ## Imports
 
-- Absolute imports from the root using `src/` prefix (e.g., `import { foo } from "src/lib/utils"`) are supported via `paths: {"*": ["./*"]}` and `vite-tsconfig-paths`.
+- Absolute imports from the root using `src/` prefix (e.g., `import { foo } from "src/lib/utils"`) are supported via `paths: {"*": ["./*"]}` in `tsconfig.json` and `resolve.tsconfigPaths: true` in `vite.config.ts`.
 
 ## Naming Conventions
 
-- **Files**: `PascalCase` for React components (e.g., `MyComponent.tsx`), `camelCase` for utility files (e.g., `utils.ts`), `kebab-case` for CSS files, `feature.fn.ts` for server functions, `feature.schema.ts` for Effect Schema files.
+- **Files**: `PascalCase` for React components (e.g., `MyComponent.tsx`), `camelCase` for utility files (e.g., `utils.ts`), `kebab-case` for CSS files, `feature.service.ts` for Effect services (server functions embedded at the bottom), `feature.schema.ts` for Effect Schema files, `*.fn.test.ts` for integration tests of server functions.
 - **Components**: `PascalCase` (e.g., `UserProfile`, `Button`).
 - **Variables/Functions**: `camelCase` (e.g., `getUserData`, `isLoading`).
 - **Types/Interfaces**: `PascalCase` (e.g., `User`, `ApiResponse`).

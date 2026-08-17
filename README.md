@@ -3,39 +3,28 @@
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
 - [ ] fix createHandler typing issue
-- [ ] add playlist feature, which are pools in sakugabooru i think anyway, playlist like on youtube
-- [ ] dockploy ??
 - [ ] split upload and convert into components and utils
 - [ ] better style Video (fix tailwind class not working)
 - [x] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
-  - there is builtint keyboard shortcut in media chrome
+  - [media chrome keyboard shortcuts](https://www.media-chrome.org/docs/en/keyboard-shortcuts)
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
 - [ ] cleanup post schemas and server fn
-- [ ] prevent the sidebar from blinking of rerender / Suspense somehow
-- [ ] ask neo how to better handle currentUserId /src/routes/posts/$postId.tsx `const currentUserId = context.user?.id;`
-- [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx maybe not sure
-- [ ] better ui
-
-## Patches
-
-- **`@tanstack/react-db` SSR crash (React 19):** `pnpm` patch adds `getServerSnapshot` to `useSyncExternalStore` to fix `Missing getServerSnapshot` error during SSR.
-  - Upstream PR: https://github.com/TanStack/db/pull/1534
-  - Tracking issue: https://github.com/TanStack/db/issues/545
-  - When the PR is merged and released, remove:
-    - `pnpm.patchedDependencies["@tanstack/react-db"]` from `package.json`
-    - `patches/@tanstack__react-db.patch`
+- [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx or /posts/$postId.tsx maybe not sure
 
 ## Secondary
 
 - [ ] ? add post ranking
-
+  
 ## Dev
 
 ```bash
-git clone https://github.com/ozaki/vitesakuga
+git clone https://github.com/ozakione/vitesakuga
 cd vitesakuga
-pnpm i
-pnpm dev
+nub install
+cp .env.example .env
+# setup infra buckets api tokens etc
+nub run infra:deploy
+nub run dev
 ```
 
 ## Environments
@@ -68,16 +57,16 @@ Set your Account ID and deploy from the project root:
 
 ```bash
 # Authenticate with Cloudflare
-npx alchemy login
+nub exec alchemy login
 
 # Set your Cloudflare Account ID
 export CLOUDFLARE_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
 # Deploy the resources (dev stage keeps the existing vitesakuga-media bucket)
-pnpm run infra:deploy
+nub run infra:deploy
 
 # Deploy the production bucket (creates vitesakuga-media-production)
-pnpm run infra:deploy:prod
+nub run infra:deploy:prod
 ```
 
 ### 3. Sync to Environment

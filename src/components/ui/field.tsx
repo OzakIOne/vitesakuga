@@ -71,14 +71,14 @@ export const Field = {
   },
 };
 
-const INPUT_SIZES: Record<string, string> = {
+export const INPUT_SIZES: Record<string, string> = {
   xs: "h-7 px-2 text-xs",
   sm: "h-8 px-2.5 text-sm",
   md: "h-10 px-3 text-sm",
   lg: "h-12 px-4 text-base",
 };
 
-const INPUT_BASE =
+export const INPUT_BASE =
   "w-full rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
 
 type InputProps = {
