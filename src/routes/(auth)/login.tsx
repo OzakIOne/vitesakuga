@@ -3,7 +3,8 @@ import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { Button } from "src/components/ui/button";
-import { Field, Input } from "src/components/ui/field";
+import { EmailAutocomplete } from "src/components/ui/email-autocomplete";
+import { Field } from "src/components/ui/field";
 import { PasswordInput } from "src/components/ui/password-input";
 import { useLogin, useSocialLogin } from "src/lib/auth/auth.hooks";
 
@@ -18,6 +19,7 @@ function LoginForm() {
 
   const [serverError, setServerError] = useState("");
   const [socialLoading, setSocialLoading] = useState(false);
+  const [email, setEmail] = useState("");
 
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -55,7 +57,12 @@ function LoginForm() {
               <Field.Label>
                 Email <Field.RequiredIndicator />
               </Field.Label>
-              <Input id="email" name="email" placeholder="hello@example.com" />
+              <EmailAutocomplete
+                id="email"
+                name="email"
+                onChange={setEmail}
+                value={email}
+              />
             </Field.Root>
 
             <Field.Root required>

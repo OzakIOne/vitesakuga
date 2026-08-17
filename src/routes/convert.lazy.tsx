@@ -1,12 +1,16 @@
-import { Portal, createListCollection } from "@ark-ui/react";
+import {
+  Portal,
+  createListCollection,
+  type ComboboxValueChangeDetails,
+} from "@ark-ui/react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LuUpload } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { Alert, Progress } from "src/components/ui/feedback";
 import { Box, Container, Flex } from "src/components/ui/layout";
-import { FileUpload, Select, Slider } from "src/components/ui/overlay";
+import { Combobox, FileUpload, Slider } from "src/components/ui/overlay";
 import { Heading, Link, Text } from "src/components/ui/typography";
 import type { AnyActorRef } from "xstate";
 
@@ -17,13 +21,6 @@ import {
   isPassthroughCompatible,
 } from "./-convert.machine";
 import type { ConvertMachineLogic } from "./-convert.machine";
-
-const outputFormats = createListCollection({
-  items: SUPPORTED_OUTPUTS.map((format) => ({
-    label: format.label,
-    value: format.label,
-  })),
-});
 
 export const Route = createLazyFileRoute("/convert")({
   component: RouteComponent,
@@ -79,6 +76,38 @@ function RouteComponent() {
     if (file) {
       actorRef.send({ type: "file.selected", file });
     }
+  };
+
+  const [formatInputValue, setFormatInputValue] = useState("");
+
+  const outputCollection = useMemo(() => {
+    const items = SUPPORTED_OUTPUTS.filter((format) =>
+      format.label.toLowerCase().includes(formatInputValue.toLowerCase()),
+    ).map((format) => ({
+      disabled: !isPassthroughCompatible(format, inputVideoCodec),
+      label: format.label,
+      value: format.label,
+    }));
+    return createListCollection({
+      isItemDisabled: (item) => item.disabled,
+      itemToValue: (item) => item.value,
+      itemToString: (item) => item.label,
+      items,
+    });
+  }, [formatInputValue, inputVideoCodec]);
+
+  const handleOutputValueChange = (details: ComboboxValueChangeDetails) => {
+    const item = details.items[0] as
+      | { label: string; value: string }
+      | undefined;
+    if (!item) {
+      return;
+    }
+    const format = SUPPORTED_OUTPUTS.find((opt) => opt.label === item.label);
+    if (format) {
+      actorRef.send({ type: "output.selected", output: format });
+    }
+    setFormatInputValue(item.label);
   };
 
   useEffect(
@@ -137,62 +166,66 @@ function RouteComponent() {
 
           <Box mb={4}>
             <Box>
-              <Text mb={2}>Output Format</Text>
-              <Select.Root
-                collection={outputFormats}
+              <Combobox.Root
+                collection={outputCollection}
                 disabled={isConverting}
-                onSelect={(details) => {
-                  const o = SUPPORTED_OUTPUTS.find(
-                    (opt) => opt.label === details.value,
-                  );
-                  if (o) {
-                    actorRef.send({ type: "output.selected", output: o });
+                inputValue={formatInputValue}
+                onInputValueChange={(details) => {
+                  if (details.reason === "input-change") {
+                    setFormatInputValue(details.inputValue);
                   }
                 }}
-                size="md"
+                onOpenChange={(details) => {
+                  if (details.open) {
+                    setFormatInputValue("");
+                  }
+                }}
+                onValueChange={handleOutputValueChange}
+                openOnChange={false}
+                openOnClick
+                selectionBehavior="replace"
                 value={output ? [output.label] : []}
-                width="full"
               >
-                <Select.Label>Output Format</Select.Label>
-                <Select.Control>
-                  <Select.Trigger>
-                    <Select.ValueText placeholder="Select format" />
-                  </Select.Trigger>
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                  </Select.IndicatorGroup>
-                </Select.Control>
+                <Combobox.Label>Output Format</Combobox.Label>
+                <Combobox.Control>
+                  <Combobox.Input
+                    placeholder="Select format"
+                    value={formatInputValue}
+                  />
+                  <Combobox.IndicatorGroup>
+                    <Combobox.Trigger />
+                  </Combobox.IndicatorGroup>
+                </Combobox.Control>
                 <Portal>
-                  <Select.Positioner>
-                    <Select.Content>
-                      {SUPPORTED_OUTPUTS.map((format) => {
-                        const compatible = isPassthroughCompatible(
-                          format,
-                          inputVideoCodec,
+                  <Combobox.Positioner>
+                    <Combobox.Content>
+                      {outputCollection.items.map((item) => {
+                        const format = SUPPORTED_OUTPUTS.find(
+                          (opt) => opt.label === item.label,
                         );
+                        const compatible =
+                          format !== undefined &&
+                          isPassthroughCompatible(format, inputVideoCodec);
                         return (
-                          <Select.Item
-                            item={{
-                              label: format.label,
-                              value: format.label,
-                              disabled: !compatible,
-                            }}
-                            key={format.label}
-                          >
-                            {format.label}
-                            {!compatible && format.videoCodec === undefined && (
-                              <Text as="span" color="fg.subtle">
-                                {" "}
-                                — codec incompatible
-                              </Text>
-                            )}
-                          </Select.Item>
+                          <Combobox.Item item={item} key={item.label}>
+                            <Combobox.ItemText>
+                              {item.label}
+                              {!compatible &&
+                                format?.videoCodec === undefined && (
+                                  <Text as="span" color="fg.subtle">
+                                    {" "}
+                                    — codec incompatible
+                                  </Text>
+                                )}
+                            </Combobox.ItemText>
+                            <Combobox.ItemIndicator />
+                          </Combobox.Item>
                         );
                       })}
-                    </Select.Content>
-                  </Select.Positioner>
+                    </Combobox.Content>
+                  </Combobox.Positioner>
                 </Portal>
-              </Select.Root>
+              </Combobox.Root>
             </Box>
           </Box>
 

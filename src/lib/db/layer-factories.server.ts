@@ -28,11 +28,11 @@ export const makeDBLayer = async () => {
 };
 
 export const makeAuthLayer = async () => {
-  const [{ auth }, { getRequestHeaders }] = await Promise.all([
+  const [{ auth }, { getRequestHeaders }, dbLayer] = await Promise.all([
     import("../auth"),
     import("@tanstack/react-start/server"),
+    makeDBLayer(),
   ]);
-  const dbLayer = await makeDBLayer();
   return Layer.mergeAll(
     dbLayer,
     Layer.succeed(AuthService)(auth),

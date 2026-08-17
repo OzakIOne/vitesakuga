@@ -132,8 +132,10 @@ export async function generateAutoThumbnails(
     );
   }
 
-  const startTimestamp = await videoTrack.getFirstTimestamp();
-  const endTimestamp = await videoTrack.computeDuration();
+  const [startTimestamp, endTimestamp] = await Promise.all([
+    videoTrack.getFirstTimestamp(),
+    videoTrack.computeDuration(),
+  ]);
   const timestamps = [0.1, 0.3, 0.5, 0.7, 0.9].map(
     (t) => startTimestamp + t * (endTimestamp - startTimestamp),
   );

@@ -5,6 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { Button } from "src/components/ui/button";
+import { EmailAutocomplete } from "src/components/ui/email-autocomplete";
 import { Field, Input } from "src/components/ui/field";
 import {
   PasswordInput,
@@ -83,13 +84,11 @@ function SignupForm() {
                     <Field.Label>
                       Email <Field.RequiredIndicator />
                     </Field.Label>
-                    <Input
+                    <EmailAutocomplete
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
-                      onChange={(e) => {
-                        field.handleChange(e.target.value);
-                      }}
+                      onChange={(value) => field.handleChange(value)}
                       placeholder="hello@example.com"
                       value={field.state.value}
                     />
@@ -138,6 +137,12 @@ function SignupForm() {
               name="confirm_password"
               validators={{
                 onChangeListenTo: ["password"],
+                onChange: ({ value, fieldApi }) => {
+                  if (value !== fieldApi.form.state.values.password) {
+                    return "Passwords do not match";
+                  }
+                  return undefined;
+                },
               }}
             >
               {(field) => (
@@ -149,6 +154,9 @@ function SignupForm() {
                     <PasswordInput
                       autoComplete="new-password"
                       id={field.name}
+                      invalid={
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      }
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => {

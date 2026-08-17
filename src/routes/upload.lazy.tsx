@@ -1,15 +1,21 @@
+import {
+  Portal,
+  createListCollection,
+  type ComboboxInputValueChangeDetails,
+  type ComboboxValueChangeDetails,
+} from "@ark-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { LuCamera, LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
 import { Button } from "src/components/ui/button";
 import { Spinner } from "src/components/ui/feedback";
-import { Field, Input } from "src/components/ui/field";
+import { Field } from "src/components/ui/field";
 import { Box, Grid } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
-import { FileUpload } from "src/components/ui/overlay";
+import { Combobox, FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Text } from "src/components/ui/typography";
@@ -85,6 +91,10 @@ function RouteComponent() {
   };
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
+  const [selectedPost, setSelectedPost] = useState<{
+    id: number;
+    title: string;
+  } | null>(null);
   const isNumericSearch = /^\d+$/.test(relatedPostSearch.trim());
   const numericId = isNumericSearch ? Number(relatedPostSearch.trim()) : null;
 
@@ -109,6 +119,66 @@ function RouteComponent() {
   });
 
   const isFetching = isSearchLoading || isIdLookupLoading;
+
+  const relatedPostCollection = useMemo(() => {
+    const items = new Map<string, { label: string; value: string }>();
+    for (const post of relatedPosts?.data ?? []) {
+      items.set(String(post.id), { label: post.title, value: String(post.id) });
+    }
+    if (postById) {
+      const { id, title } = postById.post;
+      items.set(String(id), { label: `${title} (#${id})`, value: String(id) });
+    }
+    return createListCollection({
+      itemToString: (item) => item.label,
+      itemToValue: (item) => item.value,
+      items: [...items.values()],
+    });
+  }, [postById, relatedPosts]);
+
+  const handleRelatedPostInputValueChange = (
+    details: ComboboxInputValueChangeDetails,
+  ) => {
+    if (details.reason === "clear-trigger") {
+      setRelatedPostSearch("");
+      setSelectedPost(null);
+      form.form.setFieldValue("relatedPostId", undefined);
+      return;
+    }
+    // Ignore programmatic input updates: they carry a stale value and would
+    // overwrite the input right after a suggestion is picked. Selections are
+    // handled in `handleRelatedPostValueChange`.
+    if (details.reason !== "input-change") {
+      return;
+    }
+    setRelatedPostSearch(details.inputValue);
+    setSelectedPost(null);
+    if (details.inputValue.length === 0) {
+      form.form.setFieldValue("relatedPostId", undefined);
+    }
+  };
+
+  const handleRelatedPostValueChange = (
+    details: ComboboxValueChangeDetails,
+  ) => {
+    const selected = (details.items[0] ?? details.value[0]) as
+      | { label: string; value: string }
+      | string
+      | undefined;
+    if (!selected) {
+      return;
+    }
+    const item =
+      typeof selected === "string"
+        ? relatedPostCollection.find(selected)
+        : selected;
+    if (!item) {
+      return;
+    }
+    form.form.setFieldValue("relatedPostId", Number(item.value));
+    setSelectedPost({ id: Number(item.value), title: item.label });
+    setRelatedPostSearch(item.label);
+  };
 
   return (
     <Box maxW="xl" mx="auto" px={4} py={8}>
@@ -160,91 +230,54 @@ function RouteComponent() {
                 <Field.HelperText>
                   Search by title or enter a post ID
                 </Field.HelperText>
-                <Box alignItems="center" display="flex" gap={2} mt={1}>
-                  <Input
-                    flex={1}
-                    onChange={(e) => {
-                      setRelatedPostSearch(e.target.value);
-                    }}
-                    placeholder="Search by title or enter post ID..."
-                    value={relatedPostSearch}
-                  />
-                  {isFetching && <Spinner size="sm" />}
-                </Box>
-                {relatedPosts && relatedPosts.data.length > 0 && (
-                  <Box
-                    border="1px"
-                    borderColor="gray.200"
-                    borderRadius="md"
-                    className="dark:border-gray-700"
-                    maxH="200px"
-                    mt={2}
-                    overflowY="auto"
-                    p={2}
-                  >
-                    {relatedPosts.data.map(
-                      (post: {
-                        id: number;
-                        title: string;
-                        content: string;
-                      }) => (
-                        <Box
-                          _hover={{ bg: "gray.100" }}
-                          borderRadius="sm"
-                          className="dark:hover:bg-gray-800"
-                          cursor="pointer"
-                          key={post.id}
-                          onClick={() => {
-                            field.handleChange(Number(post.id));
-                            setRelatedPostSearch(post.title);
-                          }}
-                          p={2}
-                        >
-                          <Text fontWeight="medium">{post.title}</Text>
-                          <Text
-                            className="dark:text-gray-400"
-                            color="gray.600"
-                            fontSize="sm"
-                          >
-                            {post.content.slice(0, 60)}...
-                          </Text>
-                        </Box>
-                      ),
-                    )}
-                  </Box>
-                )}
-                {postById && (
-                  <Box
-                    bg="green.50"
-                    border="1px"
-                    borderColor="green.200"
-                    borderRadius="md"
-                    className="dark:border-green-800 dark:bg-green-900/30"
-                    cursor="pointer"
-                    mt={2}
-                    onClick={() => {
-                      field.handleChange(Number(postById.post.id));
-                      setRelatedPostSearch(postById.post.title);
-                    }}
-                    p={2}
-                  >
-                    <Text
-                      className="dark:text-green-400"
-                      color="green.600"
-                      fontSize="sm"
-                    >
-                      Post #{postById.post.id} found
-                    </Text>
-                    <Text fontWeight="medium">{postById.post.title}</Text>
-                    <Text
-                      className="dark:text-gray-400"
-                      color="gray.600"
-                      fontSize="sm"
-                    >
-                      {postById.post.content.slice(0, 60)}...
-                    </Text>
-                  </Box>
-                )}
+                <Combobox.Root
+                  closeOnSelect
+                  collection={relatedPostCollection}
+                  inputValue={relatedPostSearch}
+                  onInputValueChange={handleRelatedPostInputValueChange}
+                  onValueChange={handleRelatedPostValueChange}
+                  selectionBehavior="replace"
+                  value={selectedPost ? [String(selectedPost.id)] : []}
+                >
+                  <Combobox.Control>
+                    <Combobox.Input
+                      onBlur={field.handleBlur}
+                      placeholder="Search by title or enter post ID..."
+                      value={relatedPostSearch}
+                    />
+                    <Combobox.IndicatorGroup>
+                      {isFetching && <Spinner size="sm" />}
+                      {selectedPost && <Combobox.ClearTrigger />}
+                      <Combobox.Trigger />
+                    </Combobox.IndicatorGroup>
+                  </Combobox.Control>
+                  <Portal>
+                    <Combobox.Positioner>
+                      <Combobox.Content>
+                        <Combobox.ItemGroup>
+                          {relatedPostCollection.items.length > 0 ? (
+                            relatedPostCollection.items.map((item) => (
+                              <Combobox.Item item={item} key={item.value}>
+                                <Combobox.ItemText>
+                                  {item.label}
+                                </Combobox.ItemText>
+                              </Combobox.Item>
+                            ))
+                          ) : (
+                            <Combobox.Empty>
+                              {relatedPostSearch.length > 0 &&
+                              relatedPostSearch.length < 3
+                                ? "Type at least 3 characters to search"
+                                : isFetching
+                                  ? "Searching..."
+                                  : "No posts found"}
+                            </Combobox.Empty>
+                          )}
+                        </Combobox.ItemGroup>
+                      </Combobox.Content>
+                    </Combobox.Positioner>
+                  </Portal>
+                </Combobox.Root>
                 {!isFetching &&
                   isNumericSearch &&
                   numericId !== null &&
@@ -259,7 +292,7 @@ function RouteComponent() {
                       No post found with ID #{numericId}
                     </Text>
                   )}
-                {field.state.value && (
+                {field.state.value && !selectedPost && (
                   <Box
                     bg="blue.50"
                     borderRadius="md"
@@ -274,6 +307,7 @@ function RouteComponent() {
                       mt={1}
                       onClick={() => {
                         field.handleChange(undefined);
+                        setSelectedPost(null);
                         setRelatedPostSearch("");
                       }}
                       size="sm"
@@ -281,6 +315,18 @@ function RouteComponent() {
                       Clear
                     </Button>
                   </Box>
+                )}
+                {/* Kept for parity with the previous UI: the combobox input
+                    shows the selected title; the hint below confirms the id. */}
+                {field.state.value && selectedPost && (
+                  <Text
+                    className="dark:text-gray-400"
+                    color="gray.500"
+                    fontSize="sm"
+                    mt={2}
+                  >
+                    Selected Post ID: {field.state.value}
+                  </Text>
                 )}
               </Field.Root>
             )}

@@ -181,7 +181,10 @@ function PlaylistDetailContent() {
                           </Text>
                           {item.created_at && (
                             <Text color="gray.500" fontSize="xs">
-                              {new Date(item.created_at).toLocaleDateString()}
+                              {new Date(item.created_at).toLocaleDateString(
+                                "en-US",
+                                { timeZone: "UTC" },
+                              )}
                             </Text>
                           )}
                         </VStack>

@@ -74,7 +74,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
             <Box flex="1">
               <Text color="gray.600" fontSize="sm" mb={1}>
                 {comment.userName} •{" "}
-                {new Date(comment.createdAt).toLocaleDateString()}
+                {new Date(comment.createdAt).toLocaleDateString("en-US", {
+                  timeZone: "UTC",
+                })}
               </Text>
               <Text>{comment.content}</Text>
             </Box>

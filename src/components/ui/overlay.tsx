@@ -7,6 +7,7 @@ import {
   Popover as ArkPopover,
   Select as ArkSelect,
   Slider as ArkSlider,
+  TagsInput as ArkTagsInput,
   useCollapsibleContext,
   useFileUploadContext,
   type ListCollection,
@@ -308,6 +309,39 @@ export const Combobox = {
       />
     );
   },
+  RootProvider: (
+    props: Omit<
+      React.ComponentProps<typeof ArkCombobox.RootProvider>,
+      "value"
+    > & {
+      // oxlint-disable-next-line typescript/no-explicit-any -- compat layer accepts any machine value
+      value: any;
+    } & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkCombobox.RootProvider
+        className={cx("w-full", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkCombobox.RootProvider>)}
+      />
+    );
+  },
+  Label: (
+    props: React.ComponentProps<typeof ArkCombobox.Label> & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkCombobox.Label
+        className={cx(
+          "mb-1 block text-sm font-medium text-gray-800 dark:text-gray-200",
+          className,
+        )}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkCombobox.Label>)}
+      />
+    );
+  },
   Control: (
     props: React.ComponentProps<typeof ArkCombobox.Control> & ChakraStyleProps,
   ) => {
@@ -324,9 +358,18 @@ export const Combobox = {
     props: React.ComponentProps<typeof ArkCombobox.Input> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // When the input is composed into another control via `asChild` (e.g. the
+    // tags input), the parent control owns the box chrome. Re-applying the
+    // standalone combobox styles here creates a nested bordered/shadowed
+    // container around the inner element.
+    const isComposed = props["asChild"] === true;
     return (
       <ArkCombobox.Input
-        className={cx(LIST_BASE, "pe-10", className)}
+        className={cx(
+          isComposed ? undefined : LIST_BASE,
+          isComposed ? undefined : "pe-10",
+          className,
+        )}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Input>)}
       />
@@ -338,6 +381,22 @@ export const Combobox = {
       {...props}
     />
   ),
+  ClearTrigger: (
+    props: React.ComponentProps<typeof ArkCombobox.ClearTrigger> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkCombobox.ClearTrigger
+        aria-label="Clear"
+        className={cx("flex items-center text-gray-500", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkCombobox.ClearTrigger>)}
+      >
+        <LuX />
+      </ArkCombobox.ClearTrigger>
+    );
+  },
   Trigger: (props: React.ComponentProps<typeof ArkCombobox.Trigger>) => (
     <ArkCombobox.Trigger
       aria-label="Open options"
@@ -378,6 +437,19 @@ export const Combobox = {
   ItemGroup: (props: React.ComponentProps<typeof ArkCombobox.ItemGroup>) => (
     <ArkCombobox.ItemGroup className="py-0.5" {...props} />
   ),
+  ItemGroupLabel: (
+    props: React.ComponentProps<typeof ArkCombobox.ItemGroupLabel> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkCombobox.ItemGroupLabel
+        className={cx("px-2 py-1 text-xs font-medium text-gray-500", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkCombobox.ItemGroupLabel>)}
+      />
+    );
+  },
   Item: (
     props: React.ComponentProps<typeof ArkCombobox.Item> & ChakraStyleProps,
   ) => {
@@ -390,6 +462,18 @@ export const Combobox = {
         )}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Item>)}
+      />
+    );
+  },
+  ItemText: (
+    props: React.ComponentProps<typeof ArkCombobox.ItemText> & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkCombobox.ItemText
+        className={cx("min-w-0 flex-1", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkCombobox.ItemText>)}
       />
     );
   },
@@ -410,6 +494,153 @@ export const Combobox = {
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Empty>)}
       />
+    );
+  },
+};
+
+const TAGS_CONTROL_BASE =
+  "flex w-full flex-wrap items-center gap-1.5 rounded-md border border-gray-300 bg-white p-1.5 text-sm shadow-sm transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
+
+export const TagsInput = {
+  RootProvider: (
+    props: Omit<
+      React.ComponentProps<typeof ArkTagsInput.RootProvider>,
+      "value"
+    > & {
+      // oxlint-disable-next-line typescript/no-explicit-any -- compat layer accepts any machine value
+      value: any;
+    } & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.RootProvider
+        className={cx("w-full", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.RootProvider>)}
+      />
+    );
+  },
+  Control: (
+    props: React.ComponentProps<typeof ArkTagsInput.Control> & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.Control
+        className={cx(TAGS_CONTROL_BASE, className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.Control>)}
+      />
+    );
+  },
+  Item: (
+    props: React.ComponentProps<typeof ArkTagsInput.Item> & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.Item
+        className={cx("inline-flex items-center", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.Item>)}
+      />
+    );
+  },
+  ItemPreview: (
+    props: React.ComponentProps<typeof ArkTagsInput.ItemPreview> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.ItemPreview
+        className={cx(
+          "flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-sm dark:bg-gray-700",
+          className,
+        )}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.ItemPreview>)}
+      />
+    );
+  },
+  ItemText: (
+    props: React.ComponentProps<typeof ArkTagsInput.ItemText> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.ItemText
+        className={cx("text-sm", className)}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.ItemText>)}
+      />
+    );
+  },
+  ItemDeleteTrigger: (
+    props: React.ComponentProps<typeof ArkTagsInput.ItemDeleteTrigger> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.ItemDeleteTrigger
+        className={cx(
+          "cursor-pointer rounded p-0.5 text-gray-500 transition-colors hover:text-red-600",
+          className,
+        )}
+        style={style}
+        {...(rest as React.ComponentProps<
+          typeof ArkTagsInput.ItemDeleteTrigger
+        >)}
+      >
+        <LuX />
+      </ArkTagsInput.ItemDeleteTrigger>
+    );
+  },
+  ItemInput: (
+    props: React.ComponentProps<typeof ArkTagsInput.ItemInput> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.ItemInput
+        className={cx(
+          "w-full rounded border border-gray-300 bg-white px-1 text-sm outline-none dark:border-gray-600 dark:bg-gray-800",
+          className,
+        )}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.ItemInput>)}
+      />
+    );
+  },
+  Input: (
+    props: React.ComponentProps<typeof ArkTagsInput.Input> & ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.Input
+        className={cx(
+          "min-w-24 flex-1 bg-transparent px-1 py-1 text-sm outline-none placeholder:text-gray-400",
+          className,
+        )}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.Input>)}
+      />
+    );
+  },
+  ClearTrigger: (
+    props: React.ComponentProps<typeof ArkTagsInput.ClearTrigger> &
+      ChakraStyleProps,
+  ) => {
+    const { className, style, rest } = useChakraProps(props);
+    return (
+      <ArkTagsInput.ClearTrigger
+        aria-label="Clear all tags"
+        className={cx(
+          "cursor-pointer rounded p-1 text-gray-500 transition-colors hover:text-red-600",
+          className,
+        )}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkTagsInput.ClearTrigger>)}
+      >
+        <LuX />
+      </ArkTagsInput.ClearTrigger>
     );
   },
 };

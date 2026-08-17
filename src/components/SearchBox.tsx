@@ -35,14 +35,8 @@ export function SearchBox({
   const [search, setSearch] = useState(defaultValue);
   const [tags, setTags] = useState<string[]>(() => [...defaultTags]);
 
-  const handleAddTag = (details: ComboboxValueChangeDetails) => {
-    const newValues = details.value;
-    const addedValue = newValues.at(-1);
-
-    if (addedValue && !tags.includes(addedValue)) {
-      const newTags = [...tags, addedValue];
-      setTags(newTags);
-    }
+  const handleTagChange = (details: ComboboxValueChangeDetails) => {
+    setTags([...details.value]);
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -108,8 +102,11 @@ export function SearchBox({
       <Field.Root>
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
         <Box w="full">
+          <ClientOnly fallback={null}>
+            <SearchBoxTagCombobox onValueChange={handleTagChange} tags={tags} />
+          </ClientOnly>
           {tags.length > 0 && (
-            <Wrap gap="2" mb={2}>
+            <Wrap gap="2" mt={2}>
               {tags.map((tag) => (
                 <Badge
                   alignItems="center"
@@ -130,12 +127,6 @@ export function SearchBox({
               ))}
             </Wrap>
           )}
-          <ClientOnly fallback={null}>
-            <SearchBoxTagCombobox
-              onValueChange={handleAddTag}
-              tags={tags}
-            />
-          </ClientOnly>
         </Box>
       </Field.Root>
     </Box>
@@ -172,6 +163,7 @@ function SearchBoxTagCombobox({
         setTagSearchValue(details.inputValue);
       }}
       onValueChange={handleValueChange}
+      openOnClick
       value={tags}
     >
       <Combobox.Control>

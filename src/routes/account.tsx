@@ -18,6 +18,13 @@ import {
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 
+const memberSinceFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
 export const Route = createFileRoute("/account")({
   beforeLoad: ({ context, location }) => {
     if (!context.user) {
@@ -65,11 +72,7 @@ function RouteComponent() {
     },
   });
 
-  const memberSince = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-    day: "numeric",
-  }).format(new Date(user.createdAt));
+  const memberSince = memberSinceFormatter.format(new Date(user.createdAt));
 
   return (
     <Box className="flex min-h-dvh flex-col items-center px-4 py-16 sm:px-8">

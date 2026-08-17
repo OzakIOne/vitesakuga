@@ -2,17 +2,23 @@ import {
   ClientOnly,
   Portal,
   createListCollection,
+  useCombobox,
+  useTagsInput,
   type ComboboxInputValueChangeDetails,
   type ComboboxValueChangeDetails,
 } from "@ark-ui/react";
-import { useMemo, useState } from "react";
-import { LuX } from "react-icons/lu";
+import { useId, useMemo, useState } from "react";
 import type { Tag } from "src/lib/posts/posts.schema";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
 
-import { Badge } from "./feedback";
-import { Box, Wrap } from "./layout";
-import { Combobox } from "./overlay";
+import { Box } from "./layout";
+import { Combobox, TagsInput } from "./overlay";
+
+/**
+ * Sentinel item used to offer "create a new tag" in the combobox popup when
+ * the typed value does not match any existing tag (official creatable pattern).
+ */
+const CREATE_TAG_VALUE = "\u0000create-tag";
 
 type TagInputProps = {
   value: Tag[];
@@ -22,127 +28,115 @@ type TagInputProps = {
 
 export function TagInput({ value, onChange, onBlur }: TagInputProps) {
   return (
-    <Box w="full">
-      <ClientOnly fallback={null}>
-        <TagInputCombobox
-          onChange={onChange}
-          value={value}
-          {...(onBlur ? { onBlur } : {})}
-        />
-      </ClientOnly>
-    </Box>
+    <ClientOnly fallback={null}>
+      <TagInputCombobox
+        onChange={onChange}
+        value={value}
+        {...(onBlur ? { onBlur } : {})}
+      />
+    </ClientOnly>
   );
 }
 
-function TagInputCombobox({
-  value,
-  onChange,
-  onBlur,
-}: TagInputProps) {
+function TagInputCombobox({ value, onChange, onBlur }: TagInputProps) {
+  const uid = useId();
   const [searchValue, setSearchValue] = useState("");
+
+  const tagNames = useMemo(() => value.map((tag) => tag.name), [value]);
 
   const { allTags, collection: baseCollection } = useTagCollection({
     search: searchValue,
-    exclude: value.map((tag) => tag.name),
+    exclude: tagNames,
   });
 
   const showCreateOption = useMemo(() => {
-    if (!searchValue.trim()) {
+    const trimmed = searchValue.trim();
+    if (!trimmed) {
       return false;
     }
-    const exactMatch = allTags.some(
-      (tag: { name: string }) =>
-        tag.name.toLowerCase() === searchValue.toLowerCase(),
+    return !allTags.some(
+      (tag) => tag.name.toLowerCase() === trimmed.toLowerCase(),
     );
-    return !exactMatch;
-  }, [searchValue, allTags]);
+  }, [allTags, searchValue]);
 
-  const items = useMemo(() => {
-    if (showCreateOption) {
-      return [...baseCollection.items, `Create: ${searchValue}`];
-    }
-    return baseCollection.items;
-  }, [baseCollection.items, showCreateOption, searchValue]);
+  const collection = useMemo(() => {
+    const items = showCreateOption
+      ? [...baseCollection.items, CREATE_TAG_VALUE]
+      : baseCollection.items;
+    return createListCollection({ items });
+  }, [baseCollection.items, showCreateOption]);
 
-  const collection = useMemo(() => createListCollection({ items }), [items]);
+  const tagsInput = useTagsInput({
+    allowDuplicates: false,
+    blurBehavior: "clear",
+    ids: { control: `control-${uid}`, input: `input-${uid}` },
+    onValueChange: (details) => {
+      onChange(details.value.map((name) => ({ name })));
+    },
+    value: tagNames,
+  });
 
-  const handleValueChange = (details: ComboboxValueChangeDetails) => {
-    const newValues = details.value;
-    const addedValue = newValues.at(-1);
-
-    if (!addedValue) {
-      return;
-    }
-
-    if (addedValue.startsWith("Create: ")) {
-      const newTagName = addedValue.replace("Create: ", "").trim();
-      onChange([...value, { name: newTagName }]);
-    } else {
-      const selectedTag = allTags.find(
-        (tag: { name: string }) => tag.name === addedValue,
-      );
-      if (selectedTag && !value.some((tag) => tag.name === selectedTag.name)) {
-        onChange([...value, selectedTag]);
+  const combobox = useCombobox({
+    allowCustomValue: true,
+    closeOnSelect: true,
+    collection,
+    ids: { control: `control-${uid}`, input: `input-${uid}` },
+    onInputValueChange: (details: ComboboxInputValueChangeDetails) => {
+      setSearchValue(details.inputValue);
+    },
+    onValueChange: (details: ComboboxValueChangeDetails) => {
+      const selectedValue = details.value[0];
+      if (!selectedValue) {
+        return;
       }
-    }
-
-    setSearchValue("");
-  };
-
-  const handleRemoveTag = (tagToRemove: Tag) => {
-    onChange(value.filter((tag) => tag.name !== tagToRemove.name));
-  };
+      const newTagName =
+        selectedValue === CREATE_TAG_VALUE ? searchValue.trim() : selectedValue;
+      if (newTagName) {
+        tagsInput.addValue(newTagName);
+      }
+      setSearchValue("");
+    },
+    openOnClick: true,
+    selectionBehavior: "clear",
+    value: [],
+  });
 
   return (
-    <Combobox.Root
-      closeOnSelect
-      collection={collection}
-      multiple
-      onInputValueChange={(details: ComboboxInputValueChangeDetails) => {
-        setSearchValue(details.inputValue);
-      }}
-      onValueChange={handleValueChange}
-      value={value.map((tag) => tag.name)}
-    >
-      {value.length > 0 && (
-        <Wrap className="mb-2">
-          {value.map((tag) => (
-            <Badge
-              alignItems="center"
-              display="flex"
-              gap={1}
-              key={tag.name}
-              px={2}
-              py={1}
-            >
-              {tag.name}
-              <LuX
-                className="cursor-pointer transition-colors hover:text-red-500"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveTag(tag);
-                }}
-              />
-            </Badge>
-          ))}
-        </Wrap>
-      )}
-
-      <Combobox.Control>
-        <Combobox.Input onBlur={onBlur} placeholder="Add tags..." />
-        <Combobox.IndicatorGroup>
-          <Combobox.Trigger />
-        </Combobox.IndicatorGroup>
-      </Combobox.Control>
+    <Combobox.RootProvider value={combobox}>
+      <TagsInput.RootProvider value={tagsInput}>
+        <TagsInput.Control>
+          <Combobox.Input asChild>
+            <TagsInput.Input onBlur={onBlur} placeholder="Add tags..." />
+          </Combobox.Input>
+        </TagsInput.Control>
+        {tagNames.length > 0 && (
+          <Box display="flex" flexWrap="wrap" gap={1.5} mt={2}>
+            {tagNames.map((tagName, index) => (
+              <TagsInput.Item index={index} key={tagName} value={tagName}>
+                <TagsInput.ItemPreview>
+                  <TagsInput.ItemText>{tagName}</TagsInput.ItemText>
+                  <TagsInput.ItemDeleteTrigger />
+                </TagsInput.ItemPreview>
+                <TagsInput.ItemInput />
+              </TagsInput.Item>
+            ))}
+            <TagsInput.ClearTrigger />
+          </Box>
+        )}
+      </TagsInput.RootProvider>
 
       <Portal>
         <Combobox.Positioner>
           <Combobox.Content>
             <Combobox.ItemGroup>
-              {items.length > 0 ? (
-                items.map((item: string) => (
+              {collection.items.length > 0 ? (
+                collection.items.map((item) => (
                   <Combobox.Item item={item} key={item}>
-                    {item}
+                    <Combobox.ItemText>
+                      {item === CREATE_TAG_VALUE
+                        ? `Create "${searchValue.trim()}"`
+                        : item}
+                    </Combobox.ItemText>
                     <Combobox.ItemIndicator />
                   </Combobox.Item>
                 ))
@@ -153,6 +147,6 @@ function TagInputCombobox({
           </Combobox.Content>
         </Combobox.Positioner>
       </Portal>
-    </Combobox.Root>
+    </Combobox.RootProvider>
   );
 }
