@@ -61,11 +61,55 @@ export function PostsPageLayout({
 }: PostsPageLayoutProps) {
   const isPostDetail = fromRoute === "/posts/$postId";
 
+  const sidebarCards = (
+    <>
+      {selectedTags.length > 0 && (
+        <Box border="1px" borderRadius="md" p={4} shadow="md">
+          <Heading mb={3} size="sm">
+            Active Filters
+          </Heading>
+          <Wrap gap={2}>
+            {selectedTags.map((tag) => (
+              <Badge colorScheme="blue" key={tag}>
+                {tag}
+              </Badge>
+            ))}
+          </Wrap>
+        </Box>
+      )}
+
+      {popularTags.length > 0 && (
+        <Box border="1px" borderRadius="md" p={4} shadow="md">
+          <PopularTagsSection tags={popularTags} />
+        </Box>
+      )}
+
+      {!isPostDetail && (
+        <Box border="1px" borderRadius="md" p={4} shadow="md">
+          <Heading mb={3} size="sm">
+            Filters
+          </Heading>
+          <PostFilters
+            dateRange={dateRange}
+            fromRoute={fromRoute}
+            sortBy={sortBy}
+          />
+        </Box>
+      )}
+    </>
+  );
+
+  const hasCollapsibleSidebarCards =
+    selectedTags.length > 0 || popularTags.length > 0 || !isPostDetail;
+
   return (
-    <Box p={4} w="full">
-      <Grid gap={6} templateColumns={{ base: "1fr", lg: "1fr 3fr" }} w="full">
+    <Box className="p-3 lg:p-4" w="full">
+      <Grid
+        className="grid-cols-1 gap-3 lg:grid-cols-[1fr_3fr] lg:gap-6"
+        w="full"
+      >
         <GridItem>
-          <VStack align="stretch" gap={4}>
+          <VStack align="stretch" className="lg:gap-4" gap={3}>
             <Box border="1px" borderRadius="md" p={4} shadow="md">
               <SearchBox
                 defaultTags={selectedTags}
@@ -73,38 +117,41 @@ export function PostsPageLayout({
               />
             </Box>
 
-            {selectedTags.length > 0 && (
-              <Box border="1px" borderRadius="md" p={4} shadow="md">
-                <Heading mb={3} size="sm">
-                  Active Filters
-                </Heading>
-                <Wrap gap={2}>
-                  {selectedTags.map((tag) => (
-                    <Badge colorScheme="blue" key={tag}>
-                      {tag}
-                    </Badge>
-                  ))}
-                </Wrap>
-              </Box>
-            )}
+            {hasCollapsibleSidebarCards && (
+              <>
+                <Box className="lg:hidden">
+                  <Collapsible.Root defaultOpen={false}>
+                    <Box border="1px" borderRadius="md" p={3} shadow="md">
+                      <Collapsible.Trigger className="flex w-full cursor-pointer items-center justify-between">
+                        <Text fontSize="sm" fontWeight="bold">
+                          Filters & Popular Tags
+                          {selectedTags.length > 0 && (
+                            <Badge
+                              className="ms-2"
+                              colorScheme="blue"
+                              size="xs"
+                            >
+                              {selectedTags.length} active
+                            </Badge>
+                          )}
+                        </Text>
+                        <CollapseArrow />
+                      </Collapsible.Trigger>
+                    </Box>
+                    <Collapsible.Content>
+                      <VStack align="stretch" gap={3}>
+                        {sidebarCards}
+                      </VStack>
+                    </Collapsible.Content>
+                  </Collapsible.Root>
+                </Box>
 
-            {popularTags.length > 0 && (
-              <Box border="1px" borderRadius="md" p={4} shadow="md">
-                <PopularTagsSection tags={popularTags} />
-              </Box>
-            )}
-
-            {!isPostDetail && (
-              <Box border="1px" borderRadius="md" p={4} shadow="md">
-                <Heading mb={3} size="sm">
-                  Filters
-                </Heading>
-                <PostFilters
-                  dateRange={dateRange}
-                  fromRoute={fromRoute}
-                  sortBy={sortBy}
-                />
-              </Box>
+                <Box className="hidden lg:block">
+                  <VStack align="stretch" gap={4}>
+                    {sidebarCards}
+                  </VStack>
+                </Box>
+              </>
             )}
 
             {videoMetadata && (

@@ -128,6 +128,11 @@ export function usePostsInfiniteScroll<
       void navigate({
         search: (prev) => ({ ...prev, page: nextPage }),
         replace: true,
+        // This navigation is driven by our own scroll position, so it must not
+        // trigger TanStack Router's default scroll-to-top: on mobile the window
+        // itself is scrollable and resetting it yanks the whole page up when a
+        // new infinite-scroll page becomes visible.
+        resetScroll: false,
       });
     },
     [navigate],
