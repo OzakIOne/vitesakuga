@@ -27,6 +27,15 @@ type VideoProps = {
 
 export type VideoRef = ComponentRef<typeof MediaController>;
 
+function isInteractiveTarget(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null;
+  return (
+    target?.closest(
+      "button, a, input, textarea, select, [role='button'], [role='link'], [contenteditable='true']",
+    ) != null
+  );
+}
+
 export const Video = React.forwardRef<VideoRef, VideoProps>(
   ({ url, bypass, frameRate }, ref) => {
     const uuid = React.useId();
@@ -39,15 +48,6 @@ export const Video = React.forwardRef<VideoRef, VideoProps>(
 
     const pauseVideo = () => {
       videoRef.current?.pause();
-    };
-
-    const isInteractiveTarget = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      return (
-        target?.closest(
-          "button, a, input, textarea, select, [role='button'], [role='link'], [contenteditable='true']",
-        ) != null
-      );
     };
 
     const togglePlay = (event: KeyboardEvent) => {

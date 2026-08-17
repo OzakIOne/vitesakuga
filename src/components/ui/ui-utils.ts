@@ -49,6 +49,7 @@ function mapResponsive(
   breakpoints: string[] = ["sm", "md", "lg", "xl"],
 ): string[] {
   if (isStyleObject(value)) {
+    const breakpointSet = new Set(breakpoints);
     const classes: string[] = [];
     for (const [bp, v] of Object.entries(value)) {
       const className = makeClass(String(v));
@@ -56,7 +57,7 @@ function mapResponsive(
         classes.push(className);
       } else if (bp.endsWith("Down")) {
         classes.push(`max-${bp.slice(0, -4)}:${className}`);
-      } else if (breakpoints.includes(bp)) {
+      } else if (breakpointSet.has(bp)) {
         classes.push(`${bp}:${className}`);
       }
     }

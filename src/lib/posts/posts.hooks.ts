@@ -99,11 +99,14 @@ export function usePostsInfiniteScroll<
   // overwrites the first's cache write), so buffers must not overlap.
   const prefetchedAnchorRef = useRef<number | null>(null);
   const fetchNextPageRef = useRef(fetchNextPage);
-  fetchNextPageRef.current = fetchNextPage;
   const hasNextPageRef = useRef(hasNextPage);
-  hasNextPageRef.current = hasNextPage;
   const isFetchingNextPageRef = useRef(isFetchingNextPage);
-  isFetchingNextPageRef.current = isFetchingNextPage;
+
+  useEffect(() => {
+    fetchNextPageRef.current = fetchNextPage;
+    hasNextPageRef.current = hasNextPage;
+    isFetchingNextPageRef.current = isFetchingNextPage;
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     if (prefetchedAnchorRef.current === page) return;

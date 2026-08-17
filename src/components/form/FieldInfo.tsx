@@ -1,13 +1,16 @@
 import type { AnyFieldApi } from "@tanstack/react-form";
 
 export function FieldInfo({ field }: { field: AnyFieldApi }) {
-  const errors = field.state.meta.errors
-    .map((error) =>
+  const errors: string[] = [];
+  for (const error of field.state.meta.errors) {
+    const message =
       typeof error === "string"
         ? error
-        : ((error as { message?: string } | null | undefined)?.message ?? ""),
-    )
-    .filter(Boolean);
+        : ((error as { message?: string } | null | undefined)?.message ?? "");
+    if (message) {
+      errors.push(message);
+    }
+  }
 
   return (
     <>

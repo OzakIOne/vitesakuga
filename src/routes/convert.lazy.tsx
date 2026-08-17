@@ -81,13 +81,19 @@ function RouteComponent() {
   const [formatInputValue, setFormatInputValue] = useState("");
 
   const outputCollection = useMemo(() => {
-    const items = SUPPORTED_OUTPUTS.filter((format) =>
-      format.label.toLowerCase().includes(formatInputValue.toLowerCase()),
-    ).map((format) => ({
-      disabled: !isPassthroughCompatible(format, inputVideoCodec),
-      label: format.label,
-      value: format.label,
-    }));
+    const items: { disabled: boolean; label: string; value: string }[] = [];
+    for (const format of SUPPORTED_OUTPUTS) {
+      if (
+        !format.label.toLowerCase().includes(formatInputValue.toLowerCase())
+      ) {
+        continue;
+      }
+      items.push({
+        disabled: !isPassthroughCompatible(format, inputVideoCodec),
+        label: format.label,
+        value: format.label,
+      });
+    }
     return createListCollection({
       isItemDisabled: (item) => item.disabled,
       itemToValue: (item) => item.value,

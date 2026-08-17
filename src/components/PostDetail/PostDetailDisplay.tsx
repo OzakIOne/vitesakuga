@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import { Comments } from "src/components/Comments";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
@@ -21,6 +21,53 @@ type PostDetailDisplayProps = {
   currentUserId?: string | undefined;
 };
 
+type EditState = {
+  isEditing: boolean;
+  titleDraft: string;
+  contentDraft: string;
+  sourceDraft: string;
+  tagsDraft: Tag[];
+};
+
+type EditAction =
+  | {
+      type: "startEditing";
+      title: string;
+      content: string;
+      source: string;
+      tags: Tag[];
+    }
+  | { type: "updateTitle"; title: string }
+  | { type: "updateContent"; content: string }
+  | { type: "updateSource"; source: string }
+  | { type: "updateTags"; tags: Tag[] }
+  | { type: "stopEditing" };
+
+function editReducer(state: EditState, action: EditAction): EditState {
+  switch (action.type) {
+    case "startEditing":
+      return {
+        isEditing: true,
+        titleDraft: action.title,
+        contentDraft: action.content,
+        sourceDraft: action.source,
+        tagsDraft: action.tags,
+      };
+    case "updateTitle":
+      return { ...state, titleDraft: action.title };
+    case "updateContent":
+      return { ...state, contentDraft: action.content };
+    case "updateSource":
+      return { ...state, sourceDraft: action.source };
+    case "updateTags":
+      return { ...state, tagsDraft: action.tags };
+    case "stopEditing":
+      return { ...state, isEditing: false };
+    default:
+      return state;
+  }
+}
+
 export function PostDetailDisplay({
   post,
   user,
@@ -30,11 +77,15 @@ export function PostDetailDisplay({
 }: PostDetailDisplayProps) {
   const queryClient = useQueryClient();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [titleDraft, setTitleDraft] = useState(post.title ?? "");
-  const [contentDraft, setContentDraft] = useState(post.content ?? "");
-  const [sourceDraft, setSourceDraft] = useState(post.source ?? "");
-  const [tagsDraft, setTagsDraft] = useState<Tag[]>(initialTags);
+  const [editState, dispatchEdit] = useReducer(editReducer, {
+    isEditing: false,
+    titleDraft: post.title ?? "",
+    contentDraft: post.content ?? "",
+    sourceDraft: post.source ?? "",
+    tagsDraft: initialTags,
+  });
+  const { isEditing, titleDraft, contentDraft, sourceDraft, tagsDraft } =
+    editState;
 
   const isOwner = currentUserId === user.id;
 
@@ -61,18 +112,20 @@ export function PostDetailDisplay({
       void queryClient.invalidateQueries({
         queryKey: postsKeys.detail(post.id),
       });
-      setIsEditing(false);
+      dispatchEdit({ type: "stopEditing" });
     },
     successDescription: "Your post has been updated.",
     successTitle: "Post updated",
   });
 
   const startEditing = () => {
-    setTitleDraft(post.title ?? "");
-    setContentDraft(post.content ?? "");
-    setSourceDraft(post.source ?? "");
-    setTagsDraft(initialTags);
-    setIsEditing(true);
+    dispatchEdit({
+      type: "startEditing",
+      title: post.title ?? "",
+      content: post.content ?? "",
+      source: post.source ?? "",
+      tags: initialTags,
+    });
   };
 
   const save = () => {
@@ -99,7 +152,7 @@ export function PostDetailDisplay({
               className="h-auto px-2 py-1 text-2xl font-bold"
               disabled={updatePostMutation.isPending}
               onChange={(e) => {
-                setTitleDraft(e.target.value);
+                dispatchEdit({ type: "updateTitle", title: e.target.value });
               }}
               value={titleDraft}
             />
@@ -109,7 +162,10 @@ export function PostDetailDisplay({
                 disabled={updatePostMutation.isPending}
                 id="post-content"
                 onChange={(e) => {
-                  setContentDraft(e.target.value);
+                  dispatchEdit({
+                    type: "updateContent",
+                    content: e.target.value,
+                  });
                 }}
                 value={contentDraft}
               />
@@ -120,7 +176,10 @@ export function PostDetailDisplay({
                 disabled={updatePostMutation.isPending}
                 id="post-source"
                 onChange={(e) => {
-                  setSourceDraft(e.target.value);
+                  dispatchEdit({
+                    type: "updateSource",
+                    source: e.target.value,
+                  });
                 }}
                 placeholder="Link to the original source (Twitter, YouTube, etc.)"
                 value={sourceDraft}
@@ -128,7 +187,10 @@ export function PostDetailDisplay({
             </Field.Root>
             <Field.Root>
               <Field.Label>Tags</Field.Label>
-              <TagInput onChange={setTagsDraft} value={tagsDraft} />
+              <TagInput
+                onChange={(tags) => dispatchEdit({ type: "updateTags", tags })}
+                value={tagsDraft}
+              />
             </Field.Root>
             <HStack gap={2}>
               <Button
@@ -145,7 +207,7 @@ export function PostDetailDisplay({
               <Button
                 disabled={updatePostMutation.isPending}
                 onClick={() => {
-                  setIsEditing(false);
+                  dispatchEdit({ type: "stopEditing" });
                 }}
                 variant="ghost"
               >

@@ -23,6 +23,8 @@ import { SearchBox } from "./SearchBox";
 type RegisteredRoutes =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
 
+const EMPTY_SELECTED_TAGS: readonly string[] = [];
+
 export type PostsPageLayoutProps = {
   searchQuery?: string | undefined;
   selectedTags?: readonly string[] | undefined;
@@ -51,7 +53,7 @@ function CollapseArrow() {
 
 export function PostsPageLayout({
   searchQuery,
-  selectedTags = [],
+  selectedTags = EMPTY_SELECTED_TAGS,
   popularTags,
   sortBy,
   dateRange,

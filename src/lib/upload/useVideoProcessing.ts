@@ -1,6 +1,6 @@
 import type { MediaInfo } from "mediainfo.js";
 import mediaInfoFactory from "mediainfo.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { toaster } from "src/components/ui/toaster";
 
 import type { VideoMetadata } from "../posts/posts.schema";
@@ -27,16 +27,50 @@ type VideoProcessingActions = {
   clearFile: () => void;
 };
 
+type ThumbnailSelectionState = {
+  thumbnails: GeneratedThumbnail[];
+  selectedThumbnailIndex: number;
+};
+
+type ThumbnailSelectionAction =
+  | { type: "set"; thumbnails: GeneratedThumbnail[] }
+  | { type: "append"; generated: GeneratedThumbnail[] }
+  | { type: "select"; index: number };
+
+function thumbnailSelectionReducer(
+  state: ThumbnailSelectionState,
+  action: ThumbnailSelectionAction,
+): ThumbnailSelectionState {
+  switch (action.type) {
+    case "set":
+      return { thumbnails: action.thumbnails, selectedThumbnailIndex: 0 };
+    case "append": {
+      const thumbnails = [...state.thumbnails, ...action.generated];
+      return {
+        thumbnails,
+        selectedThumbnailIndex: thumbnails.length - 1,
+      };
+    }
+    case "select":
+      return { ...state, selectedThumbnailIndex: action.index };
+    default:
+      return state;
+  }
+}
+
 export function useVideoProcessing(): VideoProcessingState &
   VideoProcessingActions {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [frameRate, setFrameRate] = useState<number | null>(null);
-  const [thumbnails, setThumbnails] = useState<GeneratedThumbnail[]>([]);
-  const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | undefined>(
     undefined,
   );
+  const [thumbnailState, dispatchThumbnails] = useReducer(
+    thumbnailSelectionReducer,
+    { thumbnails: [], selectedThumbnailIndex: 0 },
+  );
+  const { thumbnails, selectedThumbnailIndex } = thumbnailState;
 
   const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
 
@@ -64,10 +98,9 @@ export function useVideoProcessing(): VideoProcessingState &
 
   const selectFile = async (file: File) => {
     setVideoFile(file);
-    setSelectedThumbnailIndex(0);
     setVideoMetadata(undefined);
     setFrameRate(null);
-    setThumbnails([]);
+    dispatchThumbnails({ type: "set", thumbnails: [] });
 
     if (mediaInfoRef.current) {
       try {
@@ -81,10 +114,7 @@ export function useVideoProcessing(): VideoProcessingState &
 
     try {
       const generated = await generateAutoThumbnails(file);
-      setThumbnails(generated);
-      if (generated.length > 0) {
-        setSelectedThumbnailIndex(0);
-      }
+      dispatchThumbnails({ type: "set", thumbnails: generated });
     } catch (error) {
       console.error("Thumbnail generation failed:", error);
       toaster.create({
@@ -113,16 +143,12 @@ export function useVideoProcessing(): VideoProcessingState &
 
     const generated = await generateThumbnails(videoFile, [currentTime]);
     if (generated.length > 0) {
-      setThumbnails((prev) => {
-        const newThumbs = [...prev, ...generated];
-        setSelectedThumbnailIndex(newThumbs.length - 1);
-        return newThumbs;
-      });
+      dispatchThumbnails({ type: "append", generated });
     }
   };
 
   const selectThumbnail = (index: number) => {
-    setSelectedThumbnailIndex(index);
+    dispatchThumbnails({ type: "select", index });
   };
 
   const clearFile = () => {
@@ -132,9 +158,8 @@ export function useVideoProcessing(): VideoProcessingState &
     setVideoFile(null);
     setPreviewUrl(null);
     setFrameRate(null);
-    setThumbnails([]);
-    setSelectedThumbnailIndex(0);
     setVideoMetadata(undefined);
+    dispatchThumbnails({ type: "set", thumbnails: [] });
   };
 
   return {

@@ -5,14 +5,14 @@ import { KeyboardShortcutsDialog } from "src/components/KeyboardShortcutsDialog"
 import { IconButton } from "src/components/ui/button";
 import { Box } from "src/components/ui/layout";
 
+function focusSearchInput() {
+  const searchInput = document.getElementById("search-input");
+  searchInput?.focus();
+}
+
 export function GlobalShortcuts() {
   const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-  const focusSearchInput = () => {
-    const searchInput = document.getElementById("search-input");
-    searchInput?.focus();
-  };
 
   useHotkey({ key: "/", shift: true }, () => {
     setShortcutsOpen((open) => !open);

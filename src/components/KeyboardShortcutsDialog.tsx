@@ -1,5 +1,5 @@
 import { Dialog, Portal } from "@ark-ui/react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { LuX } from "react-icons/lu";
 
 type Shortcut = {
@@ -12,6 +12,16 @@ type KeyboardShortcutsDialogProps = {
   onOpenChange: (details: { open: boolean }) => void;
   open: boolean;
 };
+
+const subscribe = (): (() => void) => () => {};
+
+function isMacPlatform(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    (navigator.platform?.toLowerCase().includes("mac") ||
+      navigator.userAgent.toLowerCase().includes("mac"))
+  );
+}
 
 function getShortcuts(modKey: string): Shortcut[] {
   return [
@@ -45,14 +55,7 @@ export function KeyboardShortcutsDialog({
   onOpenChange,
   open,
 }: KeyboardShortcutsDialogProps) {
-  const [isMac, setIsMac] = useState(false);
-  useEffect(() => {
-    setIsMac(
-      typeof navigator !== "undefined" &&
-        (navigator.platform?.toLowerCase().includes("mac") ||
-          navigator.userAgent.toLowerCase().includes("mac")),
-    );
-  }, []);
+  const isMac = useSyncExternalStore(subscribe, isMacPlatform, () => false);
   const shortcuts = getShortcuts(isMac ? "⌘" : "Ctrl");
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
