@@ -31,10 +31,10 @@ function copyFilePlugin() {
 
 export default defineConfig({
   plugins: [
+    devtools(),
     copyFilePlugin(),
     tailwindcss(),
     tanstackStart(),
-    devtools(),
     nitro(),
     viteReact(),
   ],

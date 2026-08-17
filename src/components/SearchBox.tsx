@@ -1,4 +1,8 @@
-import { Portal, type ComboboxValueChangeDetails } from "@ark-ui/react";
+import {
+  ClientOnly,
+  Portal,
+  type ComboboxValueChangeDetails,
+} from "@ark-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -30,12 +34,6 @@ export function SearchBox({
   const { pathname } = useLocation();
   const [search, setSearch] = useState(defaultValue);
   const [tags, setTags] = useState<string[]>(() => [...defaultTags]);
-  const [tagSearchValue, setTagSearchValue] = useState("");
-
-  const { collection } = useTagCollection({
-    search: tagSearchValue,
-    exclude: tags,
-  });
 
   const handleAddTag = (details: ComboboxValueChangeDetails) => {
     const newValues = details.value;
@@ -45,8 +43,6 @@ export function SearchBox({
       const newTags = [...tags, addedValue];
       setTags(newTags);
     }
-
-    setTagSearchValue("");
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -134,44 +130,75 @@ export function SearchBox({
               ))}
             </Wrap>
           )}
-          <Combobox.Root
-            closeOnSelect
-            collection={collection}
-            multiple
-            onInputValueChange={(details) => {
-              setTagSearchValue(details.inputValue);
-            }}
-            onValueChange={handleAddTag}
-            value={tags}
-          >
-            <Combobox.Control>
-              <Combobox.Input placeholder="Select tags to filter..." />
-              <Combobox.IndicatorGroup>
-                <Combobox.Trigger />
-              </Combobox.IndicatorGroup>
-            </Combobox.Control>
-
-            <Portal>
-              <Combobox.Positioner>
-                <Combobox.Content>
-                  <Combobox.ItemGroup>
-                    {collection.items.length > 0 ? (
-                      collection.items.map((item: string) => (
-                        <Combobox.Item item={item} key={item}>
-                          {item}
-                          <Combobox.ItemIndicator />
-                        </Combobox.Item>
-                      ))
-                    ) : (
-                      <Combobox.Empty>No tags found</Combobox.Empty>
-                    )}
-                  </Combobox.ItemGroup>
-                </Combobox.Content>
-              </Combobox.Positioner>
-            </Portal>
-          </Combobox.Root>
+          <ClientOnly fallback={null}>
+            <SearchBoxTagCombobox
+              onValueChange={handleAddTag}
+              tags={tags}
+            />
+          </ClientOnly>
         </Box>
       </Field.Root>
     </Box>
+  );
+}
+
+type SearchBoxTagComboboxProps = {
+  onValueChange: (details: ComboboxValueChangeDetails) => void;
+  tags: string[];
+};
+
+function SearchBoxTagCombobox({
+  onValueChange,
+  tags,
+}: SearchBoxTagComboboxProps) {
+  const [tagSearchValue, setTagSearchValue] = useState("");
+
+  const { collection } = useTagCollection({
+    search: tagSearchValue,
+    exclude: tags,
+  });
+
+  const handleValueChange = (details: ComboboxValueChangeDetails) => {
+    setTagSearchValue("");
+    onValueChange(details);
+  };
+
+  return (
+    <Combobox.Root
+      closeOnSelect
+      collection={collection}
+      multiple
+      onInputValueChange={(details) => {
+        setTagSearchValue(details.inputValue);
+      }}
+      onValueChange={handleValueChange}
+      value={tags}
+    >
+      <Combobox.Control>
+        <Combobox.Input placeholder="Select tags to filter..." />
+        <Combobox.IndicatorGroup>
+          <Combobox.Trigger />
+        </Combobox.IndicatorGroup>
+      </Combobox.Control>
+
+      <Portal>
+        <Combobox.Positioner>
+          <Combobox.Content>
+            <Combobox.ItemGroup>
+              {collection.items.length > 0 ? (
+                collection.items.map((item: string) => (
+                  <Combobox.Item item={item} key={item}>
+                    {item}
+                    <Combobox.ItemIndicator />
+                  </Combobox.Item>
+                ))
+              ) : (
+                <Combobox.Empty>No tags found</Combobox.Empty>
+              )}
+            </Combobox.ItemGroup>
+          </Combobox.Content>
+        </Combobox.Positioner>
+      </Portal>
+    </Combobox.Root>
   );
 }

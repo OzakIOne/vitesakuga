@@ -1,3 +1,4 @@
+import { ClientOnly } from "@ark-ui/react";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
@@ -28,14 +29,20 @@ function UsersContent() {
 function UsersLayoutComponent() {
   return (
     <Suspense
-      fallback={
-        <Stack align="center" justify="center" minH="400px">
-          <Spinner size="lg" />
-          <Text>Loading users...</Text>
-        </Stack>
-      }
+      fallback={<UsersLoading />}
     >
-      <UsersContent />
+      <ClientOnly fallback={<UsersLoading />}>
+        <UsersContent />
+      </ClientOnly>
     </Suspense>
+  );
+}
+
+function UsersLoading() {
+  return (
+    <Stack align="center" justify="center" minH="400px">
+      <Spinner size="lg" />
+      <Text>Loading users...</Text>
+    </Stack>
   );
 }

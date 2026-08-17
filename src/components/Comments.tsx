@@ -1,4 +1,4 @@
-import { Portal } from "@ark-ui/react";
+import { ClientOnly, Portal } from "@ark-ui/react";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -23,23 +23,12 @@ type CommentsProps = {
 };
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
-  const postIdStr = postId.toString();
-
-  const { data: drafts } = useLiveQuery((query) =>
-    query
-      .from({ draft: commentDraftsCollection })
-      .where(({ draft }) => eq(draft.id, postIdStr)),
-  );
-  const draft = drafts?.[0];
-  const comment = draft?.content ?? "";
-
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
     null,
   );
 
   const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
 
-  const addCommentMutation = useAddComment(postId, currentUserId ?? "");
   const deleteCommentMutation = useDeleteComment(postId);
 
   const handleDeleteComment = () => {
@@ -51,58 +40,25 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
     }
   };
 
-  const handleSubmitComment = () => {
-    if (!(comment.trim() && currentUserId)) {
-      return;
-    }
-    addCommentMutation.mutate(comment.trim(), {
-      onSuccess: () => {
-        commentDraftsCollection.delete(postIdStr);
-      },
-    });
-  };
-
-  const handleChange = (value: string) => {
-    if (draft) {
-      commentDraftsCollection.update(postIdStr, (d) => {
-        d.content = value;
-      });
-    } else {
-      commentDraftsCollection.insert({ id: postIdStr, content: value });
-    }
-  };
-
   return (
     <Box borderRadius="md" padding="4">
       <Text fontSize="xl" fontWeight="bold" mb={4}>
         Comments
       </Text>
 
-      <Box mb={4}>
-        {currentUserId ? (
-          <>
-            <Textarea
-              mb={2}
-              onChange={(e) => {
-                handleChange(e.target.value);
-              }}
-              placeholder="Write a comment..."
-              value={comment}
-            />
-            <Button
-              colorScheme="blue"
-              disabled={addCommentMutation.isPending || !comment.trim()}
-              onClick={handleSubmitComment}
-            >
-              {addCommentMutation.isPending ? "Adding..." : "Add Comment"}
-            </Button>
-          </>
-        ) : (
+      <ClientOnly fallback={null}>
+        <CommentComposer
+          currentUserId={currentUserId}
+          postId={postId}
+        />
+      </ClientOnly>
+      {!currentUserId && (
+        <Box mb={4}>
           <Text color="gray.600" fontStyle="italic">
             You need to be logged in to write a comment.
           </Text>
-        )}
-      </Box>
+        </Box>
+      )}
 
       <Box>
         {comments?.map((comment) => (
@@ -181,6 +137,65 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
           </Dialog.Positioner>
         </Portal>
       </Dialog.Root>
+    </Box>
+  );
+}
+
+function CommentComposer({ postId, currentUserId }: CommentsProps) {
+  const postIdStr = postId.toString();
+
+  const { data: drafts } = useLiveQuery((query) =>
+    query
+      .from({ draft: commentDraftsCollection })
+      .where(({ draft }) => eq(draft.id, postIdStr)),
+  );
+  const draft = drafts?.[0];
+  const comment = draft?.content ?? "";
+
+  const addCommentMutation = useAddComment(postId, currentUserId ?? "");
+
+  const handleSubmitComment = () => {
+    if (!(comment.trim() && currentUserId)) {
+      return;
+    }
+    addCommentMutation.mutate(comment.trim(), {
+      onSuccess: () => {
+        commentDraftsCollection.delete(postIdStr);
+      },
+    });
+  };
+
+  const handleChange = (value: string) => {
+    if (draft) {
+      commentDraftsCollection.update(postIdStr, (d) => {
+        d.content = value;
+      });
+    } else {
+      commentDraftsCollection.insert({ id: postIdStr, content: value });
+    }
+  };
+
+  if (!currentUserId) {
+    return null;
+  }
+
+  return (
+    <Box mb={4}>
+      <Textarea
+        mb={2}
+        onChange={(e) => {
+          handleChange(e.target.value);
+        }}
+        placeholder="Write a comment..."
+        value={comment}
+      />
+      <Button
+        colorScheme="blue"
+        disabled={addCommentMutation.isPending || !comment.trim()}
+        onClick={handleSubmitComment}
+      >
+        {addCommentMutation.isPending ? "Adding..." : "Add Comment"}
+      </Button>
     </Box>
   );
 }

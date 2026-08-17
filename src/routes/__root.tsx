@@ -56,11 +56,9 @@ export const Route = createRootRouteWithContext<{
   },
   component: RootComponent,
   errorComponent: (props) => (
-    <Provider>
-      <RootDocument>
-        <DefaultCatchBoundary {...props} />
-      </RootDocument>
-    </Provider>
+    <RootDocument>
+      <DefaultCatchBoundary {...props} />
+    </RootDocument>
   ),
   head: () => ({
     links: [
@@ -99,18 +97,23 @@ export const Route = createRootRouteWithContext<{
       }),
     ],
   }),
-  notFoundComponent: () => (
-    <Provider>
-      <NotFound />
-    </Provider>
-  ),
+  notFoundComponent: () => <NotFound />,
 });
+
+function ThemeMenuItem() {
+  const { toggleColorMode } = useColorMode();
+
+  return (
+    <Menu.Item onClick={toggleColorMode} value="theme">
+      Toggle Theme
+    </Menu.Item>
+  );
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const ctx = Route.useRouteContext();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { toggleColorMode } = useColorMode();
 
   const currentPath = router.state.location.pathname;
   const authPaths = ["/login", "/signup"];
@@ -135,217 +138,217 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <Center
-          gap={2}
-          left={0}
-          position="absolute"
-          py={2}
-          right={0}
-          top={0}
-          zIndex={10}
-        >
-          <Link
-            activeOptions={{ exact: true }}
-            activeProps={{
-              className: "link",
-            }}
-            to="/"
-          >
-            Home
-          </Link>{" "}
-          <Link
-            activeProps={{
-              className: "link",
-            }}
-            className=""
-            to="/posts"
-          >
-            Posts
-          </Link>{" "}
-          <Link
-            activeProps={{
-              className: "link",
-            }}
-            to="/users"
-          >
-            Users
-          </Link>{" "}
-          <Link
-            activeProps={{
-              className: "link",
-            }}
-            to="/upload"
-          >
-            Upload
-          </Link>{" "}
-          <Link
-            activeProps={{
-              className: "link",
-            }}
-            to="/convert"
-          >
-            Convert video
-          </Link>{" "}
-          <Box display={{ base: "none", md: "block" }}>
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button size="xs" variant="ghost">
-                  Dev Tools
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Menu.Item asChild value="otelite">
-                    <a
-                      href="http://localhost:4000"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      Otelite
-                    </a>
-                  </Menu.Item>
-                  <Menu.Item asChild value="opencode">
-                    <a
-                      href="http://localhost:4096"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      Opencode
-                    </a>
-                  </Menu.Item>
-                  <Menu.Item asChild value="signoz">
-                    <a
-                      href="http://localhost:8080"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      SigNoz
-                    </a>
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          </Box>{" "}
-          <Box
-            alignItems="center"
-            display={{ base: "none", md: "flex" }}
+        <Provider>
+          <Center
             gap={2}
+            left={0}
+            position="absolute"
+            py={2}
+            right={0}
+            top={0}
+            zIndex={10}
           >
-            {ctx.user ? (
-              <>
-                <Link className="link" to="/account">
-                  Account
-                </Link>{" "}
-                <Button onClick={handleSignOut} size="xs">
-                  Sign Out
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link className="link" search={redirectSearch} to="/login">
-                  Login
-                </Link>{" "}
-                <Link className="link" search={redirectSearch} to="/signup">
-                  Sign Up
-                </Link>
-              </>
-            )}
-            <ColorModeButton />
-          </Box>
-          <Box display={{ base: "flex", md: "none" }}>
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <IconButton aria-label="Menu" size="sm" variant="ghost">
-                  <LuMenu />
-                </IconButton>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  {ctx.user ? (
-                    <>
-                      <Menu.Item asChild value="account">
-                        <Link to="/account">Account</Link>
-                      </Menu.Item>
-                      <Menu.Item onClick={handleSignOut} value="signout">
-                        Sign Out
-                      </Menu.Item>
-                    </>
-                  ) : (
-                    <>
-                      <Menu.Item asChild value="login">
-                        <Link search={redirectSearch} to="/login">
-                          Login
-                        </Link>
-                      </Menu.Item>
-                      <Menu.Item asChild value="signup">
-                        <Link search={redirectSearch} to="/signup">
-                          Sign Up
-                        </Link>
-                      </Menu.Item>
-                    </>
-                  )}
-                  <Menu.Separator />
-                  <Menu.Item onClick={toggleColorMode} value="theme">
-                    Toggle Theme
-                  </Menu.Item>
-                  <Menu.Separator />
-                  <Menu.Item asChild value="otelite">
-                    <a
-                      href="http://localhost:4000"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      Otelite
-                    </a>
-                  </Menu.Item>
-                  <Menu.Item asChild value="opencode">
-                    <a
-                      href="http://localhost:4096"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      Opencode
-                    </a>
-                  </Menu.Item>
-                  <Menu.Item asChild value="signoz">
-                    <a
-                      href="http://localhost:8080"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      SigNoz
-                    </a>
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          </Box>
-        </Center>
-        <Box pt={16}>{children}</Box>
-        <ClientOnly fallback={null}>
-          <Toaster />
-          <TanStackDevtools
-            plugins={[
-              {
-                name: "TanStack Query",
-                render: <ReactQueryDevtoolsPanel />,
-              },
-              {
-                name: "TanStack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              {
-                name: "TanStack Form",
-                render: <FormDevtoolsPanel />,
-              },
-              {
-                name: "TanStack Pacer",
-                render: <PacerDevtoolsPanel />,
-              },
-            ]}
-          />
-        </ClientOnly>
-        <Scripts />
+            <Link
+              activeOptions={{ exact: true }}
+              activeProps={{
+                className: "link",
+              }}
+              to="/"
+            >
+              Home
+            </Link>{" "}
+            <Link
+              activeProps={{
+                className: "link",
+              }}
+              className=""
+              to="/posts"
+            >
+              Posts
+            </Link>{" "}
+            <Link
+              activeProps={{
+                className: "link",
+              }}
+              to="/users"
+            >
+              Users
+            </Link>{" "}
+            <Link
+              activeProps={{
+                className: "link",
+              }}
+              to="/upload"
+            >
+              Upload
+            </Link>{" "}
+            <Link
+              activeProps={{
+                className: "link",
+              }}
+              to="/convert"
+            >
+              Convert video
+            </Link>{" "}
+            <Box display={{ base: "none", md: "block" }}>
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <Button size="xs" variant="ghost">
+                    Dev Tools
+                  </Button>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item asChild value="otelite">
+                      <a
+                        href="http://localhost:4000"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Otelite
+                      </a>
+                    </Menu.Item>
+                    <Menu.Item asChild value="opencode">
+                      <a
+                        href="http://localhost:4096"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Opencode
+                      </a>
+                    </Menu.Item>
+                    <Menu.Item asChild value="signoz">
+                      <a
+                        href="http://localhost:8080"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        SigNoz
+                      </a>
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
+            </Box>{" "}
+            <Box
+              alignItems="center"
+              display={{ base: "none", md: "flex" }}
+              gap={2}
+            >
+              {ctx.user ? (
+                <>
+                  <Link className="link" to="/account">
+                    Account
+                  </Link>{" "}
+                  <Button onClick={handleSignOut} size="xs">
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link className="link" search={redirectSearch} to="/login">
+                    Login
+                  </Link>{" "}
+                  <Link className="link" search={redirectSearch} to="/signup">
+                    Sign Up
+                  </Link>
+                </>
+              )}
+              <ColorModeButton />
+            </Box>
+            <Box display={{ base: "flex", md: "none" }}>
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <IconButton aria-label="Menu" size="sm" variant="ghost">
+                    <LuMenu />
+                  </IconButton>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    {ctx.user ? (
+                      <>
+                        <Menu.Item asChild value="account">
+                          <Link to="/account">Account</Link>
+                        </Menu.Item>
+                        <Menu.Item onClick={handleSignOut} value="signout">
+                          Sign Out
+                        </Menu.Item>
+                      </>
+                    ) : (
+                      <>
+                        <Menu.Item asChild value="login">
+                          <Link search={redirectSearch} to="/login">
+                            Login
+                          </Link>
+                        </Menu.Item>
+                        <Menu.Item asChild value="signup">
+                          <Link search={redirectSearch} to="/signup">
+                            Sign Up
+                          </Link>
+                        </Menu.Item>
+                      </>
+                    )}
+                    <Menu.Separator />
+                    <ThemeMenuItem />
+                    <Menu.Separator />
+                    <Menu.Item asChild value="otelite">
+                      <a
+                        href="http://localhost:4000"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Otelite
+                      </a>
+                    </Menu.Item>
+                    <Menu.Item asChild value="opencode">
+                      <a
+                        href="http://localhost:4096"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Opencode
+                      </a>
+                    </Menu.Item>
+                    <Menu.Item asChild value="signoz">
+                      <a
+                        href="http://localhost:8080"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        SigNoz
+                      </a>
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
+            </Box>
+          </Center>
+          <Box pt={16}>{children}</Box>
+          <ClientOnly fallback={null}>
+            <Toaster />
+            <TanStackDevtools
+              plugins={[
+                {
+                  name: "TanStack Query",
+                  render: <ReactQueryDevtoolsPanel />,
+                },
+                {
+                  name: "TanStack Router",
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+                {
+                  name: "TanStack Form",
+                  render: <FormDevtoolsPanel />,
+                },
+                {
+                  name: "TanStack Pacer",
+                  render: <PacerDevtoolsPanel />,
+                },
+              ]}
+            />
+          </ClientOnly>
+          <Scripts />
+        </Provider>
       </body>
     </html>
   );
@@ -353,19 +356,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <Provider>
-      <HotkeysProvider>
-        <GlobalShortcuts />
-        <AuthClientContext.Provider value={authClient}>
-          <CommentsFnsContext.Provider value={defaultCommentsFns}>
-            <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
-              <RootDocument>
-                <Outlet />
-              </RootDocument>
-            </PlaylistsFnsContext.Provider>
-          </CommentsFnsContext.Provider>
-        </AuthClientContext.Provider>
-      </HotkeysProvider>
-    </Provider>
+    <HotkeysProvider>
+      <GlobalShortcuts />
+      <AuthClientContext.Provider value={authClient}>
+        <CommentsFnsContext.Provider value={defaultCommentsFns}>
+          <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
+            <RootDocument>
+              <Outlet />
+            </RootDocument>
+          </PlaylistsFnsContext.Provider>
+        </CommentsFnsContext.Provider>
+      </AuthClientContext.Provider>
+    </HotkeysProvider>
   );
 }

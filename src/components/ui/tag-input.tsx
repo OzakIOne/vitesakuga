@@ -1,4 +1,5 @@
 import {
+  ClientOnly,
   Portal,
   createListCollection,
   type ComboboxInputValueChangeDetails,
@@ -20,6 +21,24 @@ type TagInputProps = {
 };
 
 export function TagInput({ value, onChange, onBlur }: TagInputProps) {
+  return (
+    <Box w="full">
+      <ClientOnly fallback={null}>
+        <TagInputCombobox
+          onChange={onChange}
+          value={value}
+          {...(onBlur ? { onBlur } : {})}
+        />
+      </ClientOnly>
+    </Box>
+  );
+}
+
+function TagInputCombobox({
+  value,
+  onChange,
+  onBlur,
+}: TagInputProps) {
   const [searchValue, setSearchValue] = useState("");
 
   const { allTags, collection: baseCollection } = useTagCollection({
@@ -75,67 +94,65 @@ export function TagInput({ value, onChange, onBlur }: TagInputProps) {
   };
 
   return (
-    <Box w="full">
-      <Combobox.Root
-        closeOnSelect
-        collection={collection}
-        multiple
-        onInputValueChange={(details: ComboboxInputValueChangeDetails) => {
-          setSearchValue(details.inputValue);
-        }}
-        onValueChange={handleValueChange}
-        value={value.map((tag) => tag.name)}
-      >
-        {value.length > 0 && (
-          <Wrap className="mb-2">
-            {value.map((tag) => (
-              <Badge
-                alignItems="center"
-                display="flex"
-                gap={1}
-                key={tag.name}
-                px={2}
-                py={1}
-              >
-                {tag.name}
-                <LuX
-                  className="cursor-pointer transition-colors hover:text-red-500"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveTag(tag);
-                  }}
-                />
-              </Badge>
-            ))}
-          </Wrap>
-        )}
+    <Combobox.Root
+      closeOnSelect
+      collection={collection}
+      multiple
+      onInputValueChange={(details: ComboboxInputValueChangeDetails) => {
+        setSearchValue(details.inputValue);
+      }}
+      onValueChange={handleValueChange}
+      value={value.map((tag) => tag.name)}
+    >
+      {value.length > 0 && (
+        <Wrap className="mb-2">
+          {value.map((tag) => (
+            <Badge
+              alignItems="center"
+              display="flex"
+              gap={1}
+              key={tag.name}
+              px={2}
+              py={1}
+            >
+              {tag.name}
+              <LuX
+                className="cursor-pointer transition-colors hover:text-red-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveTag(tag);
+                }}
+              />
+            </Badge>
+          ))}
+        </Wrap>
+      )}
 
-        <Combobox.Control>
-          <Combobox.Input onBlur={onBlur} placeholder="Add tags..." />
-          <Combobox.IndicatorGroup>
-            <Combobox.Trigger />
-          </Combobox.IndicatorGroup>
-        </Combobox.Control>
+      <Combobox.Control>
+        <Combobox.Input onBlur={onBlur} placeholder="Add tags..." />
+        <Combobox.IndicatorGroup>
+          <Combobox.Trigger />
+        </Combobox.IndicatorGroup>
+      </Combobox.Control>
 
-        <Portal>
-          <Combobox.Positioner>
-            <Combobox.Content>
-              <Combobox.ItemGroup>
-                {items.length > 0 ? (
-                  items.map((item: string) => (
-                    <Combobox.Item item={item} key={item}>
-                      {item}
-                      <Combobox.ItemIndicator />
-                    </Combobox.Item>
-                  ))
-                ) : (
-                  <Combobox.Empty>No tags found</Combobox.Empty>
-                )}
-              </Combobox.ItemGroup>
-            </Combobox.Content>
-          </Combobox.Positioner>
-        </Portal>
-      </Combobox.Root>
-    </Box>
+      <Portal>
+        <Combobox.Positioner>
+          <Combobox.Content>
+            <Combobox.ItemGroup>
+              {items.length > 0 ? (
+                items.map((item: string) => (
+                  <Combobox.Item item={item} key={item}>
+                    {item}
+                    <Combobox.ItemIndicator />
+                  </Combobox.Item>
+                ))
+              ) : (
+                <Combobox.Empty>No tags found</Combobox.Empty>
+              )}
+            </Combobox.ItemGroup>
+          </Combobox.Content>
+        </Combobox.Positioner>
+      </Portal>
+    </Combobox.Root>
   );
 }
