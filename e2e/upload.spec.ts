@@ -96,7 +96,7 @@ test.describe("Upload page", () => {
       timeout: 20000,
     });
 
-    await page.getByRole("button", { name: /delete file/i }).click();
+    await page.getByRole("button", { name: /^Remove / }).click();
 
     await expect(page.locator("media-controller")).not.toBeVisible({
       timeout: 5000,

@@ -11,6 +11,8 @@ import { LuCircleAlert, LuCircleCheck, LuLoader, LuX } from "react-icons/lu";
 export const toaster = createToaster({
   pauseOnPageIdle: true,
   placement: "bottom-end",
+  overlap: true,
+  gap: 24,
 });
 
 function ToastIndicator({ type }: { type: string | undefined }) {

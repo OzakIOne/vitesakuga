@@ -60,7 +60,7 @@ export default Alchemy.Stack(
     // both through `Resource.ref` from the stage that owns them (dev, for
     // now — flip ownership when production becomes the deployable owner).
     const appBranch = neonEnabled
-      ? yield* (isProduction
+      ? yield* isProduction
           ? Neon.Branch.ref("ProductionBranch", { stage: "dev" })
           : Effect.gen(function* () {
               const sakugaDatabase = yield* Neon.Project("SakugaDatabase", {
@@ -68,22 +68,19 @@ export default Alchemy.Stack(
                 region: "aws-eu-central-1",
                 pgVersion: 17,
               });
-              const productionBranch = yield* Neon.Branch(
-                "ProductionBranch",
-                {
-                  project: sakugaDatabase,
-                  name: "production",
-                  protected: true,
-                  migrationsDir: "./drizzle",
-                },
-              );
+              const productionBranch = yield* Neon.Branch("ProductionBranch", {
+                project: sakugaDatabase,
+                name: "production",
+                protected: true,
+                migrationsDir: "./drizzle",
+              });
               return yield* Neon.Branch("DevelopmentBranch", {
                 project: sakugaDatabase,
                 name: "development",
                 parentBranch: productionBranch,
                 migrationsDir: "./drizzle",
               });
-            }))
+            })
       : undefined;
 
     const SakugaBucket = Cloudflare.R2.Bucket("SakugaBucket", {
@@ -141,9 +138,10 @@ export default Alchemy.Stack(
           "VITE_CLOUDFLARE_R2_PUBLIC_URL",
         ),
         CLOUDFLARE_SECRET_KEY: Config.redacted("CLOUDFLARE_SECRET_KEY"),
-        DATABASE_URL: neonEnabled
-          ? appBranch!.pooledConnectionUri
-          : Config.redacted("DATABASE_URL"),
+        DATABASE_URL:
+          appBranch === undefined
+            ? Config.redacted("DATABASE_URL")
+            : appBranch.pooledConnectionUri,
         GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
         GITHUB_CLIENT_SECRET: Config.redacted("GITHUB_CLIENT_SECRET"),
         NODE_ENV: Config.string("NODE_ENV").pipe(

@@ -1,4 +1,3 @@
-import "src/lib/polyfills";
 import { createListCollection } from "@ark-ui/react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";

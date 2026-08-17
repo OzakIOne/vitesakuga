@@ -16,6 +16,7 @@ import {
   MediaPlaybackRateMenuButton,
 } from "media-chrome/react/menu";
 import React, { useEffect, useRef } from "react";
+import type { ComponentRef } from "react";
 import { assetUrl } from "src/lib/assets/url";
 
 type VideoProps = {
@@ -24,7 +25,9 @@ type VideoProps = {
   frameRate?: number | undefined;
 };
 
-export const Video = React.forwardRef<any, VideoProps>(
+export type VideoRef = ComponentRef<typeof MediaController>;
+
+export const Video = React.forwardRef<VideoRef, VideoProps>(
   ({ url, bypass, frameRate }, ref) => {
     const uuid = React.useId();
     const controllerId = `controller-${uuid}`;

@@ -8,10 +8,22 @@ type ToastOptions = {
   type?: "success" | "error";
 };
 
-// Regression test: Ark/Zag positions each toast with runtime CSS variables
-// (--x, --y, --scale, --height, --opacity). If the rules in src/styles/app.css
-// that map them onto `translate`/`scale`/`height`/`opacity` are removed, all
-// toasts render at the same spot and overlap instead of stacking.
+type ToastBox = {
+  height: number;
+  id: string;
+  width: number;
+  x: number;
+  y: number;
+};
+
+// Regression test: Ark/Zag collapses toasts into an overlapping stack when the
+// toaster is created with `overlap: true` (see src/components/ui/toaster.tsx).
+// Zag positions each toast with runtime CSS variables (--x, --y, --scale,
+// --height, --opacity): older toasts translate up by `gap` and scale down, so
+// every toast peeks out from behind the frontmost one. If the rules in
+// src/styles/app.css that map those variables onto translate/scale/height/
+// opacity were removed, all toasts would pile up at the exact same spot
+// instead of showing the overlapping stack.
 async function fireStackedToasts(page: Page) {
   await expect(
     page.locator('[data-scope="toast"][data-part="group"]'),
@@ -62,40 +74,62 @@ function openToastBoxes(page: Page) {
       ),
     ).map((element) => {
       const rect = element.getBoundingClientRect();
-      return { id: element.id, y: rect.y, height: rect.height };
+      return {
+        height: rect.height,
+        id: element.id,
+        width: rect.width,
+        x: rect.x,
+        y: rect.y,
+      };
     }),
   );
 }
 
-function expectNoOverlap(
-  boxes: Array<{ id: string; y: number; height: number }>,
-) {
-  const sorted = [...boxes].sort((a, b) => a.y - b.y);
-  for (let i = 1; i < sorted.length; i++) {
-    const previous = sorted[i - 1];
-    const current = sorted[i];
-    if (!previous || !current) continue;
-    const gap = current.y - (previous.y + previous.height);
-    expect(
-      gap,
-      `toasts "${previous.id}" and "${current.id}" overlap (vertical gap ${gap}px)`,
-    ).toBeGreaterThanOrEqual(0);
+function expectOverlap(boxes: ToastBox[]) {
+  expect(
+    boxes.length,
+    "expected at least two open toasts to check for overlap",
+  ).toBeGreaterThanOrEqual(2);
+
+  // Every toast must share screen space with every other toast (horizontal and
+  // vertical overlap), while still having its own spot so the stack peeks
+  // instead of piling all toasts at the exact same pixel.
+  const origins = new Set(boxes.map((box) => `${box.x},${box.y}`));
+  expect(
+    origins.size,
+    "toasts must be offset from each other (peek stack), not all at the same spot",
+  ).toBe(boxes.length);
+
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i];
+      const b = boxes[j];
+      if (!a || !b) continue;
+      const overlapX =
+        Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+      const overlapY =
+        Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+      expect(
+        overlapX > 0 && overlapY > 0,
+        `toasts "${a.id}" and "${b.id}" do not overlap (overlapX ${overlapX}px, overlapY ${overlapY}px)`,
+      ).toBe(true);
+    }
   }
 }
 
 test.describe("Toast", () => {
-  test("toasts stack without overlapping on desktop", async ({ page }) => {
+  test("toasts overlap in a peek stack on desktop", async ({ page }) => {
     await page.goto("/", { timeout: 30000, waitUntil: "load" });
 
     await fireStackedToasts(page);
-    expectNoOverlap(await openToastBoxes(page));
+    expectOverlap(await openToastBoxes(page));
   });
 
-  test("toasts stack without overlapping on mobile", async ({ page }) => {
+  test("toasts overlap in a peek stack on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/", { timeout: 30000, waitUntil: "load" });
 
     await fireStackedToasts(page);
-    expectNoOverlap(await openToastBoxes(page));
+    expectOverlap(await openToastBoxes(page));
   });
 });

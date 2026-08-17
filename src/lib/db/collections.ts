@@ -1,4 +1,3 @@
-import "src/lib/polyfills";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import {
   createCollection,

@@ -1,4 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+// The header renders account links twice: in the desktop nav and inside the
+// mobile menu (display:none at the default desktop viewport). Role locators
+// for "Account"/"Login" therefore match both variants, so filter to the
+// visible one. "Sign Out" is scoped to its button role because the mobile
+// menu renders it as a menuitem.
+function visibleHeaderLink(page: Page, name: string) {
+  return page.getByRole("link", { name }).filter({ visible: true });
+}
 
 test.describe("Auth flow", () => {
   test("login page renders form", async ({ page }) => {
@@ -23,13 +32,15 @@ test.describe("Auth flow", () => {
 
     await page.goto("/", { timeout: 30000, waitUntil: "load" });
 
-    await expect(page.getByText("Sign Out")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: "Sign Out" })).toBeVisible({
+      timeout: 15000,
+    });
 
     await context.clearCookies();
 
     await page.goto("/", { timeout: 30000, waitUntil: "load" });
 
-    await expect(page.getByRole("link", { name: "Login" })).toBeVisible({
+    await expect(visibleHeaderLink(page, "Login")).toBeVisible({
       timeout: 15000,
     });
     await expect(
@@ -49,9 +60,11 @@ test.describe("Auth flow", () => {
 
     await page.goto("/", { timeout: 30000, waitUntil: "load" });
 
-    await expect(page.getByText("Sign Out")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole("link", { name: "Account" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Login" })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign Out" })).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(visibleHeaderLink(page, "Account")).toBeVisible();
+    await expect(visibleHeaderLink(page, "Login")).not.toBeVisible();
   });
 
   test("upload page redirects to login when not authenticated", async ({

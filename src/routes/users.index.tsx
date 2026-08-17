@@ -1,4 +1,3 @@
-import "src/lib/polyfills";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";

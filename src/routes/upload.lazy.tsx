@@ -13,7 +13,7 @@ import { FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Text } from "src/components/ui/typography";
-import { Video } from "src/components/Video";
+import { Video, type VideoRef } from "src/components/Video";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
 import { searchPosts } from "src/lib/posts/posts.service";
 import { useUploadDraft } from "src/lib/upload/useUploadDraft";
@@ -44,7 +44,7 @@ function RouteComponent() {
     videoMetadata: video.videoMetadata,
   });
 
-  const videoRef = useRef<any>(null);
+  const videoRef = useRef<VideoRef>(null);
 
   const handleCapture = async () => {
     const player = videoRef.current;

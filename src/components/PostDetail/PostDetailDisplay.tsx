@@ -80,7 +80,7 @@ export function PostDetailDisplay({
     if (!trimmedTitle || contentDraft.trim().length < 3) {
       return;
     }
-    void updatePostMutation.mutate({
+     updatePostMutation.mutate({
       content: contentDraft,
       source: sourceDraft.trim() || undefined,
       tags: tagsDraft,
