@@ -1,11 +1,13 @@
 import {
   createFileRoute,
+  Link,
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
 import { NotFound } from "src/components/NotFound";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { Box } from "src/components/ui/layout";
+import { Tabs } from "src/components/ui/tabs";
 import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
@@ -91,18 +93,54 @@ function UserContent() {
 }
 
 function UserLayoutComponent() {
-  const hasChildRoute = useRouterState({
-    select: (state) =>
-      state.matches.some(
+  const { id } = Route.useParams();
+  const { activeTab, hasChildRoute } = useRouterState({
+    select: (state) => ({
+      activeTab: state.matches.some(
+        (match) => match.routeId.startsWith(`${Route.id}/playlists`),
+      )
+        ? "playlists"
+        : "posts",
+      hasChildRoute: state.matches.some(
         (match) =>
           match.routeId !== Route.id &&
           match.routeId.startsWith(`${Route.id}/`),
       ),
+    }),
   });
 
-  if (hasChildRoute) {
-    return <Outlet />;
-  }
+  return (
+    <>
+      <Box p={4} pb={0}>
+        <Tabs.Root
+          // The triggers are TanStack Router Links that already perform SPA
+          // navigation. Ark's default `navigate` re-dispatches a
+          // non-cancelable click on the anchor, which makes the browser
+          // follow the href and reload the page. Disable it so tab switches
+          // stay client-side.
+          navigate={() => {}}
+          value={activeTab}
+        >
+          <Tabs.List>
+            <Tabs.Trigger asChild value="posts">
+              <Link params={{ id }} resetScroll={false} to="/users/$id">
+                Posts
+              </Link>
+            </Tabs.Trigger>
+            <Tabs.Trigger asChild value="playlists">
+              <Link
+                params={{ id }}
+                resetScroll={false}
+                to="/users/$id/playlists"
+              >
+                Playlists
+              </Link>
+            </Tabs.Trigger>
+          </Tabs.List>
+        </Tabs.Root>
+      </Box>
 
-  return <UserContent />;
+      {hasChildRoute ? <Outlet /> : <UserContent />}
+    </>
+  );
 }

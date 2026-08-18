@@ -24,7 +24,12 @@
     "tanstack": {
       "type": "remote",
       "url": "https://tanstack.com/api/mcp"
-    }
+    },
+      "browser-control": {
+        "type": "local",
+        "command": ["browser-control-mcp"]
+      }
+
   },
   "references": {
     "effect": {

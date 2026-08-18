@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "browser-control": {
+      "source": "anomalyco/browser-control",
+      "sourceType": "github",
+      "skillPath": "skills/browser-control/SKILL.md",
+      "computedHash": "f926e12abde87f2c0079f27da5f9b85c32b2ab3b0591048834ac28a6469df713"
+    },
     "caveman": {
       "source": "mattpocock/skills",
       "sourceType": "github",

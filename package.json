@@ -4,7 +4,8 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "build": "vite build",
+    "build": "NODE_ENV=production vite build --mode production",
+    "build:dev": "NODE_ENV=development vite build --mode development",
     "db": "drizzle-kit",
     "db:local": "STAGE=local drizzle-kit",
     "db:prod": "STAGE=prod drizzle-kit",
@@ -89,6 +90,7 @@
     "@effect/language-service": "^0.87.2",
     "@effect/tsgo": "0.36.5",
     "@electric-sql/pglite": "^0.5.4",
+    "@opencode-ai/browser-control": "^0.4.0",
     "@oxlint/plugins": "1.78.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
@@ -122,7 +124,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.2.1",
     "vitest": "^4.1.10",
-    "wrangler": "^4.121.0"
+    "wrangler": "^4.121.0",
+    "ws": "8.18.3"
   },
   "devEngines": {
     "runtime": {

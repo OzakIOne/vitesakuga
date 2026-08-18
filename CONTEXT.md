@@ -64,6 +64,19 @@ Terms used consistently across the codebase. Update this file when new concepts 
 
 **Effect Layer** — Dependency injection pattern used by all domain services. Base layer: KyselyDB + StorageLive + logging + tracing. Auth layer adds AuthService + RequestHeadersService. Service layers compose on top.
 
+## Deployment
+
+Stage env files (`.env` for dev, `.env.production` for prod) feed **both** the Alchemy worker bindings (`alchemy deploy --stage dev|production`) **and** the Vite build via `import.meta.env`. Client `VITE_*` vars are baked into the bundle at build time, so each stage needs its own build script that pins `NODE_ENV` (nub loads `.env.$NODE_ENV` and Vite gives process.env the highest priority).
+
+**Build scripts:**
+
+- **Dev** (`sakuga-dev.ozaki.one`): `nub run build:dev` (`NODE_ENV=development vite build --mode development` → `.env`). Then `nub run infra:deploy`.
+- **Prod** (`sakuga.ozaki.one`): `nub run build` (`NODE_ENV=production vite build --mode production` → `.env.production`). Then `nub run infra:deploy:prod`.
+
+See [docs/build-environment.md](./docs/build-environment.md) for the full explanation of `NODE_ENV` vs `--mode` and what each impacts.
+
+Never ship a stage from a bare `vite build`: with no pinned `NODE_ENV`, nub loads `.env` and bakes the wrong stage's client env into the bundle (e.g. production `VITE_CLOUDFLARE_R2_PUBLIC_URL` — `video.ozaki.one/...` — leaking into the dev site and breaking all media).
+
 ## Storage
 
 **StorageModule** — Effect service wrapping object-storage operations in `src/lib/storage/storage.module.ts`. Interface defines `uploadVideo(userId, file)`, `uploadThumbnail(userId, file)`, `deleteFile(key)`. Tagged error: `StorageError`. S3/R2 implementation in `storage.s3.ts`; rustfs implementation for local dev/tests in `storage.rustfs.ts`; tests in `storage.test.ts`.

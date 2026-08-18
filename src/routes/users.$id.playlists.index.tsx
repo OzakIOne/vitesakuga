@@ -17,6 +17,11 @@ import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries
 
 export const Route = createFileRoute("/users/$id/playlists/")({
   component: PlaylistsContent,
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(
+      playlistsQueryUserPlaylists(params.id),
+    );
+  },
   notFoundComponent: () => <NotFound>User not found</NotFound>,
   ssr: "data-only",
 });

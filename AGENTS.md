@@ -169,6 +169,12 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 
 Issues live as GitHub Issues on `ozakione/vitesakuga`. See `docs/agents/issue-tracker.md`.
 
+### Browser control
+
+To drive the user's browser (Brave) via Playwright, use the `bc` wrapper and follow
+`docs/agents/browser-control.md`. Do not install browser-control into the project or
+nub's global store (both break silently).
+
 ### Triage labels
 
 Canonical label names: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
