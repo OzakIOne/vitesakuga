@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Effect } from "effect";
 
-import type { SessionUser } from "./session.effect";
 import { resolveMiddlewareLayer } from "../server-fn.handler";
+import type { SessionUser } from "./session.effect";
 
 export const getUserSession = createServerFn().handler(
   async (): Promise<SessionUser> => {

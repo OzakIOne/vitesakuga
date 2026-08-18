@@ -1,9 +1,9 @@
 {
   "$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
   "extends": [
-     "./node_modules/@effect/tsgo/oxlint-presets/correctness.json",
-     "./node_modules/@effect/tsgo/oxlint-presets/effect-native.json"
-   ],
+    "./node_modules/@effect/tsgo/oxlint-presets/correctness.json",
+    "./node_modules/@effect/tsgo/oxlint-presets/effect-native.json"
+  ],
   "plugins": [
     "eslint",
     "typescript",

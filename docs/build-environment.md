@@ -6,10 +6,10 @@
 
 Controls **runtime behavior of libraries** in the browser bundle.
 
-| Value | Effect |
-|---|---|
-| `"production"` | React strips dev warnings, enables optimizations. Libraries (Zustand, React Query, etc.) skip debug checks. Vite defaults to this in `vite build`. |
-| `"development"` | React keeps dev warnings + extra checks. Libraries enable debug/dev mode. Vite defaults to this in `vite dev`. |
+| Value           | Effect                                                                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"production"`  | React strips dev warnings, enables optimizations. Libraries (Zustand, React Query, etc.) skip debug checks. Vite defaults to this in `vite build`. |
+| `"development"` | React keeps dev warnings + extra checks. Libraries enable debug/dev mode. Vite defaults to this in `vite dev`.                                     |
 
 Vite replaces `process.env.NODE_ENV` with a string literal at build time via `define`. This enables **runtime branch elimination**: `if (process.env.NODE_ENV !== "production")` is stripped entirely from production builds.
 
@@ -17,11 +17,11 @@ Vite replaces `process.env.NODE_ENV` with a string literal at build time via `de
 
 Controls **build-time behavior of Vite itself**.
 
-| What it affects | How |
-|---|---|
-| **Env file selection** | Vite loads `.env.[mode]` (e.g. `--mode development` → `.env.development`) |
-| **`import.meta.env.MODE`** | Baked string literal available in code — `import.meta.env.DEV` / `import.meta.env.PROD` derived from it |
-| **Conditional code blocks** | `if (import.meta.env.MODE !== "production")` — strip or keep based on mode |
+| What it affects             | How                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Env file selection**      | Vite loads `.env.[mode]` (e.g. `--mode development` → `.env.development`)                               |
+| **`import.meta.env.MODE`**  | Baked string literal available in code — `import.meta.env.DEV` / `import.meta.env.PROD` derived from it |
+| **Conditional code blocks** | `if (import.meta.env.MODE !== "production")` — strip or keep based on mode                              |
 
 It does **not** change `NODE_ENV`. They are independent.
 

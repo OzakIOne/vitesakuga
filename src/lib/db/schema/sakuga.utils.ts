@@ -65,7 +65,9 @@ export const postWithVotesSelectSchema = Schema.Struct({
   likes: Schema.Number,
 });
 
-export type PostWithVotes = Schema.Schema.Type<typeof postWithVotesSelectSchema>;
+export type PostWithVotes = Schema.Schema.Type<
+  typeof postWithVotesSelectSchema
+>;
 
 export const commentsSelectSchema = Schema.Struct({
   content: Schema.String,

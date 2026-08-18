@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { LuEye, LuEyeOff } from "react-icons/lu";
 import { PasswordInput as ArkPasswordInput } from "@ark-ui/react/password-input";
 import { passwordStrength, type Options } from "check-password-strength";
+import * as React from "react";
+import { LuEye, LuEyeOff } from "react-icons/lu";
 
 import { INPUT_BASE, INPUT_SIZES } from "./field";
 import { cx } from "./ui-utils";

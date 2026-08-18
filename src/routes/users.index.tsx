@@ -28,9 +28,7 @@ function UsersContent() {
 
 function UsersLayoutComponent() {
   return (
-    <Suspense
-      fallback={<UsersLoading />}
-    >
+    <Suspense fallback={<UsersLoading />}>
       <ClientOnly fallback={<UsersLoading />}>
         <UsersContent />
       </ClientOnly>

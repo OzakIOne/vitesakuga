@@ -96,8 +96,8 @@ function UserLayoutComponent() {
   const { id } = Route.useParams();
   const { activeTab, hasChildRoute } = useRouterState({
     select: (state) => ({
-      activeTab: state.matches.some(
-        (match) => match.routeId.startsWith(`${Route.id}/playlists`),
+      activeTab: state.matches.some((match) =>
+        match.routeId.startsWith(`${Route.id}/playlists`),
       )
         ? "playlists"
         : "posts",

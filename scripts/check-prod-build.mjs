@@ -38,7 +38,9 @@ if (missing.length > 0) {
   console.error(
     "  Run `nub run build` (prod) or `nub run build:dev` (dev), or use",
   );
-  console.error("  `nub run infra:deploy` / `infra:deploy:prod` (builds first).");
+  console.error(
+    "  `nub run infra:deploy` / `infra:deploy:prod` (builds first).",
+  );
   process.exit(1);
 }
 
@@ -60,7 +62,9 @@ if (devJsxChunks > 0) {
   console.error(
     "  Rebuild with `nub run build` (prod) or `nub run build:dev` (dev), or use",
   );
-  console.error("  `nub run infra:deploy` / `infra:deploy:prod` (builds first).");
+  console.error(
+    "  `nub run infra:deploy` / `infra:deploy:prod` (builds first).",
+  );
   console.error("  Do NOT deploy a bundle built with `NODE_ENV=development`.");
   process.exit(1);
 }

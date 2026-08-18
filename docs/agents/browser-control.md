@@ -24,14 +24,14 @@ Flow: **inspect → act → verify**. The skill file is the behavioural contract
 Browser Control does **not** live in the project's dependencies. It lives in an
 isolated, pinned toolchain outside the repo, with a `bc` wrapper on `PATH`.
 
-| Piece | Location / value |
-|---|---|
-| Toolchain (CLI + pinned deps) | `~/.browser-control/` |
+| Piece                                | Location / value                                                                                                                                    |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Toolchain (CLI + pinned deps)        | `~/.browser-control/`                                                                                                                               |
 | Extension (loaded unpacked in Brave) | `~/.browser-control/node_modules/.store/@opencode-ai+browser-control@0.4.0_ioredis@5.11.1/node_modules/@opencode-ai/browser-control/extension/dist` |
-| Extension ID the relay accepts | `glnkinmmgjbmncnmgfblbjhkkhboidka` |
-| Wrapper command | `bc` = `cd ~/.browser-control && nub exec browser-control "$@"` |
-| Relay log | `~/.browser-control/relay.log` |
-| Versions | package `0.4.0`, extension `0.0.23`, relay HTTP `127.0.0.1:19989` |
+| Extension ID the relay accepts       | `glnkinmmgjbmncnmgfblbjhkkhboidka`                                                                                                                  |
+| Wrapper command                      | `bc` = `cd ~/.browser-control && nub exec browser-control "$@"`                                                                                     |
+| Relay log                            | `~/.browser-control/relay.log`                                                                                                                      |
+| Versions                             | package `0.4.0`, extension `0.0.23`, relay HTTP `127.0.0.1:19989`                                                                                   |
 
 Pinned `package.json` at `~/.browser-control` (do **not** change these versions):
 
@@ -73,13 +73,13 @@ continuation command.
 
 ## Why this layout (the traps, so you don't re-break it)
 
-| Trap | Symptom | Root cause |
-|---|---|---|
-| In-project `nub add @opencode-ai/browser-control` | `exit 1`, no output | CLI is built against `effect@4.0.0-beta.97`; repo pins `effect@4.0.0-rc.108`. Silent teardown. |
-| `nub add -g` global store | `exit 1`, no output | Global store dedupes `@effect/platform-node-shared` to `rc.110_effect@rc.110` while the CLI needs the `…_effect@beta.97` pairing. Two effect runtimes mix → silent `exit(1)` in `defaultTeardown`. |
-| Loading the extension from any other copy (project, old sandbox, global store) | WebSocket handshake `403` | Extension ID must equal the relay's own path hash. See rule 2. |
-| `nub add` refuses the package | `ERR_NUB_NEW_PACKAGE_NAME` | Package is <30 days old. Pass `--allow-low-downloads`. |
-| Port busy | relay `EADDRINUSE` | A previous relay is still running. Kill the listener: `lsof -tiTCP:19989 -sTCP:LISTEN \| xargs kill`, then restart. |
+| Trap                                                                           | Symptom                    | Root cause                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| In-project `nub add @opencode-ai/browser-control`                              | `exit 1`, no output        | CLI is built against `effect@4.0.0-beta.97`; repo pins `effect@4.0.0-rc.108`. Silent teardown.                                                                                                     |
+| `nub add -g` global store                                                      | `exit 1`, no output        | Global store dedupes `@effect/platform-node-shared` to `rc.110_effect@rc.110` while the CLI needs the `…_effect@beta.97` pairing. Two effect runtimes mix → silent `exit(1)` in `defaultTeardown`. |
+| Loading the extension from any other copy (project, old sandbox, global store) | WebSocket handshake `403`  | Extension ID must equal the relay's own path hash. See rule 2.                                                                                                                                     |
+| `nub add` refuses the package                                                  | `ERR_NUB_NEW_PACKAGE_NAME` | Package is <30 days old. Pass `--allow-low-downloads`.                                                                                                                                             |
+| Port busy                                                                      | relay `EADDRINUSE`         | A previous relay is still running. Kill the listener: `lsof -tiTCP:19989 -sTCP:LISTEN \| xargs kill`, then restart.                                                                                |
 
 The isolated-folder layout works because it materialises a **flat, ESM-resolvable**
 `node_modules` with the correct `platform-node-shared@rc.110_effect@beta.97` pairing.

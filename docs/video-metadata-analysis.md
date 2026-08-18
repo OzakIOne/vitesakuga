@@ -15,22 +15,22 @@ Video Metadata is parsed by `VideoMetadataSchema` (`src/lib/posts/posts.schema.t
 
 ## Field mapping (MediaInfo → mediabunny `InputVideoTrack`)
 
-| MediaInfo field | Mediabunny replacement | Status |
-| --- | --- | --- |
-| Width / Height | `getCodedWidth()` / `getCodedHeight()` or `getDisplayWidth()` / `getDisplayHeight()` (post-rotation/PAR) | ✅ direct |
-| Duration | `computeDuration()` (precise, from packet timestamps) or `getDurationFromMetadata()` (cheap, header-based) | ✅ direct |
-| FrameRate | `computeFrameRateMetrics()` → `bestGuessFrameRate` — deduced from actual frame timestamps, not unreliable file metadata; handles VFR (`underlyingFrameRate`, `min`/`max`/`median`, `frameRateIsConstant`) | ✅ direct, better |
-| BitRate | `computePacketStats()` → `averageBitrate` (measured over packets) or `getBitrate()`/`getAverageBitrate()` (metadata) | ✅ direct |
-| CodecID | `getInternalCodecId()` (container-native, e.g. `avc1`) or `getCodec()` (normalized `avc`) | ✅ direct |
-| DisplayAspectRatio | compute `getDisplayWidth() / getDisplayHeight()` (or `getPixelAspectRatio()` × coded dims) | ✅ derivable |
-| colour_primaries | `getColorSpace().primaries` (e.g. `bt709`) | ✅ direct |
-| ColorSpace | `getColorSpace().matrix` — same underlying data, different vocabulary (`YUV` vs WebCodecs `bt709`/`bt470bg`/`smpte170m`/`rgb`) | ⚠️ partial (rename/reformat) |
-| FrameCount | no exact API — approximate with `bestGuessFrameRate × computeDuration()` or `computePacketStats().packetCount` (≈1 packet/frame, not guaranteed) | ⚠️ approximate |
-| Format_Profile | no profile API — manual parse of `getCodecParameterString()` (e.g. `avc1.PPCCLL`, high-profile byte) per codec/container | ⚠️ manual parsing |
-| BitDepth | **not exposed** — `getColorSpace()` returns WebCodecs `VideoColorSpaceInit` (primaries/transfer/matrix/fullRange only); only emergent via decoded `VideoSample.format` (`I420P10` = 10-bit etc.), which needs decoding | ❌ |
-| ChromaSubsampling | **not exposed** — same: only inferable from decoded `VideoSample.format` (`I420`/`NV12` = 4:2:0, `I422`, `I444`) | ❌ |
-| Encoded_Library_Name (x264) | **not exposed** — encoder identification is a deep bitstream-parsing feature mediabunny lacks | ❌ |
-| Encoded_Library_Settings | **not exposed** — same | ❌ |
+| MediaInfo field             | Mediabunny replacement                                                                                                                                                                                                 | Status                       |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Width / Height              | `getCodedWidth()` / `getCodedHeight()` or `getDisplayWidth()` / `getDisplayHeight()` (post-rotation/PAR)                                                                                                               | ✅ direct                    |
+| Duration                    | `computeDuration()` (precise, from packet timestamps) or `getDurationFromMetadata()` (cheap, header-based)                                                                                                             | ✅ direct                    |
+| FrameRate                   | `computeFrameRateMetrics()` → `bestGuessFrameRate` — deduced from actual frame timestamps, not unreliable file metadata; handles VFR (`underlyingFrameRate`, `min`/`max`/`median`, `frameRateIsConstant`)              | ✅ direct, better            |
+| BitRate                     | `computePacketStats()` → `averageBitrate` (measured over packets) or `getBitrate()`/`getAverageBitrate()` (metadata)                                                                                                   | ✅ direct                    |
+| CodecID                     | `getInternalCodecId()` (container-native, e.g. `avc1`) or `getCodec()` (normalized `avc`)                                                                                                                              | ✅ direct                    |
+| DisplayAspectRatio          | compute `getDisplayWidth() / getDisplayHeight()` (or `getPixelAspectRatio()` × coded dims)                                                                                                                             | ✅ derivable                 |
+| colour_primaries            | `getColorSpace().primaries` (e.g. `bt709`)                                                                                                                                                                             | ✅ direct                    |
+| ColorSpace                  | `getColorSpace().matrix` — same underlying data, different vocabulary (`YUV` vs WebCodecs `bt709`/`bt470bg`/`smpte170m`/`rgb`)                                                                                         | ⚠️ partial (rename/reformat) |
+| FrameCount                  | no exact API — approximate with `bestGuessFrameRate × computeDuration()` or `computePacketStats().packetCount` (≈1 packet/frame, not guaranteed)                                                                       | ⚠️ approximate               |
+| Format_Profile              | no profile API — manual parse of `getCodecParameterString()` (e.g. `avc1.PPCCLL`, high-profile byte) per codec/container                                                                                               | ⚠️ manual parsing            |
+| BitDepth                    | **not exposed** — `getColorSpace()` returns WebCodecs `VideoColorSpaceInit` (primaries/transfer/matrix/fullRange only); only emergent via decoded `VideoSample.format` (`I420P10` = 10-bit etc.), which needs decoding | ❌                           |
+| ChromaSubsampling           | **not exposed** — same: only inferable from decoded `VideoSample.format` (`I420`/`NV12` = 4:2:0, `I422`, `I444`)                                                                                                       | ❌                           |
+| Encoded_Library_Name (x264) | **not exposed** — encoder identification is a deep bitstream-parsing feature mediabunny lacks                                                                                                                          | ❌                           |
+| Encoded_Library_Settings    | **not exposed** — same                                                                                                                                                                                                 | ❌                           |
 
 Verified against the installed `node_modules/mediabunny/dist/mediabunny.d.ts`: the API surface is the metadata-extraction example (`examples/metadata-extraction/metadata-extraction.ts`) — Format, MIME, codec + codec string, timestamps/duration, coded/display dims, rotation, PAR, transparency, packet stats, color space (primaries/transfer/matrix/fullRange), HDR, language, metadata tags. No bit depth, chroma subsampling, profile, or encoder info.
 

@@ -47,10 +47,7 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       </Text>
 
       <ClientOnly fallback={null}>
-        <CommentComposer
-          currentUserId={currentUserId}
-          postId={postId}
-        />
+        <CommentComposer currentUserId={currentUserId} postId={postId} />
       </ClientOnly>
       {!currentUserId && (
         <Box mb={4}>

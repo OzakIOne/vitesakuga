@@ -97,14 +97,14 @@ At runtime, it:
 
 ## Effective Service Files
 
-| Feature  | Service file                           |
-| -------- | -------------------------------------- |
-| Comments | `src/lib/comments/comments.service.ts` |
+| Feature   | Service file                             |
+| --------- | ---------------------------------------- |
+| Comments  | `src/lib/comments/comments.service.ts`   |
 | Playlists | `src/lib/playlists/playlists.service.ts` |
-| Posts    | `src/lib/posts/posts.service.ts`       |
-| Tags     | `src/lib/tags/tags.service.ts`         |
-| Users    | `src/lib/users/users.service.ts`       |
-| Votes    | `src/lib/votes/votes.service.ts`       |
+| Posts     | `src/lib/posts/posts.service.ts`         |
+| Tags      | `src/lib/tags/tags.service.ts`           |
+| Users     | `src/lib/users/users.service.ts`         |
+| Votes     | `src/lib/votes/votes.service.ts`         |
 
 ## Error Handling
 

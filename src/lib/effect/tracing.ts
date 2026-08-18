@@ -1,9 +1,9 @@
-import { Layer } from "effect";
 import { NodeSdk } from "@effect/opentelemetry";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { Layer } from "effect";
 
 /**
  * OpenTelemetry tracing is only enabled when an OTLP endpoint is configured

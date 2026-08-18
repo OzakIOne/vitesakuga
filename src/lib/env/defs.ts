@@ -63,9 +63,7 @@ const serverEnvConfig = Config.all({
   CLOUDFLARE_ACCESS_KEY: Config.string("CLOUDFLARE_ACCESS_KEY"),
   CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
   CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
-  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string(
-    "VITE_CLOUDFLARE_R2_PUBLIC_URL",
-  ),
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   CLOUDFLARE_SECRET_KEY: Config.string("CLOUDFLARE_SECRET_KEY"),
   DATABASE_URL: Config.string("DATABASE_URL"),
   GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
@@ -124,9 +122,7 @@ const clientEnvConfig = Config.all({
   PROD: Config.boolean("PROD"),
   SSR: Config.boolean("SSR"),
   VITE_BASE_URL: Config.string("VITE_BASE_URL"),
-  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string(
-    "VITE_CLOUDFLARE_R2_PUBLIC_URL",
-  ),
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
 });
 
 const clientEnvSchema = Schema.Struct({
