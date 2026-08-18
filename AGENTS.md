@@ -12,16 +12,20 @@ ViteSakuga is a fullstack web application built with React 19, TanStack Start, T
 
 ### General Commands
 
-- build: vite build
+- build: `APP_ENV=production NODE_ENV=production vite build --mode production` (prod stage)
+- build:dev: `APP_ENV=development NODE_ENV=production vite build --mode development` (dev stage; `APP_ENV` picks `.env` for nub, `NODE_ENV` keeps React's production runtime; `build:staging` is a deprecated alias)
 - db: drizzle-kit
-- dev: vite dev --mode development --host
-- dev:prod: vite dev --mode production
+- db:dev / db:local / db:prod: drizzle-kit pinned to the stage (`STAGE=dev|local|prod`)
+- dev: `APP_ENV=development NODE_ENV=development vite dev --mode development --host` (dev stage)
+- dev:local: `APP_ENV=test NODE_ENV=test DATABASE_DRIVER=local vite dev --mode test --host` (`.env.test`, Docker Postgres + rustfs)
+- dev:prod: `APP_ENV=production NODE_ENV=production vite dev --mode production` (`.env.production`, prod infra)
+- docker:up / docker:down (aliases dcu / dcd): local Docker stack
 - format: oxfmt --write .
 - format:check: oxfmt --check .
 - lint: oxlint . --fix
 - lint:check: oxlint . --type-check --type-aware
-- server: vite preview
-- start: node .output/server/index.mjs
+- server: vite preview (builds `.dev.vars` from `.env` first)
+- start: nub .output/server/index.mjs
 - test: vitest -w
 - test:ee: playwright test --config=e2e/playwright.config.ts
 
@@ -39,7 +43,7 @@ The project uses `vitest` for testing.
 - **Generate Migrations**: `nub run db generate` (runs `drizzle-kit generate`)
 - **Push Schema Changes**: `nub run db push` (runs `drizzle-kit push`)
 - **Apply Migrations**: `nub run db migrate` (runs `drizzle-kit migrate`)
-- **Stage-specific**: `STAGE=local|dev|prod nub run db <command>` loads the matching env file (`.env`, `.env.test`, `.env.production`). Shorthand scripts: `nub run db:local <command>`, `nub run db:prod <command>`
+- **Stage-specific**: `STAGE=local|dev|prod nub run db <command>` loads the matching env file (`.env`, `.env.test`, `.env.production`). Shorthand scripts: `nub run db:dev <command>`, `nub run db:local <command>`, `nub run db:prod <command>`
 - **Upgrade Migration Folder**: `drizzle-kit up` (v0 → v1 structure)
 
 ## General Code Style Principles

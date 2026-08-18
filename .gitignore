@@ -7,6 +7,9 @@ yarn.lock
 .env
 .env.*
 !.env.example
+.dev.vars
+.alchemy/log/
+.wrangler/state/v3/observability/
 .vercel
 .output
 

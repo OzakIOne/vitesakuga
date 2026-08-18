@@ -14,7 +14,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 ## Secondary
 
 - [ ] ? add post ranking
-  
+
 ## Dev
 
 ```bash
@@ -31,14 +31,44 @@ nub run dev
 
 Three stages, each with its own gitignored env file:
 
-| Stage | Env file | DB / storage | Command |
-| --- | --- | --- | --- |
-| local | `.env.test` | Docker Postgres + rustfs | `nub run dev:local` |
-| dev | `.env` | Neon dev branch + R2 dev | `nub run dev` |
-| prod | `.env.production` | Neon prod + R2 prod | `nub run dev:prod` |
+| Stage | Env file          | DB / storage             | Command             |
+| ----- | ----------------- | ------------------------ | ------------------- |
+| local | `.env.test`       | Docker Postgres + rustfs | `nub run dev:local` |
+| dev   | `.env`            | Neon dev branch + R2 dev | `nub run dev`       |
+| prod  | `.env.production` | Neon prod + R2 prod      | `nub run dev:prod`  |
 
 The DB CLI is stage-aware: `STAGE=prod nub run db migrate` loads
-`.env.production` (shortcuts: `nub run db:local <command>`, `nub run db:prod <command>`).
+`.env.production` (shortcuts: `nub run db:local <command>`, `nub run db:dev <command>`, `nub run db:prod <command>`).
+
+## Commands
+
+Every stage-specific script follows `verb:stage`. The unsuffixed script is the
+shortcut for its most common stage. Three independent axes are pinned per
+script: app stage, `APP_ENV` (which env file _nub_ loads), `NODE_ENV` (the
+React/bundle runtime), and Vite `--mode` (bakes `import.meta.env.MODE`).
+
+| Script                                              | Runs                                                                                  | Stage                       | `APP_ENV` / `NODE_ENV` / env file                 | Vite `--mode`     |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------- | ----------------- |
+| `dev`                                               | dev server                                                                            | dev                         | `development` / `development` / `.env`            | `development`     |
+| `dev:local`                                         | dev server (Docker Postgres + rustfs)                                                 | local                       | `test` / `test` / `.env.test`                     | `test`            |
+| `dev:prod`                                          | dev server against prod infra                                                         | prod                        | `production` / `production` / `.env.production`   | `production`      |
+| `build`                                             | production build                                                                      | prod                        | `production` / `production` / `.env.production`   | `production`      |
+| `build:dev` (alias `build:staging`)                 | dev-site build (production React runtime + dev-stage `.env`, decoupled via `APP_ENV`) | dev                         | `development` / `production` / `.env`             | `development`     |
+| `start`                                             | run built Node server                                                                 | prod                        | —                                                 | —                 |
+| `server`                                            | preview built Worker (wrangler, generates `.dev.vars` from `.env`)                    | dev                         | `production`                                      | —                 |
+| `wrangler:dev` / `wrangler:preview`                 | dev / preview through Wrangler Pages                                                  | dev                         | `development` / `.env`                            | `development` / — |
+| `db` / `db:dev` / `db:local` / `db:prod`            | drizzle-kit CLI (stage via `STAGE=`)                                                  | dev / local / prod          | `.env` / `.env` / `.env.test` / `.env.production` | —                 |
+| `infra:dev`                                         | Alchemy dev                                                                           | dev (alchemy `dev`)         | `.env`                                            | —                 |
+| `infra:deploy`                                      | builds (dev) → guard → Alchemy deploy                                                 | dev (alchemy `dev`)         | `.env`                                            | —                 |
+| `infra:deploy:prod`                                 | builds (prod) → guard → Alchemy deploy                                                | prod (alchemy `production`) | `.env.production`                                 | —                 |
+| `infra:destroy` / `infra:destroy:prod`              | Alchemy destroy                                                                       | dev / prod                  | `.env` / `.env.production`                        | —                 |
+| `docker:up` / `docker:down` (aliases `dcu` / `dcd`) | local Docker stack (Postgres, rustfs, lightpanda, otelite)                            | local                       | `.env.test`                                       | —                 |
+
+> Note: app stages are `local` / `dev` / `prod`, but Alchemy stages are `dev` /
+> `production` — the Alchemy stack derives bucket names
+> (`vitesakuga-media-production`), domains, and CORS from those exact strings,
+> so the infra scripts keep them. See `docs/build-environment.md` for why
+> `APP_ENV`, `NODE_ENV`, and `--mode` are set the way they are.
 
 ## Infrastructure Setup
 

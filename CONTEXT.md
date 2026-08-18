@@ -66,16 +66,16 @@ Terms used consistently across the codebase. Update this file when new concepts 
 
 ## Deployment
 
-Stage env files (`.env` for dev, `.env.production` for prod) feed **both** the Alchemy worker bindings (`alchemy deploy --stage dev|production`) **and** the Vite build via `import.meta.env`. Client `VITE_*` vars are baked into the bundle at build time, so each stage needs its own build script that pins `NODE_ENV` (nub loads `.env.$NODE_ENV` and Vite gives process.env the highest priority).
+Stage env files (`.env` for dev, `.env.production` for prod) feed **both** the Alchemy worker bindings (`alchemy deploy --stage dev|production`) **and** the Vite build via `import.meta.env`. Client `VITE_*` vars are baked into the bundle at build time, so each stage needs its own build script that pins the right stage env. Build scripts set `APP_ENV` (which env file nub loads: `development`→`.env`, `test`→`.env.test`, `production`→`.env.production`) and `NODE_ENV` (React runtime) independently — nub keys its env-file mode off `APP_ENV`, not `NODE_ENV`.
 
 **Build scripts:**
 
-- **Dev** (`sakuga-dev.ozaki.one`): `nub run build:dev` (`NODE_ENV=development vite build --mode development` → `.env`). Then `nub run infra:deploy`.
-- **Prod** (`sakuga.ozaki.one`): `nub run build` (`NODE_ENV=production vite build --mode production` → `.env.production`). Then `nub run infra:deploy:prod`.
+- **Dev** (`sakuga-dev.ozaki.one`): `nub run infra:deploy` — builds automatically via `nub run build:dev` (`APP_ENV=development NODE_ENV=production vite build --mode development` → nub loads `.env` while React runs in production; `build:staging` is a deprecated alias), then deploys.
+- **Prod** (`sakuga.ozaki.one`): `nub run infra:deploy:prod` — builds automatically via `nub run build` (`APP_ENV=production NODE_ENV=production vite build --mode production` → `.env.production`), then deploys.
+
+The deploy scripts (`infra:deploy`, `infra:deploy:prod`) build the correct stage first, then run `scripts/check-prod-build.mjs`, which refuses to upload a bundle whose SSR chunks were compiled with the React dev JSX runtime — that only happens with `NODE_ENV=development vite build`, which 500s every page on Cloudflare (`TypeError: jsxDEV is not a function`, surfaced as `{"status":500,"unhandled":true,"message":"HTTPError"}`). The build scripts make that poisoning impossible; the guard is belt-and-braces for direct `alchemy deploy` invocations.
 
 See [docs/build-environment.md](./docs/build-environment.md) for the full explanation of `NODE_ENV` vs `--mode` and what each impacts.
-
-Never ship a stage from a bare `vite build`: with no pinned `NODE_ENV`, nub loads `.env` and bakes the wrong stage's client env into the bundle (e.g. production `VITE_CLOUDFLARE_R2_PUBLIC_URL` — `video.ozaki.one/...` — leaking into the dev site and breaking all media).
 
 ## Storage
 
