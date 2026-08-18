@@ -1,6 +1,6 @@
 import { Portal } from "@ark-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { Button, CloseButton } from "src/components/ui/button";
@@ -94,6 +94,20 @@ function RouteComponent() {
         </div>
 
         <div className="space-y-12">
+          <section className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-700">
+            <div>
+              <Heading as="h2" mb={1} size="md">
+                Playlists
+              </Heading>
+              <Text color="gray.500" fontSize="sm">
+                Toggle visibility and manage the posts in your playlists.
+              </Text>
+            </div>
+            <Button asChild colorPalette="blue" size="sm">
+              <Link to="/account/playlists">Manage playlists</Link>
+            </Button>
+          </section>
+
           <section>
             <Heading as="h2" mb={1} size="md">
               Profile information

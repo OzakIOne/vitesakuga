@@ -51,6 +51,16 @@ export const removePostFromPlaylistInputSchema = Schema.Struct({
   postId: Schema.Number,
 });
 
+export const bulkAddPostsToPlaylistInputSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  postIds: Schema.NonEmptyArray(Schema.Number),
+});
+
+export const bulkRemovePostsFromPlaylistInputSchema = Schema.Struct({
+  playlistId: Schema.Number,
+  postIds: Schema.NonEmptyArray(Schema.Number),
+});
+
 export const reorderPlaylistPostsInputSchema = Schema.Struct({
   playlistId: Schema.Number,
   items: Schema.Array(
@@ -63,6 +73,13 @@ export const reorderPlaylistPostsInputSchema = Schema.Struct({
 
 export const fetchPlaylistDetailSchema = Schema.Struct({
   playlistId: Schema.Number,
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
+  ),
+});
+
+export const fetchPublicPlaylistsSchema = Schema.Struct({
   page: Schema.Number.pipe(
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),

@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
 import { NotFound } from "src/components/NotFound";
+import { Button } from "src/components/ui/button";
 import { Badge, Spinner } from "src/components/ui/feedback";
 import {
   Box,
@@ -32,9 +33,16 @@ function PlaylistsContent() {
 
   return (
     <Box p={4}>
-      <Text fontSize="2xl" fontWeight="bold" mb={4}>
-        {isOwner ? "My Playlists" : "Playlists"}
-      </Text>
+      <HStack align="center" justify="space-between" mb={4}>
+        <Text fontSize="2xl" fontWeight="bold">
+          {isOwner ? "My Playlists" : "Playlists"}
+        </Text>
+        {isOwner && (
+          <Button asChild size="xs" variant="outline">
+            <Link to="/account/playlists">Manage</Link>
+          </Button>
+        )}
+      </HStack>
 
       {isLoading && (
         <Stack align="center" justify="center" minH="200px">

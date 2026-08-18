@@ -21,6 +21,9 @@ export function useCreatePlaylist(userId: string) {
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.all,
+      });
     },
     successDescription: "Your playlist has been created.",
     successTitle: "Playlist created",
@@ -46,6 +49,9 @@ export function useUpdatePlaylist(userId: string) {
       });
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.detailForPlaylist(variables.playlistId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.all,
       });
     },
     successDescription: "Your playlist has been updated.",
@@ -115,6 +121,9 @@ export function useAddPostToPlaylist(userId: string) {
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.all,
+      });
     },
     successDescription: "Post added to playlist.",
     successTitle: "Added to playlist",
@@ -139,6 +148,9 @@ export function useRemovePostFromPlaylist(userId: string) {
       });
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.all,
       });
     },
     successDescription: "Post removed from playlist.",

@@ -117,7 +117,9 @@ function ThemeMenuItems() {
         >
           {icon}
           <span className="flex-1">{label}</span>
-          <ClientOnly>{theme === value && <LuCheck aria-hidden="true" />}</ClientOnly>
+          <ClientOnly>
+            {theme === value && <LuCheck aria-hidden="true" />}
+          </ClientOnly>
         </Menu.Item>
       ))}
     </>
@@ -188,6 +190,24 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             >
               Users
             </Link>{" "}
+            <Link
+              activeProps={{
+                className: "link",
+              }}
+              to="/playlists"
+            >
+              Playlists
+            </Link>{" "}
+            {ctx.user && (
+              <Link
+                activeProps={{
+                  className: "link",
+                }}
+                to="/account/playlists"
+              >
+                My Playlists
+              </Link>
+            )}{" "}
             <Link
               activeProps={{
                 className: "link",
@@ -283,6 +303,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                       <>
                         <Menu.Item asChild value="account">
                           <Link to="/account">Account</Link>
+                        </Menu.Item>
+                        <Menu.Item asChild value="my-playlists">
+                          <Link to="/account/playlists">My Playlists</Link>
                         </Menu.Item>
                         <Menu.Item onClick={handleSignOut} value="signout">
                           Sign Out

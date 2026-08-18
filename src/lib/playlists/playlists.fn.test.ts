@@ -373,6 +373,205 @@ describe(PlaylistsService.removePost, () => {
   });
 });
 
+describe(PlaylistsService.bulkAddPosts, () => {
+  let playlistId: number;
+
+  beforeEach(async () => {
+    await db.deleteFrom("playlist_posts").execute();
+
+    const row = await db
+      .insertInto("playlists")
+      .values({
+        title: "Bulk Add",
+        is_public: false,
+        user_id: "user-1",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    playlistId = row.id;
+  });
+
+  it("adds multiple posts at the end of the playlist", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: testUser });
+
+    const result = await runEffect(
+      PlaylistsService.bulkAddPosts({
+        playlistId,
+        postIds: [postId, postId2],
+      }),
+    );
+
+    expect(result).toEqual({
+      added: 2,
+      already_added: 0,
+      not_found: 0,
+      playlist_id: playlistId,
+    });
+
+    const entries = await db
+      .selectFrom("playlist_posts")
+      .selectAll()
+      .orderBy("position", "asc")
+      .execute();
+    expect(entries).toHaveLength(2);
+    expect(entries[0]!.post_id).toBe(postId);
+    expect(entries[0]!.position).toBe(0);
+    expect(entries[1]!.post_id).toBe(postId2);
+    expect(entries[1]!.position).toBe(1);
+  });
+
+  it("appends after existing posts and reports already added", async () => {
+    await db
+      .insertInto("playlist_posts")
+      .values({
+        playlist_id: playlistId,
+        post_id: postId,
+        position: 0,
+      })
+      .execute();
+
+    mockGetSession.mockResolvedValueOnce({ user: testUser });
+
+    const result = await runEffect(
+      PlaylistsService.bulkAddPosts({
+        playlistId,
+        postIds: [postId, postId2],
+      }),
+    );
+
+    expect(result.added).toBe(1);
+    expect(result.already_added).toBe(1);
+    expect(result.not_found).toBe(0);
+
+    const entries = await db
+      .selectFrom("playlist_posts")
+      .selectAll()
+      .orderBy("position", "asc")
+      .execute();
+    expect(entries).toHaveLength(2);
+    expect(entries[1]!.post_id).toBe(postId2);
+    expect(entries[1]!.position).toBe(1);
+  });
+
+  it("dedupes input and reports not found posts", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: testUser });
+
+    const result = await runEffect(
+      PlaylistsService.bulkAddPosts({
+        playlistId,
+        postIds: [postId, postId, 9999],
+      }),
+    );
+
+    expect(result).toEqual({
+      added: 1,
+      already_added: 0,
+      not_found: 1,
+      playlist_id: playlistId,
+    });
+  });
+
+  it("throws forbidden when not the owner", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+
+    await expect(
+      runEffect(
+        PlaylistsService.bulkAddPosts({
+          playlistId,
+          postIds: [postId],
+        }),
+      ),
+    ).rejects.toThrow("can only modify your own");
+  });
+});
+
+describe(PlaylistsService.bulkRemovePosts, () => {
+  let playlistId: number;
+
+  beforeEach(async () => {
+    await db.deleteFrom("playlist_posts").execute();
+
+    const row = await db
+      .insertInto("playlists")
+      .values({
+        title: "Bulk Remove",
+        is_public: false,
+        user_id: "user-1",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    playlistId = row.id;
+
+    await db
+      .insertInto("playlist_posts")
+      .values({
+        playlist_id: playlistId,
+        post_id: postId,
+        position: 0,
+      })
+      .execute();
+    await db
+      .insertInto("playlist_posts")
+      .values({
+        playlist_id: playlistId,
+        post_id: postId2,
+        position: 1,
+      })
+      .execute();
+  });
+
+  it("removes selected posts and renumbers the rest", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: testUser });
+
+    const result = await runEffect(
+      PlaylistsService.bulkRemovePosts({
+        playlistId,
+        postIds: [postId],
+      }),
+    );
+
+    expect(result).toEqual({ playlist_id: playlistId, removed: 1 });
+
+    const entries = await db
+      .selectFrom("playlist_posts")
+      .selectAll()
+      .orderBy("position", "asc")
+      .execute();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.post_id).toBe(postId2);
+    expect(entries[0]!.position).toBe(0);
+  });
+
+  it("returns removed 0 when none of the posts are in the playlist", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: testUser });
+
+    const result = await runEffect(
+      PlaylistsService.bulkRemovePosts({
+        playlistId,
+        postIds: [9999],
+      }),
+    );
+
+    expect(result).toEqual({ playlist_id: playlistId, removed: 0 });
+
+    const entries = await db.selectFrom("playlist_posts").selectAll().execute();
+    expect(entries).toHaveLength(2);
+  });
+
+  it("throws forbidden when not the owner", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+
+    await expect(
+      runEffect(
+        PlaylistsService.bulkRemovePosts({
+          playlistId,
+          postIds: [postId],
+        }),
+      ),
+    ).rejects.toThrow("can only modify your own");
+  });
+});
+
 describe(PlaylistsService.reorder, () => {
   let playlistId: number;
 
@@ -558,6 +757,106 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
       (p: (typeof result)[number]) => p.title === "Public List",
     )!;
     expect(publicList.thumbnail_key).toBe("thumbnails/abc.jpg");
+  });
+});
+
+describe(PlaylistsService.fetchPublicPlaylists, () => {
+  beforeEach(async () => {
+    await db
+      .insertInto("playlists")
+      .values({
+        title: "Older Public",
+        is_public: true,
+        user_id: "user-1",
+        created_at: new Date("2024-01-01T00:00:00Z"),
+      })
+      .execute();
+    await db
+      .insertInto("playlists")
+      .values({
+        title: "Newer Public",
+        is_public: true,
+        user_id: "user-2",
+        created_at: new Date("2024-02-01T00:00:00Z"),
+      })
+      .execute();
+    await db
+      .insertInto("playlists")
+      .values({
+        title: "Private",
+        is_public: false,
+        user_id: "user-1",
+        created_at: new Date("2024-03-01T00:00:00Z"),
+      })
+      .execute();
+  });
+
+  it("returns only public playlists ordered newest first", async () => {
+    const result = await runEffect(
+      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+    );
+
+    expect(result.data.map((p) => p.title)).toEqual([
+      "Newer Public",
+      "Older Public",
+    ]);
+    expect(result.meta.pagination.total).toBe(2);
+    expect(result.meta.pagination.totalPages).toBe(1);
+  });
+
+  it("includes post count and thumbnail from first post", async () => {
+    const playlists = await db
+      .selectFrom("playlists")
+      .select(["id"])
+      .where("title", "=", "Newer Public")
+      .executeTakeFirstOrThrow();
+
+    await db
+      .insertInto("playlist_posts")
+      .values({
+        playlist_id: playlists.id,
+        post_id: postId,
+        position: 0,
+      })
+      .execute();
+    await db
+      .insertInto("playlist_posts")
+      .values({
+        playlist_id: playlists.id,
+        post_id: postId2,
+        position: 1,
+      })
+      .execute();
+
+    const result = await runEffect(
+      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+    );
+
+    const newer = result.data.find((p) => p.title === "Newer Public")!;
+    expect(newer.post_count).toBe(2);
+    expect(newer.thumbnail_key).toBe("thumbnails/abc.jpg");
+  });
+
+  it("includes the owner name and image", async () => {
+    const result = await runEffect(
+      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+    );
+
+    const newer = result.data.find((p) => p.title === "Newer Public")!;
+    expect(newer.user_id).toBe("user-2");
+    expect(newer.user_name).toBe("Bob");
+    expect(newer.user_image).toBeNull();
+  });
+
+  it("returns empty data when no public playlists exist", async () => {
+    await db.deleteFrom("playlists").execute();
+
+    const result = await runEffect(
+      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+    );
+
+    expect(result.data).toEqual([]);
+    expect(result.meta.pagination.total).toBe(0);
   });
 });
 

@@ -285,8 +285,9 @@ export function useChakraProps<P extends ChakraStyleProps>(
         break;
       }
       case "flex": {
-        if (value === "1") classes.push("flex-1");
+        if (value === "1" || value === 1) classes.push("flex-1");
         else if (typeof value === "string") classes.push(`flex-[${value}]`);
+        else if (typeof value === "number") classes.push(`flex-[${value}]`);
         break;
       }
       case "flexShrink": {

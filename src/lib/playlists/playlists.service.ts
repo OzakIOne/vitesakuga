@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
-import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import type { AuthServices } from "../auth/context";
+import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
@@ -21,8 +21,11 @@ import {
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   addPostToPlaylistInputSchema,
+  bulkAddPostsToPlaylistInputSchema,
+  bulkRemovePostsFromPlaylistInputSchema,
   createPlaylistInputSchema,
   fetchPlaylistDetailSchema,
+  fetchPublicPlaylistsSchema,
   removePostFromPlaylistInputSchema,
   reorderPlaylistPostsInputSchema,
   updatePlaylistInputSchema,
@@ -52,6 +55,16 @@ type PlaylistWithMeta = {
   thumbnail_key: string | null;
 };
 
+type PublicPlaylistRow = PlaylistWithMeta & {
+  user_name: string;
+  user_image: string | null;
+};
+
+type PublicPlaylistsResult = {
+  data: readonly PublicPlaylistRow[];
+  meta: { pagination: PaginationMeta };
+};
+
 type PlaylistForPostCheck = {
   id: number;
   user_id: string;
@@ -69,9 +82,11 @@ type PlaylistPostRow = {
   added_at: Date;
   id: number | null;
   title: string | null;
+  content: string | null;
   thumbnail_key: string | null;
   created_at: Date | null;
   user_id: string | null;
+  user_name: string | null;
   video_key: string | null;
 };
 
@@ -86,6 +101,18 @@ type PlaylistDetailResult = {
   playlist: PlaylistWithMeta;
   data: (PlaylistPostRow | PostOrphan)[];
   meta: { pagination: PaginationMeta };
+};
+
+type BulkAddPostsResult = {
+  playlist_id: number;
+  added: number;
+  already_added: number;
+  not_found: number;
+};
+
+type BulkRemovePostsResult = {
+  playlist_id: number;
+  removed: number;
 };
 
 export class PlaylistsService extends Context.Service<
@@ -146,6 +173,29 @@ export class PlaylistsService extends Context.Service<
       | SqlError,
       AuthServices
     >;
+    readonly bulkAddPosts: (
+      data: Schema.Schema.Type<typeof bulkAddPostsToPlaylistInputSchema>,
+    ) => Effect.Effect<
+      BulkAddPostsResult,
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | SessionFetchError
+      | SqlError
+      | SqlNoFirstResult,
+      AuthServices
+    >;
+    readonly bulkRemovePosts: (
+      data: Schema.Schema.Type<typeof bulkRemovePostsFromPlaylistInputSchema>,
+    ) => Effect.Effect<
+      BulkRemovePostsResult,
+      | UnauthorizedError
+      | ForbiddenError
+      | PlaylistNotFoundError
+      | SessionFetchError
+      | SqlError,
+      AuthServices
+    >;
     readonly reorder: (
       data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
     ) => Effect.Effect<
@@ -165,6 +215,9 @@ export class PlaylistsService extends Context.Service<
       SessionFetchError | SqlError,
       AuthServices
     >;
+    readonly fetchPublicPlaylists: (
+      data: Schema.Schema.Type<typeof fetchPublicPlaylistsSchema>,
+    ) => Effect.Effect<PublicPlaylistsResult, SqlError>;
     readonly fetchDetail: (
       data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
     ) => Effect.Effect<
@@ -402,6 +455,142 @@ export class PlaylistsService extends Context.Service<
       return { success: true };
     });
 
+    const bulkAddPosts = Effect.fn("PlaylistsService.bulkAddPosts")(function* (
+      data: Schema.Schema.Type<typeof bulkAddPostsToPlaylistInputSchema>,
+    ) {
+      const user = yield* requireAuth();
+      yield* requirePlaylistOwnership(data.playlistId, user.id);
+
+      const uniqueIds = [...new Set(data.postIds)];
+
+      return yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          yield* trx.executeTakeFirstOrError(
+            trx
+              .selectFrom("playlists")
+              .select(["id"])
+              .where("id", "=", data.playlistId)
+              .forUpdate(),
+          );
+
+          const existingRows = yield* trx.execute(
+            trx
+              .selectFrom("playlist_posts")
+              .select(["post_id"])
+              .where("playlist_id", "=", data.playlistId)
+              .where("post_id", "in", uniqueIds),
+          );
+          const existingSet = new Set(existingRows.map((row) => row.post_id));
+
+          const existingPosts = yield* trx.execute(
+            trx.selectFrom("posts").select(["id"]).where("id", "in", uniqueIds),
+          );
+          const existingPostsSet = new Set(
+            existingPosts.map((post) => post.id),
+          );
+
+          const toAdd = uniqueIds.filter(
+            (postId) =>
+              !existingSet.has(postId) && existingPostsSet.has(postId),
+          );
+          const alreadyAdded = uniqueIds.filter((postId) =>
+            existingSet.has(postId),
+          ).length;
+          const notFound = uniqueIds.filter(
+            (postId) =>
+              !existingSet.has(postId) && !existingPostsSet.has(postId),
+          ).length;
+
+          if (toAdd.length > 0) {
+            const maxResults = yield* trx.execute(
+              trx
+                .selectFrom("playlist_posts")
+                .select(trx.fn.max("playlist_posts.position").as("max_pos"))
+                .where("playlist_id", "=", data.playlistId),
+            );
+            const maxPos = maxResults[0]?.max_pos;
+            let position = (maxPos != null ? Number(maxPos) : -1) + 1;
+
+            for (const postId of toAdd) {
+              yield* trx.execute(
+                trx.insertInto("playlist_posts").values({
+                  playlist_id: data.playlistId,
+                  position,
+                  post_id: postId,
+                }),
+              );
+              position++;
+            }
+          }
+
+          return {
+            added: toAdd.length,
+            already_added: alreadyAdded,
+            not_found: notFound,
+            playlist_id: data.playlistId,
+          };
+        }),
+      );
+    });
+
+    const bulkRemovePosts = Effect.fn("PlaylistsService.bulkRemovePosts")(
+      function* (
+        data: Schema.Schema.Type<typeof bulkRemovePostsFromPlaylistInputSchema>,
+      ) {
+        const user = yield* requireAuth();
+        yield* requirePlaylistOwnership(data.playlistId, user.id);
+
+        const uniqueIds = [...new Set(data.postIds)];
+
+        return yield* db.transaction().execute((trx) =>
+          Effect.gen(function* () {
+            const toRemove = yield* trx.execute(
+              trx
+                .selectFrom("playlist_posts")
+                .select(["post_id"])
+                .where("playlist_id", "=", data.playlistId)
+                .where("post_id", "in", uniqueIds),
+            );
+
+            if (toRemove.length > 0) {
+              yield* trx.execute(
+                trx
+                  .deleteFrom("playlist_posts")
+                  .where("playlist_id", "=", data.playlistId)
+                  .where("post_id", "in", uniqueIds),
+              );
+
+              const remaining = yield* trx.execute(
+                trx
+                  .selectFrom("playlist_posts")
+                  .select(["post_id"])
+                  .where("playlist_id", "=", data.playlistId)
+                  .orderBy("position", "asc")
+                  .orderBy("created_at", "asc"),
+              );
+
+              let position = 0;
+              for (const row of remaining) {
+                yield* trx.execute(
+                  trx
+                    .updateTable("playlist_posts")
+                    .set({ position })
+                    .where("playlist_id", "=", data.playlistId)
+                    .where("post_id", "=", row.post_id),
+                );
+                position++;
+              }
+            }
+
+            return {
+              playlist_id: data.playlistId,
+              removed: toRemove.length,
+            };
+          }),
+        );
+      },
+    );
+
     const reorder = Effect.fn("PlaylistsService.reorder")(function* (
       data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
     ) {
@@ -445,28 +634,8 @@ export class PlaylistsService extends Context.Service<
       return { success: true };
     });
 
-    const fetchUserPlaylists = Effect.fn("PlaylistsService.fetchUserPlaylists")(
-      function* (userId: string) {
-        const session = yield* getSessionEffect();
-        const isOwner = session?.user?.id === userId;
-
-        let query = db
-          .selectFrom("playlists")
-          .selectAll()
-          .where("user_id", "=", userId);
-
-        if (!isOwner) {
-          query = query.where("is_public", "=", true);
-        }
-
-        const playlists = yield* db.execute(
-          query.orderBy("playlists.created_at", "desc"),
-        );
-
-        if (playlists.length === 0) return [];
-
-        const playlistIds = playlists.map((p) => p.id);
-
+    const fetchPlaylistMeta = Effect.fn("PlaylistsService.fetchPlaylistMeta")(
+      function* (playlistIds: number[]) {
         const postCounts = yield* db.execute(
           db
             .selectFrom("playlist_posts")
@@ -506,6 +675,34 @@ export class PlaylistsService extends Context.Service<
           }
         }
 
+        return { countMap, thumbnailMap };
+      },
+    );
+
+    const fetchUserPlaylists = Effect.fn("PlaylistsService.fetchUserPlaylists")(
+      function* (userId: string) {
+        const session = yield* getSessionEffect();
+        const isOwner = session?.user?.id === userId;
+
+        let query = db
+          .selectFrom("playlists")
+          .selectAll()
+          .where("user_id", "=", userId);
+
+        if (!isOwner) {
+          query = query.where("is_public", "=", true);
+        }
+
+        const playlists = yield* db.execute(
+          query.orderBy("playlists.created_at", "desc"),
+        );
+
+        if (playlists.length === 0) return [];
+
+        const playlistIds = playlists.map((p) => p.id);
+        const { countMap, thumbnailMap } =
+          yield* fetchPlaylistMeta(playlistIds);
+
         return playlists.map((p) => ({
           ...p,
           post_count: countMap.get(p.id) ?? 0,
@@ -513,6 +710,69 @@ export class PlaylistsService extends Context.Service<
         }));
       },
     );
+
+    const fetchPublicPlaylists = Effect.fn(
+      "PlaylistsService.fetchPublicPlaylists",
+    )(function* (data: Schema.Schema.Type<typeof fetchPublicPlaylistsSchema>) {
+      const { page } = data;
+
+      const totalCountResult = yield* db.executeTakeFirstOrUndefined(
+        db
+          .selectFrom("playlists")
+          .select(db.fn.countAll().as("count"))
+          .where("is_public", "=", true),
+      );
+      const totalCount = Number(totalCountResult?.count ?? 0);
+
+      const pagination = computePagination(totalCount, {
+        page,
+        pageSize: PAGE_SIZE,
+      });
+
+      const playlists = yield* db.execute(
+        db
+          .selectFrom("playlists")
+          .innerJoin("user", "user.id", "playlists.user_id")
+          .select([
+            "playlists.id",
+            "playlists.user_id",
+            "playlists.title",
+            "playlists.description",
+            "playlists.is_public",
+            "playlists.created_at",
+            "playlists.updated_at",
+            "user.name as userName",
+            "user.image as userImage",
+          ])
+          .where("playlists.is_public", "=", true)
+          .orderBy("playlists.created_at", "desc")
+          .offset(pagination.offset)
+          .limit(PAGE_SIZE),
+      );
+
+      if (playlists.length === 0) {
+        return { data: [], meta: { pagination } };
+      }
+
+      const playlistIds = playlists.map((p) => p.id);
+      const { countMap, thumbnailMap } = yield* fetchPlaylistMeta(playlistIds);
+
+      const data_ = playlists.map((p) => ({
+        created_at: p.created_at,
+        description: p.description,
+        id: p.id,
+        is_public: p.is_public,
+        post_count: countMap.get(p.id) ?? 0,
+        thumbnail_key: thumbnailMap.get(p.id) ?? null,
+        title: p.title,
+        updated_at: p.updated_at,
+        user_id: p.user_id,
+        user_name: p.userName,
+        user_image: p.userImage,
+      }));
+
+      return { data: data_, meta: { pagination } };
+    });
 
     const fetchDetail = Effect.fn("PlaylistsService.fetchDetail")(function* (
       data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
@@ -560,52 +820,55 @@ export class PlaylistsService extends Context.Service<
       const playlistPosts = yield* db.execute(
         db
           .selectFrom("playlist_posts")
-          .selectAll()
-          .where("playlist_id", "=", playlistId)
-          .orderBy("position", "asc")
+          .leftJoin("posts", "posts.id", "playlist_posts.post_id")
+          .leftJoin("user", "user.id", "posts.userId")
+          .select([
+            "playlist_posts.post_id",
+            "playlist_posts.position",
+            "playlist_posts.created_at as added_at",
+            "posts.id",
+            "posts.title",
+            "posts.content",
+            "posts.thumbnailKey as thumbnail_key",
+            "posts.createdAt as created_at",
+            "posts.userId as user_id",
+            "posts.videoKey as video_key",
+            "user.name as user_name",
+          ] as const)
+          .where("playlist_posts.playlist_id", "=", playlistId)
+          .orderBy("playlist_posts.position", "asc")
           .offset(pagination.offset)
           .limit(PAGE_SIZE),
       );
 
-      const postIds = playlistPosts.map((pp) => pp.post_id);
-
-      const posts =
-        postIds.length > 0
-          ? yield* db.execute(
-              db.selectFrom("posts").selectAll().where("id", "in", postIds),
-            )
-          : [];
-
-      const postMap = new Map(posts.map((p) => [p.id, p]));
-
       let thumbnailKey: string | null = null;
 
       const data_ = playlistPosts.map((pp): PlaylistPostRow | PostOrphan => {
-        const post = postMap.get(pp.post_id);
-
-        if (!post) {
+        if (pp.id === null) {
           return {
             orphan: true,
             post_id: pp.post_id,
             position: pp.position,
-            added_at: pp.created_at,
+            added_at: pp.added_at,
           };
         }
 
-        if (thumbnailKey === null) {
-          thumbnailKey = post.thumbnailKey;
+        if (thumbnailKey === null && pp.thumbnail_key !== null) {
+          thumbnailKey = pp.thumbnail_key;
         }
 
         return {
           post_id: pp.post_id,
           position: pp.position,
-          added_at: pp.created_at,
-          id: post.id,
-          title: post.title,
-          thumbnail_key: post.thumbnailKey,
-          created_at: post.createdAt,
-          user_id: post.userId,
-          video_key: post.videoKey,
+          added_at: pp.added_at,
+          id: pp.id,
+          title: pp.title,
+          content: pp.content,
+          thumbnail_key: pp.thumbnail_key,
+          created_at: pp.created_at,
+          user_id: pp.user_id,
+          user_name: pp.user_name,
+          video_key: pp.video_key,
         };
       });
 
@@ -661,8 +924,11 @@ export class PlaylistsService extends Context.Service<
       delete_,
       addPost,
       removePost,
+      bulkAddPosts,
+      bulkRemovePosts,
       reorder,
       fetchUserPlaylists,
+      fetchPublicPlaylists,
       fetchDetail,
       fetchForPost,
     };
@@ -705,6 +971,24 @@ export class PlaylistsService extends Context.Service<
     },
   );
 
+  static readonly bulkAddPosts = Effect.fn("PlaylistsService.bulkAddPosts")(
+    function* (
+      data: Schema.Schema.Type<typeof bulkAddPostsToPlaylistInputSchema>,
+    ) {
+      const svc = yield* PlaylistsService;
+      return yield* svc.bulkAddPosts(data);
+    },
+  );
+
+  static readonly bulkRemovePosts = Effect.fn(
+    "PlaylistsService.bulkRemovePosts",
+  )(function* (
+    data: Schema.Schema.Type<typeof bulkRemovePostsFromPlaylistInputSchema>,
+  ) {
+    const svc = yield* PlaylistsService;
+    return yield* svc.bulkRemovePosts(data);
+  });
+
   static readonly reorder = Effect.fn("PlaylistsService.reorder")(function* (
     data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
   ) {
@@ -717,6 +1001,13 @@ export class PlaylistsService extends Context.Service<
   )(function* (userId: string) {
     const svc = yield* PlaylistsService;
     return yield* svc.fetchUserPlaylists(userId);
+  });
+
+  static readonly fetchPublicPlaylists = Effect.fn(
+    "PlaylistsService.fetchPublicPlaylists",
+  )(function* (data: Schema.Schema.Type<typeof fetchPublicPlaylistsSchema>) {
+    const svc = yield* PlaylistsService;
+    return yield* svc.fetchPublicPlaylists(data);
   });
 
   static readonly fetchDetail = Effect.fn("PlaylistsService.fetchDetail")(
@@ -796,6 +1087,30 @@ export const removePostFromPlaylist = createServerFn({ method: "POST" })
     ),
   );
 
+export const bulkAddPostsToPlaylist = createServerFn({ method: "POST" })
+  .validator((input: unknown) =>
+    parseStrict(bulkAddPostsToPlaylistInputSchema)(input),
+  )
+  .handler(
+    createHandler(
+      PlaylistsService.bulkAddPosts,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
+
+export const bulkRemovePostsFromPlaylist = createServerFn({ method: "POST" })
+  .validator((input: unknown) =>
+    parseStrict(bulkRemovePostsFromPlaylistInputSchema)(input),
+  )
+  .handler(
+    createHandler(
+      PlaylistsService.bulkRemovePosts,
+      PlaylistsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
+
 export const reorderPlaylistPosts = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parseStrict(reorderPlaylistPostsInputSchema)(input),
@@ -817,6 +1132,18 @@ export const fetchUserPlaylists = createServerFn({
       (data: string) => PlaylistsService.fetchUserPlaylists(data),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
+    ),
+  );
+
+export const fetchPublicPlaylists = createServerFn({
+  strict: { output: false },
+})
+  .validator((input: unknown) => parseStrict(fetchPublicPlaylistsSchema)(input))
+  .handler(
+    createHandler(
+      PlaylistsService.fetchPublicPlaylists,
+      PlaylistsServiceLive,
+      baseLayerFactories.db,
     ),
   );
 
