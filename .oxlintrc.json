@@ -39,6 +39,67 @@
     ".windsurf/**",
     "tools/oxlint/anti-slop/**"
   ],
+  // The effecttsgo rules are meant for server/Effect code (`.service.ts`, `db/`, `effect/`,
+  // env/server.ts, etc.). Frontend files — .tsx components/routes, React hooks and query
+  // factories, and client-side utilities — legitimately use native JS APIs (Date, async
+  // functions, console, fetch), so disable all effecttsgo rules there.
+  "overrides": [
+    {
+      "files": [
+        "**/*.tsx",
+        "**/*.hooks.ts",
+        "**/*.queries.ts",
+        "**/use*.ts",
+        "src/lib/upload/upload.processor.ts",
+        "src/lib/db/collections.ts",
+        "src/lib/mutations/mutation-feedback.ts",
+        "src/lib/auth/client.ts",
+        "src/lib/env/client.ts"
+      ],
+      "rules": {
+        "effecttsgo/abort-controller-in-effect": "off",
+        "effecttsgo/any-unknown-in-error-context": "off",
+        "effecttsgo/async-function": "off",
+        "effecttsgo/class-self-mismatch": "off",
+        "effecttsgo/crypto-random-uuid": "off",
+        "effecttsgo/crypto-random-uuid-in-effect": "off",
+        "effecttsgo/duplicate-package": "off",
+        "effecttsgo/effect-fn-implicit-any": "off",
+        "effecttsgo/extends-native-error": "off",
+        "effecttsgo/floating-effect": "off",
+        "effecttsgo/floating-effect-in-vitest": "off",
+        "effecttsgo/generic-effect-services": "off",
+        "effecttsgo/global-console": "off",
+        "effecttsgo/global-console-in-effect": "off",
+        "effecttsgo/global-date": "off",
+        "effecttsgo/global-date-in-effect": "off",
+        "effecttsgo/global-fetch": "off",
+        "effecttsgo/global-fetch-in-effect": "off",
+        "effecttsgo/global-random": "off",
+        "effecttsgo/global-random-in-effect": "off",
+        "effecttsgo/global-timers": "off",
+        "effecttsgo/global-timers-in-effect": "off",
+        "effecttsgo/instance-of-schema": "off",
+        "effecttsgo/missing-effect-context": "off",
+        "effecttsgo/missing-effect-error": "off",
+        "effecttsgo/missing-layer-context": "off",
+        "effecttsgo/missing-return-yield-star": "off",
+        "effecttsgo/missing-star-in-yield-effect-gen": "off",
+        "effecttsgo/new-promise": "off",
+        "effecttsgo/node-builtin-import": "off",
+        "effecttsgo/non-object-effect-service-type": "off",
+        "effecttsgo/outdated-api": "off",
+        "effecttsgo/overridden-schema-constructor": "off",
+        "effecttsgo/prefer-schema-over-json": "off",
+        "effecttsgo/process-env": "off",
+        "effecttsgo/process-env-in-effect": "off",
+        "effecttsgo/promise-in-effect-success": "off",
+        "effecttsgo/schema-literal-non-finite": "off",
+        "effecttsgo/schema-opaque-instance-member": "off",
+        "effecttsgo/unsafe-effect-type-assertion": "off"
+      }
+    }
+  ],
   "rules": {
     "no-void": "off",
     "require-await": "off",
