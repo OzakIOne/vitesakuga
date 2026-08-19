@@ -9,7 +9,7 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
 const wasmPath = path.resolve(
-  __dirname,
+  import.meta.dirname,
   "node_modules/mediainfo.js/dist/MediaInfoModule.wasm",
 );
 
@@ -18,12 +18,18 @@ function copyFilePlugin() {
     name: "copy-file-plugin",
     buildStart() {
       const src = path.resolve(wasmPath);
-      const dest = path.resolve(__dirname, "public/MediaInfoModule.wasm");
+      const dest = path.resolve(
+        import.meta.dirname,
+        "public/MediaInfoModule.wasm",
+      );
       fs.copyFileSync(src, dest);
     },
     configureServer() {
       const src = path.resolve(wasmPath);
-      const dest = path.resolve(__dirname, "public/MediaInfoModule.wasm");
+      const dest = path.resolve(
+        import.meta.dirname,
+        "public/MediaInfoModule.wasm",
+      );
       fs.copyFileSync(src, dest);
     },
   };
