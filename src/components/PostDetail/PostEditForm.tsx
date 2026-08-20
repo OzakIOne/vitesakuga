@@ -142,6 +142,10 @@ export function PostEditForm({
                 <Field.Label>Tags</Field.Label>
                 <TagInput
                   onChange={(newTags) => {
+                    // SAFETY: updatePost's payload keeps tag ids optional
+                    // ({ id?: number; name }) and the resolver branches on
+                    // tag.id === undefined, so asserting TagInput's tags as the
+                    // field's required-id shape is lossless — no code reads the id.
                     field.handleChange(
                       newTags as { id: number; name: string }[],
                     );

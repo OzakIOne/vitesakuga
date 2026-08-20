@@ -33,6 +33,7 @@ const secret = (name: string, minLength: number) =>
 const parseWith = <A>(
   label: string,
   config: Config.Config<A>,
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- parseWith is the raw env I/O boundary; it must accept arbitrary provider input.
   source: unknown,
 ): A => {
   try {
@@ -46,6 +47,7 @@ const parseWith = <A>(
 const decodeWith = <S extends Schema.ConstraintDecoder<unknown>>(
   label: string,
   schema: S,
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- decodeWith is the raw env decoding boundary; it must accept arbitrary unknown values.
   value: unknown,
 ): S["Type"] => {
   try {
@@ -69,6 +71,9 @@ const serverEnvConfig = Config.all({
   GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
   GITHUB_CLIENT_SECRET: Config.string("GITHUB_CLIENT_SECRET"),
   NODE_ENV: Config.string("NODE_ENV"),
+  TURNSTILE_SECRET: Config.string("TURNSTILE_SECRET").pipe(
+    Config.withDefault(""),
+  ),
   VITE_BASE_URL: Config.string("VITE_BASE_URL"),
 });
 
@@ -88,6 +93,10 @@ const serverEnvSchema = (requireOAuth: boolean) =>
       ? nonEmpty("GITHUB_CLIENT_SECRET")
       : Schema.String,
     NODE_ENV: Schema.Literals(["development", "production", "test"]),
+    // Optional in every stage: the captcha plugin is only enabled when the
+    // secret is actually configured (see auth/index.ts). Kept as a Redacted
+    // secret so it is never logged.
+    TURNSTILE_SECRET: Schema.RedactedFromValue(Schema.String),
     VITE_BASE_URL: nonEmpty("VITE_BASE_URL"),
   });
 
@@ -102,10 +111,13 @@ export type ServerEnv = {
   readonly GITHUB_CLIENT_ID: string;
   readonly GITHUB_CLIENT_SECRET: string;
   readonly NODE_ENV: "development" | "production" | "test";
+  readonly TURNSTILE_SECRET: Redacted.Redacted<string>;
   readonly VITE_BASE_URL: string;
 };
 
-export const loadServerEnv = (source: unknown = process.env): ServerEnv => {
+export const loadServerEnv = (
+  source: Readonly<Record<string, string | undefined>> = process.env,
+): ServerEnv => {
   const raw = parseWith("server", serverEnvConfig, source);
   // OAuth credentials are required in production, optional (may be empty) in
   // development/test where local and e2e configs do not set them.
@@ -123,6 +135,9 @@ const clientEnvConfig = Config.all({
   SSR: Config.boolean("SSR"),
   VITE_BASE_URL: Config.string("VITE_BASE_URL"),
   VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
+  VITE_TURNSTILE_SITEKEY: Config.string("VITE_TURNSTILE_SITEKEY").pipe(
+    Config.withDefault(""),
+  ),
 });
 
 const clientEnvSchema = Schema.Struct({
@@ -133,9 +148,11 @@ const clientEnvSchema = Schema.Struct({
   SSR: Schema.Boolean,
   VITE_BASE_URL: nonEmpty("VITE_BASE_URL"),
   VITE_CLOUDFLARE_R2_PUBLIC_URL: nonEmpty("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
+  // Empty in environments without Turnstile; render the widget only when set.
+  VITE_TURNSTILE_SITEKEY: Schema.String,
 });
 
-export const loadClientEnv = (source: unknown = import.meta.env) => {
+export const loadClientEnv = (source: ImportMetaEnv = import.meta.env) => {
   const raw = parseWith("client", clientEnvConfig, source);
   return decodeWith("client", clientEnvSchema, raw);
 };

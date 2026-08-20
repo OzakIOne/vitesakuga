@@ -37,6 +37,8 @@ test.describe("Upload page", () => {
     const fileChooserPromise = page.waitForEvent("filechooser", {
       timeout: 10000,
     });
+    // SAFETY: the input[type="file"] locator always matches an HTMLInputElement,
+    // so asserting el enables .click() without optional chaining.
     await page
       .locator('input[type="file"]')
       .evaluate((el) => (el as HTMLInputElement).click());
@@ -46,6 +48,8 @@ test.describe("Upload page", () => {
     await page.waitForTimeout(3000);
 
     await page.evaluate(() => {
+      // SAFETY: the querySelector targets the only input[type="file"] on the
+      // page, which is always an HTMLInputElement.
       const input = document.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
@@ -73,6 +77,8 @@ test.describe("Upload page", () => {
     const fileChooserPromise = page.waitForEvent("filechooser", {
       timeout: 10000,
     });
+    // SAFETY: the input[type="file"] locator always matches an HTMLInputElement,
+    // so asserting el enables .click() without optional chaining.
     await page
       .locator('input[type="file"]')
       .evaluate((el) => (el as HTMLInputElement).click());
@@ -82,6 +88,8 @@ test.describe("Upload page", () => {
     await page.waitForTimeout(3000);
 
     await page.evaluate(() => {
+      // SAFETY: the querySelector targets the only input[type="file"] on the
+      // page, which is always an HTMLInputElement.
       const input = document.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;

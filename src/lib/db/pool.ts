@@ -27,7 +27,11 @@ function getPool(): PgPool | NeonPool {
 }
 
 export const db = isLocal
-  ? drizzleNode({ client: getPool() as PgPool })
+  ? drizzleNode({
+      // SAFETY: getPool() constructs a PgPool exactly when DATABASE_DRIVER=local
+      // (isLocal), so this client is always the PgPool node-postgres expects.
+      client: getPool() as PgPool,
+    })
   : drizzleNeon({ client: neon(envServer.DATABASE_URL) });
 
 export const getKyselyPool = () => getPool();

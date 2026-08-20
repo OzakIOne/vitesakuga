@@ -2,11 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
+import { PasskeySignInButton } from "src/components/PasskeySignInButton";
 import { Button } from "src/components/ui/button";
 import { EmailAutocomplete } from "src/components/ui/email-autocomplete";
 import { Field } from "src/components/ui/field";
 import { PasswordInput } from "src/components/ui/password-input";
 import { useLogin, useSocialLogin } from "src/lib/auth/auth.hooks";
+import type { LoginInput } from "src/lib/auth/auth.hooks";
+import { useTurnstile } from "src/lib/auth/useTurnstile";
+import { envClient } from "src/lib/env/client";
 
 export const Route = createFileRoute("/(auth)/login")({
   component: LoginForm,
@@ -16,26 +20,35 @@ function LoginForm() {
   const { redirectUrl } = Route.useRouteContext();
   const loginMutation = useLogin(redirectUrl);
   const socialLogin = useSocialLogin(redirectUrl);
+  const { containerRef, execute: executeTurnstile } = useTurnstile(
+    envClient.VITE_TURNSTILE_SITEKEY,
+  );
 
   const [serverError, setServerError] = useState("");
   const [socialLoading, setSocialLoading] = useState(false);
   const [email, setEmail] = useState("");
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    // SAFETY: the form renders the required <input name="email"> (EmailAutocomplete);
+    // FormData.get returns its string value, and the falsy check below guards empty input.
     const email = formData.get("email") as string;
+    // SAFETY: the form renders the required <input name="password"> (PasswordInput);
+    // FormData.get returns its string value, and the falsy check below guards empty input.
     const password = formData.get("password") as string;
     if (!(email && password)) {
       return;
     }
+    const captchaToken = (await executeTurnstile()) ?? undefined;
     setServerError("");
-    loginMutation.mutate(
-      { email, password },
-      {
-        onError: (error) => setServerError(error.message),
-      },
-    );
+    const args: LoginInput = { email, password };
+    if (captchaToken) {
+      args.captchaToken = captchaToken;
+    }
+    loginMutation.mutate(args, {
+      onError: (error) => setServerError(error.message),
+    });
   };
 
   const handleSocialLogin = async (provider: "github" | "google") => {
@@ -58,6 +71,7 @@ function LoginForm() {
                 Email <Field.RequiredIndicator />
               </Field.Label>
               <EmailAutocomplete
+                autoComplete="email webauthn"
                 id="email"
                 name="email"
                 onChange={setEmail}
@@ -79,6 +93,14 @@ function LoginForm() {
             <Button disabled={loginMutation.isPending} type="submit">
               {loginMutation.isPending ? "Logging in..." : "Login"}
             </Button>
+
+            <PasskeySignInButton
+              onError={setServerError}
+              redirectUrl={redirectUrl}
+            />
+
+            {/* Invisible Turnstile widget mount point (no-op without sitekey). */}
+            <div className="hidden" ref={containerRef} />
           </div>
           {serverError && (
             <span className="text-destructive text-center text-sm">

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
@@ -47,6 +48,11 @@ const ConvertRoute = ConvertRouteImport.update({
   path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/convert.lazy').then((d) => d.Route))
+const TwoFactorRoute = TwoFactorRouteImport.update({
+  id: '/two-factor',
+  path: '/two-factor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/convert': typeof ConvertRoute
+  '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/convert': typeof ConvertRoute
+  '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/(auth)': typeof authRouteRouteWithChildren
   '/account': typeof AccountRoute
   '/convert': typeof ConvertRoute
+  '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/convert'
+    | '/two-factor'
     | '/upload'
     | '/login'
     | '/signup'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/convert'
+    | '/two-factor'
     | '/upload'
     | '/login'
     | '/signup'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/(auth)'
     | '/account'
     | '/convert'
+    | '/two-factor'
     | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   authRouteRoute: typeof authRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
   ConvertRoute: typeof ConvertRoute
+  TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   UsersIdRoute: typeof UsersIdRouteWithChildren
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/convert'
       fullPath: '/convert'
       preLoaderRoute: typeof ConvertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/two-factor': {
+      id: '/two-factor'
+      path: '/two-factor'
+      fullPath: '/two-factor'
+      preLoaderRoute: typeof TwoFactorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/upload': {
@@ -420,6 +440,7 @@ const rootRouteChildren: RootRouteChildren = {
   authRouteRoute: authRouteRouteWithChildren,
   AccountRoute: AccountRoute,
   ConvertRoute: ConvertRoute,
+  TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   UsersIdRoute: UsersIdRouteWithChildren,

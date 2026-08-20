@@ -188,6 +188,9 @@ export function PlaylistPostsTable({
 }: PlaylistPostsTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // SAFETY: each entry pairs a stringified post id with the literal `true`,
+  // so every value in the produced record is exactly `true` — the
+  // RowSelectionState (Record<string, true>) shape.
   const rowSelection = useMemo<RowSelectionState>(
     () =>
       Object.fromEntries(
@@ -201,7 +204,7 @@ export function PlaylistPostsTable({
   const handleRowSelectionChange: OnChangeFn<RowSelectionState> = useCallback(
     (updater) => {
       const next =
-        typeof updater === "function"
+        updater instanceof Function
           ? updater(rowSelectionRef.current)
           : updater;
       onSelectionChange(new Set(Object.keys(next).map(Number)));

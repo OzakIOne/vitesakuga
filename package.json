@@ -41,6 +41,7 @@
   "dependencies": {
     "@ark-ui/react": "^5.38.1",
     "@aws-sdk/client-s3": "^3.1111.0",
+    "@better-auth/passkey": "^1.7.0",
     "@effect/opentelemetry": "4.0.0-beta.102",
     "@effect/platform-node": "4.0.0-beta.107",
     "@neondatabase/serverless": "^1.1.0",
@@ -82,6 +83,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
+    "react-qr-code": "^2.2.0",
     "tailwind-merge": "^3.6.0",
     "xstate": "^6.0.0-alpha.38"
   },

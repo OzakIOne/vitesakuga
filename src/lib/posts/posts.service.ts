@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, Effect, Exit, Layer, Option, Schema } from "effect";
 import { postsSelectSchema } from "src/lib/db/schema";
 
 import type { AuthServices } from "../auth/context";
@@ -43,8 +43,9 @@ const computeStartDate = (dateRange: "today" | "week" | "month") => {
   return new Date(now.setMonth(now.getMonth() - 1));
 };
 
-export const parsePostId = (postId: unknown) =>
-  parse(Schema.Union([Schema.Number, Schema.NumberFromString]))(postId);
+export const parsePostId = parse(
+  Schema.Union([Schema.Number, Schema.NumberFromString]),
+);
 
 type PostsSearchResult = {
   readonly data: readonly PostWithVotes[];
@@ -87,7 +88,13 @@ export class PostsService extends Context.Service<
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) => Effect.Effect<
       Schema.Schema.Type<typeof postsSelectSchema>,
-      SqlError | SqlNoFirstResult | StorageError | ValidationError
+      | SqlError
+      | SqlNoFirstResult
+      | StorageError
+      | UnauthorizedError
+      | SessionFetchError
+      | ValidationError,
+      AuthServices
     >;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
@@ -284,6 +291,8 @@ export class PostsService extends Context.Service<
           .where("post_tags.postId", "=", postWithUser.id),
       );
 
+      // SAFETY: relatedPostId is a DB foreign key column typed as number in the
+      // schema; the query param asserts it against the posts.id column type.
       const relatedPostOption = postWithUser.relatedPostId
         ? yield* db.executeTakeFirstOption(
             db
@@ -322,12 +331,23 @@ export class PostsService extends Context.Service<
     const upload = Effect.fn("PostsService.upload")(function* (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) {
+      const session = yield* getSessionEffect();
+
+      if (!session?.user) {
+        return yield* Effect.fail(
+          new UnauthorizedError({
+            message: "You must be logged in to upload a post",
+          }),
+        );
+      }
+
+      const userId = session.user.id;
+
       const {
         video,
         thumbnail,
         title,
         content,
-        userId,
         source,
         relatedPostId,
         tags,
@@ -343,52 +363,68 @@ export class PostsService extends Context.Service<
         }),
       );
 
-      const { key: videoKey } = yield* storage.uploadVideo(userId, video);
-      const { key: thumbnailKey } = yield* storage.uploadThumbnail(
-        userId,
-        thumbnail,
-      );
+      // Files are uploaded to R2 before the DB insert; if any later step fails,
+      // roll the uploaded objects back so storage stays in sync with the DB.
+      const uploadedKeys: string[] = [];
 
-      const newPost = yield* db.executeTakeFirstOrError(
-        db
-          .insertInto("posts")
-          .values({
-            content,
-            relatedPostId,
-            source,
-            thumbnailKey,
-            title,
-            userId,
-            videoKey,
-            videoMetadata: JSON.stringify(videoMetadata ?? {}),
-          })
-          .returningAll(),
-      );
+      const outcome = yield* Effect.gen(function* () {
+        const { key: videoKey } = yield* storage.uploadVideo(userId, video);
+        uploadedKeys.push(videoKey);
+        const { key: thumbnailKey } = yield* storage.uploadThumbnail(
+          userId,
+          thumbnail,
+        );
+        uploadedKeys.push(thumbnailKey);
 
-      const post = yield* Effect.try({
-        try: () => parse(postsSelectSchema)(newPost),
+        const newPost = yield* db.executeTakeFirstOrError(
+          db
+            .insertInto("posts")
+            .values({
+              content,
+              relatedPostId,
+              source,
+              thumbnailKey,
+              title,
+              userId,
+              videoKey,
+              videoMetadata: JSON.stringify(videoMetadata ?? {}),
+            })
+            .returningAll(),
+        );
+
+        if (tags.length > 0) {
+          yield* resolveAndLinkTags(db, newPost.id, tags);
+          yield* Effect.logInfo("Tags linked to post").pipe(
+            Effect.annotateLogs({
+              postId: String(newPost.id),
+              tagCount: tags.length,
+            }),
+          );
+        }
+
+        yield* Effect.logInfo("Upload completed").pipe(
+          Effect.annotateLogs("postId", String(newPost.id)),
+        );
+
+        return newPost;
+      }).pipe(Effect.exit);
+
+      if (Exit.isFailure(outcome)) {
+        yield* Effect.forEach(uploadedKeys, (key) =>
+          storage.deleteFile(key).pipe(Effect.ignore),
+        ).pipe(Effect.ignore);
+
+        return yield* Effect.failCause(outcome.cause);
+      }
+
+      return yield* Effect.try({
+        try: () => parse(postsSelectSchema)(outcome.value),
         catch: (error) =>
           new ValidationError({
             message: "There was an error processing the upload result",
             cause: error,
           }),
       });
-
-      if (tags.length > 0) {
-        yield* resolveAndLinkTags(db, newPost.id, tags);
-        yield* Effect.logInfo("Tags linked to post").pipe(
-          Effect.annotateLogs({
-            postId: String(newPost.id),
-            tagCount: tags.length,
-          }),
-        );
-      }
-
-      yield* Effect.logInfo("Upload completed").pipe(
-        Effect.annotateLogs("postId", String(newPost.id)),
-      );
-
-      return post;
     });
 
     const getByTag = Effect.fn("PostsService.getByTag")(function* (
@@ -624,7 +660,7 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
 export const PostsServiceLive = Layer.effect(PostsService, PostsService.make);
 
 export const searchPosts = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => parseStrict(searchPostsBaseSchema)(input))
+  .validator(parseStrict(searchPostsBaseSchema))
   .handler(createHandler(PostsService.search, PostsServiceLive));
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
@@ -634,11 +670,18 @@ export const fetchPostDetail = createServerFn({ strict: { output: false } })
 export const uploadPost = createServerFn({ method: "POST" })
   .validator((data: FormData) => {
     const raw = Object.fromEntries(data.entries());
+    // SAFETY: raw["tags"] is a JSON string field in the multipart form; the
+    // schema re-validates the parsed value against FormFileUploadSchema.
     const tags = raw["tags"] ? JSON.parse(raw["tags"] as string) : [];
+    // SAFETY: raw["videoMetadata"] is a JSON string field in the multipart form;
+    // the schema re-validates the parsed value against FormFileUploadSchema.
     const videoMetadata = raw["videoMetadata"]
       ? JSON.parse(raw["videoMetadata"] as string)
       : undefined;
-    const normalized: Record<string, unknown> = {
+    // SAFETY: the object deliberately mixes arbitrary FormData keys (validated
+    // away by the strict schema) with the four known fields; the inferred
+    // value type is a string-keyed map whose values are validated downstream.
+    const normalized = {
       relatedPostId: undefined,
       source: undefined,
       ...raw,
@@ -647,10 +690,16 @@ export const uploadPost = createServerFn({ method: "POST" })
     };
     return parseStrict(FormFileUploadSchema)(normalized);
   })
-  .handler(createHandler(PostsService.upload, PostsServiceLive));
+  .handler(
+    createHandler(
+      PostsService.upload,
+      PostsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const updatePost = createServerFn({ method: "POST" })
-  .validator((input: unknown) => parseStrict(updatePostInputSchema)(input))
+  .validator(parseStrict(updatePostInputSchema))
   .handler(
     createHandler(
       PostsService.update,

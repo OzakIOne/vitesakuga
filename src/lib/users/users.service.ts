@@ -214,5 +214,5 @@ export const fetchUsers = createServerFn().handler(
 );
 
 export const fetchUserPosts = createServerFn()
-  .validator((input: unknown) => parseStrict(fetchUserInputSchema)(input))
+  .validator(parseStrict(fetchUserInputSchema))
   .handler(createHandler(UsersService.userPosts, UsersServiceLive));

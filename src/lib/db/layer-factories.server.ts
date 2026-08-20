@@ -13,6 +13,8 @@ const isE2E = process.env["DATABASE_DRIVER"] === "pglite";
 export const makeDBLayer = async () => {
   const dbModule = isE2E ? await import("./e2e-db") : await import("./kysely");
 
+  // SAFETY: dbModule is the static import of "./e2e-db" in the isE2E branch and of
+  // "./kysely" otherwise, so each cast matches the module actually loaded above.
   const kyselyInstance = isE2E
     ? await (dbModule as typeof import("./e2e-db")).createE2EKysely()
     : (dbModule as typeof import("./kysely")).kysely;

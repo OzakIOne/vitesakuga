@@ -1,7 +1,10 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { toaster } from "src/components/ui/toaster";
 
-export function errorMessage(error: unknown, fallback: string): string {
+export function errorMessage(
+  error: Error | string | null | undefined,
+  fallback: string,
+): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
@@ -17,7 +20,7 @@ export function toastSuccess(title: string, description?: string): void {
 
 export function toastError(
   title: string,
-  error: unknown,
+  error: Error,
   fallback: string,
   retry?: () => void,
 ): void {

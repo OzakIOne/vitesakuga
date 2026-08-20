@@ -292,6 +292,27 @@ describe("PostsService.getByTag", () => {
   });
 });
 
+describe("PostsService.upload", () => {
+  const makeUploadInput = () => ({
+    content: "<p>Test upload</p>",
+    relatedPostId: undefined,
+    source: undefined,
+    tags: [],
+    thumbnail: new File(["thumb"], "thumb.jpg", { type: "image/jpeg" }),
+    title: "Uploaded Post",
+    video: new File(["video"], "video.mp4", { type: "video/mp4" }),
+    videoMetadata: undefined,
+  });
+
+  it("throws unauthorized when no session", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
+
+    await expect(
+      runEffect(PostsService.upload(makeUploadInput())),
+    ).rejects.toThrow("You must be logged in");
+  });
+});
+
 describe("PostsService.update", () => {
   it("throws unauthorized when no session", async () => {
     mockGetSession.mockResolvedValueOnce(null);

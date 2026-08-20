@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 
 import type { makeMiddlewareLayer } from "./db/layer-factories.server";
 
-type LayerShape = Layer.Layer<never, unknown, unknown>;
+type ServerLayer = Layer.Layer<never, unknown, unknown>;
 
 export const baseLayerFactories = {
   // Dynamic imports keep server-only modules (AWS SDK, DB driver) out of the
@@ -10,18 +10,21 @@ export const baseLayerFactories = {
   db: () => import("./db/layer-factories.server").then((m) => m.makeDBLayer()),
   auth: () =>
     import("./db/layer-factories.server").then((m) => m.makeAuthLayer()),
-} satisfies Record<"db" | "auth", () => Promise<LayerShape>>;
+} satisfies Record<"db" | "auth", () => Promise<ServerLayer>>;
 
 export const createHandler =
   <TParams = undefined, A = unknown, E = unknown>(
     effect: (data: TParams) => Effect.Effect<A, E, unknown>,
-    serviceLayer: LayerShape,
-    makeBase: () => Promise<LayerShape> = baseLayerFactories.db,
+    serviceLayer: ServerLayer,
+    makeBase: () => Promise<ServerLayer> = baseLayerFactories.db,
   ) =>
   async ({ data }: { data: TParams }): Promise<A> => {
     const base = await makeBase();
     const layer = serviceLayer.pipe(Layer.provideMerge(base));
 
+    // SAFETY: the merged layer provides every service the effect requires; the
+    // erased layer types cannot express that, so the assertion asserts the
+    // requirements are satisfied at this Effect -> Promise seam.
     return Effect.runPromise(
       effect(data).pipe(
         Effect.provide(layer),
@@ -30,9 +33,6 @@ export const createHandler =
             Effect.annotateLogs({ error }),
           ),
         ),
-        // The merged layer provides every service the effect requires; the
-        // erased layer types can't express that, so we assert the requirements
-        // are satisfied at this Effect → async seam.
       ) as Effect.Effect<A, unknown>,
     );
   };

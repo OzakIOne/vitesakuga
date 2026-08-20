@@ -34,7 +34,8 @@ export class CommentsService extends Context.Service<
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) => Effect.Effect<
       Schema.Schema.Type<typeof commentsSelectSchema>,
-      SqlError | SqlNoFirstResult
+      SqlError | SqlNoFirstResult | UnauthorizedError | SessionFetchError,
+      AuthServices
     >;
     readonly delete_: (
       commentId: number,
@@ -78,6 +79,16 @@ export class CommentsService extends Context.Service<
     const add = Effect.fn("CommentsService.add")(function* (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) {
+      const session = yield* getSessionEffect();
+
+      if (!session?.user) {
+        return yield* Effect.fail(
+          new UnauthorizedError({
+            message: "You must be logged in to comment",
+          }),
+        );
+      }
+
       const comment = yield* db.executeTakeFirstOrError(
         db
           .insertInto("comments")
@@ -85,7 +96,7 @@ export class CommentsService extends Context.Service<
             content: data.content,
             createdAt: new Date(),
             postId: data.postId,
-            userId: data.userId,
+            userId: session.user.id,
           })
           .returning(["id", "postId", "content", "userId", "createdAt"]),
       );
@@ -94,7 +105,7 @@ export class CommentsService extends Context.Service<
         Effect.annotateLogs({
           commentId: String(comment.id),
           postId: String(data.postId),
-          userId: data.userId,
+          userId: session.user.id,
         }),
       );
 
@@ -179,20 +190,24 @@ export const CommentsServiceLive = Layer.effect(
 );
 
 export const fetchComments = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => parse(Schema.Number)(input))
+  .validator(parse(Schema.Number))
   .handler(createHandler(CommentsService.fetch, CommentsServiceLive));
 
 export const addComment = createServerFn({
   method: "POST",
   strict: { output: false },
 })
-  .validator((input: unknown) => parse(commentInsertSchema)(input))
-  .handler(createHandler(CommentsService.add, CommentsServiceLive));
+  .validator(parse(commentInsertSchema))
+  .handler(
+    createHandler(
+      CommentsService.add,
+      CommentsServiceLive,
+      baseLayerFactories.auth,
+    ),
+  );
 
 export const deleteComment = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parse(Schema.Struct({ commentId: Schema.Number }))(input),
-  )
+  .validator(parse(Schema.Struct({ commentId: Schema.Number })))
   .handler(
     createHandler(
       (data: { commentId: number }) => CommentsService.delete_(data.commentId),

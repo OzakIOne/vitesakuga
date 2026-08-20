@@ -14,6 +14,7 @@ export const Tabs = {
     props: React.ComponentProps<typeof ArkTabs.Root> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Root
         className={cx(className)}
@@ -26,6 +27,7 @@ export const Tabs = {
     props: React.ComponentProps<typeof ArkTabs.List> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.List
         className={cx(TABS_LIST_BASE, className)}
@@ -38,6 +40,7 @@ export const Tabs = {
     props: React.ComponentProps<typeof ArkTabs.Trigger> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Trigger
         className={cx(TABS_TRIGGER_BASE, className)}
@@ -50,6 +53,7 @@ export const Tabs = {
     props: React.ComponentProps<typeof ArkTabs.Content> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Content
         className={cx(className)}
@@ -62,6 +66,7 @@ export const Tabs = {
     props: React.ComponentProps<typeof ArkTabs.Indicator> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Indicator
         className={cx(className)}

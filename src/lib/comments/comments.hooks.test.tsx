@@ -54,7 +54,7 @@ describe(useAddComment, () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockAddComment).toHaveBeenCalledWith({
-      data: { postId: 42, content: "Nice post!", userId: "user-1" },
+      data: { postId: 42, content: "Nice post!" },
     });
   });
 

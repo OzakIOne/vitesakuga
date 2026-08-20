@@ -13,7 +13,6 @@ import type { UploadDraftData } from "./useUploadDraft";
 
 type UseUploadFormParams = {
   draft: UploadDraftData | null;
-  userId: string;
   videoFile: File | null;
   thumbnail: File | undefined;
   videoMetadata: VideoMetadata | undefined;
@@ -21,8 +20,7 @@ type UseUploadFormParams = {
 };
 
 export function useUploadForm(params: UseUploadFormParams) {
-  const { draft, userId, videoFile, thumbnail, videoMetadata, onDraftClear } =
-    params;
+  const { draft, videoFile, thumbnail, videoMetadata, onDraftClear } = params;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -48,7 +46,6 @@ export function useUploadForm(params: UseUploadFormParams) {
       tags: (draft?.tags ?? []) as Tag[],
       thumbnail: undefined as unknown as File,
       title: draft?.title ?? "",
-      userId,
       video: undefined as unknown as File,
       videoMetadata: undefined as VideoMetadata,
     },
@@ -90,7 +87,6 @@ export function useUploadForm(params: UseUploadFormParams) {
     if (videoMetadata) {
       form.setFieldValue("videoMetadata", videoMetadata);
     }
-    form.setFieldValue("userId", userId);
     await form.handleSubmit();
   };
 

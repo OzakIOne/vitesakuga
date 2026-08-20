@@ -97,12 +97,26 @@ describe("CommentsService.fetch", () => {
 });
 
 describe("CommentsService.add", () => {
-  it("creates a comment and returns it", async () => {
+  it("throws unauthorized when no session", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
+
+    await expect(
+      runEffect(
+        CommentsService.add({
+          content: "Nice!",
+          postId,
+        }),
+      ),
+    ).rejects.toThrow("You must be logged in");
+  });
+
+  it("creates a comment as the session user and returns it", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
     const result = await runEffect(
       CommentsService.add({
         content: "Nice!",
         postId,
-        userId: "user-1",
       }),
     );
 
@@ -121,12 +135,13 @@ describe("CommentsService.add", () => {
   });
 
   it("throws on database error for missing post", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
     await expect(
       runEffect(
         CommentsService.add({
           content: "Bad",
           postId: 999,
-          userId: "user-1",
         }),
       ),
     ).rejects.toThrow("SqlError");

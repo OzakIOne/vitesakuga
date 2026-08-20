@@ -77,7 +77,6 @@ export const FormFileUploadSchema = Schema.Struct({
   tags: Schema.Array(TagSchema),
   thumbnail: Schema.instanceOf(File),
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  userId: Schema.String,
   video: VideoFile,
   videoMetadata: VideoMetadataSchema,
 });

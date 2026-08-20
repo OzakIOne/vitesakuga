@@ -3,6 +3,8 @@ import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
+import { PasskeysSection } from "src/components/PasskeysSection";
+import { TwoFactorSection } from "src/components/TwoFactorSection";
 import { Button, CloseButton } from "src/components/ui/button";
 import { Field, Input, InputGroup } from "src/components/ui/field";
 import { Box } from "src/components/ui/layout";
@@ -81,7 +83,10 @@ function RouteComponent() {
           <AvatarGroup>
             <Avatar.Root size="2xl">
               <Avatar.Fallback />
-              <Avatar.Image className="rounded-full" src={user.image ?? ""} />
+              <Avatar.Image
+                className="rounded-full"
+                src={user.image ?? undefined}
+              />
             </Avatar.Root>
           </AvatarGroup>
           <div className="min-w-0 flex-1">
@@ -167,7 +172,9 @@ function RouteComponent() {
                           <AvatarGroup>
                             <Avatar.Root size="lg">
                               <Avatar.Fallback />
-                              <Avatar.Image src={field.state.value} />
+                              <Avatar.Image
+                                src={field.state.value || undefined}
+                              />
                             </Avatar.Root>
                           </AvatarGroup>
                         </div>
@@ -267,6 +274,10 @@ function RouteComponent() {
               </passwordForm.Subscribe>
             </form>
           </section>
+
+          <PasskeysSection />
+
+          <TwoFactorSection enabled={user.twoFactorEnabled} />
 
           <section className="border-t border-gray-200 pt-12">
             <Heading as="h2" mb={1} size="md">

@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
+import { UpdateObject } from "kysely";
 
 import type { AuthServices } from "../auth/context";
 import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import type { DB } from "../db/kysely";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -305,7 +307,7 @@ export class PlaylistsService extends Context.Service<
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
 
-      const setValues: Record<string, unknown> = {
+      const setValues: UpdateObject<DB, "playlists"> = {
         updated_at: new Date(),
       };
       if (data.title !== undefined) setValues["title"] = data.title;
@@ -390,6 +392,8 @@ export class PlaylistsService extends Context.Service<
               .select(trx.fn.max("playlist_posts.position").as("max_pos"))
               .where("playlist_id", "=", data.playlistId),
           );
+          // SAFETY: the aggregate row exposes max_pos under the alias used in
+          // select(); indexing via keyof keeps the lookup type-safe.
           const maxPos =
             maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
           const nextPosition = (maxPos != null ? Number(maxPos) : -1) + 1;
@@ -650,6 +654,8 @@ export class PlaylistsService extends Context.Service<
 
         const countMap = new Map<number, number>();
         for (const c of postCounts) {
+          // SAFETY: postCounts rows select playlist_id as a number column; the
+          // keyof-typed index access keeps the lookup type-safe with the DB row type.
           countMap.set(
             c["playlist_id" as keyof typeof c] as number,
             Number(c.count),
@@ -1031,7 +1037,7 @@ export const PlaylistsServiceLive = Layer.effect(
 );
 
 export const createPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) => parseStrict(createPlaylistInputSchema)(input))
+  .validator(parseStrict(createPlaylistInputSchema))
   .handler(
     createHandler(
       PlaylistsService.create,
@@ -1041,7 +1047,7 @@ export const createPlaylist = createServerFn({ method: "POST" })
   );
 
 export const updatePlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) => parseStrict(updatePlaylistInputSchema)(input))
+  .validator(parseStrict(updatePlaylistInputSchema))
   .handler(
     createHandler(
       PlaylistsService.update,
@@ -1051,9 +1057,7 @@ export const updatePlaylist = createServerFn({ method: "POST" })
   );
 
 export const deletePlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parse(Schema.Struct({ playlistId: Schema.Number }))(input),
-  )
+  .validator(parse(Schema.Struct({ playlistId: Schema.Number })))
   .handler(
     createHandler(
       (data: { playlistId: number }) =>
@@ -1064,9 +1068,7 @@ export const deletePlaylist = createServerFn({ method: "POST" })
   );
 
 export const addPostToPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parseStrict(addPostToPlaylistInputSchema)(input),
-  )
+  .validator(parseStrict(addPostToPlaylistInputSchema))
   .handler(
     createHandler(
       PlaylistsService.addPost,
@@ -1076,9 +1078,7 @@ export const addPostToPlaylist = createServerFn({ method: "POST" })
   );
 
 export const removePostFromPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parseStrict(removePostFromPlaylistInputSchema)(input),
-  )
+  .validator(parseStrict(removePostFromPlaylistInputSchema))
   .handler(
     createHandler(
       PlaylistsService.removePost,
@@ -1088,9 +1088,7 @@ export const removePostFromPlaylist = createServerFn({ method: "POST" })
   );
 
 export const bulkAddPostsToPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parseStrict(bulkAddPostsToPlaylistInputSchema)(input),
-  )
+  .validator(parseStrict(bulkAddPostsToPlaylistInputSchema))
   .handler(
     createHandler(
       PlaylistsService.bulkAddPosts,
@@ -1100,9 +1098,7 @@ export const bulkAddPostsToPlaylist = createServerFn({ method: "POST" })
   );
 
 export const bulkRemovePostsFromPlaylist = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parseStrict(bulkRemovePostsFromPlaylistInputSchema)(input),
-  )
+  .validator(parseStrict(bulkRemovePostsFromPlaylistInputSchema))
   .handler(
     createHandler(
       PlaylistsService.bulkRemovePosts,
@@ -1112,9 +1108,7 @@ export const bulkRemovePostsFromPlaylist = createServerFn({ method: "POST" })
   );
 
 export const reorderPlaylistPosts = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parseStrict(reorderPlaylistPostsInputSchema)(input),
-  )
+  .validator(parseStrict(reorderPlaylistPostsInputSchema))
   .handler(
     createHandler(
       PlaylistsService.reorder,
@@ -1126,7 +1120,7 @@ export const reorderPlaylistPosts = createServerFn({ method: "POST" })
 export const fetchUserPlaylists = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => parse(Schema.String)(input))
+  .validator(parse(Schema.String))
   .handler(
     createHandler(
       (data: string) => PlaylistsService.fetchUserPlaylists(data),
@@ -1138,7 +1132,7 @@ export const fetchUserPlaylists = createServerFn({
 export const fetchPublicPlaylists = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => parseStrict(fetchPublicPlaylistsSchema)(input))
+  .validator(parseStrict(fetchPublicPlaylistsSchema))
   .handler(
     createHandler(
       PlaylistsService.fetchPublicPlaylists,
@@ -1150,7 +1144,7 @@ export const fetchPublicPlaylists = createServerFn({
 export const fetchPlaylistDetail = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => parseStrict(fetchPlaylistDetailSchema)(input))
+  .validator(parseStrict(fetchPlaylistDetailSchema))
   .handler(
     createHandler(
       PlaylistsService.fetchDetail,
@@ -1162,7 +1156,7 @@ export const fetchPlaylistDetail = createServerFn({
 export const fetchPlaylistsForPost = createServerFn({
   strict: { output: false },
 })
-  .validator((input: unknown) => parse(Schema.Number)(input))
+  .validator(parse(Schema.Number))
   .handler(
     createHandler(
       (data: number) => PlaylistsService.fetchForPost(data),

@@ -17,7 +17,7 @@ const subscribe = (): (() => void) => () => {};
 
 function isMacPlatform(): boolean {
   return (
-    typeof navigator !== "undefined" &&
+    "navigator" in globalThis &&
     (navigator.platform?.toLowerCase().includes("mac") ||
       navigator.userAgent.toLowerCase().includes("mac"))
   );

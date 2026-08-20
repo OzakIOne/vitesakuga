@@ -2,28 +2,33 @@ import { Progress as ArkProgress } from "@ark-ui/react";
 import * as React from "react";
 import { LuCircleAlert, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
 
-import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
+import {
+  classToken,
+  cx,
+  useChakraProps,
+  type ChakraStyleProps,
+} from "./ui-utils";
 
 type Palette = "blue" | "gray" | "red" | "green" | "orange";
 
-const SUBTLE_BADGE: Record<Palette, string> = {
+const SUBTLE_BADGE = {
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
   gray: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
   red: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
   green: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
   orange:
     "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200",
-};
+} satisfies Record<Palette, string>;
 
-const SOLID_BADGE: Record<Palette, string> = {
+const SOLID_BADGE = {
   blue: "bg-blue-600 text-white",
   gray: "bg-gray-900 text-white",
   red: "bg-red-600 text-white",
   green: "bg-green-600 text-white",
   orange: "bg-orange-600 text-white",
-};
+} satisfies Record<Palette, string>;
 
-const OUTLINE_BADGE: Record<Palette, string> = {
+const OUTLINE_BADGE = {
   blue: "border border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300",
   gray: "border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300",
   red: "border border-red-300 text-red-700 dark:border-red-800 dark:text-red-300",
@@ -31,13 +36,15 @@ const OUTLINE_BADGE: Record<Palette, string> = {
     "border border-green-300 text-green-700 dark:border-green-800 dark:text-green-300",
   orange:
     "border border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-300",
-};
+} satisfies Record<Palette, string>;
 
-const BADGE_SIZES: Record<string, string> = {
+type BadgeSize = "xs" | "sm" | "lg";
+
+const BADGE_SIZES = {
   xs: "px-1.5 py-0.5 text-[0.65rem]",
   sm: "px-2 py-0.5 text-xs",
   lg: "px-2.5 py-1 text-sm",
-};
+} satisfies Record<BadgeSize, string>;
 
 type BadgeProps = {
   variant?: "subtle" | "solid" | "outline";
@@ -61,11 +68,12 @@ export function Badge({
     solid: SOLID_BADGE[palette],
     outline: OUTLINE_BADGE[palette],
   }[variant];
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <span
       className={cx(
         "inline-flex items-center gap-1 rounded-md font-medium",
-        BADGE_SIZES[size] ?? BADGE_SIZES["sm"],
+        classToken(BADGE_SIZES, size, "sm"),
         paletteClasses,
         className,
       )}
@@ -94,6 +102,7 @@ export function Spinner({ size = "md", color, ...props }: SpinnerProps) {
         : size === "lg"
           ? "h-8 w-8 border-4"
           : "h-6 w-6 border-2";
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <span
       aria-label="Loading"
@@ -113,6 +122,7 @@ type SkeletonProps = React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps;
 
 export function Skeleton(props: SkeletonProps) {
   const { className, style, rest } = useChakraProps(props);
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <div
       aria-hidden="true"
@@ -124,6 +134,7 @@ export function Skeleton(props: SkeletonProps) {
 }
 
 export const Progress = {
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   Root: ({
     striped: _striped,
     ...props
@@ -133,6 +144,7 @@ export const Progress = {
       {...(props as React.ComponentProps<typeof ArkProgress.Root>)}
     />
   ),
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   Label: (
     props: React.ComponentProps<typeof ArkProgress.Label> & ChakraStyleProps,
   ) => (
@@ -141,6 +153,7 @@ export const Progress = {
       {...(props as React.ComponentProps<typeof ArkProgress.Label>)}
     />
   ),
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   ValueText: (
     props: React.ComponentProps<typeof ArkProgress.ValueText> &
       ChakraStyleProps,
@@ -150,6 +163,7 @@ export const Progress = {
       {...(props as React.ComponentProps<typeof ArkProgress.ValueText>)}
     />
   ),
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   Track: (
     props: React.ComponentProps<typeof ArkProgress.Track> & ChakraStyleProps,
   ) => (
@@ -158,6 +172,7 @@ export const Progress = {
       {...(props as React.ComponentProps<typeof ArkProgress.Track>)}
     />
   ),
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   Range: (
     props: React.ComponentProps<typeof ArkProgress.Range> & ChakraStyleProps,
   ) => (
@@ -182,6 +197,7 @@ export const Alert = {
       info: "border-blue-200 bg-blue-50 text-blue-800",
       warning: "border-orange-200 bg-orange-50 text-orange-800",
     }[status];
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
         className={cx("rounded-md border p-4", statusClasses, className)}
@@ -193,6 +209,7 @@ export const Alert = {
   },
   Content: (props: React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
         className={cx("flex items-start gap-3", className)}
@@ -220,6 +237,7 @@ export const Alert = {
     props: React.HTMLAttributes<HTMLHeadingElement> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <p
         className={cx("font-semibold", className)}
@@ -232,6 +250,7 @@ export const Alert = {
     props: React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
         className={cx("mt-1 text-sm", className)}
@@ -249,6 +268,7 @@ export const DataList = {
   }: { orientation?: string } & React.HTMLAttributes<HTMLDListElement> &
     ChakraStyleProps) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dl
         className={cx("flex flex-col gap-2 text-sm", className)}
@@ -259,6 +279,7 @@ export const DataList = {
   },
   Item: (props: React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
         className={cx("grid grid-cols-2 gap-2", className)}
@@ -271,6 +292,7 @@ export const DataList = {
     props: React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dt
         className={cx("text-gray-500", className)}
@@ -283,6 +305,7 @@ export const DataList = {
     props: React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dd
         className={cx("min-w-0 break-words font-medium", className)}

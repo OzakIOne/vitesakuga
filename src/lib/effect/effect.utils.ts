@@ -65,6 +65,9 @@ const makeExecutor = <DB>(client: Kysely<DB>): EffectExecutor => ({
 });
 
 export const makeFromKysely = <DB>(kysely: Kysely<DB>): EffectKysely<DB> => {
+  // SAFETY: MarkedKysely<DB> is Kysely<DB> plus one optional symbol property,
+  // so reading that property off any Kysely instance is always valid and
+  // yields EffectKysely<DB> | undefined when the marker was never set.
   const existing = (kysely as MarkedKysely<DB>)[EFFECT_KYSELY_MARKER];
   if (existing) {
     return existing;
@@ -84,6 +87,8 @@ export const makeFromKysely = <DB>(kysely: Kysely<DB>): EffectKysely<DB> => {
           f: (trx: EffectTransition<DB>) => Effect.Effect<A, E>,
         ) => {
           return Effect.callback<A, E>((resume) => {
+            // SAFETY: Effect.runPromise rejects with the Effect's failure-channel
+            // value; f fixes that channel to E, so the rejected value is a valid E.
             kyselyBuilderExecute((trx) =>
               Effect.runPromise(f(Object.assign(trx, makeExecutor(trx)))),
             )
@@ -162,6 +167,9 @@ const executeRaw =
       },
     }).pipe(executeSpan(client, query));
 
+// SAFETY: executeSpan only attaches a tracing span (Effect.withSpan) and never
+// changes the success or failure channel, so narrowing the piped result back to
+// the declared Effect.Effect<O[], SqlError> signature is sound.
 const execute =
   <DB>(client: Kysely<DB>) =>
   <O>(query: Query<O>): Effect.Effect<O[], SqlError> =>
@@ -221,6 +229,8 @@ const executeTakeFirstOrError =
         }),
       ),
     );
+// SAFETY: executeTakeFirstUnsafe is unsafe by contract — the caller guarantees
+// the query returns at least one row, so result[0] is a defined value of type O.
 const executeTakeFirstUnsafe =
   <DB>(client: Kysely<DB>) =>
   <O>(query: Query<O>) =>

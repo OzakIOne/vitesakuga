@@ -199,7 +199,7 @@ export const PostVotesServiceLive = Layer.effect(
 );
 
 export const fetchPostVotes = createServerFn({ strict: { output: false } })
-  .validator((input: unknown) => parse(Schema.Number)(input))
+  .validator(parse(Schema.Number))
   .handler(
     createHandler(
       PostVotesService.get,
@@ -209,7 +209,7 @@ export const fetchPostVotes = createServerFn({ strict: { output: false } })
   );
 
 export const setPostVote = createServerFn({ method: "POST" })
-  .validator((input: unknown) => parseStrict(setPostVoteSchema)(input))
+  .validator(parseStrict(setPostVoteSchema))
   .handler(
     createHandler(
       PostVotesService.set,
@@ -219,7 +219,7 @@ export const setPostVote = createServerFn({ method: "POST" })
   );
 
 export const removePostVote = createServerFn({ method: "POST" })
-  .validator((input: unknown) => parseStrict(removePostVoteSchema)(input))
+  .validator(parseStrict(removePostVoteSchema))
   .handler(
     createHandler(
       PostVotesService.remove,

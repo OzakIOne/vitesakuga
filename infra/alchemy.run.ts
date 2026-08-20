@@ -112,6 +112,16 @@ export default Alchemy.Stack(
 
     const bucket = yield* SakugaBucket;
 
+    // Invisible Cloudflare Turnstile widget for the auth endpoints (production
+    // stage only; harmless in dev since the app gates the captcha plugin).
+    // `sitekey` is public (rendered in the sign-in form), `secret` is verified
+    // server-side by the Better Auth captcha plugin and bound as a secret.
+    const turnstile = yield* Cloudflare.Turnstile.Widget("SakugaTurnstile", {
+      name: `sakuga-turnstile-${stage}`,
+      domains: [appDomain],
+      mode: "invisible",
+    });
+
     const SakugaWorker = Cloudflare.Worker("SakugaWorker", {
       // Nitro `cloudflare_module` build output (see nitro.config.ts). Run
       // `nub run build` before deploying so `.output/` exists.
@@ -147,6 +157,15 @@ export default Alchemy.Stack(
         NODE_ENV: Config.string("NODE_ENV").pipe(
           Config.withDefault("production"),
         ),
+        // Cloudflare Rate Limiting binding (edge, per-IP). Consumed in the
+        // Nitro runtime via `event.req.runtime.cloudflare.env.RATE_LIMIT`.
+        RATE_LIMIT: Cloudflare.RateLimit("RATE_LIMIT", {
+          namespaceId: 1001,
+          simple: { limit: 100, period: 60 },
+        }),
+        // Turnstile widget keys: sitekey is public, secret is server-only.
+        TURNSTILE_SITEKEY: turnstile.sitekey,
+        TURNSTILE_SECRET: turnstile.secret,
         VITE_BASE_URL: Config.string("VITE_BASE_URL"),
       },
     });

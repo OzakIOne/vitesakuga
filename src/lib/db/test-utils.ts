@@ -61,6 +61,8 @@ export const makeServiceTestLayer = async (
 ): Promise<ServiceTestContext> => {
   const { db } = await createTestKysely();
   const mockGetSession = vi.fn<AuthSessionProvider["api"]["getSession"]>();
+  // SAFETY: mockGetSession is a vi.fn implementing AuthSessionProvider["api"]["getSession"],
+  // so the inline object widens to the provider contract only via that matching signature.
   const baseLayer = makeTestLayer(
     db,
     { api: { getSession: mockGetSession } } as AuthSessionProvider,

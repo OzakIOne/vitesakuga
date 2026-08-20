@@ -13,11 +13,11 @@ export function useAddComment(postId: number, userId: string) {
     errorFallback: "Failed to add comment",
     errorTitle: "Error adding comment",
     mutationFn: async (content: string) =>
-      addComment({ data: { postId, content, userId } }),
+      addComment({ data: { postId, content } }),
     onMutate: async (content) => {
       await queryClient.cancelQueries({ queryKey: commentsKeys.post(postId) });
       const previous = queryClient.getQueryData(commentsKeys.post(postId));
-      queryClient.setQueryData(commentsKeys.post(postId), (old: unknown) => {
+      queryClient.setQueryData(commentsKeys.post(postId), (old) => {
         const optimistic = {
           id: -Date.now(),
           postId,
@@ -27,6 +27,8 @@ export function useAddComment(postId: number, userId: string) {
           userName: "You",
           userImage: null,
         };
+        // SAFETY: the optimistic comment list is homogeneous (all rows are
+        // comment objects); unknown[] keeps the updater agnostic to the cache shape.
         return old ? [optimistic, ...(old as unknown[])] : [optimistic];
       });
       return { previous };
@@ -57,7 +59,9 @@ export function useDeleteComment(postId: number) {
     onMutate: async ({ commentId }) => {
       await queryClient.cancelQueries({ queryKey: commentsKeys.post(postId) });
       const previous = queryClient.getQueryData(commentsKeys.post(postId));
-      queryClient.setQueryData(commentsKeys.post(postId), (old: unknown) =>
+      // SAFETY: the cached list holds comment rows; the filter predicate only uses
+      // each row's id, so a minimal shape assertion is enough for the updater.
+      queryClient.setQueryData(commentsKeys.post(postId), (old) =>
         (old as Array<{ id: number }> | undefined)?.filter(
           (c) => c.id !== commentId,
         ),

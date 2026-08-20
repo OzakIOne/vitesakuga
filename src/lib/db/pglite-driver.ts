@@ -23,6 +23,8 @@ class PGliteConnection implements DatabaseConnection {
     const result = await this.pg.query(compiledQuery.sql, [
       ...compiledQuery.parameters,
     ]);
+    // SAFETY: PGlite returns rows as plain objects shaped like the compiled query's row
+    // type R, and affectedRows mirrors pg's rowCount, so the cast to QueryResult<R> holds.
     return {
       numAffectedRows:
         result.affectedRows != null ? BigInt(result.affectedRows) : undefined,

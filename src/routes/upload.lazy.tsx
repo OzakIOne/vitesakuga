@@ -36,8 +36,6 @@ export const Route = createLazyFileRoute("/upload")({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext();
-
   const video = useVideoProcessing();
   const draft = useUploadDraft();
 
@@ -45,7 +43,6 @@ function RouteComponent() {
     draft: draft.draft,
     onDraftClear: draft.clear,
     thumbnail: video.thumbnails[video.selectedThumbnailIndex]?.file,
-    userId: user?.id ?? "",
     videoFile: video.videoFile,
     videoMetadata: video.videoMetadata,
   });
@@ -161,17 +158,12 @@ function RouteComponent() {
   const handleRelatedPostValueChange = (
     details: ComboboxValueChangeDetails,
   ) => {
-    const selected = (details.items[0] ?? details.value[0]) as
-      | { label: string; value: string }
-      | string
-      | undefined;
-    if (!selected) {
-      return;
-    }
     const item =
-      typeof selected === "string"
-        ? relatedPostCollection.find(selected)
-        : selected;
+      details.items[0] !== undefined
+        ? details.items[0]
+        : details.value[0]
+          ? relatedPostCollection.find(details.value[0])
+          : undefined;
     if (!item) {
       return;
     }

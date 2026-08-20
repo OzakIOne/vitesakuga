@@ -119,6 +119,9 @@ export function PlaylistAddModal({
       void queryClient.invalidateQueries({
         queryKey: playlistsKeys.userPlaylists(userId),
       });
+      // SAFETY: the ternary guard proves createdPlaylistId is defined whenever
+      // the callback runs; the re-assertion only restores the narrowing that
+      // TypeScript drops across the closure boundary.
       const retry = createdPlaylistId
         ? () => void handleToggle(createdPlaylistId as number, false)
         : undefined;

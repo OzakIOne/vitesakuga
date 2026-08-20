@@ -14,6 +14,8 @@ export function useTagCollection(options: {
     q.from({ t: tagsCollection }).orderBy(({ t }) => t.name, "asc"),
   );
 
+  // SAFETY: the live query's collection returns tag rows matching the Tag shape;
+  // the live-query collection is weakly typed so the rows are asserted here.
   const typedTags = allTags as Tag[];
 
   const excludeSet = useMemo(() => new Set(exclude), [exclude]);

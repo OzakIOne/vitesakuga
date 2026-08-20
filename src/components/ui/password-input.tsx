@@ -41,6 +41,8 @@ export const PasswordInput = React.forwardRef<
     ...rest
   } = props;
 
+  // SAFETY: rootProps are pre-typed Ark props spread onto the Root; autoComplete
+  // narrows the caller-provided string to the only values Ark accepts.
   return (
     <ArkPasswordInput.Root
       {...(rootProps as React.ComponentProps<typeof ArkPasswordInput.Root>)}

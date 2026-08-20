@@ -146,6 +146,8 @@ export function usePostsInfiniteScroll<
     [data],
   );
 
+  // SAFETY: infinite-query pageParams is a number[], defaulting to [] when the
+  // query has not run; the cast fixes the readonly generic on the cache value.
   const pageParams = useMemo(
     () => (data?.pageParams ?? []) as readonly number[],
     [data],

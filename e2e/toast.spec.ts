@@ -33,6 +33,8 @@ async function fireStackedToasts(page: Page) {
     // Vite dev serves source modules at their .tsx URL; the import specifier is
     // built dynamically so the type-checker does not flag the extension.
     const toasterUrl = ["/src/components/ui/toaster", ".tsx"].join("");
+    // SAFETY: the dynamic import resolves to the toaster module whose shape is
+    // asserted to the exported toaster API in this repo.
     const { toaster } = (await import(toasterUrl)) as {
       toaster: { create: (options: ToastOptions) => void };
     };

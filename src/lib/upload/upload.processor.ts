@@ -14,7 +14,7 @@ export function makeReadChunk(file: File): ReadChunkFunc {
     new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
 }
 
-export function buildFormData<T extends Record<string, unknown>>(values: T) {
+export function buildFormData<T extends object>(values: T) {
   const formData = new FormData();
 
   for (const [key, value] of Object.entries(values)) {
@@ -27,12 +27,13 @@ export function buildFormData<T extends Record<string, unknown>>(values: T) {
       continue;
     }
 
-    if (Array.isArray(value) || typeof value === "object") {
+    if (Array.isArray(value) || value instanceof Object) {
       formData.append(key, JSON.stringify(value));
       continue;
     }
 
-    // fix typing lint issue
+    // SAFETY: values reaching here are primitives (string | number | boolean);
+    // File, null/undefined, arrays and objects were handled above.
     formData.append(key, String(value as string | number | boolean));
   }
 

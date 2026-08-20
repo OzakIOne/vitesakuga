@@ -6,6 +6,18 @@ export function cx(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+/** Look up a class token in a `satisfies`-validated size map by caller key. */
+export function classToken<T extends Record<string, string>>(
+  map: T,
+  key: string,
+  fallback: keyof T,
+): string {
+  // SAFETY: key is a caller-supplied prop string, not statically bounded to the
+  // map's literal key union; the cast keeps indexed access legal while the
+  // fallback covers any key absent from the literal map.
+  return map[key as keyof T] ?? map[fallback];
+}
+
 export function Slot({
   children,
   ...props

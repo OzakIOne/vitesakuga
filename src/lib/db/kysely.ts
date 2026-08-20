@@ -126,6 +126,8 @@ export type DB = {
 export const kysely = isLocal
   ? new Kysely<DB>({
       dialect: new PostgresDialect({
+        // SAFETY: getKyselyPool() creates a PgPool exactly when DATABASE_DRIVER=local
+        // (isLocal), so this pool is always the PgPool PostgresDialect requires.
         pool: getKyselyPool() as PgPool,
       }),
     })

@@ -1,5 +1,8 @@
 import {
+  bigint,
   boolean,
+  index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -20,6 +23,7 @@ export const user = pgTable("user", {
   id: text().primaryKey(),
   image: text(),
   name: text().notNull(),
+  twoFactorEnabled: boolean().notNull().default(false),
   updatedAt: timestamp()
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -32,6 +36,7 @@ export const userSelectSchema = Schema.Struct({
   id: Schema.String,
   image: Schema.NullOr(Schema.String),
   name: Schema.String,
+  twoFactorEnabled: Schema.optionalKey(Schema.Boolean),
   updatedAt: TimestampSchema,
 });
 
@@ -42,6 +47,7 @@ export const userInsertSchema = Schema.Struct({
   id: Schema.String,
   image: Schema.optionalKey(Schema.NullOr(Schema.String)),
   name: Schema.String,
+  twoFactorEnabled: Schema.optionalKey(Schema.Boolean),
   updatedAt: Schema.optionalKey(Schema.Date),
 });
 
@@ -91,3 +97,60 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
   value: text().notNull(),
 });
+
+export const passkey = pgTable(
+  "passkey",
+  {
+    aaguid: text(),
+    backedUp: boolean().notNull(),
+    counter: integer().notNull(),
+    createdAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
+    credentialID: text().notNull(),
+    deviceType: text().notNull(),
+    id: text().primaryKey(),
+    name: text(),
+    publicKey: text().notNull(),
+    transports: text(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("passkey_credentialID_unique").on(t.credentialID),
+    index("passkey_userId_idx").on(t.userId),
+  ],
+);
+
+export const twoFactor = pgTable(
+  "twoFactor",
+  {
+    backupCodes: text().notNull(),
+    failedVerificationCount: integer().notNull().default(0),
+    id: text().primaryKey(),
+    lockedUntil: timestamp(),
+    secret: text().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean().notNull().default(true),
+  },
+  (t) => [
+    index("twoFactor_secret_idx").on(t.secret),
+    index("twoFactor_userId_idx").on(t.userId),
+  ],
+);
+
+// Better Auth rate limiting store (rateLimit.storage = "database").
+// Row per (key, path) pair: `key` is the rate-limit key (IP/path), `count` is
+// the rolling request counter, `lastRequest` the last-hit epoch ms. Written
+// atomically by Better Auth's rate limiter.
+export const rateLimit = pgTable(
+  "rateLimit",
+  {
+    id: text().primaryKey(),
+    key: text().notNull(),
+    count: integer().notNull(),
+    lastRequest: bigint({ mode: "number" }).notNull(),
+  },
+  (t) => [index("rateLimit_key_idx").on(t.key)],
+);

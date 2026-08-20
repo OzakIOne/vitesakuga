@@ -75,9 +75,11 @@ export function useDeletePlaylist(userId: string) {
       const previous = queryClient.getQueryData(
         playlistsKeys.userPlaylists(userId),
       );
+      // SAFETY: the cached user-playlist list holds row objects; the filter only
+      // reads p.id, so this minimal shape assertion is all the updater needs.
       queryClient.setQueryData(
         playlistsKeys.userPlaylists(userId),
-        (old: unknown) =>
+        (old) =>
           (old as Array<{ id: number }> | undefined)?.filter(
             (p) => p.id !== playlistId,
           ),

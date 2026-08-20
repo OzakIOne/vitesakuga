@@ -1,12 +1,18 @@
 import * as React from "react";
 import { LuX } from "react-icons/lu";
 
-import { cx, Slot, useChakraProps, type ChakraStyleProps } from "./ui-utils";
+import {
+  classToken,
+  cx,
+  Slot,
+  useChakraProps,
+  type ChakraStyleProps,
+} from "./ui-utils";
 
 type Variant = "solid" | "outline" | "ghost" | "subtle";
 type Palette = "blue" | "gray" | "red" | "green" | "orange";
 
-const SOLID_CLASSES: Record<Palette, string> = {
+const SOLID_CLASSES = {
   blue: "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-600/40",
   gray: "bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:ring-neutral-900/40",
   red: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600/40",
@@ -14,9 +20,9 @@ const SOLID_CLASSES: Record<Palette, string> = {
     "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-600/40",
   orange:
     "bg-orange-600 text-white hover:bg-orange-700 focus-visible:ring-orange-600/40",
-};
+} satisfies Record<Palette, string>;
 
-const OUTLINE_CLASSES: Record<Palette, string> = {
+const OUTLINE_CLASSES = {
   blue: "border border-blue-600 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-600/40",
   gray: "border border-gray-300 text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400/40",
   red: "border border-red-600 text-red-700 hover:bg-red-50 focus-visible:ring-red-600/40",
@@ -24,17 +30,17 @@ const OUTLINE_CLASSES: Record<Palette, string> = {
     "border border-green-600 text-green-700 hover:bg-green-50 focus-visible:ring-green-600/40",
   orange:
     "border border-orange-600 text-orange-700 hover:bg-orange-50 focus-visible:ring-orange-600/40",
-};
+} satisfies Record<Palette, string>;
 
-const GHOST_CLASSES: Record<Palette, string> = {
+const GHOST_CLASSES = {
   blue: "text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-600/40",
   gray: "text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400/40",
   red: "text-red-700 hover:bg-red-50 focus-visible:ring-red-600/40",
   green: "text-green-700 hover:bg-green-50 focus-visible:ring-green-600/40",
   orange: "text-orange-700 hover:bg-orange-50 focus-visible:ring-orange-600/40",
-};
+} satisfies Record<Palette, string>;
 
-const SUBTLE_CLASSES: Record<Palette, string> = {
+const SUBTLE_CLASSES = {
   blue: "bg-blue-100 text-blue-800 hover:bg-blue-200 focus-visible:ring-blue-600/40",
   gray: "bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-400/40",
   red: "bg-red-100 text-red-800 hover:bg-red-200 focus-visible:ring-red-600/40",
@@ -42,21 +48,23 @@ const SUBTLE_CLASSES: Record<Palette, string> = {
     "bg-green-100 text-green-800 hover:bg-green-200 focus-visible:ring-green-600/40",
   orange:
     "bg-orange-100 text-orange-800 hover:bg-orange-200 focus-visible:ring-orange-600/40",
-};
+} satisfies Record<Palette, string>;
 
-const SIZES: Record<string, string> = {
+type Size = "xs" | "sm" | "md" | "lg";
+
+const SIZES = {
   xs: "h-6 px-2 text-xs",
   sm: "h-8 px-3 text-sm",
   md: "h-10 px-4 text-sm",
   lg: "h-12 px-5 text-base",
-};
+} satisfies Record<Size, string>;
 
-const ICON_SIZES: Record<string, string> = {
+const ICON_SIZES = {
   xs: "h-6 w-6 text-xs",
   sm: "h-8 w-8 text-sm",
   md: "h-10 w-10 text-base",
   lg: "h-12 w-12 text-lg",
-};
+} satisfies Record<Size, string>;
 
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap select-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
@@ -91,7 +99,7 @@ export function buttonClasses({
     ghost: GHOST_CLASSES[palette],
     subtle: SUBTLE_CLASSES[palette],
   }[variant];
-  return cx(BASE, SIZES[size] ?? SIZES["md"], variantClasses);
+  return cx(BASE, classToken(SIZES, size, "md"), variantClasses);
 }
 
 function Spinner({ size = "sm" }: { size?: string }) {
@@ -138,6 +146,7 @@ export function Button({
   );
 
   if (asChild) {
+    // SAFETY: useChakraProps strips Chakra style props into className/style; children is rendered by a Slot that accepts any React element.
     return (
       <Slot
         aria-disabled={isDisabled ? "true" : undefined}
@@ -151,6 +160,7 @@ export function Button({
     );
   }
 
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <button
       className={classes}
@@ -176,6 +186,7 @@ export function IconButton({
   ...props
 }: ButtonProps) {
   const { className, style, rest } = useChakraProps(props);
+  // SAFETY: colorScheme/colorPalette are both the Palette union and default to "gray", keeping the key within the palette class maps.
   const palette = (colorScheme ?? colorPalette ?? "gray") as Palette;
   const variantClasses = {
     solid: SOLID_CLASSES[palette],
@@ -183,12 +194,13 @@ export function IconButton({
     ghost: GHOST_CLASSES[palette],
     subtle: SUBTLE_CLASSES[palette],
   }[variant];
+  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <button
       aria-label={ariaLabel}
       className={cx(
         BASE,
-        ICON_SIZES[size] ?? ICON_SIZES["md"],
+        classToken(ICON_SIZES, size, "md"),
         variantClasses,
         className,
       )}

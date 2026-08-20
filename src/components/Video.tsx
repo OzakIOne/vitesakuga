@@ -28,6 +28,9 @@ type VideoProps = {
 export type VideoRef = ComponentRef<typeof MediaController>;
 
 function isInteractiveTarget(event: KeyboardEvent): boolean {
+  // SAFETY: keyboard events dispatch with an Element (or null) target, and the
+  // only member used below is `closest`, which every Element implements; `?.`
+  // guards the null arm of the asserted union.
   const target = event.target as HTMLElement | null;
   return (
     target?.closest(

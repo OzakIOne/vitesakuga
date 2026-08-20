@@ -104,6 +104,9 @@ export const comments = pgTable("comments", {
     .notNull(),
 });
 
+// Comment insert input. No userId here: it is derived from the authenticated
+// session server-side (see CommentsService.add); trusting a client-sent userId
+// would let any caller impersonate another user.
 export const commentInsertSchema = Schema.Struct({
   content: Schema.String.pipe(
     Schema.decode({
@@ -111,8 +114,5 @@ export const commentInsertSchema = Schema.Struct({
       encode: SchemaGetter.transform((val) => val),
     }),
   ),
-  createdAt: Schema.optionalKey(Schema.Date),
-  id: Schema.optionalKey(Schema.Number),
   postId: Schema.Number,
-  userId: Schema.String,
 });

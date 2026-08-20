@@ -43,6 +43,7 @@ export type UseColorModeReturn = {
 
 export function useColorMode(): UseColorModeReturn {
   const { theme, setTheme, resolvedTheme } = useTheme();
+  // SAFETY: next-themes only ever resolves to "light" or "dark" once mounted.
   const colorMode = resolvedTheme as ColorMode;
   const toggleColorMode = () => {
     if (theme === "light") {
@@ -55,6 +56,8 @@ export function useColorMode(): UseColorModeReturn {
   };
   return {
     colorMode,
+    // SAFETY: next-themes' theme is always one of "light" | "dark" | "system"
+    // (or undefined before mount); nullish-coalescing restores the "system" default.
     theme: (theme ?? "system") as ColorModeSelection,
     setColorMode: setTheme,
     toggleColorMode,

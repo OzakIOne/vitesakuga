@@ -12,9 +12,15 @@ import {
   PasswordStrengthMeter,
   getPasswordStrength,
 } from "src/components/ui/password-input";
-import { useSignUp, useSocialLogin } from "src/lib/auth/auth.hooks";
+import {
+  useSignUp,
+  useSocialLogin,
+} from "src/lib/auth/auth.hooks";
+import type { SignUpInput } from "src/lib/auth/auth.hooks";
 import { signUpSchema } from "src/lib/auth/auth.schemas";
+import { useTurnstile } from "src/lib/auth/useTurnstile";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
+import { envClient } from "src/lib/env/client";
 
 export const Route = createFileRoute("/(auth)/signup")({
   component: SignupForm,
@@ -24,6 +30,9 @@ function SignupForm() {
   const { redirectUrl } = Route.useRouteContext();
   const signUpMutation = useSignUp(redirectUrl);
   const socialLogin = useSocialLogin(redirectUrl);
+  const { containerRef, execute: executeTurnstile } = useTurnstile(
+    envClient.VITE_TURNSTILE_SITEKEY,
+  );
 
   const [serverError, setServerError] = useState("");
 
@@ -35,7 +44,16 @@ function SignupForm() {
       password: "",
     },
     onSubmit: async ({ value }) => {
-      signUpMutation.mutate(value, {
+      const captchaToken = (await executeTurnstile()) ?? undefined;
+      const args: SignUpInput = {
+        name: value.name,
+        email: value.email,
+        password: value.password,
+      };
+      if (captchaToken) {
+        args.captchaToken = captchaToken;
+      }
+      signUpMutation.mutate(args, {
         onError: (error) => setServerError(error.message),
       });
     },
@@ -179,6 +197,9 @@ function SignupForm() {
                 </Button>
               )}
             </form.Subscribe>
+
+            {/* Invisible Turnstile widget mount point (no-op without sitekey). */}
+            <div className="hidden" ref={containerRef} />
           </div>
           {serverError && (
             <div className="alert alert-error" role="alert">
