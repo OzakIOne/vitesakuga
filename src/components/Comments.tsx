@@ -46,10 +46,11 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
         Comments
       </Text>
 
-      <ClientOnly fallback={null}>
-        <CommentComposer currentUserId={currentUserId} postId={postId} />
-      </ClientOnly>
-      {!currentUserId && (
+      {currentUserId ? (
+        <ClientOnly fallback={null}>
+          <CommentComposer currentUserId={currentUserId} postId={postId} />
+        </ClientOnly>
+      ) : (
         <Box mb={4}>
           <Text color="gray.600" fontStyle="italic">
             You need to be logged in to write a comment.
@@ -140,7 +141,13 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   );
 }
 
-function CommentComposer({ postId, currentUserId }: CommentsProps) {
+function CommentComposer({
+  postId,
+  currentUserId,
+}: {
+  postId: number;
+  currentUserId: string;
+}) {
   const postIdStr = postId.toString();
 
   const { data: drafts } = useLiveQuery((query) =>
@@ -151,10 +158,10 @@ function CommentComposer({ postId, currentUserId }: CommentsProps) {
   const draft = drafts?.[0];
   const comment = draft?.content ?? "";
 
-  const addCommentMutation = useAddComment(postId, currentUserId ?? "");
+  const addCommentMutation = useAddComment(postId, currentUserId);
 
   const handleSubmitComment = () => {
-    if (!(comment.trim() && currentUserId)) {
+    if (!comment.trim()) {
       return;
     }
     addCommentMutation.mutate(comment.trim(), {
@@ -173,10 +180,6 @@ function CommentComposer({ postId, currentUserId }: CommentsProps) {
       commentDraftsCollection.insert({ id: postIdStr, content: value });
     }
   };
-
-  if (!currentUserId) {
-    return null;
-  }
 
   return (
     <Box mb={4}>

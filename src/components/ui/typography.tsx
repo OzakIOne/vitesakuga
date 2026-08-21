@@ -69,7 +69,7 @@ type LinkProps = {
 } & React.HTMLAttributes<HTMLAnchorElement> &
   ChakraStyleProps;
 
-export function Link(props: LinkProps) {
+export function Link({ children, ...props }: LinkProps) {
   const { className, style, rest } = useChakraProps({
     ...props,
     color: props.color ?? "blue.600",
@@ -80,6 +80,8 @@ export function Link(props: LinkProps) {
       className={cx("hover:underline", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLAnchorElement>)}
-    />
+    >
+      {children}
+    </a>
   );
 }

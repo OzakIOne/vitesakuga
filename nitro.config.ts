@@ -21,11 +21,20 @@ const mediaSources = [
   .filter(Boolean)
   .join(" ");
 
-const scriptSource = isProductionStage
-  ? "'self' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA='"
-  : "'self' 'unsafe-inline'";
+// Turnstile (challenges.cloudflare.com): the api.js script plus the widget
+// iframe. Both are required by the captcha plugin in the auth pages.
+const turnstileSource = "https://challenges.cloudflare.com";
 
-const contentSecurityPolicy = `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${mediaSources}; media-src 'self' blob: ${mediaSources}; connect-src 'self'; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
+const scriptSource = isProductionStage
+  ? `'self' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA=' ${turnstileSource}`
+  : `'self' 'unsafe-inline' ${turnstileSource}`;
+
+// img-src allows any https image on purpose: profile pictures are
+// user-supplied URLs (any host), and CSP cannot match by file extension, so a
+// per-origin allow-list would need updating for every new host. Images are the
+// lowest-risk resource type (no script execution from <img>); media-src for
+// video stays strictly allow-listed.
+const contentSecurityPolicy = `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: ${mediaSources}; connect-src 'self'; font-src 'self' data:; object-src 'none'; frame-src 'self' ${turnstileSource}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
 export default defineNitroConfig({
   cloudflare: {
@@ -51,6 +60,8 @@ export default defineNitroConfig({
   // - The single inline theme-bootstrap script is allow-listed by its SHA-256
   //   hash (regenerate it if the next-themes injector ever changes: fetch the
   //   page, hash the inline <script> content, and replace the value below).
+  // - Turnstile's api.js and widget iframe come from challenges.cloudflare.com
+  //   (see https://developers.cloudflare.com/turnstile/reference/content-security-policy/).
   // - style-src 'unsafe-inline' is required by Ark UI / React inline style attrs.
   // - No COEP on purpose (would break the media bucket); CORP set to same-site so
   //   the media bucket on the same registrable domain still loads.

@@ -387,7 +387,12 @@ export class PostsService extends Context.Service<
               title,
               userId,
               videoKey,
-              videoMetadata: JSON.stringify(videoMetadata ?? {}),
+              videoMetadata:
+                videoMetadata === undefined
+                  ? "{}"
+                  : Schema.encodeSync(
+                      Schema.fromJsonString(VideoMetadataSchema),
+                    )(videoMetadata),
             })
             .returningAll(),
         );

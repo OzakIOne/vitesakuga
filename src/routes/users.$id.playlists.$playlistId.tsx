@@ -46,7 +46,10 @@ function PlaylistDetailContent() {
   const handlePageChange = useCallback(
     (newPage: number) => {
       void navigate({
-        search: ((prev: Record<string, unknown>) => ({
+        // SAFETY: TanStack Router's navigate search updater resolves to
+        // `never` for this "data-only" route; at runtime the updater still
+        // receives the full search params and the spread preserves them.
+        search: ((prev: { page?: number }) => ({
           ...prev,
           page: newPage,
         })) as never,

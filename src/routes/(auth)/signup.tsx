@@ -12,10 +12,7 @@ import {
   PasswordStrengthMeter,
   getPasswordStrength,
 } from "src/components/ui/password-input";
-import {
-  useSignUp,
-  useSocialLogin,
-} from "src/lib/auth/auth.hooks";
+import { useSignUp, useSocialLogin } from "src/lib/auth/auth.hooks";
 import type { SignUpInput } from "src/lib/auth/auth.hooks";
 import { signUpSchema } from "src/lib/auth/auth.schemas";
 import { useTurnstile } from "src/lib/auth/useTurnstile";
@@ -215,14 +212,16 @@ function SignupForm() {
               <IoLogoGithub />
               Login with GitHub
             </Button>
-            <Button
-              disabled={signUpMutation.isPending}
-              onClick={() => void socialLogin("google").catch(setServerError)}
-              type="button"
-            >
-              <FcGoogle />
-              Login with Google
-            </Button>
+            {envClient.VITE_GOOGLE_CLIENT_ID && (
+              <Button
+                disabled={signUpMutation.isPending}
+                onClick={() => void socialLogin("google").catch(setServerError)}
+                type="button"
+              >
+                <FcGoogle />
+                Login with Google
+              </Button>
+            )}
           </div>
         </div>
       </form>

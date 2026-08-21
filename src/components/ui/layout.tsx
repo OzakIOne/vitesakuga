@@ -1,11 +1,17 @@
 import * as React from "react";
 
-import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
+import {
+  asDivProps,
+  asSpanProps,
+  cx,
+  useChakraProps,
+  type ChakraStyleProps,
+} from "./ui-utils";
 
 type BoxProps = React.HTMLAttributes<HTMLDivElement> & ChakraStyleProps;
 
-function mapTemplateColumns(value: unknown): string {
-  const str = String(value);
+function mapTemplateColumns(value: string): string {
+  const str = value;
   if (str === "1fr") return "grid-cols-1";
   if (str.startsWith("repeat(")) {
     const match = str.match(/^repeat\((\d+)/);
@@ -16,13 +22,7 @@ function mapTemplateColumns(value: unknown): string {
 
 export function Box(props: BoxProps) {
   const { className, style, rest } = useChakraProps(props);
-  return (
-    <div
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
-    />
-  );
+  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Flex(props: BoxProps) {
@@ -30,13 +30,7 @@ export function Flex(props: BoxProps) {
     ...props,
     display: "flex",
   });
-  return (
-    <div
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
-    />
-  );
+  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Center(props: BoxProps) {
@@ -46,17 +40,11 @@ export function Center(props: BoxProps) {
     alignItems: "center",
     justifyContent: "center",
   });
-  return (
-    <div
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
-    />
-  );
+  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Container(props: BoxProps) {
-  const maxW = (props as { maxW?: unknown }).maxW;
+  const maxW = props.maxW;
   const { className, style, rest } = useChakraProps({
     ...props,
     maxW: maxW ?? "xl",
@@ -64,22 +52,10 @@ export function Container(props: BoxProps) {
     px: "4",
     w: "full",
   });
-  return (
-    <div
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
-    />
-  );
+  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
 }
 
-type StackProps = BoxProps & {
-  direction?: unknown;
-  gap?: unknown;
-  align?: unknown;
-  justify?: unknown;
-  wrap?: unknown;
-};
+type StackProps = BoxProps;
 
 export function Stack({
   direction = "column",
@@ -98,13 +74,7 @@ export function Stack({
     gap,
     justifyContent: justify,
   });
-  return (
-    <div
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
-    />
-  );
+  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function HStack({ gap = 2, align = "center", ...props }: StackProps) {
@@ -115,7 +85,17 @@ export function VStack({ gap = 2, align = "center", ...props }: StackProps) {
   return <Stack align={align} direction="column" gap={gap} {...props} />;
 }
 
-export function Grid(props: BoxProps & { templateColumns?: unknown }) {
+type ResponsiveColumns = string | number | Record<string, string | number>;
+
+function isResponsiveColumns(
+  value: ResponsiveColumns | undefined,
+): value is Record<string, string | number> {
+  return typeof value === "object" && value !== null;
+}
+
+export function Grid(
+  props: BoxProps & { templateColumns?: ResponsiveColumns },
+) {
   const { templateColumns, ...restProps } = props;
   const { className, style, rest } = useChakraProps({
     ...restProps,
@@ -129,7 +109,7 @@ export function Grid(props: BoxProps & { templateColumns?: unknown }) {
     <div
       className={cx(templateClasses, className)}
       style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
+      {...asDivProps(rest)}
     />
   );
 }
@@ -141,7 +121,7 @@ export function GridItem(props: BoxProps) {
 export function SimpleGrid({
   columns,
   ...props
-}: BoxProps & { columns?: unknown }) {
+}: BoxProps & { columns?: ResponsiveColumns }) {
   const columnClasses = mapResponsiveColumns(columns, (v) => {
     const n = String(v);
     if (n.includes(" ")) {
@@ -160,18 +140,18 @@ export function SimpleGrid({
     <div
       className={cx(columnClasses, className)}
       style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
+      {...asDivProps(rest)}
     />
   );
 }
 
 function mapResponsiveColumns(
-  value: unknown,
+  value: ResponsiveColumns | undefined,
   makeClass: (v: string) => string,
 ): string {
-  if (typeof value === "object" && value !== null) {
+  if (isResponsiveColumns(value)) {
     const classes: string[] = [];
-    for (const [bp, v] of Object.entries(value as Record<string, unknown>)) {
+    for (const [bp, v] of Object.entries(value)) {
       const mapped = makeClass(String(v));
       if (bp === "base") classes.push(mapped);
       else classes.push(`${bp}:${mapped}`);
@@ -189,13 +169,7 @@ export function Wrap(props: BoxProps) {
     flexWrap: "wrap",
     gap: 2,
   });
-  return (
-    <div
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
-    />
-  );
+  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Group({
@@ -215,7 +189,7 @@ export function Group({
         className,
       )}
       style={style}
-      {...(rest as React.HTMLAttributes<HTMLDivElement>)}
+      {...asDivProps(rest)}
     />
   );
 }
@@ -225,10 +199,6 @@ export function Span(
 ) {
   const { className, style, rest } = useChakraProps(props);
   return (
-    <span
-      className={cx(className)}
-      style={style}
-      {...(rest as React.HTMLAttributes<HTMLSpanElement>)}
-    />
+    <span className={cx(className)} style={style} {...asSpanProps(rest)} />
   );
 }

@@ -1,3 +1,4 @@
+import type { ConversionOptions } from "mediabunny";
 import {
   createAsyncLogic,
   createCallbackLogic,
@@ -20,20 +21,17 @@ export type OutputFormat = {
 export const VIDEO_QUALITY_MIN = 2;
 
 /** Highest CRF/quantizer users may select, per video codec. */
-const VIDEO_QUALITY_MAX: Record<
-  NonNullable<OutputFormat["videoCodec"]>,
-  number
-> = {
+const VIDEO_QUALITY_MAX = {
   avc: 51,
   vp9: 63,
-};
+} satisfies Record<NonNullable<OutputFormat["videoCodec"]>, number>;
 
 /** Default CRF/quantizer used when transcoding. */
 export const DEFAULT_VIDEO_QUALITY = 18;
 
 export function getVideoQualityRange(
   codec: NonNullable<OutputFormat["videoCodec"]>,
-): { min: number; max: number } {
+) {
   return { min: VIDEO_QUALITY_MIN, max: VIDEO_QUALITY_MAX[codec] };
 }
 
@@ -299,20 +297,18 @@ export const convertMachine = createMachine({
               }
             : undefined;
 
-          const initArgs: Record<string, unknown> = {
+          const initArgs: ConversionOptions = {
             input: mediabunnyInput,
             output: mediabunnyOutput,
           };
-          if (audioOptions !== undefined) initArgs["audio"] = audioOptions;
-          if (videoOptions !== undefined) initArgs["video"] = videoOptions;
-          const conversion = await Conversion.init(
-            initArgs as Parameters<typeof Conversion.init>[0],
-          );
+          if (audioOptions !== undefined) initArgs.audio = audioOptions;
+          if (videoOptions !== undefined) initArgs.video = videoOptions;
+          const conversion = await Conversion.init(initArgs);
 
           if (!conversion.isValid) {
             sendBack({
               type: "conversion.error",
-              message: `Conversion is invalid: ${(conversion.discardedTracks as Array<{ reason: string }>).map((t) => t.reason).join(", ")}`,
+              message: `Conversion is invalid: ${conversion.discardedTracks.map((t) => t.reason).join(", ")}`,
             });
             return;
           }

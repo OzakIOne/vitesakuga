@@ -62,6 +62,7 @@ const columns = columnHelper.columns([
     size: 44,
     header: ({ table }) => (
       <Checkbox.Root
+        aria-label="Select all rows"
         checked={
           table.getIsAllPageRowsSelected()
             ? true
@@ -86,6 +87,7 @@ const columns = columnHelper.columns([
       }
       return (
         <Checkbox.Root
+          aria-label={`Select row ${row.original.postId}`}
           checked={row.getIsSelected()}
           onCheckedChange={() => row.toggleSelected()}
         >
@@ -220,6 +222,7 @@ export function PlaylistPostsTable({
     onRowSelectionChange: handleRowSelectionChange,
     state: { rowSelection },
   });
+  const { FlexRender } = table;
 
   const tableRows = table.getRowModel().rows;
   const virtualizer = useVirtualizer({
@@ -275,7 +278,7 @@ export function PlaylistPostsTable({
                   >
                     <span className="min-w-0 truncate">
                       {header.isPlaceholder ? null : (
-                        <table.FlexRender header={header} />
+                        <FlexRender header={header} />
                       )}
                     </span>
                   </th>
@@ -319,7 +322,7 @@ export function PlaylistPostsTable({
                         width: grow ? "auto" : cell.column.getSize(),
                       }}
                     >
-                      <table.FlexRender cell={cell} />
+                      <FlexRender cell={cell} />
                     </td>
                   );
                 })}

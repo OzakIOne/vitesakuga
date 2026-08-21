@@ -104,14 +104,13 @@ export function Spinner({ size = "md", color, ...props }: SpinnerProps) {
           : "h-6 w-6 border-2";
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
-    <span
+    <output
       aria-label="Loading"
       className={cx(
         "inline-block animate-spin rounded-full border-current border-t-transparent",
         box,
         className,
       )}
-      role="status"
       style={style}
       {...(rest as React.HTMLAttributes<HTMLSpanElement>)}
     />
@@ -263,7 +262,7 @@ export const Alert = {
 
 export const DataList = {
   Root: ({
-    orientation,
+    orientation: _orientation,
     ...props
   }: { orientation?: string } & React.HTMLAttributes<HTMLDListElement> &
     ChakraStyleProps) => {

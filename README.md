@@ -11,10 +11,10 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] cleanup post schemas and server fn
 - [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx or /posts/$postId.tsx maybe not sure
 - [ ] passkey / TOTP
-- [ ] github login
-  - [ ] google login
+- [x] github login
+  - [X] google login
     - [ ] add test to this login, make it undependant of each service if possible
-- [ ] captcha ?
+- [x] captcha ?
 - [ ] better auth dash?
 - [ ] better auth sentinel?
 - [ ] 

@@ -154,6 +154,8 @@ export default Alchemy.Stack(
             : appBranch.pooledConnectionUri,
         GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
         GITHUB_CLIENT_SECRET: Config.redacted("GITHUB_CLIENT_SECRET"),
+        GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
+        GOOGLE_CLIENT_SECRET: Config.redacted("GOOGLE_CLIENT_SECRET"),
         NODE_ENV: Config.string("NODE_ENV").pipe(
           Config.withDefault("production"),
         ),

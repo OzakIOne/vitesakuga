@@ -19,6 +19,17 @@ type UseUploadFormParams = {
   onDraftClear: () => void;
 };
 
+type UploadFormValues = {
+  content: string;
+  relatedPostId: number | undefined;
+  source: string | undefined;
+  tags: Tag[];
+  thumbnail: File | undefined;
+  title: string;
+  video: File | undefined;
+  videoMetadata: VideoMetadata | undefined;
+};
+
 export function useUploadForm(params: UseUploadFormParams) {
   const { draft, videoFile, thumbnail, videoMetadata, onDraftClear } = params;
   const queryClient = useQueryClient();
@@ -38,17 +49,22 @@ export function useUploadForm(params: UseUploadFormParams) {
     successTitle: "Upload successful",
   });
 
+  // The video/thumbnail files are required by the submit schema but start
+  // unset; `submit()` populates them right before handleSubmit, and the
+  // onSubmit validator rejects the form until the user provides them.
+  const defaultValues: UploadFormValues = {
+    content: draft?.content ?? "",
+    relatedPostId: draft?.relatedPostId,
+    source: draft?.source,
+    tags: draft?.tags ?? [],
+    thumbnail: undefined,
+    title: draft?.title ?? "",
+    video: undefined,
+    videoMetadata: undefined,
+  };
+
   const form = useForm({
-    defaultValues: {
-      content: draft?.content ?? "",
-      relatedPostId: draft?.relatedPostId as number | undefined,
-      source: draft?.source as string | undefined,
-      tags: (draft?.tags ?? []) as Tag[],
-      thumbnail: undefined as unknown as File,
-      title: draft?.title ?? "",
-      video: undefined as unknown as File,
-      videoMetadata: undefined as VideoMetadata,
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
       const formData = buildFormData(value);
       await uploadPostMutation.mutateAsync(formData);

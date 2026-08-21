@@ -1,11 +1,8 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { toaster } from "src/components/ui/toaster";
 
-export function errorMessage(
-  error: Error | string | null | undefined,
-  fallback: string,
-): string {
-  return error instanceof Error && error.message ? error.message : fallback;
+export function errorMessage(cause: unknown, fallback: string): string {
+  return cause instanceof Error && cause.message ? cause.message : fallback;
 }
 
 export function toastSuccess(title: string, description?: string): void {
@@ -20,14 +17,14 @@ export function toastSuccess(title: string, description?: string): void {
 
 export function toastError(
   title: string,
-  error: Error,
+  cause: unknown,
   fallback: string,
   retry?: () => void,
 ): void {
   toaster.create({
     action: retry ? { label: "Retry", onClick: retry } : undefined,
     closable: true,
-    description: errorMessage(error, fallback),
+    description: errorMessage(cause, fallback),
     duration: 5000,
     title,
     type: "error",

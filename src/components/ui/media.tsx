@@ -10,11 +10,12 @@ import {
 
 type ImageProps = React.ImgHTMLAttributes<HTMLImageElement> & ChakraStyleProps;
 
-export function Image(props: ImageProps) {
+export function Image({ alt, ...props }: ImageProps) {
   const { className, style, rest } = useChakraProps(props);
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <img
+      alt={alt ?? ""}
       className={cx(className)}
       style={style}
       {...(rest as React.ImgHTMLAttributes<HTMLImageElement>)}
@@ -67,7 +68,8 @@ export const Avatar = {
     );
   },
   Fallback: (
-    props: React.ComponentProps<typeof ArkAvatar.Fallback> & ChakraStyleProps,
+    props: React.ComponentProps<typeof ArkAvatar.Fallback> &
+      ChakraStyleProps & { name?: string },
   ) => {
     const { className, style, rest } = useChakraProps(props);
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.

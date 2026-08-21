@@ -10,6 +10,31 @@ import { db } from "../db/pool";
 import * as schema from "../db/schema";
 
 const passkeyRpID = new URL(envServer.VITE_BASE_URL).hostname;
+const githubClientSecret = Redacted.value(envServer.GITHUB_CLIENT_SECRET);
+const googleClientSecret = Redacted.value(envServer.GOOGLE_CLIENT_SECRET);
+// Social providers are only registered when their credentials are actually
+// set, so a fresh clone with empty env vars still boots (the corresponding
+// button then gets a "provider not found" error instead of crashing the
+// server).
+type SocialProviderEntry = {
+  clientId: string;
+  clientSecret: string;
+};
+const socialProviders: Partial<
+  Record<"github" | "google", SocialProviderEntry>
+> = {};
+if (envServer.GITHUB_CLIENT_ID && githubClientSecret) {
+  socialProviders.github = {
+    clientId: envServer.GITHUB_CLIENT_ID,
+    clientSecret: githubClientSecret,
+  };
+}
+if (envServer.GOOGLE_CLIENT_ID && googleClientSecret) {
+  socialProviders.google = {
+    clientId: envServer.GOOGLE_CLIENT_ID,
+    clientSecret: googleClientSecret,
+  };
+}
 
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,
@@ -22,16 +47,7 @@ export const auth = betterAuth({
   }),
 
   // https://www.better-auth.com/docs/concepts/oauth
-  // socialProviders: {
-  //   github: {
-  //     clientId: env.GITHUB_CLIENT_ID!,
-  //     clientSecret: env.GITHUB_CLIENT_SECRET!,
-  //   },
-  //   google: {
-  //     clientId: env.GOOGLE_CLIENT_ID!,
-  //     clientSecret: env.GOOGLE_CLIENT_SECRET!,
-  //   },
-  // },
+  socialProviders,
 
   // https://www.better-auth.com/docs/authentication/email-password
   emailAndPassword: {
@@ -96,6 +112,11 @@ export const auth = betterAuth({
         },
       },
     }),
+    // https://www.better-auth.com/docs/plugins/dash
+    // TODO: `dash` is the Better Auth Infrastructure plugin from
+    // `@better-auth/infra`, which is not installed in this project yet.
+    // Re-enable once the dependency and its API key config are provisioned.
+    // dash(dashOptions),
     // Cookie integration must come last so `Set-Cookie` headers from the
     // plugins above (2FA challenge, passkey sessions) are forwarded to the
     // TanStack Start cookie store.

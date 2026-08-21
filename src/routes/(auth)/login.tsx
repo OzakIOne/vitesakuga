@@ -116,14 +116,16 @@ function LoginForm() {
               <IoLogoGithub />
               Login with GitHub
             </Button>
-            <Button
-              disabled={socialLoading}
-              onClick={() => void handleSocialLogin("google")}
-              type="button"
-            >
-              <FcGoogle />
-              Login with Google
-            </Button>
+            {envClient.VITE_GOOGLE_CLIENT_ID && (
+              <Button
+                disabled={socialLoading}
+                onClick={() => void handleSocialLogin("google")}
+                type="button"
+              >
+                <FcGoogle />
+                Login with Google
+              </Button>
+            )}
           </div>
         </div>
       </form>

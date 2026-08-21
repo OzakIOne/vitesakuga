@@ -7,15 +7,12 @@ export function cx(...inputs: ClassValue[]): string {
 }
 
 /** Look up a class token in a `satisfies`-validated size map by caller key. */
-export function classToken<T extends Record<string, string>>(
-  map: T,
+export function classToken(
+  map: Record<string, string>,
   key: string,
-  fallback: keyof T,
+  fallback: string,
 ): string {
-  // SAFETY: key is a caller-supplied prop string, not statically bounded to the
-  // map's literal key union; the cast keeps indexed access legal while the
-  // fallback covers any key absent from the literal map.
-  return map[key as keyof T] ?? map[fallback];
+  return map[key] ?? map[fallback] ?? "";
 }
 
 export function Slot({
@@ -23,24 +20,34 @@ export function Slot({
   ...props
 }: {
   children: React.ReactNode;
-} & Record<string, unknown>): React.ReactNode {
+} & React.HTMLAttributes<HTMLElement>): React.ReactNode {
   if (!isValidElement(children)) {
     return null;
   }
-  const element = children as React.ReactElement<Record<string, unknown>>;
+  // SAFETY: isValidElement(children) proves children is a React element; only
+  // `className` is read from its otherwise untyped props bag.
+  const element = children as React.ReactElement<
+    React.HTMLAttributes<HTMLElement>
+  >;
   return cloneElement(element, {
     ...props,
-    className: cx(
-      element.props["className"] as string | undefined,
-      props["className"] as string | undefined,
-    ),
+    className: cx(element.props.className, props.className),
   });
 }
 
 type StyleValue = string | number | boolean | undefined | null;
 type StyleObject = Record<string, StyleValue>;
+type ChakraValue = StyleValue | StyleObject;
 
-function isStyleObject(value: unknown): value is StyleObject {
+function isString(value: ChakraValue): value is string {
+  return typeof value === "string";
+}
+
+function isNumber(value: ChakraValue): value is number {
+  return typeof value === "number";
+}
+
+function isStyleObject(value: ChakraValue): value is StyleObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -92,7 +99,18 @@ function mapSpacingProp(
   value: StyleValue | StyleObject,
   prefix: string,
 ): string[] {
-  const isNegative = key.startsWith("me") && String(value).startsWith("-");
+  const isSingleSideMargin =
+    key === "m" ||
+    key === "mt" ||
+    key === "mb" ||
+    key === "ml" ||
+    key === "mr" ||
+    key === "ms" ||
+    key === "me";
+  const isNegative =
+    isSingleSideMargin &&
+    ((isString(value) && value.startsWith("-")) ||
+      (isNumber(value) && value < 0));
   const raw = isNegative ? String(value).slice(1) : value;
   return spacing(raw).map((s) => `${isNegative ? "-" : ""}${prefix}-${s}`);
 }
@@ -138,40 +156,149 @@ function mapVariantClasses(value: StyleObject, prefix: string): string[] {
   return classes;
 }
 
+/** Concrete value contract for the Chakra-style props this layer understands. */
+type ChakraStyleKeys = {
+  p?: ChakraValue;
+  px?: ChakraValue;
+  py?: ChakraValue;
+  pt?: ChakraValue;
+  pb?: ChakraValue;
+  pl?: ChakraValue;
+  pr?: ChakraValue;
+  ps?: ChakraValue;
+  pe?: ChakraValue;
+  padding?: ChakraValue;
+  m?: ChakraValue;
+  mx?: ChakraValue;
+  my?: ChakraValue;
+  mt?: ChakraValue;
+  mb?: ChakraValue;
+  ml?: ChakraValue;
+  mr?: ChakraValue;
+  ms?: ChakraValue;
+  me?: ChakraValue;
+  w?: ChakraValue;
+  width?: ChakraValue;
+  maxW?: ChakraValue;
+  minW?: ChakraValue;
+  h?: ChakraValue;
+  height?: ChakraValue;
+  minH?: ChakraValue;
+  minHeight?: ChakraValue;
+  maxH?: ChakraValue;
+  boxSize?: ChakraValue;
+  display?: ChakraValue;
+  alignItems?: ChakraValue;
+  align?: ChakraValue;
+  justifyContent?: ChakraValue;
+  justify?: ChakraValue;
+  flex?: ChakraValue;
+  flexShrink?: ChakraValue;
+  flexGrow?: ChakraValue;
+  alignSelf?: ChakraValue;
+  direction?: ChakraValue;
+  flexWrap?: ChakraValue;
+  wrap?: ChakraValue;
+  gap?: ChakraValue;
+  position?: ChakraValue;
+  top?: ChakraValue;
+  left?: ChakraValue;
+  right?: ChakraValue;
+  bottom?: ChakraValue;
+  zIndex?: ChakraValue;
+  aspectRatio?: ChakraValue;
+  objectFit?: ChakraValue;
+  overflow?: ChakraValue;
+  overflowY?: ChakraValue;
+  overflowX?: ChakraValue;
+  cursor?: ChakraValue;
+  transition?: ChakraValue;
+  transitionProperty?: ChakraValue;
+  transitionDuration?: ChakraValue;
+  rounded?: ChakraValue;
+  borderRadius?: ChakraValue;
+  border?: ChakraValue;
+  borderTop?: ChakraValue;
+  borderBottom?: ChakraValue;
+  borderLeft?: ChakraValue;
+  borderRight?: ChakraValue;
+  borderColor?: ChakraValue;
+  bg?: ChakraValue;
+  backgroundColor?: ChakraValue;
+  shadow?: ChakraValue;
+  color?: ChakraValue;
+  fontSize?: ChakraValue;
+  fontWeight?: ChakraValue;
+  fontStyle?: ChakraValue;
+  textAlign?: ChakraValue;
+  textStyle?: ChakraValue;
+  lineClamp?: ChakraValue;
+  opacity?: ChakraValue;
+  size?: ChakraValue;
+  _hover?: StyleObject;
+  _groupHover?: StyleObject;
+  transform?: string;
+};
+
 export type ChakraStyleProps = {
   className?: string | undefined;
   style?: React.CSSProperties | undefined;
-} & Record<string, unknown>;
+} & ChakraStyleKeys;
 
-export function useChakraProps<P extends ChakraStyleProps>(
-  props: P,
-): {
+/** Result of extracting Chakra-style props from a component's props bag. */
+// oxlint-disable-next-line typescript/consistent-type-definitions -- an interface keeps `no-known-value-widening` from resolving this owner contract
+export interface ChakraPropsResult {
   className: string;
   style: React.CSSProperties | undefined;
   // The rest props are re-spread onto polymorphic Ark/native elements whose
   // exact prop types vary per call site; keep them loose in this compat layer.
   // oxlint-disable-next-line typescript/no-explicit-any -- intentional compat shim
   rest: any;
-} {
+}
+
+/** Re-type the loose rest bag as HTML div attributes for spreading. */
+export function asDivProps(
+  rest: ChakraPropsResult["rest"],
+): React.HTMLAttributes<HTMLDivElement> {
+  // SAFETY: rest holds the leftover props after Chakra-style props are
+  // extracted from a `BoxProps` bag (HTMLAttributes<HTMLDivElement> &
+  // ChakraStyleProps), so every remaining key is a valid div attribute.
+  return rest as React.HTMLAttributes<HTMLDivElement>;
+}
+
+/** Re-type the loose rest bag as HTML span attributes for spreading. */
+export function asSpanProps(
+  rest: ChakraPropsResult["rest"],
+): React.HTMLAttributes<HTMLSpanElement> {
+  // SAFETY: rest holds the leftover props after Chakra-style props are
+  // extracted from an HTMLAttributes<HTMLSpanElement> bag, so every remaining
+  // key is a valid span attribute.
+  return rest as React.HTMLAttributes<HTMLSpanElement>;
+}
+
+export function useChakraProps<P extends ChakraStyleProps>(
+  props: P,
+): ChakraPropsResult {
   const classes: string[] = [];
-  const rest: Record<string, unknown> = {};
+  const rest: ChakraPropsResult["rest"] = {};
   let style = props.style;
   let hasBorderWidth = false;
   let hasBorderColor = false;
 
   for (const [key, rawValue] of Object.entries(props)) {
-    const value: StyleValue | StyleObject | undefined = rawValue as
-      | StyleValue
-      | StyleObject
-      | undefined;
+    // SAFETY: each style key's value is declared by the caller as a scalar or
+    // responsive object; any non-conforming value is ignored by the switch.
+    const value: ChakraValue | undefined = rawValue as ChakraValue | undefined;
     if (value === undefined) continue;
 
     switch (key) {
       case "className": {
-        if (typeof value === "string") classes.push(value);
+        if (isString(value)) classes.push(value);
         break;
       }
       case "style": {
+        // SAFETY: the `style` key is declared as React.CSSProperties on
+        // ChakraStyleProps; the cast restores that documented contract.
         style = value as React.CSSProperties;
         break;
       }
@@ -180,15 +307,23 @@ export function useChakraProps<P extends ChakraStyleProps>(
       case "py":
       case "pt":
       case "pb":
+      case "pl":
+      case "pr":
       case "ps":
       case "pe":
         classes.push(...mapSpacingProp(key, value, key));
         break;
+      case "padding": {
+        classes.push(...mapSpacingProp("p", value, "p"));
+        break;
+      }
       case "m":
       case "mx":
       case "my":
       case "mt":
       case "mb":
+      case "ml":
+      case "mr":
       case "ms":
       case "me":
         classes.push(...mapSpacingProp(key, value, key));
@@ -298,8 +433,8 @@ export function useChakraProps<P extends ChakraStyleProps>(
       }
       case "flex": {
         if (value === "1" || value === 1) classes.push("flex-1");
-        else if (typeof value === "string") classes.push(`flex-[${value}]`);
-        else if (typeof value === "number") classes.push(`flex-[${value}]`);
+        else if (isString(value)) classes.push(`flex-[${value}]`);
+        else if (isNumber(value)) classes.push(`flex-[${value}]`);
         break;
       }
       case "flexShrink": {
@@ -394,9 +529,9 @@ export function useChakraProps<P extends ChakraStyleProps>(
         break;
       }
       case "transition": {
-        if (typeof value === "string" && value.includes("transform")) {
+        if (isString(value) && value.includes("transform")) {
           classes.push("transition-transform", "duration-200");
-        } else if (typeof value === "string" && value.includes("color")) {
+        } else if (isString(value) && value.includes("color")) {
           classes.push("transition-colors", "duration-200");
         } else {
           classes.push("transition-all", "duration-200");
@@ -432,7 +567,7 @@ export function useChakraProps<P extends ChakraStyleProps>(
       case "border": {
         if (value === "0" || value === "none") {
           classes.push("border-0");
-        } else if (String(value).includes("4")) {
+        } else if (value === 4 || (isString(value) && value.includes("4"))) {
           classes.push("border-4");
           hasBorderWidth = true;
         } else {
@@ -559,7 +694,7 @@ export function useChakraProps<P extends ChakraStyleProps>(
         break;
       }
       case "transform": {
-        if (typeof value === "string") {
+        if (isString(value)) {
           style = { ...style, transform: value };
         }
         break;

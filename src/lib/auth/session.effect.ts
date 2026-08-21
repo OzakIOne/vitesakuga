@@ -52,6 +52,7 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
         id: "e2e-test-user",
         image: null,
         name: "E2E Test User",
+        twoFactorEnabled: false,
         updatedAt: new Date(),
       },
     };

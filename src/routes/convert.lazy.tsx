@@ -52,12 +52,11 @@ function ConversionProgress({ actor }: { actor: ActorLike }) {
 }
 
 function RouteComponent() {
-  // xstate@6.0.0-alpha.36 types `StateMachine.validator` with an explicit
-  // `| undefined`, which fails the `AnyActorLogic` constraint of `useActorRef`
-  // under `exactOptionalPropertyTypes`. `ConvertMachineLogic` fixes only that.
-  const actorRef = useActorRef(
-    convertMachine as unknown as ConvertMachineLogic,
-  );
+  // SAFETY: xstate@6.0.0-alpha.36 types `StateMachine.validator` with an
+  // explicit `| undefined`, which fails the `AnyActorLogic` constraint of
+  // `useActorRef` under `exactOptionalPropertyTypes`. `ConvertMachineLogic`
+  // fixes only that variance and is otherwise identical to the machine type.
+  const actorRef = useActorRef(convertMachine as ConvertMachineLogic);
 
   const file = useSelector(actorRef, (s) => s.context.file);
   const output = useSelector(actorRef, (s) => s.context.output);
@@ -103,9 +102,7 @@ function RouteComponent() {
   }, [formatInputValue, inputVideoCodec]);
 
   const handleOutputValueChange = (details: ComboboxValueChangeDetails) => {
-    const item = details.items[0] as
-      | { label: string; value: string }
-      | undefined;
+    const item = details.items[0];
     if (!item) {
       return;
     }

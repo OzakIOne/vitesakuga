@@ -78,6 +78,7 @@ export type ButtonProps = {
   loadingText?: string;
   asChild?: boolean;
   type?: "button" | "submit" | "reset";
+  ref?: React.Ref<HTMLButtonElement>;
 } & React.ButtonHTMLAttributes<HTMLButtonElement> &
   ChakraStyleProps;
 

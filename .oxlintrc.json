@@ -41,8 +41,9 @@
   ],
   // The effecttsgo rules are meant for server/Effect code (`.service.ts`, `db/`, `effect/`,
   // env/server.ts, etc.). Frontend files — .tsx components/routes, React hooks and query
-  // factories, and client-side utilities — legitimately use native JS APIs (Date, async
-  // functions, console, fetch), so disable all effecttsgo rules there.
+  // factories, client-side utilities, e2e tests, and Node build/test configs —
+  // legitimately use native JS APIs (Date, async functions, console, fetch,
+  // process.env), so disable all effecttsgo rules there.
   "overrides": [
     {
       "files": [
@@ -50,6 +51,13 @@
         "**/*.hooks.ts",
         "**/*.queries.ts",
         "**/use*.ts",
+        "e2e/**",
+        "vitest.setup.ts",
+        "vite.config.ts",
+        "nitro.config.ts",
+        "drizzle.config.ts",
+        "src/lib/db/test-utils.ts",
+        "src/lib/db/e2e-db.ts",
         "src/lib/upload/upload.processor.ts",
         "src/lib/db/collections.ts",
         "src/lib/mutations/mutation-feedback.ts",
@@ -131,7 +139,9 @@
     "anti-slop/no-object-parameters": "error",
     "anti-slop/no-reflect-apply": "error",
     "anti-slop/no-reflect-get": "error",
-    "anti-slop/no-runtime-typeof": "error",
+    // Type guards are the sanctioned place to establish a value contract;
+    // `typeof` remains banned outside predicate functions.
+    "anti-slop/no-runtime-typeof": ["error", { "allowInTypeGuards": true }],
     "anti-slop/no-shape-in-symbol-names": "error",
     "anti-slop/no-unknown-parameters": "error",
     "anti-slop/no-unknown-returns": "error",

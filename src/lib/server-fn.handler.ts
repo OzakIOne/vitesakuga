@@ -25,16 +25,19 @@ export const createHandler =
     // SAFETY: the merged layer provides every service the effect requires; the
     // erased layer types cannot express that, so the assertion asserts the
     // requirements are satisfied at this Effect -> Promise seam.
-    return Effect.runPromise(
-      effect(data).pipe(
-        Effect.provide(layer),
-        Effect.tapError((error) =>
-          Effect.logError("Server function failed").pipe(
-            Effect.annotateLogs({ error }),
-          ),
+    // SAFETY: the merged layer provides every service the effect requires; the
+    // erased layer types cannot express that, so the assertion asserts the
+    // requirements are satisfied at this Effect -> Promise seam.
+    // oxlint-disable-next-line effecttsgo/unsafe-effect-type-assertion -- the layer is built from concrete factories, so the requirements channel is fully provided
+    const provided = effect(data).pipe(
+      Effect.provide(layer),
+      Effect.tapError((error) =>
+        Effect.logError("Server function failed").pipe(
+          Effect.annotateLogs({ error }),
         ),
-      ) as Effect.Effect<A, unknown>,
-    );
+      ),
+    ) as Effect.Effect<A, unknown, never>;
+    return Effect.runPromise(provided);
   };
 
 export async function resolveMiddlewareLayer() {

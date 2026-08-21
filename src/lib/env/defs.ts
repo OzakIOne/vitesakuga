@@ -70,6 +70,8 @@ const serverEnvConfig = Config.all({
   DATABASE_URL: Config.string("DATABASE_URL"),
   GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
   GITHUB_CLIENT_SECRET: Config.string("GITHUB_CLIENT_SECRET"),
+  GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: Config.string("GOOGLE_CLIENT_SECRET"),
   NODE_ENV: Config.string("NODE_ENV"),
   TURNSTILE_SECRET: Config.string("TURNSTILE_SECRET").pipe(
     Config.withDefault(""),
@@ -90,8 +92,14 @@ const serverEnvSchema = (requireOAuth: boolean) =>
       ? nonEmpty("GITHUB_CLIENT_ID")
       : Schema.String,
     GITHUB_CLIENT_SECRET: requireOAuth
-      ? nonEmpty("GITHUB_CLIENT_SECRET")
+      ? secret("GITHUB_CLIENT_SECRET", 1)
+      : Schema.RedactedFromValue(Schema.String),
+    GOOGLE_CLIENT_ID: requireOAuth
+      ? nonEmpty("GOOGLE_CLIENT_ID")
       : Schema.String,
+    GOOGLE_CLIENT_SECRET: requireOAuth
+      ? secret("GOOGLE_CLIENT_SECRET", 1)
+      : Schema.RedactedFromValue(Schema.String),
     NODE_ENV: Schema.Literals(["development", "production", "test"]),
     // Optional in every stage: the captcha plugin is only enabled when the
     // secret is actually configured (see auth/index.ts). Kept as a Redacted
@@ -109,7 +117,9 @@ export type ServerEnv = {
   readonly CLOUDFLARE_SECRET_KEY: Redacted.Redacted<string>;
   readonly DATABASE_URL: string;
   readonly GITHUB_CLIENT_ID: string;
-  readonly GITHUB_CLIENT_SECRET: string;
+  readonly GITHUB_CLIENT_SECRET: Redacted.Redacted<string>;
+  readonly GOOGLE_CLIENT_ID: string;
+  readonly GOOGLE_CLIENT_SECRET: Redacted.Redacted<string>;
   readonly NODE_ENV: "development" | "production" | "test";
   readonly TURNSTILE_SECRET: Redacted.Redacted<string>;
   readonly VITE_BASE_URL: string;
@@ -135,6 +145,11 @@ const clientEnvConfig = Config.all({
   SSR: Config.boolean("SSR"),
   VITE_BASE_URL: Config.string("VITE_BASE_URL"),
   VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
+  // Public Google OAuth client ID. Empty unless Google social login has been
+  // provisioned; the login/signup Google button only renders when set.
+  VITE_GOOGLE_CLIENT_ID: Config.string("VITE_GOOGLE_CLIENT_ID").pipe(
+    Config.withDefault(""),
+  ),
   VITE_TURNSTILE_SITEKEY: Config.string("VITE_TURNSTILE_SITEKEY").pipe(
     Config.withDefault(""),
   ),
@@ -148,6 +163,7 @@ const clientEnvSchema = Schema.Struct({
   SSR: Schema.Boolean,
   VITE_BASE_URL: nonEmpty("VITE_BASE_URL"),
   VITE_CLOUDFLARE_R2_PUBLIC_URL: nonEmpty("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
+  VITE_GOOGLE_CLIENT_ID: Schema.String,
   // Empty in environments without Turnstile; render the widget only when set.
   VITE_TURNSTILE_SITEKEY: Schema.String,
 });
