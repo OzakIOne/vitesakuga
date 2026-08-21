@@ -19,16 +19,22 @@ import {
   type PaginationMeta,
 } from "../pagination/pagination";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { videoContentType } from "../storage/content-type";
 import { StorageError, StorageModule } from "../storage/storage.module";
+import { isUploadedVideoValid } from "../storage/upload-policy";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchPostVoteCounts } from "../votes/votes.utils";
+import { assertThumbnailIsJpeg } from "./file-validation";
 import {
+  createVideoUploadUrlSchema,
   FormFileUploadSchema,
+  MAX_VIDEO_SIZE_BYTES,
   postByTagSchema,
   searchPostsBaseSchema,
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
+import { escapeLikePattern } from "./search-pattern";
 
 const PAGE_SIZE = 30;
 
@@ -96,6 +102,17 @@ export class PostsService extends Context.Service<
       | ValidationError,
       AuthServices
     >;
+    readonly createVideoUploadUrl: (
+      data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>,
+    ) => Effect.Effect<
+      {
+        readonly contentType: string;
+        readonly key: string;
+        readonly url: string;
+      },
+      StorageError | UnauthorizedError | SessionFetchError,
+      AuthServices
+    >;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
     ) => Effect.Effect<
@@ -148,11 +165,12 @@ export class PostsService extends Context.Service<
       let query = db.selectFrom("posts").selectAll("posts");
 
       if (q) {
+        const pattern = `%${escapeLikePattern(q)}%`;
         query = query.where((eb) =>
-          eb("posts.title", "ilike", `%${q}%`).or(
+          eb("posts.title", "ilike", pattern).or(
             "posts.content",
             "ilike",
-            `%${q}%`,
+            pattern,
           ),
         );
       }
@@ -211,11 +229,12 @@ export class PostsService extends Context.Service<
         .innerJoin("posts", "posts.id", "post_tags.postId");
 
       if (q) {
+        const pattern = `%${escapeLikePattern(q)}%`;
         popularTagsQuery = popularTagsQuery.where((eb) =>
-          eb("posts.title", "ilike", `%${q}%`).or(
+          eb("posts.title", "ilike", pattern).or(
             "posts.content",
             "ilike",
-            `%${q}%`,
+            pattern,
           ),
         );
       }
@@ -344,7 +363,6 @@ export class PostsService extends Context.Service<
       const userId = session.user.id;
 
       const {
-        video,
         thumbnail,
         title,
         content,
@@ -352,23 +370,50 @@ export class PostsService extends Context.Service<
         relatedPostId,
         tags,
         videoMetadata,
+        videoKey,
       } = data;
 
       yield* Effect.logInfo("Upload started").pipe(
         Effect.annotateLogs({
-          fileName: video.name,
-          fileSize: video.size,
           title,
           userId,
+          videoKey,
         }),
       );
 
-      // Files are uploaded to R2 before the DB insert; if any later step fails,
-      // roll the uploaded objects back so storage stays in sync with the DB.
+      if (!videoKey.startsWith(`videos/${userId}/`)) {
+        return yield* Effect.fail(
+          new ValidationError({ message: "Invalid video upload key" }),
+        );
+      }
+
+      const ext = videoKey.split(".").pop() ?? "";
+      const expectedContentType = videoContentType(ext);
+      const head = yield* storage.headFile(videoKey).pipe(
+        Effect.mapError(
+          (error) =>
+            new ValidationError({
+              cause: error,
+              message: `Video upload could not be verified: ${error.message}`,
+            }),
+        ),
+      );
+
+      if (!isUploadedVideoValid(head, expectedContentType)) {
+        yield* storage.deleteFile(videoKey).pipe(Effect.ignore);
+        return yield* Effect.fail(
+          new ValidationError({
+            message: `Video upload is invalid: expected ${expectedContentType}, at most ${MAX_VIDEO_SIZE_BYTES / (1024 * 1024)} MB`,
+          }),
+        );
+      }
+
+      // The video was uploaded direct-to-R2 before this confirm step; the
+      // thumbnail still transits the Worker. If any later step fails, roll the
+      // uploaded objects back so storage stays in sync with the DB.
       const uploadedKeys: string[] = [];
 
       const outcome = yield* Effect.gen(function* () {
-        const { key: videoKey } = yield* storage.uploadVideo(userId, video);
         uploadedKeys.push(videoKey);
         const { key: thumbnailKey } = yield* storage.uploadThumbnail(
           userId,
@@ -431,6 +476,23 @@ export class PostsService extends Context.Service<
           }),
       });
     });
+
+    const createVideoUploadUrl = Effect.fn("PostsService.createVideoUploadUrl")(
+      function* (data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>) {
+        const session = yield* getSessionEffect();
+
+        if (!session?.user) {
+          return yield* Effect.fail(
+            new UnauthorizedError({
+              message: "You must be logged in to upload a post",
+            }),
+          );
+        }
+
+        const ext = data.fileName.split(".").pop() ?? "";
+        return yield* storage.presignVideoUpload(session.user.id, ext);
+      },
+    );
 
     const getByTag = Effect.fn("PostsService.getByTag")(function* (
       data: Schema.Schema.Type<typeof postByTagSchema>,
@@ -590,6 +652,7 @@ export class PostsService extends Context.Service<
       search,
       fetchDetail,
       upload,
+      createVideoUploadUrl,
       getByTag,
       update,
     };
@@ -614,6 +677,13 @@ export class PostsService extends Context.Service<
   ) {
     const svc = yield* PostsService;
     return yield* svc.upload(data);
+  });
+
+  static readonly createVideoUploadUrl = Effect.fn(
+    "PostsService.createVideoUploadUrl",
+  )(function* (data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>) {
+    const svc = yield* PostsService;
+    return yield* svc.createVideoUploadUrl(data);
   });
 
   static readonly getByTag = Effect.fn("PostsService.getByTag")(function* (
@@ -680,7 +750,8 @@ export const fetchPostDetail = createServerFn({ strict: { output: false } })
   );
 
 export const uploadPost = createServerFn({ method: "POST" })
-  .validator((data: FormData) => {
+  // oxlint-disable-next-line effecttsgo/async-function -- server-fn validators are the sanctioned pre-handler boundary; the JPEG magic-byte check needs async File I/O, which Effect cannot express in a validator.
+  .validator(async (data: FormData) => {
     const raw = Object.fromEntries(data.entries());
     // SAFETY: raw["tags"] is a JSON string field in the multipart form; the
     // schema re-validates the parsed value against FormFileUploadSchema.
@@ -700,13 +771,26 @@ export const uploadPost = createServerFn({ method: "POST" })
       tags,
       videoMetadata,
     };
-    return parseStrict(FormFileUploadSchema)(normalized);
+    const parsed = parseStrict(FormFileUploadSchema)(normalized);
+    // Extension/size checks are sync in the schema; the JPEG magic-byte check
+    // requires reading file bytes, so it runs here before any storage/DB work.
+    await assertThumbnailIsJpeg(parsed.thumbnail);
+    return parsed;
   })
   .handler(
     createHandler(
       PostsServiceLive,
       baseLayerFactories.auth,
     )(PostsService.upload),
+  );
+
+export const createVideoUploadUrl = createServerFn({ method: "POST" })
+  .validator(parseStrict(createVideoUploadUrlSchema))
+  .handler(
+    createHandler(
+      PostsServiceLive,
+      baseLayerFactories.auth,
+    )(PostsService.createVideoUploadUrl),
   );
 
 export const updatePost = createServerFn({ method: "POST" })

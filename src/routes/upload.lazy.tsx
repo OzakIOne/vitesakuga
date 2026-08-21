@@ -342,7 +342,7 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
-          <form.form.Field name="video">
+          <form.form.Field name="videoKey">
             {(field) => (
               <>
                 <Field.Root required>

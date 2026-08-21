@@ -1,5 +1,7 @@
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Effect, Layer, Redacted } from "effect";
 
+import { THUMBNAIL_CONTENT_TYPE, videoContentType } from "./content-type";
 import { StorageError, StorageModule } from "./storage.module";
 
 export const StorageLive = Layer.effect(
@@ -34,6 +36,10 @@ export const StorageLive = Layer.effect(
       },
       endpoint: envServer.CLOUDFLARE_R2,
       region: "auto",
+      // Presigned PUT URLs must not carry the SDK's default CRC32 checksum
+      // query params: the checksum is computed over an unsigned payload and
+      // would be rejected by R2 against the real uploaded bytes.
+      requestChecksumCalculation: "WHEN_REQUIRED",
     });
 
     const uploadFile = (
@@ -41,8 +47,10 @@ export const StorageLive = Layer.effect(
       userId: string,
       file: File,
       ext: string,
+      contentType: string,
     ): Effect.Effect<{ key: string }, StorageError> =>
       Effect.gen(function* () {
+        // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
         const baseName = crypto.randomUUID();
         const key = `${namespace}/${userId}/${baseName}.${ext}`;
 
@@ -63,7 +71,7 @@ export const StorageLive = Layer.effect(
               new s3Mod.PutObjectCommand({
                 Body: Buffer.from(buffer),
                 Bucket: envServer.CLOUDFLARE_BUCKET,
-                ContentType: file.type,
+                ContentType: contentType,
                 Key: key,
               }),
             ),
@@ -117,11 +125,68 @@ export const StorageLive = Layer.effect(
           );
         }),
       uploadThumbnail: (userId, file) =>
-        uploadFile("thumbnails", userId, file, "jpg"),
+        uploadFile("thumbnails", userId, file, "jpg", THUMBNAIL_CONTENT_TYPE),
       uploadVideo: (userId, file) => {
         const ext = file.name.split(".").pop() ?? "mp4";
-        return uploadFile("videos", userId, file, ext);
+        return uploadFile("videos", userId, file, ext, videoContentType(ext));
       },
+      headFile: (key) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              client.send(
+                new s3Mod.HeadObjectCommand({
+                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  Key: key,
+                }),
+              ),
+            catch: (cause) =>
+              new StorageError({
+                cause,
+                key,
+                message: `Failed to inspect file: ${String(cause)}`,
+                operation: "head",
+              }),
+          });
+
+          return {
+            contentLength: result.ContentLength ?? 0,
+            contentType: result.ContentType ?? "",
+          };
+        }),
+      presignVideoUpload: (userId, ext) =>
+        Effect.gen(function* () {
+          // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
+          const baseName = crypto.randomUUID();
+          const key = `videos/${userId}/${baseName}.${ext}`;
+          const contentType = videoContentType(ext);
+
+          const url = yield* Effect.tryPromise({
+            try: () =>
+              getSignedUrl(
+                client,
+                new s3Mod.PutObjectCommand({
+                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  ContentType: contentType,
+                  Key: key,
+                }),
+                { expiresIn: 15 * 60 },
+              ),
+            catch: (cause) =>
+              new StorageError({
+                cause,
+                key,
+                message: `Failed to presign upload: ${String(cause)}`,
+                operation: "presign",
+              }),
+          });
+
+          yield* Effect.logInfo("Video upload URL presigned").pipe(
+            Effect.annotateLogs({ key }),
+          );
+
+          return { contentType, key, url };
+        }),
     } satisfies StorageModule["Service"];
   }),
 );

@@ -1,13 +1,20 @@
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { safeParseStrict } from "../effect/schema.utils";
-import { useMutationWithFeedback } from "../mutations/mutation-feedback";
+import {
+  toastError,
+  useMutationWithFeedback,
+} from "../mutations/mutation-feedback";
 import { postsKeys } from "../posts/posts.queries";
-import { FormFileUploadSchema } from "../posts/posts.schema";
+import {
+  FormFileUploadSchema,
+  MAX_VIDEO_SIZE_BYTES,
+} from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
-import { uploadPost } from "../posts/posts.service";
+import { createVideoUploadUrl, uploadPost } from "../posts/posts.service";
 import { buildFormData } from "./upload.processor";
 import type { UploadDraftData } from "./useUploadDraft";
 
@@ -26,7 +33,7 @@ type UploadFormValues = {
   tags: Tag[];
   thumbnail: File | undefined;
   title: string;
-  video: File | undefined;
+  videoKey: string | undefined;
   videoMetadata: VideoMetadata | undefined;
 };
 
@@ -34,6 +41,7 @@ export function useUploadForm(params: UseUploadFormParams) {
   const { draft, videoFile, thumbnail, videoMetadata, onDraftClear } = params;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
 
   const uploadPostMutation = useMutationWithFeedback({
     errorFallback: "There was an error uploading your post.",
@@ -49,9 +57,10 @@ export function useUploadForm(params: UseUploadFormParams) {
     successTitle: "Upload successful",
   });
 
-  // The video/thumbnail files are required by the submit schema but start
-  // unset; `submit()` populates them right before handleSubmit, and the
-  // onSubmit validator rejects the form until the user provides them.
+  // The thumbnail file and videoKey are required by the submit schema but
+  // start unset; `submit()` populates them right before handleSubmit (the
+  // videoKey comes from the presigned direct-to-R2 upload), and the onSubmit
+  // validator rejects the form until the user provides them.
   const defaultValues: UploadFormValues = {
     content: draft?.content ?? "",
     relatedPostId: draft?.relatedPostId,
@@ -59,7 +68,7 @@ export function useUploadForm(params: UseUploadFormParams) {
     tags: draft?.tags ?? [],
     thumbnail: undefined,
     title: draft?.title ?? "",
-    video: undefined,
+    videoKey: undefined,
     videoMetadata: undefined,
   };
 
@@ -94,21 +103,60 @@ export function useUploadForm(params: UseUploadFormParams) {
   });
 
   const submit = async () => {
-    if (videoFile) {
-      form.setFieldValue("video", videoFile);
-    }
     if (thumbnail) {
       form.setFieldValue("thumbnail", thumbnail);
     }
     if (videoMetadata) {
       form.setFieldValue("videoMetadata", videoMetadata);
     }
+
+    // The video bytes never transit the Worker: presign a direct-to-R2 PUT,
+    // upload from the browser, then hand the resulting key to the confirm step.
+    if (!videoFile) {
+      return;
+    }
+    if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
+      toastError(
+        "Upload failed",
+        new Error(
+          `Video files must not exceed ${MAX_VIDEO_SIZE_BYTES / (1024 * 1024)} MB`,
+        ),
+        "There was an error uploading your post.",
+      );
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    try {
+      const { contentType, key, url } = await createVideoUploadUrl({
+        data: { fileName: videoFile.name },
+      });
+      const response = await fetch(url, {
+        body: videoFile,
+        headers: { "Content-Type": contentType },
+        method: "PUT",
+      });
+      if (!response.ok) {
+        throw new Error(`Storage upload failed with status ${response.status}`);
+      }
+      form.setFieldValue("videoKey", key);
+    } catch (error) {
+      toastError(
+        "Upload failed",
+        error,
+        "There was an error uploading your post.",
+      );
+      return;
+    } finally {
+      setIsUploadingVideo(false);
+    }
+
     await form.handleSubmit();
   };
 
   return {
     form,
-    isSubmitting: uploadPostMutation.isPending,
+    isSubmitting: uploadPostMutation.isPending || isUploadingVideo,
     submit,
   };
 }

@@ -11,6 +11,7 @@ import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { UserNotFoundError, ValidationError } from "../errors";
 import { computePagination } from "../pagination/pagination";
+import { escapeLikePattern } from "../posts/search-pattern";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchPostVoteCounts } from "../votes/votes.utils";
@@ -99,8 +100,9 @@ export class UsersService extends Context.Service<
         .where("userId", "=", userId);
 
       if (q) {
+        const pattern = `%${escapeLikePattern(q)}%`;
         query = query.where((eb) =>
-          eb("title", "ilike", `%${q}%`).or("content", "ilike", `%${q}%`),
+          eb("title", "ilike", pattern).or("content", "ilike", pattern),
         );
       }
 

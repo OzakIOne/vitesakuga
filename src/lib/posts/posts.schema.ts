@@ -1,6 +1,11 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
 import { sanitize } from "../sanitize";
+import {
+  MAX_SEARCH_QUERY_LENGTH,
+  MAX_SEARCH_TAGS_COUNT,
+  MAX_TAG_NAME_LENGTH,
+} from "../search/search-limits";
 
 const CoerceNumber = Schema.Union([Schema.Number, Schema.NumberFromString]);
 
@@ -35,6 +40,12 @@ export const TagSchema = Schema.Struct({
 
 export type Tag = Schema.Schema.Type<typeof TagSchema>;
 
+// Videos upload direct-to-R2 via presigned PUTs, so bytes never buffer in the
+// Worker; the cap is a product/cost guard enforced at upload-confirm time.
+// Thumbnails still transit the Worker and stay small.
+export const MAX_VIDEO_SIZE_BYTES = 200 * 1024 * 1024;
+export const MAX_THUMBNAIL_SIZE_BYTES = 5 * 1024 * 1024;
+
 const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
   schema.pipe(
     Schema.decodeTo(Schema.String, {
@@ -63,10 +74,26 @@ export const FormFileUploadTextSchema = Schema.Struct({
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
 
-const VideoFile = Schema.instanceOf(File).pipe(
+export const VIDEO_EXTENSION_PATTERN = /\.(mp4|avi|mov|wmv|flv|mkv)$/i;
+
+const VideoKey = Schema.String.pipe(
+  Schema.check(
+    Schema.isMinLength(1, {
+      message: "Video upload is missing",
+    }),
+  ),
+);
+
+const ThumbnailFile = Schema.instanceOf(File).pipe(
+  Schema.refine((file): file is File => /\.(jpe?g)$/i.test(file.name), {
+    message: "Thumbnail must be a JPEG image",
+  }),
   Schema.refine(
-    (file): file is File => /\.(mp4|avi|mov|wmv|flv|mkv)$/i.test(file.name),
-    { message: "Only video files are allowed" },
+    (file): file is File =>
+      file.size > 0 && file.size <= MAX_THUMBNAIL_SIZE_BYTES,
+    {
+      message: `Thumbnails must not exceed ${MAX_THUMBNAIL_SIZE_BYTES / (1024 * 1024)} MB`,
+    },
   ),
 );
 
@@ -75,13 +102,27 @@ export const FormFileUploadSchema = Schema.Struct({
   relatedPostId: Schema.optional(RelatedPostId),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   tags: Schema.Array(TagSchema),
-  thumbnail: Schema.instanceOf(File),
+  thumbnail: ThumbnailFile,
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  video: VideoFile,
+  videoKey: VideoKey,
   videoMetadata: VideoMetadataSchema,
 });
 
 export type FileUploadData = Schema.Schema.Type<typeof FormFileUploadSchema>;
+
+export const createVideoUploadUrlSchema = Schema.Struct({
+  fileName: Schema.String.pipe(
+    Schema.check(
+      Schema.isPattern(VIDEO_EXTENSION_PATTERN, {
+        message: "Only video files are allowed",
+      }),
+    ),
+  ),
+});
+
+export type CreateVideoUploadUrlInput = Schema.Schema.Type<
+  typeof createVideoUploadUrlSchema
+>;
 
 export const updatePostInputSchema = Schema.Struct({
   content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
@@ -105,12 +146,30 @@ export const searchPostsBaseSchema = Schema.Struct({
       decode: SchemaGetter.transform((val) => val.trim()),
       encode: SchemaGetter.transform((val) => val),
     }),
+    Schema.check(
+      Schema.isMaxLength(MAX_SEARCH_QUERY_LENGTH, {
+        message: `Search query must not exceed ${MAX_SEARCH_QUERY_LENGTH} characters`,
+      }),
+    ),
     Schema.withDecodingDefault(Effect.succeed("")),
   ),
   sortBy: Schema.Literals(["newest", "oldest"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("newest")),
   ),
-  tags: Schema.Array(Schema.String).pipe(
+  tags: Schema.Array(
+    Schema.String.pipe(
+      Schema.check(
+        Schema.isMaxLength(MAX_TAG_NAME_LENGTH, {
+          message: `Tag names must not exceed ${MAX_TAG_NAME_LENGTH} characters`,
+        }),
+      ),
+    ),
+  ).pipe(
+    Schema.check(
+      Schema.isMaxLength(MAX_SEARCH_TAGS_COUNT, {
+        message: `Select at most ${MAX_SEARCH_TAGS_COUNT} tags`,
+      }),
+    ),
     Schema.withDecodingDefault(Effect.succeed([])),
   ),
 });

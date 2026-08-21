@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { parse, parseStrict } from "../effect/schema.utils";
-import { searchPostsBaseSchema, updatePostInputSchema } from "./posts.schema";
+import {
+  MAX_SEARCH_QUERY_LENGTH,
+  MAX_SEARCH_TAGS_COUNT,
+  MAX_TAG_NAME_LENGTH,
+} from "../search/search-limits";
+import {
+  FormFileUploadSchema,
+  MAX_THUMBNAIL_SIZE_BYTES,
+  searchPostsBaseSchema,
+  updatePostInputSchema,
+} from "./posts.schema";
 import { parsePostId } from "./posts.service";
 
 describe("parsePostId", () => {
@@ -58,6 +68,33 @@ describe("searchPostsBaseSchema", () => {
   it("should throw on unknown extra key", () => {
     expect(() =>
       parseStrict(searchPostsBaseSchema)({ unknownKey: "value" }),
+    ).toThrow();
+  });
+
+  it("should throw on a search query longer than the cap", () => {
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({
+        q: "a".repeat(MAX_SEARCH_QUERY_LENGTH + 1),
+      }),
+    ).toThrow();
+  });
+
+  it("should throw on more tags than the cap", () => {
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({
+        tags: Array.from(
+          { length: MAX_SEARCH_TAGS_COUNT + 1 },
+          (_, index) => `tag-${index}`,
+        ),
+      }),
+    ).toThrow();
+  });
+
+  it("should throw on a tag name longer than the cap", () => {
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({
+        tags: ["a".repeat(MAX_TAG_NAME_LENGTH + 1)],
+      }),
     ).toThrow();
   });
 });
@@ -158,5 +195,60 @@ describe("updatePostInputSchema", () => {
       title: "<script>alert('xss')</script>",
     });
     expect(result.title).toBe("");
+  });
+});
+
+describe("FormFileUploadSchema", () => {
+  const thumbnailSizeMessage = `Thumbnails must not exceed ${MAX_THUMBNAIL_SIZE_BYTES / (1024 * 1024)} MB`;
+
+  const makeUploadInput = () => ({
+    content: "content",
+    relatedPostId: undefined,
+    source: undefined,
+    tags: [],
+    thumbnail: new File(["thumb"], "thumb.jpg", { type: "image/jpeg" }),
+    title: "title",
+    videoKey: "videos/user-1/abc.mp4",
+    videoMetadata: undefined,
+  });
+
+  it("accepts a video key and JPEG thumbnail", () => {
+    const input = makeUploadInput();
+    const result = parseStrict(FormFileUploadSchema)(input);
+    expect(result.videoKey).toBe("videos/user-1/abc.mp4");
+    expect(result.thumbnail.name).toBe("thumb.jpg");
+  });
+
+  it("rejects a missing video key", () => {
+    expect(() =>
+      parseStrict(FormFileUploadSchema)({
+        ...makeUploadInput(),
+        videoKey: "",
+      }),
+    ).toThrow("Video upload is missing");
+  });
+
+  it("rejects a thumbnail that is not a JPEG", () => {
+    expect(() =>
+      parseStrict(FormFileUploadSchema)({
+        ...makeUploadInput(),
+        thumbnail: new File(["thumb"], "thumb.png", {
+          type: "image/png",
+        }),
+      }),
+    ).toThrow("Thumbnail must be a JPEG image");
+  });
+
+  it("rejects a thumbnail larger than the size cap", () => {
+    expect(() =>
+      parseStrict(FormFileUploadSchema)({
+        ...makeUploadInput(),
+        thumbnail: new File(
+          [new Uint8Array(MAX_THUMBNAIL_SIZE_BYTES + 1)],
+          "thumb.jpg",
+          { type: "image/jpeg" },
+        ),
+      }),
+    ).toThrow(thumbnailSizeMessage);
   });
 });

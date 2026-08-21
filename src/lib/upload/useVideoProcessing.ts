@@ -3,6 +3,7 @@ import mediaInfoFactory from "mediainfo.js";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { toaster } from "src/components/ui/toaster";
 
+import { MAX_VIDEO_SIZE_BYTES } from "../posts/posts.schema";
 import type { VideoMetadata } from "../posts/posts.schema";
 import {
   analyzeVideo,
@@ -97,6 +98,16 @@ export function useVideoProcessing(): VideoProcessingState &
   );
 
   const selectFile = async (file: File) => {
+    if (file.size > MAX_VIDEO_SIZE_BYTES) {
+      toaster.create({
+        description: `Video files must not exceed ${MAX_VIDEO_SIZE_BYTES / (1024 * 1024)} MB`,
+        duration: 5000,
+        title: "Video too large",
+        type: "error",
+      });
+      return;
+    }
+
     setVideoFile(file);
     setVideoMetadata(undefined);
     setFrameRate(null);

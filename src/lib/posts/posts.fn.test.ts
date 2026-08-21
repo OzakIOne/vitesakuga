@@ -1,8 +1,10 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import { StorageModule } from "../storage/storage.module";
 import { PostsService, PostsServiceLive } from "./posts.service";
 
 let db: Kysely<DB>;
@@ -158,6 +160,40 @@ describe("PostsService.search", () => {
     expect(result.data[0].title).toBe("Anime Sakuga");
   });
 
+  it("treats search wildcards as literals", async () => {
+    await insertPost({ title: "100% Anime", content: "literal percent" });
+    await insertPost({ title: "Plain Post", content: "no percent" });
+
+    const result = await runEffect(
+      PostsService.search({
+        q: "100%",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].title).toBe("100% Anime");
+  });
+
+  it("does not treat a bare percent query as match-all", async () => {
+    await insertPost({ title: "Anime", content: "Sakuga" });
+
+    const result = await runEffect(
+      PostsService.search({
+        q: "%",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+
+    expect(result.data).toHaveLength(0);
+  });
+
   it("filters by tags", async () => {
     const postId1 = await insertPost({ title: "Tagged Post" });
     const postId2 = await insertPost({ title: "Untagged Post" });
@@ -293,14 +329,24 @@ describe("PostsService.getByTag", () => {
 });
 
 describe("PostsService.upload", () => {
-  const makeUploadInput = () => ({
+  const uploadVideoToStorage = async (name = "video.mp4") => {
+    const file = new File(["video bytes"], name, { type: "video/mp4" });
+    return runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        return yield* storage.uploadVideo("user-1", file);
+      }),
+    );
+  };
+
+  const makeUploadInput = (videoKey: string) => ({
     content: "<p>Test upload</p>",
     relatedPostId: undefined,
     source: undefined,
     tags: [],
     thumbnail: new File(["thumb"], "thumb.jpg", { type: "image/jpeg" }),
     title: "Uploaded Post",
-    video: new File(["video"], "video.mp4", { type: "video/mp4" }),
+    videoKey,
     videoMetadata: undefined,
   });
 
@@ -308,8 +354,62 @@ describe("PostsService.upload", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     await expect(
-      runEffect(PostsService.upload(makeUploadInput())),
+      runEffect(PostsService.upload(makeUploadInput("videos/user-1/a.mp4"))),
     ).rejects.toThrow("You must be logged in");
+  });
+
+  it("confirms the direct-to-R2 upload and creates the post", async () => {
+    const { key } = await uploadVideoToStorage();
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    const post = await runEffect(PostsService.upload(makeUploadInput(key)));
+
+    expect(post.id).toBeGreaterThan(0);
+    expect(post.videoKey).toBe(key);
+    expect(post.title).toBe("Uploaded Post");
+  });
+
+  it("rejects a video key outside the user's namespace", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    await expect(
+      runEffect(
+        PostsService.upload(makeUploadInput("videos/other-user/abc.mp4")),
+      ),
+    ).rejects.toThrow("Invalid video upload key");
+  });
+
+  it("rejects a video key that was never uploaded", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    await expect(
+      runEffect(
+        PostsService.upload(
+          makeUploadInput("videos/user-1/never-uploaded.mp4"),
+        ),
+      ),
+    ).rejects.toThrow("Video upload could not be verified");
+  });
+});
+
+describe("PostsService.createVideoUploadUrl", () => {
+  it("throws unauthorized when no session", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
+
+    await expect(
+      runEffect(PostsService.createVideoUploadUrl({ fileName: "clip.mp4" })),
+    ).rejects.toThrow("You must be logged in");
+  });
+
+  it("presigns a direct-to-R2 upload for the session user", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    const result = await runEffect(
+      PostsService.createVideoUploadUrl({ fileName: "clip.mp4" }),
+    );
+
+    expect(result.key).toMatch(/^videos\/user-1\/[a-f0-9-]+\.mp4$/);
+    expect(result.contentType).toBe("video/mp4");
+    expect(result.url).toContain(result.key);
+    expect(result.url).toContain("X-Amz-Signature=");
   });
 });
 

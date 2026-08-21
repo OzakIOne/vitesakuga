@@ -1,5 +1,7 @@
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Effect, Layer } from "effect";
 
+import { THUMBNAIL_CONTENT_TYPE, videoContentType } from "./content-type";
 import { StorageError, StorageModule } from "./storage.module";
 
 const RUSTFS_ENDPOINT = "http://localhost:9000";
@@ -30,6 +32,10 @@ export const makeRustFSStorageLayer = () => {
           secretAccessKey: RUSTFS_SECRET_KEY,
         },
         forcePathStyle: true,
+        // Presigned PUT URLs must not carry the SDK's default CRC32 checksum
+        // query params: the checksum is computed over an unsigned payload and
+        // would be rejected by the S3-compatible server against the real bytes.
+        requestChecksumCalculation: "WHEN_REQUIRED",
       });
 
       const uploadFile = (
@@ -37,8 +43,10 @@ export const makeRustFSStorageLayer = () => {
         userId: string,
         file: File,
         ext: string,
+        contentType: string,
       ): Effect.Effect<{ key: string }, StorageError> =>
         Effect.gen(function* () {
+          // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
           const baseName = crypto.randomUUID();
           const key = `${namespace}/${userId}/${baseName}.${ext}`;
 
@@ -59,7 +67,7 @@ export const makeRustFSStorageLayer = () => {
                 new s3Mod.PutObjectCommand({
                   Body: Buffer.from(buffer),
                   Bucket: BUCKET,
-                  ContentType: file.type,
+                  ContentType: contentType,
                   Key: key,
                 }),
               ),
@@ -107,11 +115,64 @@ export const makeRustFSStorageLayer = () => {
             });
           }),
         uploadThumbnail: (userId, file) =>
-          uploadFile("thumbnails", userId, file, "jpg"),
+          uploadFile("thumbnails", userId, file, "jpg", THUMBNAIL_CONTENT_TYPE),
         uploadVideo: (userId, file) => {
           const ext = file.name.split(".").pop() ?? "mp4";
-          return uploadFile("videos", userId, file, ext);
+          return uploadFile("videos", userId, file, ext, videoContentType(ext));
         },
+        headFile: (key) =>
+          Effect.gen(function* () {
+            const result = yield* Effect.tryPromise({
+              try: () =>
+                client.send(
+                  new s3Mod.HeadObjectCommand({
+                    Bucket: BUCKET,
+                    Key: key,
+                  }),
+                ),
+              catch: (cause) =>
+                new StorageError({
+                  cause,
+                  key,
+                  message: `Failed to inspect file: ${String(cause)}`,
+                  operation: "head",
+                }),
+            });
+
+            return {
+              contentLength: result.ContentLength ?? 0,
+              contentType: result.ContentType ?? "",
+            };
+          }),
+        presignVideoUpload: (userId, ext) =>
+          Effect.gen(function* () {
+            // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
+            const baseName = crypto.randomUUID();
+            const key = `videos/${userId}/${baseName}.${ext}`;
+            const contentType = videoContentType(ext);
+
+            const url = yield* Effect.tryPromise({
+              try: () =>
+                getSignedUrl(
+                  client,
+                  new s3Mod.PutObjectCommand({
+                    Bucket: BUCKET,
+                    ContentType: contentType,
+                    Key: key,
+                  }),
+                  { expiresIn: 15 * 60 },
+                ),
+              catch: (cause) =>
+                new StorageError({
+                  cause,
+                  key,
+                  message: `Failed to presign upload: ${String(cause)}`,
+                  operation: "presign",
+                }),
+            });
+
+            return { contentType, key, url };
+          }),
       } satisfies StorageModule["Service"];
     }),
   );

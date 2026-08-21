@@ -1,5 +1,11 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
+import {
+  MAX_SEARCH_QUERY_LENGTH,
+  MAX_SEARCH_TAGS_COUNT,
+  MAX_TAG_NAME_LENGTH,
+} from "../search/search-limits";
+
 export const userPublicSchema = Schema.Struct({
   id: Schema.String,
   image: Schema.NullOr(Schema.String),
@@ -18,9 +24,27 @@ export const fetchUserInputSchema = Schema.Struct({
       decode: SchemaGetter.transform((val) => val.trim()),
       encode: SchemaGetter.transform((val) => val),
     }),
+    Schema.check(
+      Schema.isMaxLength(MAX_SEARCH_QUERY_LENGTH, {
+        message: `Search query must not exceed ${MAX_SEARCH_QUERY_LENGTH} characters`,
+      }),
+    ),
     Schema.withDecodingDefault(Effect.succeed("")),
   ),
-  tags: Schema.Array(Schema.String).pipe(
+  tags: Schema.Array(
+    Schema.String.pipe(
+      Schema.check(
+        Schema.isMaxLength(MAX_TAG_NAME_LENGTH, {
+          message: `Tag names must not exceed ${MAX_TAG_NAME_LENGTH} characters`,
+        }),
+      ),
+    ),
+  ).pipe(
+    Schema.check(
+      Schema.isMaxLength(MAX_SEARCH_TAGS_COUNT, {
+        message: `Select at most ${MAX_SEARCH_TAGS_COUNT} tags`,
+      }),
+    ),
     Schema.withDecodingDefault(Effect.succeed([])),
   ),
   userId: Schema.String,

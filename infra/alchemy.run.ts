@@ -91,10 +91,11 @@ export default Alchemy.Stack(
       // Public bucket domain, e.g. media-dev.ozaki.one.
       domains: [{ name: mediaDomain }],
       // Only the app domain (and localhost in dev) may read the bucket from
-      // the browser. Uploads stay server-side (S3 API), so GET/HEAD suffices.
+      // the browser. Videos upload direct-to-R2 via presigned PUTs, so the app
+      // origin may also PUT; DELETE stays server-side.
       cors: [
         {
-          allowedMethods: ["GET", "HEAD"],
+          allowedMethods: ["GET", "HEAD", "PUT"],
           allowedOrigins:
             stage === "dev"
               ? [
@@ -103,7 +104,7 @@ export default Alchemy.Stack(
                   "http://localhost:5173",
                 ]
               : [`https://${appDomain}`],
-          allowedHeaders: ["range"],
+          allowedHeaders: ["range", "content-type"],
           exposeHeaders: ["etag", "content-range", "accept-ranges"],
           maxAgeSeconds: 3600,
         },

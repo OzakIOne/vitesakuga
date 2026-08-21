@@ -65,6 +65,47 @@ describe("StorageModule", () => {
     });
   });
 
+  describe("headFile", () => {
+    it("returns the stored size and content type", async () => {
+      const file = new File(["test content"], "clip.mp4", {
+        type: "video/mp4",
+      });
+      const { key } = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.uploadVideo("user-123", file);
+        }),
+      );
+
+      const head = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(key);
+        }),
+      );
+
+      expect(head.contentLength).toBe(12);
+      expect(head.contentType).toBe("video/mp4");
+    });
+  });
+
+  describe("presignVideoUpload", () => {
+    it("returns a scoped key, content type and signed PUT URL", async () => {
+      const result = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.presignVideoUpload("user-123", "mp4");
+        }),
+      );
+
+      expect(result.key).toMatch(/^videos\/user-123\/[a-f0-9-]+\.mp4$/);
+      expect(result.contentType).toBe("video/mp4");
+      expect(result.url).toContain(result.key);
+      expect(result.url).toContain("X-Amz-Signature=");
+      expect(result.url).toContain("X-Amz-Expires=900");
+    });
+  });
+
   describe("deleteFile", () => {
     it("succeeds silently when key does not exist", async () => {
       await runTest(
