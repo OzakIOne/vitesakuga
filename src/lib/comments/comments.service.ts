@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 
 import type { AuthServices } from "../auth/context";
 import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
@@ -89,12 +89,13 @@ export class CommentsService extends Context.Service<
         );
       }
 
+      const now = yield* DateTime.now;
       const comment = yield* db.executeTakeFirstOrError(
         db
           .insertInto("comments")
           .values({
             content: data.content,
-            createdAt: new Date(),
+            createdAt: DateTime.toDate(now),
             postId: data.postId,
             userId: session.user.id,
           })
@@ -191,7 +192,12 @@ export const CommentsServiceLive = Layer.effect(
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   .validator(parse(Schema.Number))
-  .handler(createHandler(CommentsService.fetch, CommentsServiceLive));
+  .handler(
+    createHandler(
+      CommentsServiceLive,
+      baseLayerFactories.db,
+    )(CommentsService.fetch),
+  );
 
 export const addComment = createServerFn({
   method: "POST",
@@ -200,18 +206,16 @@ export const addComment = createServerFn({
   .validator(parse(commentInsertSchema))
   .handler(
     createHandler(
-      CommentsService.add,
       CommentsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(CommentsService.add),
   );
 
 export const deleteComment = createServerFn({ method: "POST" })
   .validator(parse(Schema.Struct({ commentId: Schema.Number })))
   .handler(
     createHandler(
-      (data: { commentId: number }) => CommentsService.delete_(data.commentId),
       CommentsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )((data: { commentId: number }) => CommentsService.delete_(data.commentId)),
   );

@@ -666,11 +666,18 @@ export const PostsServiceLive = Layer.effect(PostsService, PostsService.make);
 
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator(parseStrict(searchPostsBaseSchema))
-  .handler(createHandler(PostsService.search, PostsServiceLive));
+  .handler(
+    createHandler(PostsServiceLive, baseLayerFactories.db)(PostsService.search),
+  );
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
   .validator(parsePostId)
-  .handler(createHandler(PostsService.fetchDetail, PostsServiceLive));
+  .handler(
+    createHandler(
+      PostsServiceLive,
+      baseLayerFactories.db,
+    )(PostsService.fetchDetail),
+  );
 
 export const uploadPost = createServerFn({ method: "POST" })
   .validator((data: FormData) => {
@@ -697,18 +704,16 @@ export const uploadPost = createServerFn({ method: "POST" })
   })
   .handler(
     createHandler(
-      PostsService.upload,
       PostsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PostsService.upload),
   );
 
 export const updatePost = createServerFn({ method: "POST" })
   .validator(parseStrict(updatePostInputSchema))
   .handler(
     createHandler(
-      PostsService.update,
       PostsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PostsService.update),
   );

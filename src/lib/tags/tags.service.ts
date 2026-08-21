@@ -3,7 +3,7 @@ import { Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../effect/effect.utils";
-import { createHandler } from "../server-fn.handler";
+import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "./tags.utils";
 
 export class TagsService extends Context.Service<
@@ -54,9 +54,9 @@ export class TagsService extends Context.Service<
 export const TagsServiceLive = Layer.effect(TagsService, TagsService.make);
 
 export const getAllTags = createServerFn().handler(
-  createHandler(TagsService.all, TagsServiceLive),
+  createHandler(TagsServiceLive, baseLayerFactories.db)(TagsService.all),
 );
 
 export const getAllPopularTags = createServerFn().handler(
-  createHandler(TagsService.popular, TagsServiceLive),
+  createHandler(TagsServiceLive, baseLayerFactories.db)(TagsService.popular),
 );

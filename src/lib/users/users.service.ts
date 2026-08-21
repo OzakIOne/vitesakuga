@@ -11,7 +11,7 @@ import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { UserNotFoundError, ValidationError } from "../errors";
 import { computePagination } from "../pagination/pagination";
-import { createHandler } from "../server-fn.handler";
+import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { mapPopularTags } from "../tags/tags.utils";
 import { fetchPostVoteCounts } from "../votes/votes.utils";
 import { fetchUserInputSchema, userPublicSchema } from "./users.schema";
@@ -210,9 +210,14 @@ export class UsersService extends Context.Service<
 export const UsersServiceLive = Layer.effect(UsersService, UsersService.make);
 
 export const fetchUsers = createServerFn().handler(
-  createHandler(UsersService.all, UsersServiceLive),
+  createHandler(UsersServiceLive, baseLayerFactories.db)(UsersService.all),
 );
 
 export const fetchUserPosts = createServerFn()
   .validator(parseStrict(fetchUserInputSchema))
-  .handler(createHandler(UsersService.userPosts, UsersServiceLive));
+  .handler(
+    createHandler(
+      UsersServiceLive,
+      baseLayerFactories.db,
+    )(UsersService.userPosts),
+  );

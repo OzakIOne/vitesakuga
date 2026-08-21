@@ -1,5 +1,5 @@
 import type { UserWithTwoFactor } from "better-auth/plugins";
-import { Effect, Schema } from "effect";
+import { Config, DateTime, Effect, Schema } from "effect";
 
 import { AuthService, RequestHeadersService } from "./context";
 
@@ -20,40 +20,46 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
 
   // import.meta.env.MODE is statically replaced by Vite, so it is safe on
   // both client and server; this module is server-only. The e2e bypass is
-  // additionally gated on process.env.DATABASE_DRIVER === "pglite" (only set
-  // by the Playwright webServer in e2e/playwright.config.ts). Deployed
-  // workers never set that var, and NODE_ENV defaults to "production" there
+  // additionally gated on DATABASE_DRIVER === "pglite" (only set by the
+  // Playwright webServer in e2e/playwright.config.ts). Deployed workers never
+  // set that var, and NODE_ENV defaults to "production" there
   // (infra/alchemy.run.ts), so the bypass can never activate outside e2e —
   // even for dev-mode builds that report MODE=development.
-  const isE2E =
-    process.env["DATABASE_DRIVER"] === "pglite" &&
-    process.env["NODE_ENV"] !== "production";
+  const databaseDriver = yield* Config.string("DATABASE_DRIVER").pipe(
+    Effect.orElseSucceed(() => ""),
+  );
+  const nodeEnv = yield* Config.string("NODE_ENV").pipe(
+    Effect.orElseSucceed(() => ""),
+  );
+  const isE2E = databaseDriver === "pglite" && nodeEnv !== "production";
 
   if (
     import.meta.env.MODE !== "production" &&
     isE2E &&
     cookie.includes("e2e-test-auth=bypass")
   ) {
+    const now = yield* DateTime.now;
+    const expiresAt = DateTime.add(now, { days: 1 });
     return {
       session: {
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        createdAt: DateTime.toDate(now),
+        expiresAt: DateTime.toDate(expiresAt),
         id: "e2e-session",
         ipAddress: "127.0.0.1",
         token: "e2e-token",
-        updatedAt: new Date(),
+        updatedAt: DateTime.toDate(now),
         userAgent: "e2e-test",
         userId: "e2e-test-user",
       },
       user: {
-        createdAt: new Date(),
+        createdAt: DateTime.toDate(now),
         email: "e2e@test.local",
         emailVerified: true,
         id: "e2e-test-user",
         image: null,
         name: "E2E Test User",
         twoFactorEnabled: false,
-        updatedAt: new Date(),
+        updatedAt: DateTime.toDate(now),
       },
     };
   }

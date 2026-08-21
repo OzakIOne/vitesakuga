@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 import { UpdateObject } from "kysely";
 
 import type { AuthServices } from "../auth/context";
@@ -307,8 +307,9 @@ export class PlaylistsService extends Context.Service<
       const user = yield* requireAuth();
       yield* requirePlaylistOwnership(data.playlistId, user.id);
 
+      const now = yield* DateTime.now;
       const setValues: UpdateObject<DB, "playlists"> = {
-        updated_at: new Date(),
+        updated_at: DateTime.toDate(now),
       };
       if (data.title !== undefined) setValues["title"] = data.title;
       if (data.description !== undefined)
@@ -1040,30 +1041,28 @@ export const createPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(createPlaylistInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.create,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.create),
   );
 
 export const updatePlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(updatePlaylistInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.update,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.update),
   );
 
 export const deletePlaylist = createServerFn({ method: "POST" })
   .validator(parse(Schema.Struct({ playlistId: Schema.Number })))
   .handler(
     createHandler(
-      (data: { playlistId: number }) =>
-        PlaylistsService.delete_(data.playlistId),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
+    )((data: { playlistId: number }) =>
+      PlaylistsService.delete_(data.playlistId),
     ),
   );
 
@@ -1071,50 +1070,45 @@ export const addPostToPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(addPostToPlaylistInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.addPost,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.addPost),
   );
 
 export const removePostFromPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(removePostFromPlaylistInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.removePost,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.removePost),
   );
 
 export const bulkAddPostsToPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(bulkAddPostsToPlaylistInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.bulkAddPosts,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.bulkAddPosts),
   );
 
 export const bulkRemovePostsFromPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(bulkRemovePostsFromPlaylistInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.bulkRemovePosts,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.bulkRemovePosts),
   );
 
 export const reorderPlaylistPosts = createServerFn({ method: "POST" })
   .validator(parseStrict(reorderPlaylistPostsInputSchema))
   .handler(
     createHandler(
-      PlaylistsService.reorder,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.reorder),
   );
 
 export const fetchUserPlaylists = createServerFn({
@@ -1123,10 +1117,9 @@ export const fetchUserPlaylists = createServerFn({
   .validator(parse(Schema.String))
   .handler(
     createHandler(
-      (data: string) => PlaylistsService.fetchUserPlaylists(data),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )((data: string) => PlaylistsService.fetchUserPlaylists(data)),
   );
 
 export const fetchPublicPlaylists = createServerFn({
@@ -1135,10 +1128,9 @@ export const fetchPublicPlaylists = createServerFn({
   .validator(parseStrict(fetchPublicPlaylistsSchema))
   .handler(
     createHandler(
-      PlaylistsService.fetchPublicPlaylists,
       PlaylistsServiceLive,
       baseLayerFactories.db,
-    ),
+    )(PlaylistsService.fetchPublicPlaylists),
   );
 
 export const fetchPlaylistDetail = createServerFn({
@@ -1147,10 +1139,9 @@ export const fetchPlaylistDetail = createServerFn({
   .validator(parseStrict(fetchPlaylistDetailSchema))
   .handler(
     createHandler(
-      PlaylistsService.fetchDetail,
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PlaylistsService.fetchDetail),
   );
 
 export const fetchPlaylistsForPost = createServerFn({
@@ -1159,8 +1150,7 @@ export const fetchPlaylistsForPost = createServerFn({
   .validator(parse(Schema.Number))
   .handler(
     createHandler(
-      (data: number) => PlaylistsService.fetchForPost(data),
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    ),
+    )((data: number) => PlaylistsService.fetchForPost(data)),
   );

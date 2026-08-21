@@ -202,28 +202,25 @@ export const fetchPostVotes = createServerFn({ strict: { output: false } })
   .validator(parse(Schema.Number))
   .handler(
     createHandler(
-      PostVotesService.get,
       PostVotesServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PostVotesService.get),
   );
 
 export const setPostVote = createServerFn({ method: "POST" })
   .validator(parseStrict(setPostVoteSchema))
   .handler(
     createHandler(
-      PostVotesService.set,
       PostVotesServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PostVotesService.set),
   );
 
 export const removePostVote = createServerFn({ method: "POST" })
   .validator(parseStrict(removePostVoteSchema))
   .handler(
     createHandler(
-      PostVotesService.remove,
       PostVotesServiceLive,
       baseLayerFactories.auth,
-    ),
+    )(PostVotesService.remove),
   );
