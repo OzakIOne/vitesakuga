@@ -20,7 +20,7 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
 
   // import.meta.env.MODE is statically replaced by Vite, so it is safe on
   // both client and server; this module is server-only. The e2e bypass is
-  // additionally gated on DATABASE_DRIVER === "pglite" (only set by the
+  // additionally gated on DATABASE_DRIVER === "e2e" (only set by the
   // Playwright webServer in e2e/playwright.config.ts). Deployed workers never
   // set that var, and NODE_ENV defaults to "production" there
   // (infra/alchemy.run.ts), so the bypass can never activate outside e2e —
@@ -31,7 +31,7 @@ export const getSessionEffect = Effect.fn("getSession")(function* () {
   const nodeEnv = yield* Config.string("NODE_ENV").pipe(
     Effect.orElseSucceed(() => ""),
   );
-  const isE2E = databaseDriver === "pglite" && nodeEnv !== "production";
+  const isE2E = databaseDriver === "e2e" && nodeEnv !== "production";
 
   if (
     import.meta.env.MODE !== "production" &&

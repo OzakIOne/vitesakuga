@@ -1,10 +1,16 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { fetchPostVotes } from "./votes.service";
+import type { FetchLikedPostsInput } from "./votes.schema";
+import { fetchLikedPosts, fetchPostVotes } from "./votes.service";
+
+const votesKeysRoot = ["post-votes"] as const;
 
 export const votesKeys = {
-  all: ["post-votes"] as const,
-  post: (postId: number) => [...votesKeys.all, postId] as const,
+  all: votesKeysRoot,
+  likedPosts: (params: FetchLikedPostsInput) =>
+    [...votesKeysRoot, "liked-posts", params] as const,
+  likedPostsAll: [...votesKeysRoot, "liked-posts"] as const,
+  post: (postId: number) => [...votesKeysRoot, postId] as const,
 } as const;
 
 // Centralized queryOptions factories for the post votes feature
@@ -20,7 +26,22 @@ const votesQueries = {
       queryKey: votesKeys.post(postId),
       staleTime: 30 * 1000, // 30 seconds
     }),
+
+  // Paginated virtual "Liked posts" playlist derived from the user's likes
+  likedPosts: (params: FetchLikedPostsInput) =>
+    queryOptions({
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      queryFn: async () =>
+        fetchLikedPosts({
+          data: params,
+        }),
+      queryKey: votesKeys.likedPosts(params),
+      staleTime: 30 * 1000, // 30 seconds
+    }),
 };
 
 export const votesQueryGetVotes = (postId: number) =>
   votesQueries.getVotes(postId);
+
+export const votesQueryLikedPosts = (params: FetchLikedPostsInput) =>
+  votesQueries.likedPosts(params);

@@ -75,6 +75,10 @@ export function useSetVote(postId: number) {
       void queryClient.invalidateQueries({
         queryKey: votesKeys.post(postId),
       });
+      // Keep the virtual "Liked posts" playlist in sync with the vote.
+      void queryClient.invalidateQueries({
+        queryKey: votesKeys.likedPostsAll,
+      });
     },
     successDescription: "Your vote has been updated.",
     successTitle: "Vote updated",

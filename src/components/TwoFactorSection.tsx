@@ -18,7 +18,7 @@ import {
 } from "src/lib/auth/two-factor.hooks";
 import { usersKeys } from "src/lib/users/users.queries";
 
-type EnableStep = "password" | "qr" | "backup-codes";
+type EnableStep = "password" | "generating" | "qr" | "backup-codes";
 
 function totpSecret(totpUri: string): string {
   try {
@@ -51,6 +51,8 @@ async function copyText(text: string, label: string): Promise<void> {
 
 type TwoFactorSectionProps = {
   enabled: boolean;
+  /** Whether the current user has a credential (email/password) account. */
+  hasPassword: boolean;
 };
 
 /**
@@ -58,7 +60,10 @@ type TwoFactorSectionProps = {
  * with an authenticator app (QR code + verification code), show backup codes,
  * regenerate them and disable 2FA.
  */
-export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
+export function TwoFactorSection({
+  enabled,
+  hasPassword,
+}: TwoFactorSectionProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const enableMutation = useEnableTwoFactor();
@@ -67,7 +72,9 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
   const generateMutation = useGenerateBackupCodes();
 
   const [enableOpen, setEnableOpen] = useState(false);
-  const [enableStep, setEnableStep] = useState<EnableStep>("password");
+  const [enableStep, setEnableStep] = useState<EnableStep>(
+    hasPassword ? "password" : "generating",
+  );
   const [enablePassword, setEnablePassword] = useState("");
   const [totpUri, setTotpUri] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -83,7 +90,7 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
 
   const closeEnable = () => {
     setEnableOpen(false);
-    setEnableStep("password");
+    setEnableStep(hasPassword ? "password" : "generating");
     setEnablePassword("");
     setTotpUri("");
     setBackupCodes([]);
@@ -96,27 +103,39 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
     await router.invalidate();
   };
 
+  const startEnable = (password?: string) => {
+    setEnableError("");
+    enableMutation.mutate(hasPassword ? { password: password ?? "" } : {}, {
+      onSuccess: (data) => {
+        if (data.method !== "totp") {
+          setEnableError("TOTP setup is not available.");
+          return;
+        }
+        setTotpUri(data.totpURI);
+        setBackupCodes(data.backupCodes);
+        setEnableStep("qr");
+      },
+      onError: (error) => setEnableError(error.message),
+    });
+  };
+
+  const handleEnableClick = () => {
+    if (!hasPassword) {
+      setEnableStep("generating");
+      setEnableOpen(true);
+      startEnable();
+      return;
+    }
+    setEnableStep("password");
+    setEnableOpen(true);
+  };
+
   const handleEnable = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!enablePassword) {
       return;
     }
-    setEnableError("");
-    enableMutation.mutate(
-      { password: enablePassword },
-      {
-        onSuccess: (data) => {
-          if (data.method !== "totp") {
-            setEnableError("TOTP setup is not available.");
-            return;
-          }
-          setTotpUri(data.totpURI);
-          setBackupCodes(data.backupCodes);
-          setEnableStep("qr");
-        },
-        onError: (error) => setEnableError(error.message),
-      },
-    );
+    startEnable(enablePassword);
   };
 
   const handleVerifyCode = (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -140,11 +159,20 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
 
   const handleDisable = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!disablePassword) {
+    if (hasPassword && !disablePassword) {
       return;
     }
+    disableMutation.mutate(hasPassword ? { password: disablePassword } : {}, {
+      onSuccess: () => {
+        setDisableOpen(false);
+        setDisablePassword("");
+      },
+    });
+  };
+
+  const handleDisableClick = () => {
     disableMutation.mutate(
-      { password: disablePassword },
+      {},
       {
         onSuccess: () => {
           setDisableOpen(false);
@@ -156,11 +184,23 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
 
   const handleRegenerate = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!regeneratePassword) {
+    if (hasPassword && !regeneratePassword) {
       return;
     }
     generateMutation.mutate(
-      { password: regeneratePassword },
+      hasPassword ? { password: regeneratePassword } : {},
+      {
+        onSuccess: (data) => {
+          setNewBackupCodes(data.backupCodes);
+          setRegeneratePassword("");
+        },
+      },
+    );
+  };
+
+  const handleRegenerateClick = () => {
+    generateMutation.mutate(
+      {},
       {
         onSuccess: (data) => {
           setNewBackupCodes(data.backupCodes);
@@ -175,7 +215,9 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
       ? "Scan the QR code"
       : enableStep === "backup-codes"
         ? "Save your backup codes"
-        : "Enable two-factor authentication";
+        : enableStep === "generating"
+          ? "Set up two-factor authentication"
+          : "Enable two-factor authentication";
 
   return (
     <section className="border-t border-gray-200 pt-12">
@@ -212,7 +254,8 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
         ) : (
           <Button
             colorPalette="blue"
-            onClick={() => setEnableOpen(true)}
+            disabled={enableMutation.isPending}
+            onClick={handleEnableClick}
             size="sm"
           >
             <LuShieldCheck />
@@ -225,7 +268,7 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
         <div className="mt-5 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/40">
           <Text color="green.700" fontSize="sm">
             Two-factor authentication is on. You&apos;ll be asked for a code
-            from your authenticator app when signing in with your password.
+            from your authenticator app when signing in.
           </Text>
         </div>
       )}
@@ -266,6 +309,14 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                       />
                     </Field.Root>
                   </form>
+                )}
+
+                {enableStep === "generating" && (
+                  <Text color="gray.500" fontSize="sm">
+                    {enableMutation.isPending
+                      ? "Generating a setup key for your authenticator app\u2026"
+                      : "Something went wrong. Try again."}
+                  </Text>
                 )}
 
                 {enableStep === "qr" && (
@@ -376,6 +427,20 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                     </Button>
                   </>
                 )}
+                {enableStep === "generating" && (
+                  <>
+                    <Dialog.ActionTrigger asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </Dialog.ActionTrigger>
+                    <Button
+                      colorPalette="blue"
+                      disabled={enableMutation.isPending}
+                      onClick={() => startEnable()}
+                    >
+                      {enableMutation.isPending ? "Setting up..." : "Try again"}
+                    </Button>
+                  </>
+                )}
                 {enableStep === "qr" && (
                   <Button
                     colorPalette="blue"
@@ -418,21 +483,28 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                 </Dialog.CloseTrigger>
               </Dialog.Header>
               <Dialog.Body>
-                <form id="disable-2fa" onSubmit={handleDisable}>
+                {hasPassword ? (
+                  <form id="disable-2fa" onSubmit={handleDisable}>
+                    <Text color="gray.500" fontSize="sm" mb={4}>
+                      Your account will only be protected by your password.
+                      Enter your password to confirm.
+                    </Text>
+                    <Field.Root>
+                      <Field.Label>Password</Field.Label>
+                      <PasswordInput
+                        autoComplete="current-password"
+                        onChange={(e) => setDisablePassword(e.target.value)}
+                        placeholder="Enter your password"
+                        value={disablePassword}
+                      />
+                    </Field.Root>
+                  </form>
+                ) : (
                   <Text color="gray.500" fontSize="sm" mb={4}>
-                    Your account will only be protected by your password. Enter
-                    your password to confirm.
+                    Your account will only be protected by your GitHub or Google
+                    sign-in. Confirm to turn off two-factor authentication.
                   </Text>
-                  <Field.Root>
-                    <Field.Label>Password</Field.Label>
-                    <PasswordInput
-                      autoComplete="current-password"
-                      onChange={(e) => setDisablePassword(e.target.value)}
-                      placeholder="Enter your password"
-                      value={disablePassword}
-                    />
-                  </Field.Root>
-                </form>
+                )}
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.ActionTrigger asChild>
@@ -440,9 +512,13 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                 </Dialog.ActionTrigger>
                 <Button
                   colorPalette="red"
-                  disabled={!disablePassword || disableMutation.isPending}
-                  form="disable-2fa"
-                  type="submit"
+                  disabled={
+                    (hasPassword && !disablePassword) ||
+                    disableMutation.isPending
+                  }
+                  form={hasPassword ? "disable-2fa" : undefined}
+                  onClick={hasPassword ? undefined : handleDisableClick}
+                  type={hasPassword ? "submit" : "button"}
                 >
                   {disableMutation.isPending ? "Disabling..." : "Disable 2FA"}
                 </Button>
@@ -501,7 +577,7 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                       Copy all
                     </Button>
                   </div>
-                ) : (
+                ) : hasPassword ? (
                   <form id="regenerate-2fa" onSubmit={handleRegenerate}>
                     <Text color="gray.500" fontSize="sm" mb={4}>
                       Generate a fresh set of backup codes. Your current codes
@@ -518,6 +594,11 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                       />
                     </Field.Root>
                   </form>
+                ) : (
+                  <Text color="gray.500" fontSize="sm" mb={4}>
+                    Generate a fresh set of backup codes. Your current codes
+                    will stop working immediately.
+                  </Text>
                 )}
               </Dialog.Body>
               <Dialog.Footer>
@@ -539,10 +620,12 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
                     <Button
                       colorPalette="red"
                       disabled={
-                        !regeneratePassword || generateMutation.isPending
+                        (hasPassword && !regeneratePassword) ||
+                        generateMutation.isPending
                       }
-                      form="regenerate-2fa"
-                      type="submit"
+                      form={hasPassword ? "regenerate-2fa" : undefined}
+                      onClick={hasPassword ? undefined : handleRegenerateClick}
+                      type={hasPassword ? "submit" : "button"}
                     >
                       {generateMutation.isPending
                         ? "Generating..."

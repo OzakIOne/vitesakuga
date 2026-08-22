@@ -69,9 +69,8 @@ export default defineMiddleware(async (event) => {
   // SAFETY: Nitro exposes the Worker runtime bindings under
   // `event.req.runtime.cloudflare` on the Cloudflare preset; the runtime is
   // typed generically, so we cast to the known shape and treat it as optional.
-  const cfEnv = (
-    event.req.runtime as CloudflareRuntime | undefined
-  )?.cloudflare?.env;
+  const cfEnv = (event.req.runtime as CloudflareRuntime | undefined)?.cloudflare
+    ?.env;
   const cfRateLimit = cfEnv?.RATE_LIMIT;
   if (cfRateLimit) {
     const outcome = await cfRateLimit.limit({ key: `mut:${ip}` });

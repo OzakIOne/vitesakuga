@@ -1,6 +1,7 @@
 import { Portal } from "@ark-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useState } from "react";
 import { LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasskeysSection } from "src/components/PasskeysSection";
@@ -12,6 +13,7 @@ import { Avatar, AvatarGroup } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { PasswordInput } from "src/components/ui/password-input";
 import { Heading, Text } from "src/components/ui/typography";
+import { getAccountSecurity } from "src/lib/auth/account-security";
 import {
   useChangePassword,
   useDeleteAccount,
@@ -19,6 +21,7 @@ import {
 } from "src/lib/auth/auth.hooks";
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
+import { usersKeys } from "src/lib/users/users.queries";
 
 const memberSinceFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -27,21 +30,106 @@ const memberSinceFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+type DeleteAccountDialogProps = {
+  hasPassword: boolean;
+  isPending: boolean;
+  onConfirm: (password?: string) => void;
+};
+
+function DeleteAccountDialog({
+  hasPassword,
+  isPending,
+  onConfirm,
+}: DeleteAccountDialogProps) {
+  const [password, setPassword] = useState("");
+
+  const canConfirm = !hasPassword || password.trim().length > 0;
+
+  return (
+    <Dialog.Root
+      onOpenChange={(details) => {
+        if (!details.open) {
+          setPassword("");
+        }
+      }}
+      role="alertdialog"
+    >
+      <Dialog.Trigger asChild>
+        <Button colorPalette="red" flexShrink={0} size="sm" variant="outline">
+          Delete account
+        </Button>
+      </Dialog.Trigger>
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Are you sure?</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Text mb={4}>
+                This action cannot be undone. Your posts and comments will
+                remain publicly visible, published as &ldquo;Deleted
+                user&rdquo;. All your other data will be permanently removed.
+              </Text>
+              {hasPassword && (
+                <Field.Root>
+                  <Field.Label>Confirm your password</Field.Label>
+                  <PasswordInput
+                    autoComplete="current-password"
+                    className="h-12 w-full"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                    }}
+                    placeholder="Enter your password"
+                    value={password}
+                  />
+                </Field.Root>
+              )}
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.ActionTrigger asChild>
+                <Button variant="outline">Cancel</Button>
+              </Dialog.ActionTrigger>
+              <Button
+                colorPalette="red"
+                disabled={!canConfirm}
+                loading={isPending}
+                onClick={() => onConfirm(hasPassword ? password : undefined)}
+              >
+                Confirm account deletion
+              </Button>
+            </Dialog.Footer>
+            <Dialog.CloseTrigger asChild>
+              <CloseButton size="sm" />
+            </Dialog.CloseTrigger>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  );
+}
+
 export const Route = createFileRoute("/account")({
-  beforeLoad: ({ context, location }) => {
+  beforeLoad: async ({ context, location }) => {
     if (!context.user) {
       throw redirect({
         search: { redirect: location.pathname },
         to: "/login",
       });
     }
-    return { user: context.user };
+    const security = await context.queryClient.fetchQuery({
+      queryKey: usersKeys.accountSecurity,
+      queryFn: async ({ signal }) => getAccountSecurity({ signal }),
+      staleTime: 60 * 60 * 1000,
+    });
+    return { user: context.user, hasPassword: security.hasPassword };
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext();
+  const { hasPassword, user } = Route.useRouteContext();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
   const deleteAccountMutation = useDeleteAccount();
@@ -277,7 +365,10 @@ function RouteComponent() {
 
           <PasskeysSection />
 
-          <TwoFactorSection enabled={user.twoFactorEnabled} />
+          <TwoFactorSection
+            enabled={user.twoFactorEnabled}
+            hasPassword={hasPassword}
+          />
 
           <section className="border-t border-gray-200 pt-12">
             <Heading as="h2" mb={1} size="md">
@@ -289,54 +380,21 @@ function RouteComponent() {
               fontSize="sm"
               mb={4}
             >
-              Deleting your account is permanent.
+              Deleting your account is permanent. Your posts and comments stay
+              public under the name &ldquo;Deleted user&rdquo;.
             </Text>
             <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-red-100 bg-red-50 p-4 sm:flex-row sm:items-center dark:border-red-900 dark:bg-red-950/40">
               <Text className="dark:text-red-300" color="red.700" fontSize="sm">
-                This removes your account and all associated data for good.
+                This removes your account and personal data for good. Public
+                content is anonymized, not deleted.
               </Text>
-              <Dialog.Root role="alertdialog">
-                <Dialog.Trigger asChild>
-                  <Button
-                    colorPalette="red"
-                    flexShrink={0}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Delete account
-                  </Button>
-                </Dialog.Trigger>
-                <Portal>
-                  <Dialog.Backdrop />
-                  <Dialog.Positioner>
-                    <Dialog.Content>
-                      <Dialog.Header>
-                        <Dialog.Title>Are you sure?</Dialog.Title>
-                      </Dialog.Header>
-                      <Dialog.Body>
-                        <Text>
-                          This action cannot be undone and all your data will be
-                          permanently removed.
-                        </Text>
-                      </Dialog.Body>
-                      <Dialog.Footer>
-                        <Dialog.ActionTrigger asChild>
-                          <Button variant="outline">Cancel</Button>
-                        </Dialog.ActionTrigger>
-                        <Button
-                          colorPalette="red"
-                          onClick={() => deleteAccountMutation.mutate()}
-                        >
-                          Confirm account deletion
-                        </Button>
-                      </Dialog.Footer>
-                      <Dialog.CloseTrigger asChild>
-                        <CloseButton size="sm" />
-                      </Dialog.CloseTrigger>
-                    </Dialog.Content>
-                  </Dialog.Positioner>
-                </Portal>
-              </Dialog.Root>
+              <DeleteAccountDialog
+                hasPassword={hasPassword}
+                isPending={deleteAccountMutation.isPending}
+                onConfirm={(password) =>
+                  deleteAccountMutation.mutate({ password })
+                }
+              />
             </div>
           </section>
         </div>

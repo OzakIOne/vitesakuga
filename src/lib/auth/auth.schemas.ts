@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
+
 const Email = Schema.String.pipe(
   Schema.check(
     Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
@@ -28,6 +30,24 @@ const PasswordMatch = Schema.makeFilter(
       : "Passwords do not match",
 );
 
+// Shared by sign-up and password change; mirrors the server-side policy in
+// `password-policy.ts` (Better Auth `minPasswordLength` + `hooks.before`),
+// so the form rejects weak passwords before the request is ever sent.
+const StrongPassword = Schema.String.pipe(
+  Schema.check(
+    Schema.isMinLength(MIN_PASSWORD_LENGTH, {
+      message: `You must have a length of at least ${MIN_PASSWORD_LENGTH}`,
+    }),
+  ),
+  Schema.check(
+    Schema.makeFilter((password: string): string | undefined =>
+      assessPassword(password).ok
+        ? undefined
+        : "Please choose a stronger password (mix lowercase, uppercase, digits or symbols)",
+    ),
+  ),
+);
+
 export const signUpSchema = Schema.Struct({
   name: Schema.String.pipe(
     Schema.check(
@@ -37,13 +57,7 @@ export const signUpSchema = Schema.Struct({
     ),
   ),
   email: Email,
-  password: Schema.String.pipe(
-    Schema.check(
-      Schema.isMinLength(8, {
-        message: "You must have a length of at least 8",
-      }),
-    ),
-  ),
+  password: StrongPassword,
   confirm_password: Schema.String,
 }).pipe(Schema.check(PasswordMatch));
 
@@ -54,5 +68,5 @@ export const profileSchema = Schema.Struct({
 
 export const passwordSchema = Schema.Struct({
   currentPassword: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
-  newPassword: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+  newPassword: StrongPassword,
 });

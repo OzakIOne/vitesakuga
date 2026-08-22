@@ -13,6 +13,7 @@ export const usersKeys = {
     [...usersKeys.all, "detail", { userId, q, tags }] as const,
   list: () => [...usersKeys.all, "list"] as const,
   userInfo: ["userInfo"] as const,
+  accountSecurity: ["accountSecurity"] as const,
   userPostsInfinite: ({ userId, q, tags }: FetchUserInput) =>
     [...usersKeys.all, "userPostsInfinite", { userId, q, tags }] as const,
 } as const;

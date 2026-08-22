@@ -24,6 +24,7 @@ import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as UsersIdRouteImport } from './routes/users.$id'
 import { Route as AccountPlaylistsIndexRouteImport } from './routes/account_.playlists.index'
 import { Route as AccountPlaylistsPlaylistIdRouteImport } from './routes/account_.playlists.$playlistId'
+import { Route as AccountPlaylistsLikedRouteImport } from './routes/account_.playlists.liked'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as PostsTagsTagRouteImport } from './routes/posts/tags/$tag'
 import { Route as UsersIdPlaylistsIndexRouteImport } from './routes/users.$id.playlists.index'
@@ -104,6 +105,11 @@ const AccountPlaylistsPlaylistIdRoute =
     path: '/account/playlists/$playlistId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AccountPlaylistsLikedRoute = AccountPlaylistsLikedRouteImport.update({
+  id: '/account_/playlists/liked',
+  path: '/account/playlists/liked',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/account/playlists/$playlistId': typeof AccountPlaylistsPlaylistIdRoute
+  '/account/playlists/liked': typeof AccountPlaylistsLikedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
   '/account/playlists/': typeof AccountPlaylistsIndexRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
   '/account/playlists/$playlistId': typeof AccountPlaylistsPlaylistIdRoute
+  '/account/playlists/liked': typeof AccountPlaylistsLikedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
   '/account/playlists': typeof AccountPlaylistsIndexRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/account_/playlists/$playlistId': typeof AccountPlaylistsPlaylistIdRoute
+  '/account_/playlists/liked': typeof AccountPlaylistsLikedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/posts/tags/$tag': typeof PostsTagsTagRoute
   '/account_/playlists/': typeof AccountPlaylistsIndexRoute
@@ -204,6 +213,7 @@ export interface FileRouteTypes {
     | '/posts/'
     | '/users/'
     | '/account/playlists/$playlistId'
+    | '/account/playlists/liked'
     | '/api/auth/$'
     | '/posts/tags/$tag'
     | '/account/playlists/'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/users'
     | '/account/playlists/$playlistId'
+    | '/account/playlists/liked'
     | '/api/auth/$'
     | '/posts/tags/$tag'
     | '/account/playlists'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/posts/'
     | '/users/'
     | '/account_/playlists/$playlistId'
+    | '/account_/playlists/liked'
     | '/api/auth/$'
     | '/posts/tags/$tag'
     | '/account_/playlists/'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   PostsIndexRoute: typeof PostsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
   AccountPlaylistsPlaylistIdRoute: typeof AccountPlaylistsPlaylistIdRoute
+  AccountPlaylistsLikedRoute: typeof AccountPlaylistsLikedRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   PostsTagsTagRoute: typeof PostsTagsTagRoute
   AccountPlaylistsIndexRoute: typeof AccountPlaylistsIndexRoute
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountPlaylistsPlaylistIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account_/playlists/liked': {
+      id: '/account_/playlists/liked'
+      path: '/account/playlists/liked'
+      fullPath: '/account/playlists/liked'
+      preLoaderRoute: typeof AccountPlaylistsLikedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   PostsIndexRoute: PostsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,
   AccountPlaylistsPlaylistIdRoute: AccountPlaylistsPlaylistIdRoute,
+  AccountPlaylistsLikedRoute: AccountPlaylistsLikedRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   PostsTagsTagRoute: PostsTagsTagRoute,
   AccountPlaylistsIndexRoute: AccountPlaylistsIndexRoute,

@@ -39,13 +39,23 @@ export default defineConfig({
       reuseExistingServer: !CI,
       timeout: 120000,
       env: {
-        DATABASE_DRIVER: "pglite",
-        DATABASE_URL: "postgresql://e2e:e2e@localhost:5432/e2e",
+        // "e2e" behaves like the local Postgres driver (see src/lib/db/pool.ts)
+        // but is distinct so the e2e auth bypass in session.effect.ts stays
+        // unreachable from `nub run dev:local`.
+        DATABASE_DRIVER: "e2e",
+        DATABASE_URL:
+          "postgresql://user:password@localhost:5432/sakuga?sslmode=disable",
         CLOUDFLARE_ACCESS_KEY: "rustfsadmin",
         CLOUDFLARE_BUCKET: "e2e-test",
         CLOUDFLARE_R2: "http://localhost:9000",
         CLOUDFLARE_R2_PUBLIC_URL: "http://localhost:9000/e2e-test",
         CLOUDFLARE_SECRET_KEY: "rustfsadmin",
+        // Real-auth e2e flows (2FA challenge, passkeys) sign up and sign in
+        // against the local dev server; without this, Vite inherits the
+        // `VITE_BASE_URL` from `.env` (a remote dev origin), which would send
+        // auth traffic off-machine and set Secure cookies that never persist
+        // over http://localhost.
+        VITE_BASE_URL: "http://localhost:3000",
       },
     },
   ],

@@ -74,7 +74,6 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "1.0.0-rc.4",
     "effect": "^4.0.0-rc.108",
-    "isomorphic-dompurify": "^3.22.0",
     "kysely": "^0.29.5",
     "media-chrome": "^4.19.2",
     "mediabunny": "^1.54.0",
@@ -86,6 +85,7 @@
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
     "react-qr-code": "^2.2.0",
+    "sanitize-html": "^2.17.7",
     "tailwind-merge": "^3.6.0",
     "xstate": "^6.0.0-alpha.38"
   },
@@ -113,6 +113,7 @@
     "@types/pg": "^8.21.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "@types/sanitize-html": "^2.16.1",
     "@vitejs/plugin-react": "^6.0.5",
     "alchemy": "2.0.0-beta.72",
     "dotenv": "^17.4.2",

@@ -9,18 +9,20 @@ import {
 } from "./auth.schemas";
 
 describe("signUpSchema", () => {
+  const VALID_PASSWORD = "Sup3r$ecretKey";
+
   it("accepts valid signup data", () => {
     const result = parse(signUpSchema)({
       name: "John Doe",
       email: "john@example.com",
-      password: "password123",
-      confirm_password: "password123",
+      password: VALID_PASSWORD,
+      confirm_password: VALID_PASSWORD,
     });
     expect(result).toEqual({
       name: "John Doe",
       email: "john@example.com",
-      password: "password123",
-      confirm_password: "password123",
+      password: VALID_PASSWORD,
+      confirm_password: VALID_PASSWORD,
     });
   });
 
@@ -29,8 +31,8 @@ describe("signUpSchema", () => {
       parse(signUpSchema)({
         name: "John Doe",
         email: "john@example.com",
-        password: "password123",
-        confirm_password: "different",
+        password: VALID_PASSWORD,
+        confirm_password: "Differ3nt$Key",
       }),
     ).toThrow();
   });
@@ -40,8 +42,8 @@ describe("signUpSchema", () => {
       parse(signUpSchema)({
         name: "John Doe",
         email: "not-an-email",
-        password: "password123",
-        confirm_password: "password123",
+        password: VALID_PASSWORD,
+        confirm_password: VALID_PASSWORD,
       }),
     ).toThrow();
   });
@@ -51,19 +53,30 @@ describe("signUpSchema", () => {
       parse(signUpSchema)({
         name: "ab",
         email: "john@example.com",
-        password: "password123",
-        confirm_password: "password123",
+        password: VALID_PASSWORD,
+        confirm_password: VALID_PASSWORD,
       }),
     ).toThrow();
   });
 
-  it("rejects password shorter than 8 characters", () => {
+  it("rejects password shorter than 12 characters", () => {
     expect(() =>
       parse(signUpSchema)({
         name: "John Doe",
         email: "john@example.com",
-        password: "short",
-        confirm_password: "short",
+        password: "Ab1!678901",
+        confirm_password: "Ab1!678901",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a long password without character-class diversity", () => {
+    expect(() =>
+      parse(signUpSchema)({
+        name: "John Doe",
+        email: "john@example.com",
+        password: "abcdefghijkl",
+        confirm_password: "abcdefghijkl",
       }),
     ).toThrow();
   });
@@ -137,11 +150,11 @@ describe("passwordSchema", () => {
   it("accepts valid password change data", () => {
     const result = parse(passwordSchema)({
       currentPassword: "oldpass123",
-      newPassword: "newpass123",
+      newPassword: "N3w-Sup3rSecret",
     });
     expect(result).toEqual({
       currentPassword: "oldpass123",
-      newPassword: "newpass123",
+      newPassword: "N3w-Sup3rSecret",
     });
   });
 
@@ -149,6 +162,15 @@ describe("passwordSchema", () => {
     expect(() =>
       parse(passwordSchema)({
         currentPassword: "",
+        newPassword: "N3w-Sup3rSecret",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a weak new password", () => {
+    expect(() =>
+      parse(passwordSchema)({
+        currentPassword: "oldpass123",
         newPassword: "newpass123",
       }),
     ).toThrow();

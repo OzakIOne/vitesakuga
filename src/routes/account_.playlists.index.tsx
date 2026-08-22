@@ -14,6 +14,7 @@ import { Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
+import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
 
 export const Route = createFileRoute("/account_/playlists/")({
   component: ManagePlaylistsContent,
@@ -28,6 +29,72 @@ export const Route = createFileRoute("/account_/playlists/")({
     return { user: context.user };
   },
 });
+
+// Virtual system playlist (YouTube-style): derived from the user's like
+// votes, always private, pinned at the top of the playlists grid.
+function LikedPostsCard() {
+  const { data } = useSuspenseQuery(votesQueryLikedPosts({ page: 0 }));
+
+  return (
+    <Box
+      border="1px solid"
+      borderColor="gray.200"
+      borderRadius="lg"
+      overflow="hidden"
+    >
+      <Link to="/account/playlists/liked">
+        <Box
+          aspectRatio="16 / 9"
+          bg="gray.800"
+          cursor="pointer"
+          overflow="hidden"
+          position="relative"
+          w="full"
+        >
+          {data.playlist.thumbnail_key ? (
+            <Image
+              alt="Liked posts"
+              h="full"
+              objectFit="contain"
+              src={assetUrl(data.playlist.thumbnail_key)}
+              w="full"
+            />
+          ) : (
+            <Box
+              alignItems="center"
+              display="flex"
+              h="full"
+              justifyContent="center"
+              w="full"
+            >
+              <Text color="gray.500" fontSize="lg">
+                No liked posts yet
+              </Text>
+            </Box>
+          )}
+        </Box>
+      </Link>
+
+      <VStack align="start" gap={2} p={3}>
+        <Link to="/account/playlists/liked">
+          <Text fontWeight="medium" lineClamp={2}>
+            Liked posts
+          </Text>
+        </Link>
+
+        <HStack gap={2}>
+          <Text color="gray.500" fontSize="xs">
+            {data.playlist.post_count} post
+            {data.playlist.post_count !== 1 ? "s" : ""}
+          </Text>
+          <Badge borderRadius="full" colorPalette="gray" px={2} size="xs">
+            Private
+          </Badge>
+        </HStack>
+      </VStack>
+    </Box>
+  );
+}
 
 function ManagePlaylistsContent() {
   const { user } = Route.useRouteContext();
@@ -54,20 +121,9 @@ function ManagePlaylistsContent() {
         </Stack>
       )}
 
-      {!isLoading && playlists.length === 0 ? (
-        <Box
-          alignItems="center"
-          border="1px solid"
-          borderColor="gray.200"
-          borderRadius="md"
-          display="flex"
-          h="200px"
-          justifyContent="center"
-        >
-          <Text color="gray.500">You have no playlists yet</Text>
-        </Box>
-      ) : (
+      {!isLoading && (
         <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4}>
+          <LikedPostsCard />
           {playlists.map((playlist) => (
             <Box
               border="1px solid"

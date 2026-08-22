@@ -16,4 +16,11 @@ describe("auth server config", () => {
       clientSecret: "test-client-secret",
     });
   });
+
+  it("allows managing 2FA without a password for OAuth-only users", () => {
+    const twoFactorPlugin = auth.options.plugins?.find(
+      (plugin) => plugin.id === "two-factor",
+    );
+    expect(twoFactorPlugin?.options).toMatchObject({ allowPasswordless: true });
+  });
 });

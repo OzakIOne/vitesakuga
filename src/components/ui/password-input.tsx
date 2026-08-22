@@ -1,9 +1,10 @@
 "use client";
 
 import { PasswordInput as ArkPasswordInput } from "@ark-ui/react/password-input";
-import { passwordStrength, type Options } from "check-password-strength";
+import { passwordStrength } from "check-password-strength";
 import * as React from "react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
+import { PASSWORD_STRENGTH_OPTIONS } from "src/lib/auth/password-policy";
 
 import { INPUT_BASE, INPUT_SIZES } from "./field";
 import { cx } from "./ui-utils";
@@ -79,12 +80,7 @@ export const PasswordInput = React.forwardRef<
   );
 });
 
-const STRENGTH_OPTIONS: Options<string> = [
-  { id: 0, value: "weak", minDiversity: 0, minLength: 0 },
-  { id: 1, value: "fair", minDiversity: 2, minLength: 6 },
-  { id: 2, value: "good", minDiversity: 3, minLength: 8 },
-  { id: 3, value: "strong", minDiversity: 4, minLength: 12 },
-];
+const STRENGTH_OPTIONS = PASSWORD_STRENGTH_OPTIONS;
 
 export type PasswordStrengthResult = {
   /** 0 for an empty password, otherwise 1 (weak) to 4 (strong). */

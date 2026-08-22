@@ -13,6 +13,8 @@ type UserTable = {
   email: string;
   emailVerified: boolean;
   image: string | null;
+  twoFactorEnabled: boolean;
+  deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 };
@@ -51,6 +53,32 @@ type VerificationTable = {
   expiresAt: Date;
   createdAt: Date | null;
   updatedAt: Date | null;
+};
+
+// Written/read by Better Auth's two-factor plugin.
+type TwoFactorTable = {
+  id: string;
+  userId: string;
+  secret: string;
+  backupCodes: string;
+  verified: boolean;
+  failedVerificationCount: number;
+  lockedUntil: Date | null;
+};
+
+// Written/read by @better-auth/passkey.
+type PasskeyTable = {
+  id: string;
+  userId: string;
+  credentialID: string;
+  publicKey: string;
+  counter: number;
+  backedUp: boolean;
+  deviceType: string;
+  transports: string | null;
+  aaguid: string | null;
+  name: string | null;
+  createdAt: Date | null;
 };
 
 type TagsTable = {
@@ -114,6 +142,8 @@ export type DB = {
   session: SessionTable;
   user: UserTable;
   verification: VerificationTable;
+  twoFactor: TwoFactorTable;
+  passkey: PasskeyTable;
   comments: CommentsTable;
   post_votes: PostVotesTable;
   post_tags: PostTagsTable;

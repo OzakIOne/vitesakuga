@@ -1,7 +1,9 @@
 import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import { Data, Duration, Effect, Schedule } from "effect";
 
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RUSTFS_ENDPOINT = "http://localhost:9000";
 const RUSTFS_ACCESS_KEY = "rustfsadmin";
 const RUSTFS_SECRET_KEY = "rustfsadmin";
@@ -12,9 +14,14 @@ class CommandError extends Data.TaggedError("CommandError")<{
   readonly message: string;
 }> {}
 
-const exec = (cmd: string) =>
+const exec = (cmd: string, options: { cwd?: string } = {}) =>
   Effect.try({
-    try: () => execSync(cmd, { stdio: "pipe", encoding: "utf-8" }).trim(),
+    try: () =>
+      execSync(cmd, {
+        cwd: options.cwd,
+        encoding: "utf-8",
+        stdio: "pipe",
+      }).trim(),
     catch: () =>
       new CommandError({ command: cmd, message: `Command failed: ${cmd}` }),
   });
@@ -86,8 +93,51 @@ const createBucket = Effect.gen(function* () {
   yield* Effect.log(`Bucket "${BUCKET}" ready`);
 });
 
+const ensurePostgres = Effect.gen(function* () {
+  yield* Effect.log("Checking local Postgres...");
+  yield* exec("docker compose up -d postgres", { cwd: REPO_ROOT }).pipe(
+    Effect.catch((error) =>
+      Effect.fail(
+        new CommandError({
+          command: "docker compose",
+          message: `Failed to start Postgres: ${error instanceof Error ? error.message : error}`,
+        }),
+      ),
+    ),
+  );
+  yield* Effect.log("Postgres is up");
+});
+
+const migrateDatabase = Effect.gen(function* () {
+  yield* Effect.log("Applying database migrations...");
+
+  yield* Effect.retry(
+    Effect.gen(function* () {
+      yield* Effect.sleep(Duration.seconds(1));
+      yield* exec(
+        "DATABASE_URL='postgresql://user:password@localhost:5432/sakuga?sslmode=disable' nub e2e/migrate-local.mjs",
+        { cwd: REPO_ROOT },
+      ).pipe(Effect.catch(() => Effect.fail("migrations not ready")));
+    }),
+    Schedule.recurs(30),
+  ).pipe(
+    Effect.catch(() =>
+      Effect.fail(
+        new CommandError({
+          command: "migrate-local.mjs",
+          message: "Database migrations failed",
+        }),
+      ),
+    ),
+  );
+
+  yield* Effect.log("Database migrations applied");
+});
+
 const setup = Effect.gen(function* () {
   yield* startRustFS;
+  yield* ensurePostgres;
+  yield* migrateDatabase;
   yield* createBucket;
 }).pipe(
   Effect.catch((error) =>

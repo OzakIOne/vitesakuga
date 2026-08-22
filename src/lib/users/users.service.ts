@@ -53,8 +53,13 @@ export class UsersService extends Context.Service<
     const db = yield* KyselyDB;
 
     const all = Effect.fn("UsersService.all")(function* () {
+      // Skip anonymized (deleted) accounts: they are inert shells kept only
+      // so posts/comments can render their "Deleted user" attribution.
       const data = yield* db.execute(
-        db.selectFrom("user").select(["id", "name", "image"]),
+        db
+          .selectFrom("user")
+          .select(["id", "name", "image"])
+          .where("deletedAt", "is", null),
       );
       return yield* Effect.try({
         try: () => parse(Schema.Array(userPublicSchema))(data),

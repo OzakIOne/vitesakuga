@@ -11,10 +11,16 @@ import type { PostVote } from "../db/schema";
 import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { PostNotFoundError, UnauthorizedError } from "../errors";
+import {
+  computePagination,
+  type PaginationMeta,
+} from "../pagination/pagination";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
+  fetchLikedPostsSchema,
   removePostVoteSchema,
   setPostVoteSchema,
+  type FetchLikedPostsInput,
   type RemovePostVoteInput,
   type SetPostVoteInput,
 } from "./votes.schema";
@@ -23,6 +29,39 @@ export type PostVotesSummary = {
   dislikes: number;
   likes: number;
   userVote: PostVote | null;
+};
+
+const LIKED_POSTS_PAGE_SIZE = 30;
+const LIKED_PLAYLIST_TITLE = "Liked posts";
+
+// A liked post row mirrors the playlist detail row shape so the same grid UI
+// can render regular playlists and the virtual "Liked posts" playlist.
+export type LikedPostRow = {
+  post_id: number;
+  position: number;
+  added_at: Date;
+  id: number;
+  title: string;
+  content: string;
+  thumbnail_key: string;
+  created_at: Date;
+  user_id: string | null;
+  user_name: string | null;
+  video_key: string;
+};
+
+export type LikedPlaylistMeta = {
+  title: string;
+  description: string | null;
+  is_public: boolean;
+  post_count: number;
+  thumbnail_key: string | null;
+};
+
+export type LikedPostsResult = {
+  playlist: LikedPlaylistMeta;
+  data: readonly LikedPostRow[];
+  meta: { pagination: PaginationMeta };
 };
 
 export class PostVotesService extends Context.Service<
@@ -46,6 +85,13 @@ export class PostVotesService extends Context.Service<
       data: RemovePostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
+      UnauthorizedError | SessionFetchError | SqlError,
+      AuthServices
+    >;
+    readonly fetchLikedPosts: (
+      data: FetchLikedPostsInput,
+    ) => Effect.Effect<
+      LikedPostsResult,
       UnauthorizedError | SessionFetchError | SqlError,
       AuthServices
     >;
@@ -168,7 +214,90 @@ export class PostVotesService extends Context.Service<
       return yield* fetchSummary(data.postId, session.id);
     });
 
-    return { get, set, remove };
+    // Virtual "Liked posts" playlist (YouTube-style): derived directly from the
+    // user's like votes instead of stored playlist rows, so it can never drift
+    // out of sync with what the user actually liked.
+    const fetchLikedPosts = Effect.fn("PostVotesService.fetchLikedPosts")(
+      function* (data: FetchLikedPostsInput) {
+        const session = yield* getUserSessionEffect();
+
+        if (!session) {
+          return yield* new UnauthorizedError({
+            message: "You must be logged in to view your liked posts",
+          });
+        }
+
+        const countResult = yield* db.executeTakeFirstOrUndefined(
+          db
+            .selectFrom("post_votes")
+            .select(db.fn.countAll().as("count"))
+            .where("userId", "=", session.id)
+            .where("vote", "=", "like"),
+        );
+        const totalCount = Number(countResult?.count ?? 0);
+
+        const pagination = computePagination(totalCount, {
+          page: data.page,
+          pageSize: LIKED_POSTS_PAGE_SIZE,
+        });
+
+        // Inner join on posts is enough: post_votes.postId cascades on post
+        // deletion, so a vote can never reference a deleted post.
+        const rows = yield* db.execute(
+          db
+            .selectFrom("post_votes")
+            .innerJoin("posts", "posts.id", "post_votes.postId")
+            .leftJoin("user", "user.id", "posts.userId")
+            .select([
+              "post_votes.postId as post_id",
+              "post_votes.createdAt as added_at",
+              "posts.id",
+              "posts.title",
+              "posts.content",
+              "posts.thumbnailKey as thumbnail_key",
+              "posts.createdAt as created_at",
+              "posts.userId as user_id",
+              "posts.videoKey as video_key",
+              "user.name as user_name",
+            ] as const)
+            .where("post_votes.userId", "=", session.id)
+            .where("post_votes.vote", "=", "like")
+            .orderBy("post_votes.createdAt", "desc")
+            // Stable tie-breaker when two likes share the same timestamp.
+            .orderBy("post_votes.postId", "desc")
+            .offset(pagination.offset)
+            .limit(LIKED_POSTS_PAGE_SIZE),
+        );
+
+        const likedRows: LikedPostRow[] = rows.map((row, index) => ({
+          added_at: row.added_at,
+          content: row.content,
+          created_at: row.created_at,
+          id: row.id,
+          position: pagination.offset + index,
+          post_id: row.post_id,
+          thumbnail_key: row.thumbnail_key,
+          title: row.title,
+          user_id: row.user_id,
+          user_name: row.user_name,
+          video_key: row.video_key,
+        }));
+
+        return {
+          playlist: {
+            description: null,
+            is_public: false,
+            post_count: totalCount,
+            thumbnail_key: likedRows[0]?.thumbnail_key ?? null,
+            title: LIKED_PLAYLIST_TITLE,
+          },
+          data: likedRows,
+          meta: { pagination },
+        };
+      },
+    );
+
+    return { get, set, remove, fetchLikedPosts };
   }),
 }) {
   static readonly get = Effect.fn("PostVotesService.get")(function* (
@@ -190,6 +319,13 @@ export class PostVotesService extends Context.Service<
   ) {
     const svc = yield* PostVotesService;
     return yield* svc.remove(data);
+  });
+
+  static readonly fetchLikedPosts = Effect.fn(
+    "PostVotesService.fetchLikedPosts",
+  )(function* (data: FetchLikedPostsInput) {
+    const svc = yield* PostVotesService;
+    return yield* svc.fetchLikedPosts(data);
   });
 }
 
@@ -223,4 +359,15 @@ export const removePostVote = createServerFn({ method: "POST" })
       PostVotesServiceLive,
       baseLayerFactories.auth,
     )(PostVotesService.remove),
+  );
+
+export const fetchLikedPosts = createServerFn({
+  strict: { output: false },
+})
+  .validator(parseStrict(fetchLikedPostsSchema))
+  .handler(
+    createHandler(
+      PostVotesServiceLive,
+      baseLayerFactories.auth,
+    )(PostVotesService.fetchLikedPosts),
   );

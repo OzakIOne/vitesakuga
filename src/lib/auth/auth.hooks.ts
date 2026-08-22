@@ -6,6 +6,7 @@ import { usersKeys } from "src/lib/users/users.queries";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { AuthClientContext } from "./client-context";
+import { deleteAccount } from "./delete-account";
 import {
   setTwoFactorRedirectUrl,
   TwoFactorRedirectSchema,
@@ -41,11 +42,7 @@ export function useLogin(redirectUrl: string) {
   const authClient = useContext(AuthClientContext);
 
   return useMutation({
-    mutationFn: async ({
-      email,
-      password,
-      captchaToken,
-    }: LoginInput) => {
+    mutationFn: async ({ email, password, captchaToken }: LoginInput) => {
       const options: NonNullable<
         Parameters<typeof authClient.signIn.email>[1]
       > = {
@@ -151,18 +148,32 @@ export function useChangePassword() {
   });
 }
 
+export type DeleteAccountInput = {
+  password?: string | undefined;
+};
+
 export function useDeleteAccount() {
   const navigate = useNavigate();
   const authClient = useContext(AuthClientContext);
+  const queryClient = useQueryClient();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to delete account",
     errorTitle: "Error deleting account",
-    mutationFn: async () => authClient.deleteUser(),
-    onSuccess: () => {
-      void navigate({ to: "/" });
+    mutationFn: async ({ password }: DeleteAccountInput) => {
+      await deleteAccount({ data: password ? { password } : {} });
+      // The server removed every session; sign out clears the auth cookie
+      // and the cached user state on this device.
+      await authClient.signOut();
     },
-    successDescription: "Your account has been successfully deleted.",
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: usersKeys.userInfo,
+      });
+      await navigate({ to: "/" });
+    },
+    successDescription:
+      "Your account has been deleted. Your posts and comments remain visible under “Deleted user”.",
     successTitle: "Account deleted",
   });
 }

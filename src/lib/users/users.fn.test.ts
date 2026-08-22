@@ -31,6 +31,19 @@ describe("UsersService.all", () => {
     expect(result.map((u) => u.name).sort()).toEqual(["Alice", "Bob"]);
   });
 
+  it("excludes deleted (anonymized) users", async () => {
+    await db
+      .updateTable("user")
+      .set({ deletedAt: new Date(), name: "Deleted user" })
+      .where("id", "=", "user-2")
+      .execute();
+
+    const result = await runEffect(UsersService.all());
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("Alice");
+  });
+
   it("returns validated user objects", async () => {
     const result = await runEffect(UsersService.all());
 

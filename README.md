@@ -2,22 +2,17 @@
 
 Cloning a mvp of sakugabooru but with mainly typescript and good libs
 
-- [ ] fix createHandler typing issue
-- [ ] split upload and convert into components and utils
 - [ ] better style Video (fix tailwind class not working)
 - [x] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
   - [media chrome keyboard shortcuts](https://www.media-chrome.org/docs/en/keyboard-shortcuts)
 - [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
 - [ ] cleanup post schemas and server fn
-- [ ] better handle optional props that shouldnt be optional is some cases, currentUserId in comments.tsx or /posts/$postId.tsx maybe not sure
-- [ ] passkey / TOTP
+- [x] passkey / TOTP
 - [x] github login
   - [X] google login
     - [ ] add test to this login, make it undependant of each service if possible
 - [x] captcha ?
-- [ ] better auth dash?
 - [ ] better auth sentinel?
-- [ ] 
 
 ## Secondary
 

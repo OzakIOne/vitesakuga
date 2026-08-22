@@ -16,6 +16,10 @@ export const user = pgTable("user", {
   createdAt: timestamp()
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
+  // Set when the account has been deleted and anonymized: posts and comments
+  // keep referencing this row so they stay public, attributed to
+  // DELETED_USER_NAME ("Deleted user").
+  deletedAt: timestamp(),
   email: text().notNull().unique(),
   emailVerified: boolean()
     .$defaultFn(() => false)
@@ -29,8 +33,12 @@ export const user = pgTable("user", {
     .notNull(),
 });
 
+// Display name shown for accounts that were deleted and anonymized.
+export const DELETED_USER_NAME = "Deleted user";
+
 export const userSelectSchema = Schema.Struct({
   createdAt: TimestampSchema,
+  deletedAt: Schema.optionalKey(Schema.NullOr(TimestampSchema)),
   email: Schema.String,
   emailVerified: Schema.Boolean,
   id: Schema.String,
@@ -42,6 +50,7 @@ export const userSelectSchema = Schema.Struct({
 
 export const userInsertSchema = Schema.Struct({
   createdAt: Schema.optionalKey(Schema.Date),
+  deletedAt: Schema.optionalKey(Schema.NullOr(Schema.Date)),
   email: Schema.String,
   emailVerified: Schema.optionalKey(Schema.Boolean),
   id: Schema.String,

@@ -51,9 +51,13 @@ export function useEnableTwoFactor() {
   const authClient = useContext(AuthClientContext);
 
   return useMutation({
-    mutationFn: async ({ password }: { password: string }) => {
+    // Password is only required for users with a credential account. OAuth-only
+    // users (GitHub/Google) enable 2FA without one; an empty string is sent so
+    // the client request stays within the plugin's typed request shape and the
+    // server (allowPasswordless) skips validation for those users.
+    mutationFn: async ({ password }: { password?: string }) => {
       const { data, error } = await authClient.twoFactor.enable({
-        password,
+        password: password ?? "",
         method: "totp",
       });
       if (error) {
@@ -119,9 +123,9 @@ export function useGenerateBackupCodes() {
   return useMutationWithFeedback({
     errorFallback: "Failed to generate backup codes",
     errorTitle: "Error generating backup codes",
-    mutationFn: async ({ password }: { password: string }) => {
+    mutationFn: async ({ password }: { password?: string }) => {
       const { data, error } = await authClient.twoFactor.generateBackupCodes({
-        password,
+        password: password ?? "",
       });
       if (error) {
         throw twoFactorErrorMessage(error, "Failed to generate backup codes");
@@ -141,8 +145,10 @@ export function useDisableTwoFactor() {
   return useMutationWithFeedback({
     errorFallback: "Failed to disable two-factor authentication",
     errorTitle: "Error disabling 2FA",
-    mutationFn: async ({ password }: { password: string }) => {
-      const { data, error } = await authClient.twoFactor.disable({ password });
+    mutationFn: async ({ password }: { password?: string }) => {
+      const { data, error } = await authClient.twoFactor.disable({
+        password: password ?? "",
+      });
       if (error) {
         throw twoFactorErrorMessage(
           error,

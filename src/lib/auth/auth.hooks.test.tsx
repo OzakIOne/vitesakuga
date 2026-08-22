@@ -23,8 +23,12 @@ const createMockAuthClient = () => ({
   },
   updateUser: vi.fn(),
   changePassword: vi.fn(),
-  deleteUser: vi.fn(),
+  signOut: vi.fn(),
 });
+
+vi.mock("./delete-account", () => ({
+  deleteAccount: vi.fn(),
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
@@ -240,25 +244,47 @@ describe(useDeleteAccount, () => {
     mockAuth = createMockAuthClient();
   });
 
-  it("calls deleteUser", async () => {
-    mockAuth.deleteUser.mockResolvedValueOnce({});
+  it("calls deleteAccount with the password then signs out", async () => {
+    const { deleteAccount } = await import("./delete-account");
+    vi.mocked(deleteAccount).mockResolvedValueOnce({ deletedUserId: "u1" });
+    mockAuth.signOut.mockResolvedValueOnce({});
     const { result } = renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
-    result.current.mutate();
+    result.current.mutate({ password: "secret" });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockAuth.deleteUser).toHaveBeenCalled();
+    expect(deleteAccount).toHaveBeenCalledWith({
+      data: { password: "secret" },
+    });
+    expect(mockAuth.signOut).toHaveBeenCalled();
+  });
+
+  it("calls deleteAccount without a password for passwordless accounts", async () => {
+    const { deleteAccount } = await import("./delete-account");
+    vi.mocked(deleteAccount).mockResolvedValueOnce({ deletedUserId: "u1" });
+    mockAuth.signOut.mockResolvedValueOnce({});
+    const { result } = renderHook(() => useDeleteAccount(), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({ password: undefined });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(deleteAccount).toHaveBeenCalledWith({ data: {} });
   });
 
   it("shows error toast on failure", async () => {
-    mockAuth.deleteUser.mockRejectedValueOnce(new Error("Cannot delete"));
+    const { deleteAccount } = await import("./delete-account");
+    vi.mocked(deleteAccount).mockRejectedValueOnce(
+      new Error("Incorrect password"),
+    );
     const { result } = renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
-    result.current.mutate();
+    result.current.mutate({ password: "wrong" });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     const { toaster } = await import("src/components/ui/toaster");
@@ -268,12 +294,14 @@ describe(useDeleteAccount, () => {
   });
 
   it("shows success toast on success", async () => {
-    mockAuth.deleteUser.mockResolvedValueOnce({});
+    const { deleteAccount } = await import("./delete-account");
+    vi.mocked(deleteAccount).mockResolvedValueOnce({ deletedUserId: "u1" });
+    mockAuth.signOut.mockResolvedValueOnce({});
     const { result } = renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
-    result.current.mutate();
+    result.current.mutate({ password: undefined });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const { toaster } = await import("src/components/ui/toaster");

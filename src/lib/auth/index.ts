@@ -1,13 +1,15 @@
 import { getAuthenticatorName, passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { captcha, twoFactor } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { Redacted } from "effect";
+import { Option, Redacted, Schema } from "effect";
 import { envServer } from "src/lib/env/server";
 
 import { db } from "../db/pool";
 import * as schema from "../db/schema";
+import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
 
 const passkeyRpID = new URL(envServer.VITE_BASE_URL).hostname;
 const githubClientSecret = Redacted.value(envServer.GITHUB_CLIENT_SECRET);
@@ -36,6 +38,22 @@ if (envServer.GOOGLE_CLIENT_ID && googleClientSecret) {
   };
 }
 
+// Every endpoint whose body carries a new plaintext password. Better Auth's
+// `minPasswordLength` enforces the length floor on all of them; the strength
+// rules are added by the `hooks.before` middleware below.
+const PASSWORD_SET_PATHS = new Set([
+  "/change-password",
+  "/reset-password",
+  "/sign-up/email",
+]);
+
+// Shape of the two Better Auth endpoints that accept a new password:
+// sign-up uses `password`, change/reset use `newPassword`.
+const NewPasswordBody = Schema.Union([
+  Schema.Struct({ password: Schema.String }),
+  Schema.Struct({ newPassword: Schema.String }),
+]);
+
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,
   secret: Redacted.value(envServer.BETTER_AUTH_SECRET),
@@ -52,6 +70,37 @@ export const auth = betterAuth({
   // https://www.better-auth.com/docs/authentication/email-password
   emailAndPassword: {
     enabled: true,
+    // Server-side floor for sign-up, password change and password reset.
+    // Strength (character-class) rules live in hooks.before below.
+    minPasswordLength: MIN_PASSWORD_LENGTH,
+  },
+
+  // https://www.better-auth.com/docs/concepts/hooks
+  // Server-side password-strength enforcement on every endpoint that sets a
+  // new password. The client schema mirrors this (auth.schemas.ts), but the
+  // check must not trust the client: this hook is the actual gate.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (!PASSWORD_SET_PATHS.has(ctx.path)) {
+        return;
+      }
+      // Parse the request here instead of runtime-narrowing `ctx.body`;
+      // requests that don't carry a new password fall through untouched.
+      const candidate = Schema.decodeUnknownOption(NewPasswordBody)(
+        ctx.body,
+      ).pipe(
+        Option.map((body) =>
+          "password" in body ? body.password : body.newPassword,
+        ),
+      );
+      if (Option.isNone(candidate)) {
+        return;
+      }
+      const assessment = assessPassword(candidate.value);
+      if (!assessment.ok) {
+        throw new APIError("BAD_REQUEST", { message: assessment.reason });
+      }
+    }),
   },
 
   // https://www.better-auth.com/docs/concepts/rate-limit
@@ -98,6 +147,11 @@ export const auth = betterAuth({
     // https://www.better-auth.com/docs/plugins/2fa
     twoFactor({
       issuer: "ViteSakuga",
+      // OAuth-only users (GitHub/Google) have no credential account, so they
+      // can't provide a password when enabling, disabling or regenerating 2FA.
+      // With this flag, Better Auth only asks for a password when the user
+      // actually has a credential account.
+      allowPasswordless: true,
     }),
     passkey({
       rpID: passkeyRpID,
@@ -132,9 +186,11 @@ export const auth = betterAuth({
   },
 
   user: {
-    deleteUser: {
-      enabled: true,
-    },
+    // Account deletion is NOT handled by Better Auth's built-in
+    // `deleteUser` endpoint: it would hard-delete the `user` row and fail
+    // on the posts/comments foreign keys, leaking nothing but errors.
+    // Deletion goes through the custom anonymizing server function in
+    // `src/lib/auth/delete-account.ts` instead.
     // changeEmail: {
     //   enabled: true,
     // },
