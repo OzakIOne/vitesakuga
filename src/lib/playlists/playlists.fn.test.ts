@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import type { PlaylistId, PostId } from "../ids";
+import { asPlaylistId, asPostId } from "../ids";
 import { PlaylistsService, PlaylistsServiceLive } from "./playlists.service";
 
 let db: Kysely<DB>;
@@ -23,8 +25,8 @@ const testUser2 = {
   image: null,
 };
 
-let postId: number;
-let postId2: number;
+let postId: PostId;
+let postId2: PostId;
 
 const insertPost = async (
   overrides: Partial<{
@@ -48,7 +50,8 @@ const insertPost = async (
     .values(row)
     .returning("id")
     .executeTakeFirstOrThrow();
-  return result.id;
+  // SAFETY: posts.id is the table's primary key.
+  return asPostId(result.id);
 };
 
 beforeEach(async () => {
@@ -63,7 +66,7 @@ beforeEach(async () => {
   await db.deleteFrom("playlist_posts").execute();
   await db.deleteFrom("playlists").execute();
 
-  postId = await insertPost();
+  postId = asPostId(await insertPost());
   postId2 = await insertPost({
     title: "Second Post",
     videoKey: "videos/def.mp4",
@@ -112,7 +115,7 @@ describe(PlaylistsService.create, () => {
 });
 
 describe(PlaylistsService.update, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     const row = await db
@@ -125,7 +128,7 @@ describe(PlaylistsService.update, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
   });
 
   it("updates title and description", async () => {
@@ -180,13 +183,15 @@ describe(PlaylistsService.update, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     await expect(
-      runEffect(PlaylistsService.update({ playlistId: 9999, title: "X" })),
+      runEffect(
+        PlaylistsService.update({ playlistId: asPlaylistId(9999), title: "X" }),
+      ),
     ).rejects.toThrow("Playlist 9999 not found");
   });
 });
 
 describe(PlaylistsService.delete_, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     const row = await db
@@ -198,7 +203,7 @@ describe(PlaylistsService.delete_, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
   });
 
   it("deletes the playlist", async () => {
@@ -243,7 +248,7 @@ describe(PlaylistsService.delete_, () => {
 });
 
 describe(PlaylistsService.addPost, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     await db.deleteFrom("playlist_posts").execute();
@@ -257,7 +262,7 @@ describe(PlaylistsService.addPost, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
   });
 
   it("adds a post to the playlist", async () => {
@@ -304,7 +309,9 @@ describe(PlaylistsService.addPost, () => {
     mockGetSession.mockResolvedValueOnce({ user: testUser });
 
     await expect(
-      runEffect(PlaylistsService.addPost({ playlistId, postId: 9999 })),
+      runEffect(
+        PlaylistsService.addPost({ playlistId, postId: asPostId(9999) }),
+      ),
     ).rejects.toThrow("Post 9999 not found");
   });
 
@@ -318,7 +325,7 @@ describe(PlaylistsService.addPost, () => {
 });
 
 describe(PlaylistsService.removePost, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     const row = await db
@@ -330,7 +337,7 @@ describe(PlaylistsService.removePost, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
 
     await db
       .insertInto("playlist_posts")
@@ -374,7 +381,7 @@ describe(PlaylistsService.removePost, () => {
 });
 
 describe(PlaylistsService.bulkAddPosts, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     await db.deleteFrom("playlist_posts").execute();
@@ -388,7 +395,7 @@ describe(PlaylistsService.bulkAddPosts, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
   });
 
   it("adds multiple posts at the end of the playlist", async () => {
@@ -459,7 +466,7 @@ describe(PlaylistsService.bulkAddPosts, () => {
     const result = await runEffect(
       PlaylistsService.bulkAddPosts({
         playlistId,
-        postIds: [postId, postId, 9999],
+        postIds: [postId, postId, asPostId(9999)],
       }),
     );
 
@@ -486,7 +493,7 @@ describe(PlaylistsService.bulkAddPosts, () => {
 });
 
 describe(PlaylistsService.bulkRemovePosts, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     await db.deleteFrom("playlist_posts").execute();
@@ -500,7 +507,7 @@ describe(PlaylistsService.bulkRemovePosts, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
 
     await db
       .insertInto("playlist_posts")
@@ -548,7 +555,7 @@ describe(PlaylistsService.bulkRemovePosts, () => {
     const result = await runEffect(
       PlaylistsService.bulkRemovePosts({
         playlistId,
-        postIds: [9999],
+        postIds: [asPostId(9999)],
       }),
     );
 
@@ -573,7 +580,7 @@ describe(PlaylistsService.bulkRemovePosts, () => {
 });
 
 describe(PlaylistsService.reorder, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     const row = await db
@@ -585,7 +592,7 @@ describe(PlaylistsService.reorder, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
 
     await db
       .insertInto("playlist_posts")
@@ -861,7 +868,7 @@ describe(PlaylistsService.fetchPublicPlaylists, () => {
 });
 
 describe(PlaylistsService.fetchDetail, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
 
   beforeEach(async () => {
     const row = await db
@@ -873,7 +880,7 @@ describe(PlaylistsService.fetchDetail, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row.id;
+    playlistId = asPlaylistId(row.id);
 
     await db
       .insertInto("playlist_posts")
@@ -940,7 +947,7 @@ describe(PlaylistsService.fetchDetail, () => {
     await expect(
       runEffect(
         PlaylistsService.fetchDetail({
-          playlistId: row.id,
+          playlistId: asPlaylistId(row.id),
           page: 0,
         }),
       ),
@@ -991,7 +998,7 @@ describe(PlaylistsService.fetchDetail, () => {
 });
 
 describe(PlaylistsService.fetchForPost, () => {
-  let playlistId: number;
+  let playlistId: PlaylistId;
   let playlistId2: number;
 
   beforeEach(async () => {
@@ -1004,7 +1011,7 @@ describe(PlaylistsService.fetchForPost, () => {
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    playlistId = row1.id;
+    playlistId = asPlaylistId(row1.id);
 
     const row2 = await db
       .insertInto("playlists")
@@ -1080,7 +1087,7 @@ describe("PlaylistsService.delete_ cascading", () => {
       .execute();
 
     mockGetSession.mockResolvedValueOnce({ user: testUser });
-    await runEffect(PlaylistsService.delete_(row.id));
+    await runEffect(PlaylistsService.delete_(asPlaylistId(row.id)));
 
     const posts = await db
       .selectFrom("posts")

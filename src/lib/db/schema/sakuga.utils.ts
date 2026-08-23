@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 
+import { PostId } from "../../ids";
 import type { userInsertSchema, userSelectSchema } from "./auth.schema";
 import { TimestampSchema } from "./timestamp";
 
@@ -18,8 +19,8 @@ export const tagsInsertSchema = Schema.Struct({
 export const postsSelectSchema = Schema.Struct({
   content: Schema.String,
   createdAt: TimestampSchema,
-  id: Schema.Number,
-  relatedPostId: Schema.NullOr(Schema.Number),
+  id: PostId,
+  relatedPostId: Schema.NullOr(PostId),
   source: Schema.NullOr(Schema.String),
   thumbnailKey: Schema.String,
   title: Schema.String,
@@ -47,7 +48,7 @@ export type PostVote = Schema.Schema.Type<typeof postVoteSchema>;
 
 export const postVotesSelectSchema = Schema.Struct({
   createdAt: TimestampSchema,
-  postId: Schema.Number,
+  postId: PostId,
   userId: Schema.String,
   vote: postVoteSchema,
 });
@@ -73,7 +74,7 @@ export const commentsSelectSchema = Schema.Struct({
   content: Schema.String,
   createdAt: TimestampSchema,
   id: Schema.Number,
-  postId: Schema.Number,
+  postId: PostId,
   userId: Schema.String,
 });
 

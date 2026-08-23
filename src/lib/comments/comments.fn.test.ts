@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import type { PostId } from "../ids";
+import { asPostId } from "../ids";
 import { CommentsService, CommentsServiceLive } from "./comments.service";
 
 let db: Kysely<DB>;
@@ -16,7 +18,7 @@ const testUser = {
   image: null,
 };
 
-let postId: number;
+let postId: PostId;
 
 beforeEach(async () => {
   const ctx = await makeServiceTestLayer(CommentsServiceLive);
@@ -39,7 +41,7 @@ beforeEach(async () => {
     .returning("id")
     .executeTakeFirstOrThrow();
 
-  postId = post.id;
+  postId = asPostId(post.id);
 });
 
 describe("CommentsService.fetch", () => {
@@ -141,7 +143,7 @@ describe("CommentsService.add", () => {
       runEffect(
         CommentsService.add({
           content: "Bad",
-          postId: 999,
+          postId: asPostId(999),
         }),
       ),
     ).rejects.toThrow("SqlError");
@@ -149,7 +151,7 @@ describe("CommentsService.add", () => {
 });
 
 describe("CommentsService.delete_", () => {
-  let commentId: number;
+  let commentId: PostId;
 
   beforeEach(async () => {
     const result = await db
@@ -162,7 +164,7 @@ describe("CommentsService.delete_", () => {
       .returning("id")
       .executeTakeFirstOrThrow();
 
-    commentId = result.id;
+    commentId = asPostId(result.id);
   });
 
   it("throws unauthorized when no session", async () => {

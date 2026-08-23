@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { asPostId } from "../ids";
 import type { PostsInfinitePage } from "./posts.queries";
 import {
   computeAnchorPostIndex,
@@ -14,7 +15,7 @@ const makePage = (
     content: "content",
     createdAt: new Date(),
     dislikes: 0,
-    id: i,
+    id: asPostId(i),
     likes: 0,
     relatedPostId: null,
     source: null,

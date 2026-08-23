@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import type { PostId } from "../ids";
+import { asPostId } from "../ids";
 import { PostVotesService, PostVotesServiceLive } from "./votes.service";
 
 let db: Kysely<DB>;
@@ -16,7 +18,7 @@ const testUser = {
   image: null,
 };
 
-let postId: number;
+let postId: PostId;
 
 beforeEach(async () => {
   const ctx = await makeServiceTestLayer(PostVotesServiceLive);
@@ -40,7 +42,7 @@ beforeEach(async () => {
     .returning("id")
     .executeTakeFirstOrThrow();
 
-  postId = post.id;
+  postId = asPostId(post.id);
 });
 
 describe("PostVotesService.get", () => {
@@ -88,7 +90,7 @@ describe("PostVotesService.set", () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
 
     await expect(
-      runEffect(PostVotesService.set({ postId: 999, vote: "like" })),
+      runEffect(PostVotesService.set({ postId: asPostId(999), vote: "like" })),
     ).rejects.toThrow("Post 999 not found");
   });
 

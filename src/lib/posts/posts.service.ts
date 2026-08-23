@@ -17,6 +17,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors";
+import { asPostId, PostId } from "../ids";
 import {
   computePagination,
   type PaginationMeta,
@@ -55,10 +56,6 @@ const computeStartDate = (dateRange: "today" | "week" | "month") => {
 };
 // oxlint-enable effecttsgo/global-date
 
-export const parsePostId = parse(
-  Schema.Union([Schema.Number, Schema.NumberFromString]),
-);
-
 type PostsSearchResult = {
   readonly data: readonly PostWithVotes[];
   meta: {
@@ -71,8 +68,8 @@ type PostDetailResult = {
   post: {
     content: string;
     createdAt: Date;
-    id: number;
-    relatedPostId: number | null;
+    id: PostId;
+    relatedPostId: PostId | null;
     source: string | null;
     title: string;
     videoKey: string;
@@ -94,7 +91,7 @@ export class PostsService extends Context.Service<
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
     ) => Effect.Effect<PostsSearchResult, SqlError | RowParseError>;
     readonly fetchDetail: (
-      postId: number,
+      postId: PostId,
     ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
     readonly upload: (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
@@ -242,7 +239,7 @@ export class PostsService extends Context.Service<
     });
 
     const fetchDetail = Effect.fn("PostsService.fetchDetail")(function* (
-      postId: number,
+      postId: PostId,
     ) {
       const postOption = yield* db.executeTakeFirstOption(
         db
@@ -283,28 +280,35 @@ export class PostsService extends Context.Service<
           .where("post_tags.postId", "=", postWithUser.id),
       );
 
-      // SAFETY: relatedPostId is a DB foreign key column typed as number in the
-      // schema; the query param asserts it against the posts.id column type.
+      // SAFETY: relatedPostId is a posts.id foreign key column; the row value
+      // is coerced to the branded type the FK relationship guarantees.
       const relatedPostOption = postWithUser.relatedPostId
         ? yield* db.executeTakeFirstOption(
             db
               .selectFrom("posts")
               .selectAll()
-              .where("id", "=", postWithUser.relatedPostId as number),
+              .where("id", "=", asPostId(postWithUser.relatedPostId as number)),
           )
         : Option.none();
 
       const relatedPost = Option.match(relatedPostOption, {
         onNone: () => null,
-        onSome: (value) => value,
+        // Full posts row: run it through the select schema so its identity
+        // fields come out branded, consistent with every other post payload.
+        onSome: (row) => parse(postsSelectSchema)(row),
       });
 
       return {
         post: {
           content: postWithUser.content,
           createdAt: postWithUser.createdAt,
-          id: postWithUser.id,
-          relatedPostId: postWithUser.relatedPostId,
+          // SAFETY: posts.id is the table's primary key.
+          id: asPostId(postWithUser.id),
+          // SAFETY: relatedPostId is a posts.id FK column; the row value
+          // satisfies the PostId contract by construction.
+          relatedPostId: postWithUser.relatedPostId
+            ? asPostId(postWithUser.relatedPostId as number)
+            : null,
           source: postWithUser.source,
           title: postWithUser.title,
           videoKey: postWithUser.videoKey,
@@ -428,7 +432,7 @@ export class PostsService extends Context.Service<
         );
 
         if (tags.length > 0) {
-          yield* resolveAndLinkTags(db, newPost.id, tags);
+          yield* resolveAndLinkTags(db, asPostId(newPost.id), tags);
           yield* Effect.logInfo("Tags linked to post").pipe(
             Effect.annotateLogs({
               postId: String(newPost.id),
@@ -622,7 +626,7 @@ export class PostsService extends Context.Service<
   });
 
   static readonly fetchDetail = Effect.fn("PostsService.fetchDetail")(
-    function* (postId: number) {
+    function* (postId: PostId) {
       const svc = yield* PostsService;
       return yield* svc.fetchDetail(postId);
     },
@@ -659,7 +663,7 @@ export class PostsService extends Context.Service<
 
 const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   db: KyselyDB["Service"],
-  postId: number,
+  postId: PostId,
   tags: ReadonlyArray<{ id?: number | undefined; name: string }>,
 ) {
   const allTagIds: number[] = [];
@@ -697,12 +701,13 @@ export const searchPosts = createServerFn({ strict: { output: false } })
   );
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
-  .validator(parsePostId)
+  // Scalar payloads stay unbranded on the wire (see fetchComments pattern).
+  .validator(parse(Schema.Number))
   .handler(
     createHandler(
       PostsServiceLive,
       baseLayerFactories.db,
-    )(PostsService.fetchDetail),
+    )((postId: number) => PostsService.fetchDetail(asPostId(postId))),
   );
 
 export const uploadPost = createServerFn({ method: "POST" })

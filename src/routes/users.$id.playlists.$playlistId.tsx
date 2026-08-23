@@ -16,6 +16,7 @@ import { Image } from "src/components/ui/media";
 import { Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { parse } from "src/lib/effect/schema.utils";
+import { asPlaylistId } from "src/lib/ids";
 import { playlistQueryDetail } from "src/lib/playlists/playlists.queries";
 
 const PlaylistSearchSchema = Schema.Struct({
@@ -35,7 +36,10 @@ export const Route = createFileRoute("/users/$id/playlists/$playlistId")({
 function PlaylistDetailContent() {
   const params = Route.useParams();
   const userId = params.id;
-  const playlistId = parse(Schema.NumberFromString)(params.playlistId);
+  // Route param is untrusted here; the playlist-detail server fn re-validates.
+  const playlistId = asPlaylistId(
+    parse(Schema.NumberFromString)(params.playlistId),
+  );
   const { page } = Route.useSearch();
   const navigate = useNavigate();
 

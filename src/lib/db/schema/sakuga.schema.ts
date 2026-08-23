@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { Schema, SchemaGetter } from "effect";
 
+import { PostId } from "../../ids";
 import { sanitize } from "../../sanitize";
 import { user } from "./auth.schema";
 
@@ -114,5 +115,5 @@ export const commentInsertSchema = Schema.Struct({
       encode: SchemaGetter.transform((val) => val),
     }),
   ),
-  postId: Schema.Number,
+  postId: PostId,
 });

@@ -20,6 +20,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors";
+import { asPostId, PlaylistId, PostId } from "../ids";
 import {
   computePagination,
   type PaginationMeta,
@@ -144,7 +145,7 @@ export class PlaylistsService extends Context.Service<
       SessionService
     >;
     readonly delete_: (
-      playlistId: number,
+      playlistId: PlaylistId,
     ) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
@@ -232,7 +233,7 @@ export class PlaylistsService extends Context.Service<
       SessionService
     >;
     readonly fetchForPost: (
-      postId: number,
+      postId: PostId,
     ) => Effect.Effect<
       readonly PlaylistForPostCheck[],
       UnauthorizedError | SessionFetchError | SqlError,
@@ -251,14 +252,14 @@ export class PlaylistsService extends Context.Service<
     /** Auth + ownership in one step; every mutation starts with this. */
     const requireOwnedPlaylist = Effect.fn(
       "PlaylistsService.requireOwnedPlaylist",
-    )(function* (playlistId: number) {
+    )(function* (playlistId: PlaylistId) {
       const user = yield* requireAuth();
       return yield* requirePlaylistOwnership(playlistId, user.id);
     });
 
     const requirePlaylistOwnership = Effect.fn(
       "PlaylistsService.requirePlaylistOwnership",
-    )(function* (playlistId: number, userId: string) {
+    )(function* (playlistId: PlaylistId, userId: string) {
       const playlistOption = yield* db.executeTakeFirstOption(
         db
           .selectFrom("playlists")
@@ -283,7 +284,7 @@ export class PlaylistsService extends Context.Service<
     /** Next sequential position for appending to a playlist. */
     const nextPosition = Effect.fn("PlaylistsService.nextPosition")(function* (
       trx: EffectTransition<DB>,
-      playlistId: number,
+      playlistId: PlaylistId,
     ) {
       const maxResults = yield* trx.execute(
         trx
@@ -303,7 +304,7 @@ export class PlaylistsService extends Context.Service<
      */
     const resequencePositions = Effect.fn(
       "PlaylistsService.resequencePositions",
-    )(function* (trx: EffectTransition<DB>, playlistId: number) {
+    )(function* (trx: EffectTransition<DB>, playlistId: PlaylistId) {
       const remaining = yield* trx.execute(
         trx
           .selectFrom("playlist_posts")
@@ -372,7 +373,7 @@ export class PlaylistsService extends Context.Service<
     });
 
     const delete_ = Effect.fn("PlaylistsService.delete_")(function* (
-      playlistId: number,
+      playlistId: PlaylistId,
     ) {
       yield* requireOwnedPlaylist(playlistId);
 
@@ -591,7 +592,11 @@ export class PlaylistsService extends Context.Service<
           .where("playlist_id", "=", data.playlistId),
       );
 
-      const currentSet = new Set(currentPostIds.map((row) => row.post_id));
+      // SAFETY: playlist_posts.post_id is a FK to posts.id, so the row values
+      // satisfy the PostId contract by construction.
+      const currentSet = new Set(
+        currentPostIds.map((row) => asPostId(row.post_id)),
+      );
       const submittedSet = new Set(data.items.map((item) => item.postId));
 
       if (
@@ -877,7 +882,7 @@ export class PlaylistsService extends Context.Service<
     });
 
     const fetchForPost = Effect.fn("PlaylistsService.fetchForPost")(function* (
-      postId: number,
+      postId: PostId,
     ) {
       const user = yield* requireAuth();
 
@@ -940,7 +945,7 @@ export class PlaylistsService extends Context.Service<
   });
 
   static readonly delete_ = Effect.fn("PlaylistsService.delete_")(function* (
-    playlistId: number,
+    playlistId: PlaylistId,
   ) {
     const svc = yield* PlaylistsService;
     return yield* svc.delete_(playlistId);
@@ -1009,7 +1014,7 @@ export class PlaylistsService extends Context.Service<
   );
 
   static readonly fetchForPost = Effect.fn("PlaylistsService.fetchForPost")(
-    function* (postId: number) {
+    function* (postId: PostId) {
       const svc = yield* PlaylistsService;
       return yield* svc.fetchForPost(postId);
     },
@@ -1040,12 +1045,12 @@ export const updatePlaylist = createServerFn({ method: "POST" })
   );
 
 export const deletePlaylist = createServerFn({ method: "POST" })
-  .validator(parse(Schema.Struct({ playlistId: Schema.Number })))
+  .validator(parse(Schema.Struct({ playlistId: PlaylistId })))
   .handler(
     createHandler(
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    )((data: { playlistId: number }) =>
+    )((data: { playlistId: PlaylistId }) =>
       PlaylistsService.delete_(data.playlistId),
     ),
   );
@@ -1136,5 +1141,5 @@ export const fetchPlaylistsForPost = createServerFn({
     createHandler(
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    )((data: number) => PlaylistsService.fetchForPost(data)),
+    )((data: number) => PlaylistsService.fetchForPost(asPostId(data))),
   );

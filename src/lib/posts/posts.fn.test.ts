@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import { asPostId } from "../ids";
 import { StorageModule } from "../storage/storage.module";
 import { PostsService, PostsServiceLive } from "./posts.service";
 
@@ -76,7 +77,8 @@ const insertPost = async (
     .values(row)
     .returning("id")
     .executeTakeFirstOrThrow();
-  return result.id;
+  // SAFETY: posts.id is the table's primary key.
+  return asPostId(result.id);
 };
 
 const insertTag = async (name: string) => {
@@ -287,9 +289,9 @@ describe("PostsService.fetchDetail", () => {
   });
 
   it("throws when post is not found", async () => {
-    await expect(runEffect(PostsService.fetchDetail(999))).rejects.toThrow(
-      "Post 999 not found",
-    );
+    await expect(
+      runEffect(PostsService.fetchDetail(asPostId(999))),
+    ).rejects.toThrow("Post 999 not found");
   });
 });
 

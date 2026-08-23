@@ -7,6 +7,7 @@ import type { PostVote } from "../db/schema";
 import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { PostNotFoundError, UnauthorizedError } from "../errors";
+import { asPostId, PostId } from "../ids";
 import {
   computePagination,
   type PaginationMeta,
@@ -64,7 +65,7 @@ export class PostVotesService extends Context.Service<
   PostVotesService,
   {
     readonly get: (
-      postId: number,
+      postId: PostId,
     ) => Effect.Effect<
       PostVotesSummary,
       SessionFetchError | SqlError,
@@ -97,7 +98,7 @@ export class PostVotesService extends Context.Service<
     const db = yield* KyselyDB;
 
     const fetchSummary = Effect.fn("PostVotesService.fetchSummary")(function* (
-      postId: number,
+      postId: PostId,
       userId: string | null,
     ) {
       const counts = yield* db.executeTakeFirstOrUndefined(
@@ -127,7 +128,7 @@ export class PostVotesService extends Context.Service<
       };
     });
 
-    const get = Effect.fn("PostVotesService.get")(function* (postId: number) {
+    const get = Effect.fn("PostVotesService.get")(function* (postId: PostId) {
       const sessions = yield* SessionService;
       const user = yield* sessions.getUser();
       return yield* fetchSummary(postId, user?.id ?? null);
@@ -285,7 +286,7 @@ export class PostVotesService extends Context.Service<
   }),
 }) {
   static readonly get = Effect.fn("PostVotesService.get")(function* (
-    postId: number,
+    postId: PostId,
   ) {
     const svc = yield* PostVotesService;
     return yield* svc.get(postId);
@@ -319,12 +320,13 @@ export const PostVotesServiceLive = Layer.effect(
 );
 
 export const fetchPostVotes = createServerFn({ strict: { output: false } })
+  // Scalar payloads stay unbranded on the wire; see fetchComments note pattern.
   .validator(parse(Schema.Number))
   .handler(
     createHandler(
       PostVotesServiceLive,
       baseLayerFactories.auth,
-    )(PostVotesService.get),
+    )((postId: number) => PostVotesService.get(asPostId(postId))),
   );
 
 export const setPostVote = createServerFn({ method: "POST" })

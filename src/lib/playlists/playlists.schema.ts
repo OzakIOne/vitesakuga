@@ -1,5 +1,6 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
+import { PlaylistId, PostId } from "../ids";
 import { sanitize } from "../sanitize";
 
 const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
@@ -26,7 +27,7 @@ export const createPlaylistInputSchema = Schema.Struct({
 });
 
 export const updatePlaylistInputSchema = Schema.Struct({
-  playlistId: Schema.Number,
+  playlistId: PlaylistId,
   title: Schema.optionalKey(
     sanitizeString(
       Schema.String.pipe(
@@ -42,37 +43,37 @@ export const updatePlaylistInputSchema = Schema.Struct({
 });
 
 export const addPostToPlaylistInputSchema = Schema.Struct({
-  playlistId: Schema.Number,
-  postId: Schema.Number,
+  playlistId: PlaylistId,
+  postId: PostId,
 });
 
 export const removePostFromPlaylistInputSchema = Schema.Struct({
-  playlistId: Schema.Number,
-  postId: Schema.Number,
+  playlistId: PlaylistId,
+  postId: PostId,
 });
 
 export const bulkAddPostsToPlaylistInputSchema = Schema.Struct({
-  playlistId: Schema.Number,
-  postIds: Schema.NonEmptyArray(Schema.Number),
+  playlistId: PlaylistId,
+  postIds: Schema.NonEmptyArray(PostId),
 });
 
 export const bulkRemovePostsFromPlaylistInputSchema = Schema.Struct({
-  playlistId: Schema.Number,
-  postIds: Schema.NonEmptyArray(Schema.Number),
+  playlistId: PlaylistId,
+  postIds: Schema.NonEmptyArray(PostId),
 });
 
 export const reorderPlaylistPostsInputSchema = Schema.Struct({
-  playlistId: Schema.Number,
+  playlistId: PlaylistId,
   items: Schema.Array(
     Schema.Struct({
-      postId: Schema.Number,
+      postId: PostId,
       position: Schema.Number,
     }),
   ),
 });
 
 export const fetchPlaylistDetailSchema = Schema.Struct({
-  playlistId: Schema.Number,
+  playlistId: PlaylistId,
   page: Schema.Number.pipe(
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),

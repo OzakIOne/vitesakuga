@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parse, parseStrict } from "../effect/schema.utils";
+import { parseStrict } from "../effect/schema.utils";
 import {
   MAX_SEARCH_QUERY_LENGTH,
   MAX_SEARCH_TAGS_COUNT,
@@ -12,17 +12,6 @@ import {
   searchPostsBaseSchema,
   updatePostInputSchema,
 } from "./posts.schema";
-import { parsePostId } from "./posts.service";
-
-describe("parsePostId", () => {
-  it("accepts the numeric postId sent by the client", () => {
-    expect(parsePostId(1)).toBe(1);
-  });
-
-  it("accepts a string postId", () => {
-    expect(parsePostId("1")).toBe(1);
-  });
-});
 
 describe("searchPostsBaseSchema", () => {
   it("should use default values for empty input", () => {

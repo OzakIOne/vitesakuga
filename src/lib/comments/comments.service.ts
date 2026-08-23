@@ -12,6 +12,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
+import { asPostId, PostId } from "../ids";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
 export type CommentWithUser = {
@@ -28,7 +29,7 @@ export class CommentsService extends Context.Service<
   CommentsService,
   {
     readonly fetch: (
-      postId: number,
+      postId: PostId,
     ) => Effect.Effect<readonly CommentWithUser[], SqlError>;
     readonly add: (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
@@ -54,7 +55,7 @@ export class CommentsService extends Context.Service<
     const db = yield* KyselyDB;
 
     const fetch = Effect.fn("CommentsService.fetch")(function* (
-      postId: number,
+      postId: PostId,
     ) {
       const comments = yield* db.execute(
         db
@@ -97,6 +98,10 @@ export class CommentsService extends Context.Service<
           .returning(["id", "postId", "content", "userId", "createdAt"]),
       );
 
+      // SAFETY: postId is a comments.postId FK column; the row value satisfies
+      // the PostId contract by construction.
+      const created = { ...comment, postId: asPostId(comment.postId) };
+
       yield* Effect.logInfo("Comment added").pipe(
         Effect.annotateLogs({
           commentId: String(comment.id),
@@ -105,7 +110,7 @@ export class CommentsService extends Context.Service<
         }),
       );
 
-      return comment;
+      return created;
     });
 
     const delete_ = Effect.fn("CommentsService.delete_")(function* (
@@ -152,7 +157,7 @@ export class CommentsService extends Context.Service<
   }),
 }) {
   static readonly fetch = Effect.fn("CommentsService.fetch")(function* (
-    postId: number,
+    postId: PostId,
   ) {
     const svc = yield* CommentsService;
     return yield* svc.fetch(postId);
@@ -179,12 +184,14 @@ export const CommentsServiceLive = Layer.effect(
 );
 
 export const fetchComments = createServerFn({ strict: { output: false } })
+  // Scalar server-fn payloads stay unbranded on the wire (TanStack's ServerFnCtx
+  // cannot round-trip branded primitives); conversion happens in the handler.
   .validator(parse(Schema.Number))
   .handler(
     createHandler(
       CommentsServiceLive,
       baseLayerFactories.db,
-    )(CommentsService.fetch),
+    )((postId: number) => CommentsService.fetch(asPostId(postId))),
   );
 
 export const addComment = createServerFn({

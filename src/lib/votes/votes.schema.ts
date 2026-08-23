@@ -1,14 +1,15 @@
 import { Schema } from "effect";
 
 import { postVoteSchema } from "../db/schema";
+import { PostId } from "../ids";
 
 export const setPostVoteSchema = Schema.Struct({
-  postId: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
   vote: postVoteSchema,
 });
 
 export const removePostVoteSchema = Schema.Struct({
-  postId: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
 });
 
 export const fetchLikedPostsSchema = Schema.Struct({

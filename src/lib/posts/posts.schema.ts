@@ -1,5 +1,6 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
+import { PostId } from "../ids";
 import { sanitize } from "../sanitize";
 import {
   MAX_SEARCH_QUERY_LENGTH,
@@ -62,7 +63,7 @@ const HttpsUrl = Schema.String.pipe(
   Schema.check(Schema.isPattern(/^https?:\/\//)),
 );
 
-const RelatedPostId = Schema.Number.pipe(
+const RelatedPostId = PostId.pipe(
   Schema.check(Schema.isGreaterThanOrEqualTo(0)),
 );
 
@@ -126,7 +127,7 @@ export type CreateVideoUploadUrlInput = Schema.Schema.Type<
 
 export const updatePostInputSchema = Schema.Struct({
   content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  postId: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
   relatedPostId: Schema.optional(RelatedPostId),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   tags: Schema.Array(TagSchema),
