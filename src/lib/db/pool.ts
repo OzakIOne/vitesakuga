@@ -4,14 +4,14 @@ import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
 import { Effect } from "effect";
 import { Pool as PgPool } from "pg";
 
+import { envInfra } from "../env/infra";
 import { envServer } from "../env/server";
-
-const databaseDriver = process.env["DATABASE_DRIVER"];
 
 // "local" is the developer's Docker Postgres (`nub run dev:local`); "e2e" is
 // the Playwright webServer pointing at the same local Postgres, kept distinct
 // so the e2e auth bypass in session.effect.ts stays unreachable from dev runs.
-export const isLocal = databaseDriver === "local" || databaseDriver === "e2e";
+export const isLocal =
+  envInfra.databaseDriver === "local" || envInfra.databaseDriver === "e2e";
 
 let pool: PgPool | NeonPool | null = null;
 

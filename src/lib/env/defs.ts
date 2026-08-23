@@ -172,3 +172,50 @@ export const loadClientEnv = (source: ImportMetaEnv = import.meta.env) => {
   const raw = parseWith("client", clientEnvConfig, source);
   return decodeWith("client", clientEnvSchema, raw);
 };
+
+// ---- Infrastructure environment ----
+
+const infraEnvSchema = Schema.Struct({
+  DATABASE_DRIVER: Schema.optionalKey(Schema.String),
+  OTEL_EXPORTER_OTLP_ENDPOINT: Schema.optionalKey(Schema.String),
+  SEED_DB: Schema.optionalKey(Schema.String),
+});
+
+export type InfraEnv = {
+  /**
+   * Which database backend the process talks to: `"local"` (developer Docker
+   * Postgres), `"e2e"` (Playwright webServer pointing at the same Postgres,
+   * plus the auth bypass in session.effect.ts), `"pglite"` (in-memory
+   * instance for service tests), or `undefined` (deployed Neon serverless).
+   */
+  readonly databaseDriver: string | undefined;
+  /**
+   * OTLP collector endpoint for traces and logs; `undefined` disables the
+   * OpenTelemetry layers entirely (a Worker has no reachable default).
+   */
+  readonly otlpEndpoint: string | undefined;
+  /** Opt-in switch for the drizzle-kit seed CLI (`SEED_DB=true`). */
+  readonly seedDatabase: boolean;
+};
+
+const optionalString = (value: string | undefined): string | undefined =>
+  value === undefined || value.length === 0 ? undefined : value;
+
+/**
+ * Boot-time infrastructure flags. Unlike the app envs above, these are read
+ * before any Effect runtime exists (module-scope driver selection, tracing
+ * setup, the drizzle-kit seed CLI), so they are loaded synchronously and
+ * interpreted with exact-match comparisons rather than validated further.
+ * Kept here so this file remains the single inventory of every environment
+ * variable the app reads.
+ */
+export const loadInfraEnv = (
+  source: Readonly<Record<string, string | undefined>> = process.env,
+): InfraEnv => {
+  const raw = decodeWith("infra", infraEnvSchema, source);
+  return {
+    databaseDriver: optionalString(raw.DATABASE_DRIVER),
+    otlpEndpoint: optionalString(raw.OTEL_EXPORTER_OTLP_ENDPOINT),
+    seedDatabase: raw.SEED_DB === "true",
+  };
+};

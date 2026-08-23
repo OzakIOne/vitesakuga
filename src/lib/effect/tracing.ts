@@ -5,6 +5,8 @@ import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { Layer } from "effect";
 
+import { envInfra } from "../env/infra";
+
 /**
  * OpenTelemetry tracing is only enabled when an OTLP endpoint is configured
  * (`OTEL_EXPORTER_OTLP_ENDPOINT`). Without one, the exporters fall back to
@@ -12,9 +14,7 @@ import { Layer } from "effect";
  * fails every traced effect with an `OTLPExporterError` (HTTP 403
  * "Forbidden"), breaking `getUserSession` and SSR rendering.
  */
-const otlpEndpoint = process.env["OTEL_EXPORTER_OTLP_ENDPOINT"];
-
-export const TracingLive = otlpEndpoint
+export const TracingLive = envInfra.otlpEndpoint
   ? NodeSdk.layer(() => ({
       resource: { serviceName: "vitesakuga" },
       spanProcessor: new BatchSpanProcessor(new OTLPTraceExporter()),
