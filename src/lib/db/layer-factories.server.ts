@@ -9,11 +9,15 @@ import {
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
+import { envInfra } from "../env/infra";
 import { KyselyDB } from "./context";
 
 const LOG_LAYER = withMinimumLogLevel("Debug");
 
-const isE2E = process.env["DATABASE_DRIVER"] === "pglite";
+// In-memory PGlite instance instead of a real Postgres connection. Note this
+// is distinct from DATABASE_DRIVER=e2e (the Playwright webServer, which uses
+// the regular local Postgres path via pool.ts).
+const isPglite = envInfra.databaseDriver === "pglite";
 
 type AuthInstance = typeof import("../auth").auth;
 
@@ -47,15 +51,18 @@ const toAuthSessionProvider = (auth: AuthInstance): AuthSessionProvider => ({
 });
 
 export const makeDBLayer = async () => {
-  const dbModule = isE2E ? await import("./e2e-db") : await import("./kysely");
+  const dbModule = isPglite
+    ? await import("./e2e-db")
+    : await import("./kysely");
 
-  // SAFETY: dbModule is the static import of "./e2e-db" in the isE2E branch and of
-  // "./kysely" otherwise, so each cast matches the module actually loaded above.
-  const kyselyInstance = isE2E
+  // SAFETY: dbModule is the static import of "./e2e-db" in the isPglite branch
+  // and of "./kysely" otherwise, so each cast matches the module actually
+  // loaded above.
+  const kyselyInstance = isPglite
     ? await (dbModule as typeof import("./e2e-db")).createE2EKysely()
     : (dbModule as typeof import("./kysely")).kysely;
 
-  const { StorageLive } = await import("../storage/storage.s3");
+  const { StorageLive } = await import("../storage/storage.adapter");
 
   return Layer.mergeAll(
     Layer.succeed(KyselyDB)(makeFromKysely(kyselyInstance)),

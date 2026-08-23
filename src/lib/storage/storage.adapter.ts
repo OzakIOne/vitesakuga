@@ -5,20 +5,33 @@ import { THUMBNAIL_CONTENT_TYPE, videoContentType } from "./content-type";
 import { PENDING_VIDEOS_PREFIX, finalizedVideoKey } from "./keys";
 import { StorageError, StorageModule } from "./storage.module";
 
-export const StorageLive = Layer.effect(
-  StorageModule,
-  Effect.gen(function* () {
-    const { envServer } = yield* Effect.tryPromise({
-      try: () => import("../env/server"),
-      catch: (cause) =>
-        new StorageError({
-          cause,
-          key: "",
-          message: `Failed to load environment: ${String(cause)}`,
-          operation: "upload",
-        }),
-    });
+/**
+ * Connection parameters for any store speaking the S3 protocol. The two
+ * configurations shipped below are Cloudflare R2 (production, resolved from
+ * the validated app environment) and RustFS (local Docker store used by the
+ * service tests).
+ */
+type S3Connection = {
+  readonly bucket: string;
+  /** Human-readable store name for log lines (e.g. "R2", "RustFS"). */
+  readonly label: string;
+  readonly endpoint: string;
+  readonly region: string;
+  readonly credentials: {
+    readonly accessKeyId: string;
+    readonly secretAccessKey: string;
+  };
+  /** Path-style addressing for local S3-compatible stores (RustFS/MinIO). */
+  readonly forcePathStyle: boolean;
+};
 
+/**
+ * Build the storage service against a concrete S3-compatible endpoint. The
+ * AWS SDK is loaded lazily inside the constructor so importing this module
+ * never pulls the SDK into a bundle that does not build a layer from it.
+ */
+const makeS3StorageService = (connection: S3Connection) =>
+  Effect.gen(function* () {
     const s3Mod = yield* Effect.tryPromise({
       try: () => import("@aws-sdk/client-s3"),
       catch: (cause) =>
@@ -31,15 +44,13 @@ export const StorageLive = Layer.effect(
     });
 
     const client = new s3Mod.S3Client({
-      credentials: {
-        accessKeyId: Redacted.value(envServer.CLOUDFLARE_ACCESS_KEY),
-        secretAccessKey: Redacted.value(envServer.CLOUDFLARE_SECRET_KEY),
-      },
-      endpoint: envServer.CLOUDFLARE_R2,
-      region: "auto",
+      credentials: connection.credentials,
+      endpoint: connection.endpoint,
+      region: connection.region,
+      forcePathStyle: connection.forcePathStyle,
       // Presigned PUT URLs must not carry the SDK's default CRC32 checksum
       // query params: the checksum is computed over an unsigned payload and
-      // would be rejected by R2 against the real uploaded bytes.
+      // would be rejected by the S3-compatible server against the real bytes.
       requestChecksumCalculation: "WHEN_REQUIRED",
     });
 
@@ -71,7 +82,7 @@ export const StorageLive = Layer.effect(
             client.send(
               new s3Mod.PutObjectCommand({
                 Body: Buffer.from(buffer),
-                Bucket: envServer.CLOUDFLARE_BUCKET,
+                Bucket: connection.bucket,
                 ContentType: contentType,
                 Key: key,
               }),
@@ -94,7 +105,7 @@ export const StorageLive = Layer.effect(
           });
         }
 
-        yield* Effect.logInfo("File uploaded to R2").pipe(
+        yield* Effect.logInfo(`File uploaded to ${connection.label}`).pipe(
           Effect.annotateLogs("key", key),
         );
 
@@ -108,7 +119,7 @@ export const StorageLive = Layer.effect(
             try: () =>
               client.send(
                 new s3Mod.DeleteObjectCommand({
-                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  Bucket: connection.bucket,
                   Key: key,
                 }),
               ),
@@ -121,7 +132,7 @@ export const StorageLive = Layer.effect(
               }),
           });
 
-          yield* Effect.logInfo("File deleted from R2").pipe(
+          yield* Effect.logInfo(`File deleted from ${connection.label}`).pipe(
             Effect.annotateLogs("key", key),
           );
         }),
@@ -137,7 +148,7 @@ export const StorageLive = Layer.effect(
             try: () =>
               client.send(
                 new s3Mod.HeadObjectCommand({
-                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  Bucket: connection.bucket,
                   Key: key,
                 }),
               ),
@@ -169,7 +180,7 @@ export const StorageLive = Layer.effect(
               getSignedUrl(
                 client,
                 new s3Mod.PutObjectCommand({
-                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  Bucket: connection.bucket,
                   ContentType: contentType,
                   Key: key,
                 }),
@@ -198,7 +209,7 @@ export const StorageLive = Layer.effect(
           // URL-encoded; the generated keys only ever contain UUIDs, a
           // whitelisted extension and `/` separators, so encoding each
           // segment is identity in practice and defensive by construction.
-          const copySource = `${envServer.CLOUDFLARE_BUCKET}/${pendingKey
+          const copySource = `${connection.bucket}/${pendingKey
             .split("/")
             .map(encodeURIComponent)
             .join("/")}`;
@@ -207,7 +218,7 @@ export const StorageLive = Layer.effect(
             try: () =>
               client.send(
                 new s3Mod.CopyObjectCommand({
-                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  Bucket: connection.bucket,
                   CopySource: copySource,
                   Key: finalKey,
                 }),
@@ -230,7 +241,7 @@ export const StorageLive = Layer.effect(
               try: () =>
                 client.send(
                   new s3Mod.DeleteObjectCommand({
-                    Bucket: envServer.CLOUDFLARE_BUCKET,
+                    Bucket: connection.bucket,
                     Key: pendingKey,
                   }),
                 ),
@@ -251,5 +262,60 @@ export const StorageLive = Layer.effect(
           return { key: finalKey };
         }),
     } satisfies StorageModule["Service"];
+  });
+
+/** Layer form of {@link makeS3StorageService} for any S3-compatible store. */
+export const makeS3StorageLayer = (
+  connection: S3Connection,
+): Layer.Layer<StorageModule, StorageError> =>
+  Layer.effect(StorageModule, makeS3StorageService(connection));
+
+/**
+ * Production storage backed by Cloudflare R2. The app environment is loaded
+ * lazily at layer construction so secrets are validated only when a server
+ * runtime actually needs them.
+ */
+export const StorageLive = Layer.effect(
+  StorageModule,
+  Effect.gen(function* () {
+    const { envServer } = yield* Effect.tryPromise({
+      try: () => import("../env/server"),
+      catch: (cause) =>
+        new StorageError({
+          cause,
+          key: "",
+          message: `Failed to load environment: ${String(cause)}`,
+          operation: "upload",
+        }),
+    });
+
+    return yield* makeS3StorageService({
+      bucket: envServer.CLOUDFLARE_BUCKET,
+      credentials: {
+        accessKeyId: Redacted.value(envServer.CLOUDFLARE_ACCESS_KEY),
+        secretAccessKey: Redacted.value(envServer.CLOUDFLARE_SECRET_KEY),
+      },
+      endpoint: envServer.CLOUDFLARE_R2,
+      forcePathStyle: false,
+      label: "R2",
+      region: "auto",
+    });
   }),
 );
+
+/** Local Docker RustFS store used by the service test layers. */
+export const makeRustFSStorageLayer = (): Layer.Layer<
+  StorageModule,
+  StorageError
+> =>
+  makeS3StorageLayer({
+    bucket: "e2e-test",
+    credentials: {
+      accessKeyId: "rustfsadmin",
+      secretAccessKey: "rustfsadmin",
+    },
+    endpoint: "http://localhost:9000",
+    forcePathStyle: true,
+    label: "RustFS",
+    region: "us-east-1",
+  });
