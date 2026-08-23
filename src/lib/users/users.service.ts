@@ -9,7 +9,7 @@ import {
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
-import { UserNotFoundError, ValidationError } from "../errors";
+import { RowParseError, UserNotFoundError } from "../errors";
 import { computePagination } from "../pagination/pagination";
 import { escapeLikePattern } from "../posts/search-pattern";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
@@ -24,7 +24,7 @@ export class UsersService extends Context.Service<
   {
     readonly all: () => Effect.Effect<
       readonly Schema.Schema.Type<typeof userPublicSchema>[],
-      SqlError | ValidationError
+      SqlError | RowParseError
     >;
     readonly userPosts: (
       data: Schema.Schema.Type<typeof fetchUserInputSchema>,
@@ -45,7 +45,7 @@ export class UsersService extends Context.Service<
         };
         user: { id: string; image: string | null; name: string };
       },
-      SqlError | ValidationError | UserNotFoundError
+      SqlError | RowParseError | UserNotFoundError
     >;
   }
 >()("UsersService", {
@@ -64,7 +64,7 @@ export class UsersService extends Context.Service<
       return yield* Effect.try({
         try: () => parse(Schema.Array(userPublicSchema))(data),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: "There was an error processing the search results",
             cause: error,
           }),
@@ -140,7 +140,7 @@ export class UsersService extends Context.Service<
       const posts = yield* Effect.try({
         try: () => parse(Schema.Array(postsSelectSchema))(items),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: "Error processing user posts",
             cause: error,
           }),
@@ -166,7 +166,7 @@ export class UsersService extends Context.Service<
             }),
           ),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: "Error processing user post vote counts",
             cause: error,
           }),

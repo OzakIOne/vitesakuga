@@ -46,6 +46,17 @@ export class ValidationError extends Schema.TaggedError<ValidationError>()(
   },
 ) {}
 
+// A database row failed to decode against its domain schema. This is an
+// internal data-integrity defect, not bad user input — never render it as a
+// validation message in the UI.
+export class RowParseError extends Schema.TaggedError<RowParseError>()(
+  "RowParseError",
+  {
+    message: Schema.String,
+    cause: Schema.optionalKey(Schema.Unknown),
+  },
+) {}
+
 export class PlaylistNotFoundError extends Schema.TaggedError<PlaylistNotFoundError>()(
   "PlaylistNotFoundError",
   {

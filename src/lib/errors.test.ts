@@ -7,6 +7,7 @@ import {
   PlaylistNotFoundError,
   PostAlreadyInPlaylistError,
   PostNotFoundError,
+  RowParseError,
   UnauthorizedError,
   UserNotFoundError,
   ValidationError,
@@ -70,6 +71,7 @@ describe("tagged errors", () => {
         playlistId: 1,
         postId: 1,
       }),
+      new RowParseError({ message: "m" }),
     ];
     expect(errors.map((e) => e._tag)).toEqual([
       "PostNotFoundError",
@@ -80,6 +82,21 @@ describe("tagged errors", () => {
       "ValidationError",
       "PlaylistNotFoundError",
       "PostAlreadyInPlaylistError",
+      "RowParseError",
     ]);
+  });
+
+  it("distinguishes RowParseError from ValidationError by tag", async () => {
+    const failure: RowParseError | ValidationError = new RowParseError({
+      message: "bad row",
+      cause: new Error("schema"),
+    });
+    const program = Effect.fail(failure).pipe(
+      Effect.catchTags(
+        { RowParseError: (err) => Effect.succeed(`row:${err.message}`) },
+        () => Effect.succeed("other"),
+      ),
+    );
+    expect(await Effect.runPromise(program)).toBe("row:bad row");
   });
 });

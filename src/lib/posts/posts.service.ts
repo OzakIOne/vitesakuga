@@ -11,6 +11,7 @@ import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
   PostNotFoundError,
+  RowParseError,
   UnauthorizedError,
   ValidationError,
 } from "../errors";
@@ -87,7 +88,7 @@ export class PostsService extends Context.Service<
   {
     readonly search: (
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
-    ) => Effect.Effect<PostsSearchResult, SqlError | ValidationError>;
+    ) => Effect.Effect<PostsSearchResult, SqlError | RowParseError>;
     readonly fetchDetail: (
       postId: number,
     ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
@@ -100,7 +101,8 @@ export class PostsService extends Context.Service<
       | StorageError
       | UnauthorizedError
       | SessionFetchError
-      | ValidationError,
+      | ValidationError
+      | RowParseError,
       AuthServices
     >;
     readonly createVideoUploadUrl: (
@@ -124,12 +126,12 @@ export class PostsService extends Context.Service<
       | SessionFetchError
       | SqlError
       | SqlNoFirstResult
-      | ValidationError,
+      | RowParseError,
       AuthServices
     >;
     readonly getByTag: (
       data: Schema.Schema.Type<typeof postByTagSchema>,
-    ) => Effect.Effect<PostsSearchResult, SqlError | ValidationError>;
+    ) => Effect.Effect<PostsSearchResult, SqlError | RowParseError>;
   }
 >()("PostsService", {
   make: Effect.gen(function* () {
@@ -151,7 +153,7 @@ export class PostsService extends Context.Service<
       return yield* Effect.try({
         try: () => parse(Schema.Array(postWithVotesSelectSchema))(withVotes),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: `Error processing vote counts: ${String(error)}`,
             cause: error,
           }),
@@ -217,7 +219,7 @@ export class PostsService extends Context.Service<
       const parsed = yield* Effect.try({
         try: () => parse(Schema.Array(postsSelectSchema))(items),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: `Error processing search results: ${String(error)}`,
           }),
       });
@@ -488,7 +490,7 @@ export class PostsService extends Context.Service<
       return yield* Effect.try({
         try: () => parse(postsSelectSchema)(outcome.value),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: "There was an error processing the upload result",
             cause: error,
           }),
@@ -544,7 +546,7 @@ export class PostsService extends Context.Service<
       const parsed = yield* Effect.try({
         try: () => parse(Schema.Array(postsSelectSchema))(items),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: `Error processing posts by tag: ${String(error)}`,
           }),
       });
@@ -642,7 +644,7 @@ export class PostsService extends Context.Service<
       const updatedPostParsed = yield* Effect.try({
         try: () => parse(postsSelectSchema)(updatedPost),
         catch: (error) =>
-          new ValidationError({
+          new RowParseError({
             message: "There was an error processing the update result",
             cause: error,
           }),
