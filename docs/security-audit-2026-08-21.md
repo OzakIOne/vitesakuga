@@ -4,6 +4,8 @@
 
 **Overall verdict:** 🟢 **Strong posture.** Layered defenses, validated env, consistent ownership guards. Findings below are mostly hardening gaps rather than exploitable holes; three deserve prompt attention.
 
+**Status (2026-08-23):** ✅ fixed — H1, H2, M1, M2, M3, M5, L4, L5 · ⬜ open — H3 (e2e bypass flag), M4 (email verification), L1–L3 (+ optional post deletion).
+
 ---
 
 ## ✅ Strengths
@@ -47,7 +49,7 @@
 
 - **M1 — Bypassable regex sanitizer** — ✅ **FIXED (`d276678`)**: ~~regex blacklist in `src/lib/sanitize.ts` missed unquoted handlers (`<img src=x onerror=alert(1)>`), SVG/MathML vectors; `isomorphic-dompurify` sat unused in `package.json`.~~ → Replaced the regex blacklist with parser-based allowlisting via `sanitize-html` (htmlparser2, pure JS — runs identically on Workers/Node/browser). Allowlisted tags only, schemes restricted to http/https/mailto (kills `javascript:`), event-handler attributes stripped by default; unused `isomorphic-dompurify` dependency removed. Regression tests cover all flagged M1 vectors (`sanitize.test.ts`: unquoted handlers, SVG, MathML, script/iframe/object/embed, `javascript:` URLs).
 - **M2 — Account deletion leaks storage & content** — ✅ **FIXED (`d276678`, product decision: anonymize, don't erase)**: ~~`user.deleteUser.enabled` hard-deleted nothing and orphaned content.~~ → Custom anonymizing server fn (`src/lib/auth/delete-account.ts`) replaces Better Auth's built-in endpoint (now disabled with rationale in `auth/index.ts`). In a single transaction: `user` row kept as an inert shell (name → "Deleted user", email → unusable `deleted-{id}@deleted.local` placeholder freeing the address, image/emailVerified/twoFactor scrubbed, new `deletedAt` column set); sessions, credential/OAuth accounts (password hashes + tokens), passkeys and 2FA secrets deleted; personal playlists + playlist_posts deleted. Posts/comments/votes intentionally kept — public content stays visible under "Deleted user" and vote counts stay stable. Password re-verification required when a credential account exists (mirrors Better Auth's `shouldRequirePassword`). Integration tests cover all four paths (`delete-account.fn.test.ts`).
-- **M3 — Dependency advisories (48)**: runtime-relevant: `ws < 8.21` (**high**, DoS) + `< 8.20.1` memory disclosure via `better-auth → @libsql/client`; `valibot ≤ 1.4.1` (moderate) via drizzle-orm; `diff` (low). Rest (`hono`, `sharp`, `lodash`, `extract-zip` highs) are devDependencies only (build-machine risk). Run `nub update` / add overrides, re-run `nub audit`.
+- **M3 — Dependency advisories (48)** — ✅ **FIXED (`636b4c2`)**: 48 → 44 findings; every runtime-relevant high resolved. `ws` bumped to 8.21.3 (kills the **high** memory-exhaustion DoS + uninitialized-memory disclosure); `sharp`, `extract-zip` highs gone via the `alchemy` beta bump; `better-auth` moved off RC to 1.7.1 stable (verified: full auth suite + posts integration green). Remaining 44 are dev-toolchain only and low-impact: `hono`/`@hono/node-server`/`lodash` highs under `alchemy → @prisma/dev` (build machine, never deployed), `valibot ≤ 1.4.1` moderate pinned by `drizzle-orm 1.0.0-rc.4`, `diff < 5.2.2` low under `neonctl`. Forcing those needs pnpm overrides inside toolchains we don't own — revisit when `drizzle-orm`/`alchemy` ship stable bumps.
 - **M4 — Email verification not required**: accounts bound to unowned emails → reset ambiguity, spam signups. Enable verification plugin (OTP rate-limit rule already exists).
 - **M5 — Search DoS knobs** — ✅ FIXED (`d932a99`): ILIKE `%`/`_` unescaped (`posts.service.ts:150-158`), no length caps on `q` / `tags` arrays → cheap full-scan amplification. ~~Escape wildcards, cap lengths at schema level.~~ → `escapeLikePattern` applied to every ILIKE site; shared caps (`q` ≤ 100, ≤ 20 tags, tag name ≤ 50) enforced in posts + users schemas.
 
@@ -56,7 +58,7 @@
 - **L1** — In-memory rate-limit fallback trusts spoofable `x-forwarded-for` (`rate-limit.middleware.ts:52-56`); fine behind Cloudflare (`cf-connecting-ip` wins); document as dev-only.
 - **L2** — `docker-compose.yml` binds Postgres :5432, rustfs :9000-9001 (default creds) on `0.0.0.0`; bind to `127.0.0.1`.
 - **L3** — Non-prod CSP `script-src 'unsafe-inline'`; `img-src https:` allows user-supplied image hosts (tracking pixels) — documented tradeoffs, acceptable.
-- **L4** — No media lifecycle (no post deletion, no GC job) — pairs with M2. **Updated 2026-08-22:** the presigned direct-to-R2 flow adds a new orphan window — a video PUT to R2 whose confirm call (`uploadPost`) never runs (tab closed, validator rejection on title/tags/thumbnail) leaves an unreferenced object in the bucket forever. See "Orphaned presigned uploads" below.
+- **L4** — No media lifecycle — ✅ **FIXED (2026-08-23, components 1–3)**: direct-to-R2 uploads now stage under `videos/_pending/{userId}/` (`storage/{s3,rustfs}.ts`), confirm promotes validated objects to their final key via new `finalizeVideoUpload` (copy + best-effort staging cleanup) before the DB insert, and an R2 lifecycle rule expires anything left in `_pending/` after 48 h (`infra/alchemy.run.ts`). Every byte entering the bucket either ends up referenced by a DB row or self-destructs — closing both orphan windows and bounding the unconfirmed-oversized-object abuse window. Post deletion (component 4) remains an open product decision.
 - **L5** — Password policy min 8 (= Better Auth default) — ✅ **FIXED (2026-08-22)**: `MIN_PASSWORD_LENGTH = 12` shared by client schemas (`auth.schemas.ts`), the UI strength meter (`password-input.tsx`) and the server (`emailAndPassword.minPasswordLength` + `hooks.before` strength gate on `/sign-up/email`, `/change-password`, `/reset-password` in `auth/index.ts`, via new `password-policy.ts`). Server no longer trusts the client: character-class diversity (≥ 3 of lowercase/uppercase/digits/symbols) is enforced at every password-set endpoint.
 
 ---
@@ -65,13 +67,46 @@
 
 1. ~~**H1 + H2** — one PR: upload schema refines (size/type both files), server-set Content-Type.~~ ✅ Done (`d932a99`), went further: presigned PUTs direct-to-R2.
 2. **H3** — build-time e2e flag. Small change, removes the scariest footgun.
-3. ~~**M3** dependency bumps + **M5** input caps~~ — M5 ✅ done (`d932a99`); M3 still open.
+3. ~~**M3** dependency bumps + **M5** input caps~~ — both ✅ done (M5 `d932a99`, M3 `636b4c2`).
 4. ~~**M1**~~ ✅ Done (`d276678`, sanitize-html) / ~~**M2**~~ ✅ Done (`d276678`, anonymize-in-place) / **M4** — remaining design decisions: email verification.
 5. ~~**L5** — password policy 12+ with server-side strength check.~~ ✅ Done (2026-08-22).
 
 ---
 
-## Orphaned presigned uploads (follow-up to H1 fix, feeds L4)
+## Orphaned presigned uploads — ✅ IMPLEMENTED (2026-08-23)
+
+The leak windows described below are now closed (components 1–3):
+
+```
+PUT ──→ videos/_pending/{uid}/{uuid}.mp4   ──48h──> 💀 auto-deleted (R2 lifecycle)
+              │
+     confirm passes head-checks?
+              │ yes                    │ no (never called / rejected)
+              ▼                        ▼
+   videos/{uid}/{uuid}.mp4      stays in _pending → dies with rule
+   (+ rollback still covers post-promotion failures)
+```
+
+- **Staging namespace** (`keys.ts`): `presignVideoUpload` mints
+  `videos/_pending/{userId}/{uuid}.{ext}`; confirms reject any key outside the
+  caller's own staging scope.
+- **Promotion at confirm** (`finalizeVideoUpload` in both storage backends):
+  validated uploads are copied to their final `videos/{userId}/…` key and the
+  staging copy is best-effort deleted; only promoted keys enter `uploadedKeys`
+  rollback and the DB. A failed staging-delete cannot fail promotion (the
+  lifecycle rule collects the leftover).
+- **Bucket lifecycle rule** (`infra/alchemy.run.ts`): `expire-pending-uploads`
+  deletes `_pending/` objects after 48 h — garbage collection by storage-layer
+  physics, no cron, and it bounds how long oversized unconfirmed objects can
+  occupy the bucket.
+
+Tests: `storage.test.ts` exercises the real presign→PUT→promote flow against
+rustfs (final object readable, staging copy gone); `posts.fn.test.ts` asserts
+promotion, staging-scope enforcement, and final-namespace rejection.
+
+---
+
+## Original analysis (kept for reference)
 
 ### The two-step lifecycle
 

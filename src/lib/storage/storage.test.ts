@@ -90,7 +90,7 @@ describe("StorageModule", () => {
   });
 
   describe("presignVideoUpload", () => {
-    it("returns a scoped key, content type and signed PUT URL", async () => {
+    it("returns a staging key, content type and signed PUT URL", async () => {
       const result = await runTest(
         Effect.gen(function* () {
           const storage = yield* StorageModule;
@@ -98,11 +98,64 @@ describe("StorageModule", () => {
         }),
       );
 
-      expect(result.key).toMatch(/^videos\/user-123\/[a-f0-9-]+\.mp4$/);
+      expect(result.key).toMatch(
+        /^videos\/_pending\/user-123\/[a-f0-9-]+\.mp4$/,
+      );
       expect(result.contentType).toBe("video/mp4");
       expect(result.url).toContain(result.key);
       expect(result.url).toContain("X-Amz-Signature=");
       expect(result.url).toContain("X-Amz-Expires=900");
+    });
+  });
+
+  describe("finalizeVideoUpload", () => {
+    const putPendingUpload = async () => {
+      const staged = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.presignVideoUpload("user-123", "mp4");
+        }),
+      );
+      // Mirror the browser flow: PUT through the presigned URL with the
+      // signed content type.
+      const response = await fetch(staged.url, {
+        method: "PUT",
+        body: new File(["test content"], "clip.mp4", { type: "video/mp4" }),
+        headers: { "Content-Type": staged.contentType },
+      });
+      expect(response.ok).toBe(true);
+      return staged.key;
+    };
+
+    it("copies the object to its final key and clears the staging copy", async () => {
+      const pendingKey = await putPendingUpload();
+
+      const { key: finalKey } = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.finalizeVideoUpload(pendingKey);
+        }),
+      );
+
+      expect(finalKey).toMatch(/^videos\/user-123\/[a-f0-9-]+\.mp4$/);
+      // The promoted object is fully readable at its final location.
+      const head = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(finalKey);
+        }),
+      );
+      expect(head.contentLength).toBe(12);
+      expect(head.contentType).toBe("video/mp4");
+      // The staging copy is gone.
+      await expect(
+        runTest(
+          Effect.gen(function* () {
+            const storage = yield* StorageModule;
+            return yield* storage.headFile(pendingKey);
+          }),
+        ),
+      ).rejects.toThrow();
     });
   });
 

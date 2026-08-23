@@ -20,6 +20,7 @@ import {
 } from "../pagination/pagination";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { videoContentType } from "../storage/content-type";
+import { pendingVideoPrefix } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { isUploadedVideoValid } from "../storage/upload-policy";
 import { mapPopularTags } from "../tags/tags.utils";
@@ -381,7 +382,10 @@ export class PostsService extends Context.Service<
         }),
       );
 
-      if (!videoKey.startsWith(`videos/${userId}/`)) {
+      // Only keys from the caller's own staging namespace are acceptable:
+      // presigned PUTs land under `videos/_pending/{userId}/` and are
+      // promoted to their final key below, after validation.
+      if (!videoKey.startsWith(pendingVideoPrefix(userId))) {
         return yield* Effect.fail(
           new ValidationError({ message: "Invalid video upload key" }),
         );
@@ -408,13 +412,27 @@ export class PostsService extends Context.Service<
         );
       }
 
-      // The video was uploaded direct-to-R2 before this confirm step; the
-      // thumbnail still transits the Worker. If any later step fails, roll the
-      // uploaded objects back so storage stays in sync with the DB.
+      // Promote the validated upload out of the staging namespace so only
+      // confirmed objects live under `videos/{userId}/`; anything abandoned
+      // in staging expires via the bucket lifecycle rule.
+      const { key: promotedVideoKey } = yield* storage
+        .finalizeVideoUpload(videoKey)
+        .pipe(
+          Effect.mapError(
+            (error) =>
+              new ValidationError({
+                cause: error,
+                message: `Video upload could not be promoted: ${error.message}`,
+              }),
+          ),
+        );
+
+      // The thumbnail still transits the Worker. If any later step fails,
+      // roll the uploaded objects back so storage stays in sync with the DB.
       const uploadedKeys: string[] = [];
 
       const outcome = yield* Effect.gen(function* () {
-        uploadedKeys.push(videoKey);
+        uploadedKeys.push(promotedVideoKey);
         const { key: thumbnailKey } = yield* storage.uploadThumbnail(
           userId,
           thumbnail,
@@ -431,7 +449,7 @@ export class PostsService extends Context.Service<
               thumbnailKey,
               title,
               userId,
-              videoKey,
+              videoKey: promotedVideoKey,
               videoMetadata:
                 videoMetadata === undefined
                   ? "{}"

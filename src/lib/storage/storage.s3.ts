@@ -2,6 +2,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Effect, Layer, Redacted } from "effect";
 
 import { THUMBNAIL_CONTENT_TYPE, videoContentType } from "./content-type";
+import { PENDING_VIDEOS_PREFIX, finalizedVideoKey } from "./keys";
 import { StorageError, StorageModule } from "./storage.module";
 
 export const StorageLive = Layer.effect(
@@ -158,7 +159,9 @@ export const StorageLive = Layer.effect(
         Effect.gen(function* () {
           // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
           const baseName = crypto.randomUUID();
-          const key = `videos/${userId}/${baseName}.${ext}`;
+          // Presigned PUTs land in the staging namespace; only the confirm
+          // step promotes validated objects to their final `videos/` key.
+          const key = `${PENDING_VIDEOS_PREFIX}${userId}/${baseName}.${ext}`;
           const contentType = videoContentType(ext);
 
           const url = yield* Effect.tryPromise({
@@ -186,6 +189,66 @@ export const StorageLive = Layer.effect(
           );
 
           return { contentType, key, url };
+        }),
+      finalizeVideoUpload: (pendingKey) =>
+        Effect.gen(function* () {
+          const finalKey = finalizedVideoKey(pendingKey);
+
+          // SAFETY: CopySource is `${bucket}/${key}` with the key path
+          // URL-encoded; the generated keys only ever contain UUIDs, a
+          // whitelisted extension and `/` separators, so encoding each
+          // segment is identity in practice and defensive by construction.
+          const copySource = `${envServer.CLOUDFLARE_BUCKET}/${pendingKey
+            .split("/")
+            .map(encodeURIComponent)
+            .join("/")}`;
+
+          yield* Effect.tryPromise({
+            try: () =>
+              client.send(
+                new s3Mod.CopyObjectCommand({
+                  Bucket: envServer.CLOUDFLARE_BUCKET,
+                  CopySource: copySource,
+                  Key: finalKey,
+                }),
+              ),
+            catch: (cause) =>
+              new StorageError({
+                cause,
+                key: pendingKey,
+                message: `Failed to promote upload: ${String(cause)}`,
+                operation: "finalize",
+              }),
+          });
+
+          // Best-effort cleanup of the staging copy: if this delete fails,
+          // the bucket lifecycle rule expires it, so promotion must not
+          // fail (a raised error here would leak the promoted object with
+          // no uploadedKeys entry to roll back).
+          yield* Effect.ignore(
+            Effect.tryPromise({
+              try: () =>
+                client.send(
+                  new s3Mod.DeleteObjectCommand({
+                    Bucket: envServer.CLOUDFLARE_BUCKET,
+                    Key: pendingKey,
+                  }),
+                ),
+              catch: (cause) =>
+                new StorageError({
+                  cause,
+                  key: pendingKey,
+                  message: `Failed to clean up staged upload: ${String(cause)}`,
+                  operation: "finalize",
+                }),
+            }),
+          );
+
+          yield* Effect.logInfo("Pending upload promoted").pipe(
+            Effect.annotateLogs({ finalKey }),
+          );
+
+          return { key: finalKey };
         }),
     } satisfies StorageModule["Service"];
   }),

@@ -4,7 +4,13 @@ export class StorageError extends Schema.TaggedError<StorageError>()(
   "StorageError",
   {
     message: Schema.String,
-    operation: Schema.Literals(["upload", "delete", "presign", "head"]),
+    operation: Schema.Literals([
+      "upload",
+      "delete",
+      "presign",
+      "head",
+      "finalize",
+    ]),
     key: Schema.String,
     cause: Schema.Unknown,
   },
@@ -44,5 +50,15 @@ export class StorageModule extends Context.Service<
       userId: string,
       ext: string,
     ) => Effect.Effect<PresignedVideoUpload, StorageError>;
+
+    /**
+     * Promote a pending direct-to-R2 upload out of the staging namespace:
+     * copies the object to its final `videos/{userId}/…` key and best-effort
+     * deletes the pending one (any leftover expires via the bucket lifecycle
+     * rule). Returns the final key to persist in the DB.
+     */
+    readonly finalizeVideoUpload: (
+      pendingKey: string,
+    ) => Effect.Effect<{ key: string }, StorageError>;
   }
 >()("StorageModule") {}

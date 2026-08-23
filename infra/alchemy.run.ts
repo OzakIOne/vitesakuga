@@ -72,13 +72,13 @@ export default Alchemy.Stack(
                 project: sakugaDatabase,
                 name: "production",
                 protected: true,
-                migrationsDir: "./drizzle",
+                migrations: "./drizzle",
               });
               return yield* Neon.Branch("DevelopmentBranch", {
                 project: sakugaDatabase,
                 name: "development",
                 parentBranch: productionBranch,
-                migrationsDir: "./drizzle",
+                migrations: "./drizzle",
               });
             })
       : undefined;
@@ -90,6 +90,21 @@ export default Alchemy.Stack(
       locationHint: "weur",
       // Public bucket domain, e.g. media-dev.ozaki.one.
       domains: [{ name: mediaDomain }],
+      // Staged direct-to-R2 uploads (`videos/_pending/`) that were never
+      // confirmed expire after 48h: closes the orphan window where a video
+      // was PUT to R2 but its confirm call never ran (tab closed, validator
+      // rejection), and bounds how long oversized unconfirmed objects can
+      // occupy storage. Confirmed uploads are promoted out of the prefix by
+      // PostsService.upload before the DB insert.
+      lifecycleRules: [
+        {
+          id: "expire-pending-uploads",
+          prefix: "videos/_pending/",
+          deleteObjectsTransition: {
+            condition: { type: "Age", maxAge: 48 * 60 * 60 },
+          },
+        },
+      ],
       // Only the app domain (and localhost in dev) may read the bucket from
       // the browser. Videos upload direct-to-R2 via presigned PUTs, so the app
       // origin may also PUT; DELETE stays server-side.

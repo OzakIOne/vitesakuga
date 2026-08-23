@@ -329,14 +329,23 @@ describe("PostsService.getByTag", () => {
 });
 
 describe("PostsService.upload", () => {
+  // Mirror the real client flow: presign a staging key, PUT the bytes to R2,
+  // and hand the staging key to the confirm step.
   const uploadVideoToStorage = async (name = "video.mp4") => {
     const file = new File(["video bytes"], name, { type: "video/mp4" });
-    return runEffect(
+    const staged = await runEffect(
       Effect.gen(function* () {
         const storage = yield* StorageModule;
-        return yield* storage.uploadVideo("user-1", file);
+        return yield* storage.presignVideoUpload("user-1", "mp4");
       }),
     );
+    const response = await fetch(staged.url, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": staged.contentType },
+    });
+    expect(response.ok).toBe(true);
+    return { key: staged.key };
   };
 
   const makeUploadInput = (videoKey: string) => ({
@@ -359,17 +368,21 @@ describe("PostsService.upload", () => {
   });
 
   it("confirms the direct-to-R2 upload and creates the post", async () => {
-    const { key } = await uploadVideoToStorage();
+    const { key: pendingKey } = await uploadVideoToStorage();
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
 
-    const post = await runEffect(PostsService.upload(makeUploadInput(key)));
+    const post = await runEffect(
+      PostsService.upload(makeUploadInput(pendingKey)),
+    );
 
     expect(post.id).toBeGreaterThan(0);
-    expect(post.videoKey).toBe(key);
+    // The stored key is the promoted one, out of the staging namespace.
+    expect(post.videoKey).toMatch(/^videos\/user-1\/[a-f0-9-]+\.mp4$/);
+    expect(post.videoKey).not.toBe(pendingKey);
     expect(post.title).toBe("Uploaded Post");
   });
 
-  it("rejects a video key outside the user's namespace", async () => {
+  it("rejects a video key outside the user's staging namespace", async () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
     await expect(
       runEffect(
@@ -378,12 +391,19 @@ describe("PostsService.upload", () => {
     ).rejects.toThrow("Invalid video upload key");
   });
 
+  it("rejects a final-namespace key (uploads must be staged first)", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    await expect(
+      runEffect(PostsService.upload(makeUploadInput("videos/user-1/a.mp4"))),
+    ).rejects.toThrow("Invalid video upload key");
+  });
+
   it("rejects a video key that was never uploaded", async () => {
     mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
     await expect(
       runEffect(
         PostsService.upload(
-          makeUploadInput("videos/user-1/never-uploaded.mp4"),
+          makeUploadInput("videos/_pending/user-1/never-uploaded.mp4"),
         ),
       ),
     ).rejects.toThrow("Video upload could not be verified");
@@ -406,7 +426,7 @@ describe("PostsService.createVideoUploadUrl", () => {
       PostsService.createVideoUploadUrl({ fileName: "clip.mp4" }),
     );
 
-    expect(result.key).toMatch(/^videos\/user-1\/[a-f0-9-]+\.mp4$/);
+    expect(result.key).toMatch(/^videos\/_pending\/user-1\/[a-f0-9-]+\.mp4$/);
     expect(result.contentType).toBe("video/mp4");
     expect(result.url).toContain(result.key);
     expect(result.url).toContain("X-Amz-Signature=");

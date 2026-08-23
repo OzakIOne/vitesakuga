@@ -18,6 +18,14 @@ Terms used consistently across the codebase. Update this file when new concepts 
 
 ## Upload Path
 
+Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes never transit the Worker), then the form confirm promotes them.
+
+**Presigned Upload** — `createVideoUploadUrl` server fn mints a 15-min presigned PUT scoped to `videos/_pending/{userId}/{uuid}.{ext}` with a server-pinned Content-Type. The browser PUTs the file, then hands the staging key to `uploadPost`. Size/type are verified at confirm against the stored object (`headFile` + `upload-policy.ts`), which **promotes** it to its final key (`finalizeVideoUpload`: copy out of `_pending/`, best-effort staging delete) before any DB write.
+
+**Staging Namespace & GC** — Anything left under `videos/_pending/` is garbage by definition and expires after 48 h via an R2 bucket lifecycle rule (`infra/alchemy.run.ts`) — closing the orphan window where a video was PUT but its confirm never ran.
+
+**Thumbnail Validation** — Thumbnails transit the Worker and are validated server-side in the confirm validator: `.jpe?g` extension + ≤5 MB + JPEG magic bytes (`file-validation.ts`); stored Content-Type forced to `image/jpeg`.
+
 **Upload Processor** — Pure functions in `upload.processor.ts` for client-side video work: `analyzeVideo` (mediainfo.js metadata extraction), `generateThumbnails` (mediabunny frame extraction), `generateAutoThumbnails` (5 evenly-spaced frames), `buildFormData` (values → FormData).
 
 **Video Processing** — Client-side hook (`useVideoProcessing`) that owns the MediaInfo WASM lifecycle, video file selection, preview URL, thumbnail generation/capture, and frame rate state. Returns `{ videoFile, previewUrl, frameRate, thumbnails, selectedThumbnailIndex, videoMetadata, selectFile, captureFrame, selectThumbnail, clearFile }`.
@@ -79,7 +87,7 @@ See [docs/build-environment.md](./docs/build-environment.md) for the full explan
 
 ## Storage
 
-**StorageModule** — Effect service wrapping object-storage operations in `src/lib/storage/storage.module.ts`. Interface defines `uploadVideo(userId, file)`, `uploadThumbnail(userId, file)`, `deleteFile(key)`. Tagged error: `StorageError`. S3/R2 implementation in `storage.s3.ts`; rustfs implementation for local dev/tests in `storage.rustfs.ts`; tests in `storage.test.ts`.
+**StorageModule** — Effect service wrapping object-storage operations in `src/lib/storage/storage.module.ts`. Interface defines `uploadVideo(userId, file)`, `uploadThumbnail(userId, file)`, `deleteFile(key)`, `headFile(key)`, `presignVideoUpload(userId, ext)`, `finalizeVideoUpload(pendingKey)`. Tagged error: `StorageError` (operations: upload/delete/presign/head/finalize). S3/R2 implementation in `storage.s3.ts`; rustfs implementation for local dev/tests in `storage.rustfs.ts`; tests in `storage.test.ts`. Key helpers (pending namespace) in `keys.ts`; content-type derivation from whitelisted extensions in `content-type.ts`; confirm-time size/content-type policy in `upload-policy.ts`.
 
 ## Pagination
 

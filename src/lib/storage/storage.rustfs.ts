@@ -2,6 +2,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Effect, Layer } from "effect";
 
 import { THUMBNAIL_CONTENT_TYPE, videoContentType } from "./content-type";
+import { PENDING_VIDEOS_PREFIX, finalizedVideoKey } from "./keys";
 import { StorageError, StorageModule } from "./storage.module";
 
 const RUSTFS_ENDPOINT = "http://localhost:9000";
@@ -148,7 +149,9 @@ export const makeRustFSStorageLayer = () => {
           Effect.gen(function* () {
             // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
             const baseName = crypto.randomUUID();
-            const key = `videos/${userId}/${baseName}.${ext}`;
+            // Presigned PUTs land in the staging namespace; only the confirm
+            // step promotes validated objects to their final `videos/` key.
+            const key = `${PENDING_VIDEOS_PREFIX}${userId}/${baseName}.${ext}`;
             const contentType = videoContentType(ext);
 
             const url = yield* Effect.tryPromise({
@@ -172,6 +175,64 @@ export const makeRustFSStorageLayer = () => {
             });
 
             return { contentType, key, url };
+          }),
+        finalizeVideoUpload: (pendingKey) =>
+          Effect.gen(function* () {
+            const finalKey = finalizedVideoKey(pendingKey);
+
+            // SAFETY: CopySource is `${bucket}/${key}` with the key path
+            // URL-encoded; the generated keys only ever contain UUIDs, a
+            // whitelisted extension and `/` separators, so encoding each
+            // segment is identity in practice and defensive by construction.
+            const copySource = `${BUCKET}/${pendingKey
+              .split("/")
+              .map(encodeURIComponent)
+              .join("/")}`;
+
+            yield* Effect.tryPromise({
+              try: () =>
+                client.send(
+                  new s3Mod.CopyObjectCommand({
+                    Bucket: BUCKET,
+                    CopySource: copySource,
+                    Key: finalKey,
+                  }),
+                ),
+              catch: (cause) =>
+                new StorageError({
+                  cause,
+                  key: pendingKey,
+                  message: `Failed to promote upload: ${String(cause)}`,
+                  operation: "finalize",
+                }),
+            });
+
+            // Best-effort cleanup of the staging copy; leftovers expire via
+            // the bucket lifecycle rule, so promotion must not fail here.
+            yield* Effect.ignore(
+              Effect.tryPromise({
+                try: () =>
+                  client.send(
+                    new s3Mod.DeleteObjectCommand({
+                      Bucket: BUCKET,
+                      Key: pendingKey,
+                    }),
+                  ),
+                catch: (cause) =>
+                  new StorageError({
+                    cause,
+                    key: pendingKey,
+                    message: `Failed to clean up staged upload: ${String(cause)}`,
+                    operation: "finalize",
+                  }),
+              }),
+            );
+
+            yield* Effect.logInfo("Pending upload promoted").pipe(
+              Effect.annotateLogs({ finalKey }),
+            );
+
+            return { key: finalKey };
           }),
       } satisfies StorageModule["Service"];
     }),
