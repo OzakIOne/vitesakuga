@@ -112,3 +112,11 @@ At runtime, it:
 - Errors propagate through Effect's error channel and are caught by `createHandler` which logs them via `Effect.logError`
 - Callers (client-side) should use React Query's `onError` / `.catch()` for error handling
 - Avoid `try-catch` within service methods — use Effect's `Effect.try`, `Option.match`, and tagged errors
+
+### Error taxonomy
+
+- `ValidationError` — the caller's input was rejected (bad upload key, invalid video, reorder mismatch). Safe to show as a user-facing message.
+- `RowParseError` — a database row failed to decode against its domain schema. This is an internal data-integrity defect, not bad user input; never render it as validation feedback.
+- Every other tag names one specific failure (`PostNotFoundError`, `ForbiddenError`, …) and carries its entity ID for context.
+
+Tagged errors survive the server-function round trip: TanStack Start serializes own properties, so the client receives an `Error` with `_tag` intact even though class identity is lost. Discriminate with `errorTag(cause)` from `src/lib/mutations/mutation-feedback.ts`; `toastError` already turns `UnauthorizedError` into a "Log in" action automatically.

@@ -4,8 +4,10 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { UnauthorizedError } from "../errors";
 import {
   errorMessage,
+  errorTag,
   toastError,
   toastSuccess,
   useMutationWithFeedback,
@@ -70,6 +72,51 @@ describe(toastError, () => {
         action: { label: "Retry", onClick: retry },
       }),
     );
+  });
+
+  it("offers a log-in action for unauthorized tagged errors", async () => {
+    const error = new UnauthorizedError({ message: "You must be logged in" });
+    toastError("Title", error, "fallback");
+
+    const { toaster } = await import("src/components/ui/toaster");
+    expect(toaster.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: { label: "Log in", onClick: expect.any(Function) },
+        description: "You must be logged in",
+      }),
+    );
+  });
+
+  it("keeps no action for untagged errors", async () => {
+    toastError("Title", new Error("nope"), "fallback");
+
+    const { toaster } = await import("src/components/ui/toaster");
+    expect(toaster.create).toHaveBeenCalledWith(
+      expect.objectContaining({ action: undefined }),
+    );
+  });
+});
+
+describe(errorTag, () => {
+  it("reads _tag off real tagged errors", () => {
+    const error = new UnauthorizedError({ message: "m" });
+    expect(errorTag(error)).toBe("UnauthorizedError");
+  });
+
+  it("reads _tag off serialized errors that lost class identity", () => {
+    const error = new UnauthorizedError({ message: "m" });
+    const serialized = Object.assign(new Error(error.message), {
+      _tag: error._tag,
+    });
+    expect(errorTag(serialized)).toBe("UnauthorizedError");
+  });
+
+  it("returns undefined for plain errors and non-errors", () => {
+    expect(errorTag(new Error("plain"))).toBeUndefined();
+    expect(errorTag({ _tag: 42 })).toBeUndefined();
+    expect(errorTag("boom")).toBeUndefined();
+    expect(errorTag(undefined)).toBeUndefined();
+    expect(errorTag(null)).toBeUndefined();
   });
 });
 
