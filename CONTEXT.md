@@ -44,15 +44,15 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Auth
 
-**Session** — Better Auth session with user info. Retrieved via `getSessionEffect` (in `src/lib/auth/session.effect.ts`). Required for mutations (update post, delete comment, set vote, playlist edits).
+**Session** — Better Auth session with user info, accessed through `SessionService` (an Effect `Context.Service` in `src/lib/auth/session.effect.ts`, provided by `SessionServiceLive`). Interface: `getSession()` (full session or null), `getUser()` (user or null), and `requireUser(message)` (fails with `UnauthorizedError` when signed out). All mutating services read auth state through this service so the dependency appears in their Effect requirement channel; tests swap in a mocked `AuthService` under the real `SessionServiceLive`.
 
-**Ownership Guard** — Pattern for checking that the authenticated user owns the resource before allowing mutation. Currently inlined in `PostsService.update`, `CommentsService.delete_`, vote set/remove, and the playlist mutation methods. Steps: get session → fetch resource owner → compare IDs → fail with `UnauthorizedError` or `ForbiddenError`.
+**Ownership Guard** — Pattern for checking that the authenticated user owns the resource before allowing mutation. The sign-in half is centralized: services call `SessionService.requireUser(message)` first. The ownership half is centralized in `ensureOwned({ resource, selectOwnerId, userId, notFound, forbidden })` (`src/lib/auth/ownership.ts`) — fails with the caller-supplied not-found error when absent, forbidden error when the owner differs; returns the owned row. Used by `PostsService.update`, `CommentsService.delete_`, and (via the private `requireOwnedPlaylist`) every playlist mutation. Vote set/remove needs no explicit guard — ownership is enforced structurally by scoping queries to the authenticated `userId`.
 
 ## Search & Pagination
 
 **Post Search** — Server-side filtering by query string (title/content ilike), tags (junction table join), date range (today/week/month/all), and sort order (newest/oldest). Returns paginated posts (with vote counts) plus popular tags.
 
-**Popular Tags** — Aggregation query: join post_tags, group by tag, count posts, order by count desc, limit 10. Currently duplicated across 4 service methods.
+**Popular Tags** — Aggregation query: top-10 tags by tagged-post count among a filtered post set. Centralized in `fetchPopularTagsForPosts(db, predicates)` (`src/lib/tags/tags.utils.ts`); callers express scope as predicates over the joined `posts` table (post search, by-tag page, user profiles). `TagsService.popular` deliberately builds its own leftJoin variant so zero-count tags appear.
 
 **Pagination** — Offset-based pagination computed by `computePagination(totalCount, { page, pageSize })`. Returns `{ currentPage, totalPages, hasMore, hasPrevious, offset, limit, total }`.
 
@@ -64,7 +64,7 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Infrastructure
 
-**R2** — Cloudflare R2 (S3-compatible) object storage for video and thumbnail files. Accessed via AWS SDK S3Client. Local dev and e2e tests use rustfs (S3-compatible) via `storage.rustfs.ts` instead.
+**R2** — Cloudflare R2 (S3-compatible) object storage for video and thumbnail files. Accessed via AWS SDK S3Client through `storage.adapter.ts`. Local dev and e2e tests use rustfs (S3-compatible) via the `makeRustFSStorageLayer()` configuration of the same adapter instead.
 
 **Neon** — Serverless PostgreSQL database. Accessed via Neon HTTP driver (Drizzle) and Neon serverless pool (Kysely). Local dev (`DATABASE_DRIVER=local`) uses a `pg` Pool against Docker Postgres instead.
 
@@ -87,7 +87,7 @@ See [docs/build-environment.md](./docs/build-environment.md) for the full explan
 
 ## Storage
 
-**StorageModule** — Effect service wrapping object-storage operations in `src/lib/storage/storage.module.ts`. Interface defines `uploadVideo(userId, file)`, `uploadThumbnail(userId, file)`, `deleteFile(key)`, `headFile(key)`, `presignVideoUpload(userId, ext)`, `finalizeVideoUpload(pendingKey)`. Tagged error: `StorageError` (operations: upload/delete/presign/head/finalize). S3/R2 implementation in `storage.s3.ts`; rustfs implementation for local dev/tests in `storage.rustfs.ts`; tests in `storage.test.ts`. Key helpers (pending namespace) in `keys.ts`; content-type derivation from whitelisted extensions in `content-type.ts`; confirm-time size/content-type policy in `upload-policy.ts`.
+**StorageModule** — Effect service wrapping object-storage operations in `src/lib/storage/storage.module.ts`. Interface defines `uploadVideo(userId, file)`, `uploadThumbnail(userId, file)`, `deleteFile(key)`, `headFile(key)`, `presignVideoUpload(userId, ext)`, `finalizeVideoUpload(pendingKey)`. Tagged error: `StorageError` (operations: upload/delete/presign/head/finalize). One S3-protocol adapter in `storage.adapter.ts`, parametrized by an `S3Connection` config (`bucket`, `endpoint`, `credentials`, `forcePathStyle`): `StorageLive` is the production Cloudflare R2 configuration, `makeRustFSStorageLayer()` the local rustfs one used by dev/tests. Key helpers (pending namespace) in `keys.ts`; content-type derivation from whitelisted extensions in `content-type.ts`; confirm-time size/content-type policy in `upload-policy.ts`.
 
 ## Pagination
 

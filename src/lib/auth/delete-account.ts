@@ -8,8 +8,7 @@ import { SqlError } from "../effect/effect.utils";
 import { parseStrict } from "../effect/schema.utils";
 import { ForbiddenError, UnauthorizedError } from "../errors";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
-import type { AuthServices } from "./context";
-import { getSessionEffect, SessionFetchError } from "./session.effect";
+import { SessionFetchError, SessionService } from "./session.effect";
 
 export const deleteAccountInputSchema = Schema.Struct({
   password: Schema.optionalKey(Schema.String),
@@ -40,7 +39,7 @@ export class DeleteAccountService extends Context.Service<
     ) => Effect.Effect<
       { deletedUserId: string },
       ForbiddenError | SessionFetchError | SqlError | UnauthorizedError,
-      AuthServices
+      SessionService
     >;
   }
 >()("DeleteAccountService", {
@@ -49,14 +48,9 @@ export class DeleteAccountService extends Context.Service<
 
     const deleteAccount = Effect.fn("DeleteAccountService.deleteAccount")(
       function* (input: Schema.Schema.Type<typeof deleteAccountInputSchema>) {
-        const session = yield* getSessionEffect();
-
-        if (!session?.user) {
-          return yield* new UnauthorizedError({
-            message: "You must be logged in",
-          });
-        }
-        const userId = session.user.id;
+        const sessions = yield* SessionService;
+        const user = yield* sessions.requireUser("You must be logged in");
+        const userId = user.id;
 
         // Mirrors Better Auth's `shouldRequirePassword`: a password is only
         // required when the user has a credential account storing a password.

@@ -6,6 +6,7 @@ import {
   RequestHeadersService,
   type AuthSessionProvider,
 } from "../auth/context";
+import { SessionServiceLive } from "../auth/session.effect";
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
@@ -13,6 +14,23 @@ import { envInfra } from "../env/infra";
 import { KyselyDB } from "./context";
 
 const LOG_LAYER = withMinimumLogLevel("Debug");
+
+/**
+ * `SessionServiceLive` fed by the raw Better Auth instance and the request
+ * headers factory — the only consumers of those low-level services.
+ */
+const makeSessionLayer = (
+  auth: AuthInstance,
+  getRequestHeaders: () => Headers,
+) =>
+  SessionServiceLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.succeed(AuthService)(toAuthSessionProvider(auth)),
+        Layer.succeed(RequestHeadersService)(getRequestHeaders),
+      ),
+    ),
+  );
 
 // In-memory PGlite instance instead of a real Postgres connection. Note this
 // is distinct from DATABASE_DRIVER=e2e (the Playwright webServer, which uses
@@ -78,11 +96,7 @@ export const makeAuthLayer = async () => {
     import("@tanstack/react-start/server"),
     makeDBLayer(),
   ]);
-  return Layer.mergeAll(
-    dbLayer,
-    Layer.succeed(AuthService)(toAuthSessionProvider(auth)),
-    Layer.succeed(RequestHeadersService)(() => getRequestHeaders()),
-  );
+  return Layer.mergeAll(dbLayer, makeSessionLayer(auth, getRequestHeaders));
 };
 
 export const makeMiddlewareLayer = async () => {
@@ -91,8 +105,7 @@ export const makeMiddlewareLayer = async () => {
     import("@tanstack/react-start/server"),
   ]);
   return Layer.mergeAll(
-    Layer.succeed(AuthService)(toAuthSessionProvider(auth)),
-    Layer.succeed(RequestHeadersService)(() => getRequestHeaders()),
+    makeSessionLayer(auth, getRequestHeaders),
     LOG_LAYER,
     TracingLive,
   );

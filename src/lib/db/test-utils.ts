@@ -10,6 +10,7 @@ import { vi } from "vitest";
 import { AuthService } from "../auth/context";
 import type { AuthSessionProvider } from "../auth/context";
 import { RequestHeadersService } from "../auth/context";
+import { SessionServiceLive } from "../auth/session.effect";
 import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
@@ -37,12 +38,22 @@ const makeTestLayer = (
   headers: () => Headers,
 ) => {
   const storageLayer = makeRustFSStorageLayer();
+  // SessionService is the single auth dependency services require; it sits
+  // on top of the mocked Better Auth provider so mockGetSession keeps
+  // driving every session-related test.
+  const sessionLayer = SessionServiceLive.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.succeed(AuthService)(
+          auth ?? { api: { getSession: async () => null } },
+        ),
+        Layer.succeed(RequestHeadersService)(headers),
+      ),
+    ),
+  );
   return Layer.mergeAll(
     Layer.succeed(KyselyDB)(makeFromKysely(db)),
-    Layer.succeed(AuthService)(
-      auth ?? { api: { getSession: async () => null } },
-    ),
-    Layer.succeed(RequestHeadersService)(headers),
+    sessionLayer,
     storageLayer,
     LOG_LAYER,
     TracingLive,

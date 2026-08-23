@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
+import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
-import type { AuthServices } from "../auth/context";
-import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
+import { ensureOwned } from "../auth/ownership";
+import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
@@ -35,7 +35,7 @@ export class CommentsService extends Context.Service<
     ) => Effect.Effect<
       Schema.Schema.Type<typeof commentsSelectSchema>,
       SqlError | SqlNoFirstResult | UnauthorizedError | SessionFetchError,
-      AuthServices
+      SessionService
     >;
     readonly delete_: (
       commentId: number,
@@ -46,7 +46,7 @@ export class CommentsService extends Context.Service<
       | CommentNotFoundError
       | SessionFetchError
       | SqlError,
-      AuthServices
+      SessionService
     >;
   }
 >()("CommentsService", {
@@ -79,15 +79,10 @@ export class CommentsService extends Context.Service<
     const add = Effect.fn("CommentsService.add")(function* (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) {
-      const session = yield* getSessionEffect();
-
-      if (!session?.user) {
-        return yield* Effect.fail(
-          new UnauthorizedError({
-            message: "You must be logged in to comment",
-          }),
-        );
-      }
+      const sessions = yield* SessionService;
+      const user = yield* sessions.requireUser(
+        "You must be logged in to comment",
+      );
 
       const now = yield* DateTime.now;
       const comment = yield* db.executeTakeFirstOrError(
@@ -97,7 +92,7 @@ export class CommentsService extends Context.Service<
             content: data.content,
             createdAt: DateTime.toDate(now),
             postId: data.postId,
-            userId: session.user.id,
+            userId: user.id,
           })
           .returning(["id", "postId", "content", "userId", "createdAt"]),
       );
@@ -106,7 +101,7 @@ export class CommentsService extends Context.Service<
         Effect.annotateLogs({
           commentId: String(comment.id),
           postId: String(data.postId),
-          userId: session.user.id,
+          userId: user.id,
         }),
       );
 
@@ -116,13 +111,10 @@ export class CommentsService extends Context.Service<
     const delete_ = Effect.fn("CommentsService.delete_")(function* (
       commentId: number,
     ) {
-      const session = yield* getSessionEffect();
-
-      if (!session?.user) {
-        return yield* new UnauthorizedError({
-          message: "You must be logged in to delete a comment",
-        });
-      }
+      const sessions = yield* SessionService;
+      const user = yield* sessions.requireUser(
+        "You must be logged in to delete a comment",
+      );
 
       const commentOption = yield* db.executeTakeFirstOption(
         db
@@ -131,29 +123,25 @@ export class CommentsService extends Context.Service<
           .where("id", "=", commentId),
       );
 
-      const comment = yield* Option.match(commentOption, {
-        onNone: () =>
-          Effect.fail(
-            new CommentNotFoundError({
-              commentId,
-              message: `Comment ${commentId} not found`,
-            }),
-          ),
-        onSome: (value) => Effect.succeed(value),
-      });
-
-      if (comment.userId !== session.user.id) {
-        return yield* new ForbiddenError({
+      yield* ensureOwned({
+        resource: commentOption,
+        selectOwnerId: (row) => row.userId,
+        userId: user.id,
+        notFound: new CommentNotFoundError({
+          commentId,
+          message: `Comment ${commentId} not found`,
+        }),
+        forbidden: new ForbiddenError({
           message: "You can only delete your own comments",
-        });
-      }
+        }),
+      });
 
       yield* db.execute(db.deleteFrom("comments").where("id", "=", commentId));
 
       yield* Effect.logInfo("Comment deleted").pipe(
         Effect.annotateLogs({
           commentId: String(commentId),
-          userId: session.user.id,
+          userId: user.id,
         }),
       );
 

@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Exit, Layer, Option, Schema } from "effect";
+import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 
-import type { AuthServices } from "../auth/context";
-import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
+import { ensureOwned } from "../auth/ownership";
+import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import { postWithVotesSelectSchema, type PostWithVotes } from "../db/schema";
+import type { DB } from "../db/kysely";
+import type { PostWithVotes } from "../db/schema";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -24,8 +26,8 @@ import { videoContentType } from "../storage/content-type";
 import { pendingVideoPrefix } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { isUploadedVideoValid } from "../storage/upload-policy";
-import { mapPopularTags } from "../tags/tags.utils";
-import { fetchPostVoteCounts } from "../votes/votes.utils";
+import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
+import { mergeVoteCounts } from "../votes/votes.utils";
 import { assertThumbnailIsJpeg } from "./file-validation";
 import {
   createVideoUploadUrlSchema,
@@ -40,6 +42,7 @@ import { escapeLikePattern } from "./search-pattern";
 
 const PAGE_SIZE = 30;
 
+// oxlint-disable effecttsgo/global-date -- calendar-day boundaries use the server's local timezone so "today"/"this week" match user expectations; Effect DateTime has no local-midnight equivalent
 const computeStartDate = (dateRange: "today" | "week" | "month") => {
   const now = new Date();
   if (dateRange === "today") {
@@ -50,6 +53,7 @@ const computeStartDate = (dateRange: "today" | "week" | "month") => {
   }
   return new Date(now.setMonth(now.getMonth() - 1));
 };
+// oxlint-enable effecttsgo/global-date
 
 export const parsePostId = parse(
   Schema.Union([Schema.Number, Schema.NumberFromString]),
@@ -103,7 +107,7 @@ export class PostsService extends Context.Service<
       | SessionFetchError
       | ValidationError
       | RowParseError,
-      AuthServices
+      SessionService
     >;
     readonly createVideoUploadUrl: (
       data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>,
@@ -114,7 +118,7 @@ export class PostsService extends Context.Service<
         readonly url: string;
       },
       StorageError | UnauthorizedError | SessionFetchError,
-      AuthServices
+      SessionService
     >;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
@@ -127,7 +131,7 @@ export class PostsService extends Context.Service<
       | SqlError
       | SqlNoFirstResult
       | RowParseError,
-      AuthServices
+      SessionService
     >;
     readonly getByTag: (
       data: Schema.Schema.Type<typeof postByTagSchema>,
@@ -137,28 +141,6 @@ export class PostsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
-
-    const parseWithVotes = Effect.fn("PostsService.parseWithVotes")(function* (
-      parsed: readonly Schema.Schema.Type<typeof postsSelectSchema>[],
-    ) {
-      const voteCounts = yield* fetchPostVoteCounts(
-        db,
-        parsed.map((post) => post.id),
-      );
-      const withVotes = parsed.map((post) => {
-        const counts = voteCounts.get(post.id) ?? { dislikes: 0, likes: 0 };
-        return { ...post, dislikes: counts.dislikes, likes: counts.likes };
-      });
-
-      return yield* Effect.try({
-        try: () => parse(Schema.Array(postWithVotesSelectSchema))(withVotes),
-        catch: (error) =>
-          new RowParseError({
-            message: `Error processing vote counts: ${String(error)}`,
-            cause: error,
-          }),
-      });
-    });
 
     const search = Effect.fn("PostsService.search")(function* (
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
@@ -224,49 +206,37 @@ export class PostsService extends Context.Service<
           }),
       });
 
-      const parsedWithVotes = yield* parseWithVotes(parsed);
+      const parsedWithVotes = yield* mergeVoteCounts(db, parsed);
 
-      let popularTagsQuery = db
-        .selectFrom("tags")
-        .innerJoin("post_tags", "tags.id", "post_tags.tagId")
-        .innerJoin("posts", "posts.id", "post_tags.postId");
-
+      const popularTagsPredicates: ((
+        eb: ExpressionBuilder<DB, "posts">,
+      ) => Expression<SqlBool>)[] = [];
       if (q) {
         const pattern = `%${escapeLikePattern(q)}%`;
-        popularTagsQuery = popularTagsQuery.where((eb) =>
-          eb("posts.title", "ilike", pattern).or(
-            "posts.content",
-            "ilike",
-            pattern,
-          ),
+        popularTagsPredicates.push((eb) =>
+          eb.or([
+            eb("posts.title", "ilike", pattern),
+            eb("posts.content", "ilike", pattern),
+          ]),
         );
       }
 
       if (dateRange !== "all") {
-        popularTagsQuery = popularTagsQuery.where(
-          "posts.createdAt",
-          ">=",
-          computeStartDate(dateRange),
+        popularTagsPredicates.push((eb) =>
+          eb("posts.createdAt", ">=", computeStartDate(dateRange)),
         );
       }
 
-      const popularTagsResult = yield* db.execute(
-        popularTagsQuery
-          .select([
-            "tags.id",
-            "tags.name",
-            db.fn.count("post_tags.postId").as("postCount"),
-          ])
-          .groupBy(["tags.id", "tags.name"])
-          .orderBy("postCount", "desc")
-          .limit(10),
+      const popularTags = yield* fetchPopularTagsForPosts(
+        db,
+        popularTagsPredicates,
       );
 
       return {
         data: parsedWithVotes,
         meta: {
           pagination,
-          popularTags: mapPopularTags(popularTagsResult),
+          popularTags,
         },
       };
     });
@@ -353,17 +323,12 @@ export class PostsService extends Context.Service<
     const upload = Effect.fn("PostsService.upload")(function* (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) {
-      const session = yield* getSessionEffect();
+      const sessions = yield* SessionService;
+      const user = yield* sessions.requireUser(
+        "You must be logged in to upload a post",
+      );
 
-      if (!session?.user) {
-        return yield* Effect.fail(
-          new UnauthorizedError({
-            message: "You must be logged in to upload a post",
-          }),
-        );
-      }
-
-      const userId = session.user.id;
+      const userId = user.id;
 
       const {
         thumbnail,
@@ -499,18 +464,13 @@ export class PostsService extends Context.Service<
 
     const createVideoUploadUrl = Effect.fn("PostsService.createVideoUploadUrl")(
       function* (data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>) {
-        const session = yield* getSessionEffect();
-
-        if (!session?.user) {
-          return yield* Effect.fail(
-            new UnauthorizedError({
-              message: "You must be logged in to upload a post",
-            }),
-          );
-        }
+        const sessions = yield* SessionService;
+        const user = yield* sessions.requireUser(
+          "You must be logged in to upload a post",
+        );
 
         const ext = data.fileName.split(".").pop() ?? "";
-        return yield* storage.presignVideoUpload(session.user.id, ext);
+        return yield* storage.presignVideoUpload(user.id, ext);
       },
     );
 
@@ -551,36 +511,25 @@ export class PostsService extends Context.Service<
           }),
       });
 
-      const parsedWithVotes = yield* parseWithVotes(parsed);
+      const parsedWithVotes = yield* mergeVoteCounts(db, parsed);
 
-      const popularTagsResult = yield* db.execute(
-        db
-          .selectFrom("tags")
-          .innerJoin("post_tags", "tags.id", "post_tags.tagId")
-          .innerJoin("posts", "posts.id", "post_tags.postId")
-          .where("posts.id", "in", (eb) =>
-            eb
+      const popularTags = yield* fetchPopularTagsForPosts(db, [
+        (eb) =>
+          eb("posts.id", "in", (eb2) =>
+            eb2
               .selectFrom("posts")
               .innerJoin("post_tags", "post_tags.postId", "posts.id")
               .innerJoin("tags", "tags.id", "post_tags.tagId")
               .where("tags.name", "=", tagName)
               .select("posts.id"),
-          )
-          .select([
-            "tags.id",
-            "tags.name",
-            db.fn.count("post_tags.postId").as("postCount"),
-          ])
-          .groupBy(["tags.id", "tags.name"])
-          .orderBy("postCount", "desc")
-          .limit(10),
-      );
+          ),
+      ]);
 
       return {
         data: parsedWithVotes,
         meta: {
           pagination,
-          popularTags: mapPopularTags(popularTagsResult),
+          popularTags,
         },
       };
     });
@@ -588,22 +537,17 @@ export class PostsService extends Context.Service<
     const update = Effect.fn("PostsService.update")(function* (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
     ) {
-      const session = yield* getSessionEffect();
-
-      if (!session?.user) {
-        return yield* Effect.fail(
-          new UnauthorizedError({
-            message: "You must be logged in to update a post",
-          }),
-        );
-      }
+      const sessions = yield* SessionService;
+      const user = yield* sessions.requireUser(
+        "You must be logged in to update a post",
+      );
 
       const { postId, title, content, source, relatedPostId, tags } = data;
 
       yield* Effect.logInfo("Post update started").pipe(
         Effect.annotateLogs({
           postId: String(postId),
-          userId: session.user.id,
+          userId: user.id,
         }),
       );
 
@@ -614,24 +558,18 @@ export class PostsService extends Context.Service<
           .where("id", "=", postId),
       );
 
-      const post = yield* Option.match(postOption, {
-        onNone: () =>
-          Effect.fail(
-            new PostNotFoundError({
-              message: `Post ${postId} not found`,
-              postId,
-            }),
-          ),
-        onSome: (value) => Effect.succeed(value),
+      yield* ensureOwned({
+        resource: postOption,
+        selectOwnerId: (row) => row.userId,
+        userId: user.id,
+        notFound: new PostNotFoundError({
+          message: `Post ${postId} not found`,
+          postId,
+        }),
+        forbidden: new ForbiddenError({
+          message: "You can only update your own posts",
+        }),
       });
-
-      if (post.userId !== session.user.id) {
-        return yield* Effect.fail(
-          new ForbiddenError({
-            message: "You can only update your own posts",
-          }),
-        );
-      }
 
       const updatedPost = yield* db.executeTakeFirstOrError(
         db
@@ -650,15 +588,13 @@ export class PostsService extends Context.Service<
           }),
       });
 
+      // Tag links are rebuilt wholesale: delete-then-relink when new tags are
+      // supplied, plain clear otherwise.
+      yield* db.execute(
+        db.deleteFrom("post_tags").where("postId", "=", postId),
+      );
       if (tags && tags.length > 0) {
-        yield* db.execute(
-          db.deleteFrom("post_tags").where("postId", "=", postId),
-        );
         yield* resolveAndLinkTags(db, postId, tags);
-      } else {
-        yield* db.execute(
-          db.deleteFrom("post_tags").where("postId", "=", postId),
-        );
       }
 
       yield* Effect.logInfo("Post updated").pipe(

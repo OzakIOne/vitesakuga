@@ -1,11 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
-import type { AuthServices } from "../auth/context";
-import {
-  getUserSessionEffect,
-  SessionFetchError,
-} from "../auth/session.effect";
+import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { PostVote } from "../db/schema";
 import { SqlError } from "../effect/effect.utils";
@@ -72,28 +68,28 @@ export class PostVotesService extends Context.Service<
     ) => Effect.Effect<
       PostVotesSummary,
       SessionFetchError | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly set: (
       data: SetPostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
       UnauthorizedError | PostNotFoundError | SessionFetchError | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly remove: (
       data: RemovePostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
       UnauthorizedError | SessionFetchError | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly fetchLikedPosts: (
       data: FetchLikedPostsInput,
     ) => Effect.Effect<
       LikedPostsResult,
       UnauthorizedError | SessionFetchError | SqlError,
-      AuthServices
+      SessionService
     >;
   }
 >()("PostVotesService", {
@@ -132,22 +128,18 @@ export class PostVotesService extends Context.Service<
     });
 
     const get = Effect.fn("PostVotesService.get")(function* (postId: number) {
-      const user = yield* getUserSessionEffect();
+      const sessions = yield* SessionService;
+      const user = yield* sessions.getUser();
       return yield* fetchSummary(postId, user?.id ?? null);
     });
 
     const set = Effect.fn("PostVotesService.set")(function* (
       data: SetPostVoteInput,
     ) {
-      const session = yield* getUserSessionEffect();
-
-      if (!session) {
-        return yield* Effect.fail(
-          new UnauthorizedError({
-            message: "You must be logged in to vote on posts",
-          }),
-        );
-      }
+      const sessions = yield* SessionService;
+      const session = yield* sessions.requireUser(
+        "You must be logged in to vote on posts",
+      );
 
       const postOption = yield* db.executeTakeFirstOption(
         db.selectFrom("posts").select("id").where("id", "=", data.postId),
@@ -187,15 +179,10 @@ export class PostVotesService extends Context.Service<
     const remove = Effect.fn("PostVotesService.remove")(function* (
       data: RemovePostVoteInput,
     ) {
-      const session = yield* getUserSessionEffect();
-
-      if (!session) {
-        return yield* Effect.fail(
-          new UnauthorizedError({
-            message: "You must be logged in to vote on posts",
-          }),
-        );
-      }
+      const sessions = yield* SessionService;
+      const session = yield* sessions.requireUser(
+        "You must be logged in to vote on posts",
+      );
 
       yield* db.execute(
         db
@@ -219,13 +206,10 @@ export class PostVotesService extends Context.Service<
     // out of sync with what the user actually liked.
     const fetchLikedPosts = Effect.fn("PostVotesService.fetchLikedPosts")(
       function* (data: FetchLikedPostsInput) {
-        const session = yield* getUserSessionEffect();
-
-        if (!session) {
-          return yield* new UnauthorizedError({
-            message: "You must be logged in to view your liked posts",
-          });
-        }
+        const sessions = yield* SessionService;
+        const session = yield* sessions.requireUser(
+          "You must be logged in to view your liked posts",
+        );
 
         const countResult = yield* db.executeTakeFirstOrUndefined(
           db

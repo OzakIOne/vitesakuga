@@ -2,11 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 import { UpdateObject } from "kysely";
 
-import type { AuthServices } from "../auth/context";
-import { getSessionEffect, SessionFetchError } from "../auth/session.effect";
+import { ensureOwned } from "../auth/ownership";
+import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { DB } from "../db/kysely";
-import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
+import {
+  SqlError,
+  SqlNoFirstResult,
+  type EffectTransition,
+} from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
@@ -125,7 +129,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       PlaylistRow,
       UnauthorizedError | SessionFetchError | SqlError | SqlNoFirstResult,
-      AuthServices
+      SessionService
     >;
     readonly update: (
       data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
@@ -137,7 +141,7 @@ export class PlaylistsService extends Context.Service<
       | SessionFetchError
       | SqlError
       | SqlNoFirstResult,
-      AuthServices
+      SessionService
     >;
     readonly delete_: (
       playlistId: number,
@@ -148,7 +152,7 @@ export class PlaylistsService extends Context.Service<
       | PlaylistNotFoundError
       | SessionFetchError
       | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly addPost: (
       data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
@@ -162,7 +166,7 @@ export class PlaylistsService extends Context.Service<
       | SessionFetchError
       | SqlError
       | SqlNoFirstResult,
-      AuthServices
+      SessionService
     >;
     readonly removePost: (
       data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
@@ -173,7 +177,7 @@ export class PlaylistsService extends Context.Service<
       | PlaylistNotFoundError
       | SessionFetchError
       | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly bulkAddPosts: (
       data: Schema.Schema.Type<typeof bulkAddPostsToPlaylistInputSchema>,
@@ -185,7 +189,7 @@ export class PlaylistsService extends Context.Service<
       | SessionFetchError
       | SqlError
       | SqlNoFirstResult,
-      AuthServices
+      SessionService
     >;
     readonly bulkRemovePosts: (
       data: Schema.Schema.Type<typeof bulkRemovePostsFromPlaylistInputSchema>,
@@ -196,7 +200,7 @@ export class PlaylistsService extends Context.Service<
       | PlaylistNotFoundError
       | SessionFetchError
       | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly reorder: (
       data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
@@ -208,14 +212,14 @@ export class PlaylistsService extends Context.Service<
       | SessionFetchError
       | SqlError
       | ValidationError,
-      AuthServices
+      SessionService
     >;
     readonly fetchUserPlaylists: (
       userId: string,
     ) => Effect.Effect<
       readonly PlaylistWithMeta[],
       SessionFetchError | SqlError,
-      AuthServices
+      SessionService
     >;
     readonly fetchPublicPlaylists: (
       data: Schema.Schema.Type<typeof fetchPublicPlaylistsSchema>,
@@ -225,14 +229,14 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       PlaylistDetailResult,
       PlaylistNotFoundError | SessionFetchError | SqlError | SqlNoFirstResult,
-      AuthServices
+      SessionService
     >;
     readonly fetchForPost: (
       postId: number,
     ) => Effect.Effect<
       readonly PlaylistForPostCheck[],
       UnauthorizedError | SessionFetchError | SqlError,
-      AuthServices
+      SessionService
     >;
   }
 >()("PlaylistsService", {
@@ -240,15 +244,16 @@ export class PlaylistsService extends Context.Service<
     const db = yield* KyselyDB;
 
     const requireAuth = Effect.fn("PlaylistsService.requireAuth")(function* () {
-      const session = yield* getSessionEffect();
+      const sessions = yield* SessionService;
+      return yield* sessions.requireUser("You must be logged in");
+    });
 
-      if (!session?.user) {
-        return yield* new UnauthorizedError({
-          message: "You must be logged in",
-        });
-      }
-
-      return session.user;
+    /** Auth + ownership in one step; every mutation starts with this. */
+    const requireOwnedPlaylist = Effect.fn(
+      "PlaylistsService.requireOwnedPlaylist",
+    )(function* (playlistId: number) {
+      const user = yield* requireAuth();
+      return yield* requirePlaylistOwnership(playlistId, user.id);
     });
 
     const requirePlaylistOwnership = Effect.fn(
@@ -261,24 +266,64 @@ export class PlaylistsService extends Context.Service<
           .where("id", "=", playlistId),
       );
 
-      const playlist = yield* Option.match(playlistOption, {
-        onNone: () =>
-          Effect.fail(
-            new PlaylistNotFoundError({
-              message: `Playlist ${playlistId} not found`,
-              playlistId,
-            }),
-          ),
-        onSome: (value) => Effect.succeed(value),
-      });
-
-      if (playlist.user_id !== userId) {
-        return yield* new ForbiddenError({
+      return yield* ensureOwned({
+        resource: playlistOption,
+        selectOwnerId: (row) => row.user_id,
+        userId,
+        notFound: new PlaylistNotFoundError({
+          message: `Playlist ${playlistId} not found`,
+          playlistId,
+        }),
+        forbidden: new ForbiddenError({
           message: "You can only modify your own playlists",
-        });
-      }
+        }),
+      });
+    });
 
-      return playlist;
+    /** Next sequential position for appending to a playlist. */
+    const nextPosition = Effect.fn("PlaylistsService.nextPosition")(function* (
+      trx: EffectTransition<DB>,
+      playlistId: number,
+    ) {
+      const maxResults = yield* trx.execute(
+        trx
+          .selectFrom("playlist_posts")
+          .select(trx.fn.max("playlist_posts.position").as("max_pos"))
+          .where("playlist_id", "=", playlistId),
+      );
+      // SAFETY: the aggregate row exposes max_pos under the alias used in
+      // select(); indexing via keyof keeps the lookup type-safe.
+      const maxPos = maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
+      return (maxPos != null ? Number(maxPos) : -1) + 1;
+    });
+
+    /**
+     * Rewrite positions 0..n-1 over the remaining rows after a removal, in
+     * (position, added_at) order — shared by removePost and bulkRemovePosts.
+     */
+    const resequencePositions = Effect.fn(
+      "PlaylistsService.resequencePositions",
+    )(function* (trx: EffectTransition<DB>, playlistId: number) {
+      const remaining = yield* trx.execute(
+        trx
+          .selectFrom("playlist_posts")
+          .select(["post_id"])
+          .where("playlist_id", "=", playlistId)
+          .orderBy("position", "asc")
+          .orderBy("created_at", "asc"),
+      );
+
+      let position = 0;
+      for (const row of remaining) {
+        yield* trx.execute(
+          trx
+            .updateTable("playlist_posts")
+            .set({ position })
+            .where("playlist_id", "=", playlistId)
+            .where("post_id", "=", row.post_id),
+        );
+        position++;
+      }
     });
 
     const create = Effect.fn("PlaylistsService.create")(function* (
@@ -304,8 +349,7 @@ export class PlaylistsService extends Context.Service<
     const update = Effect.fn("PlaylistsService.update")(function* (
       data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
     ) {
-      const user = yield* requireAuth();
-      yield* requirePlaylistOwnership(data.playlistId, user.id);
+      yield* requireOwnedPlaylist(data.playlistId);
 
       const now = yield* DateTime.now;
       const setValues: UpdateObject<DB, "playlists"> = {
@@ -330,8 +374,7 @@ export class PlaylistsService extends Context.Service<
     const delete_ = Effect.fn("PlaylistsService.delete_")(function* (
       playlistId: number,
     ) {
-      const user = yield* requireAuth();
-      yield* requirePlaylistOwnership(playlistId, user.id);
+      yield* requireOwnedPlaylist(playlistId);
 
       yield* db.execute(
         db.deleteFrom("playlists").where("id", "=", playlistId),
@@ -343,8 +386,7 @@ export class PlaylistsService extends Context.Service<
     const addPost = Effect.fn("PlaylistsService.addPost")(function* (
       data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
     ) {
-      const user = yield* requireAuth();
-      yield* requirePlaylistOwnership(data.playlistId, user.id);
+      yield* requireOwnedPlaylist(data.playlistId);
 
       const postOption = yield* db.executeTakeFirstOption(
         db.selectFrom("posts").select(["id"]).where("id", "=", data.postId),
@@ -387,24 +429,13 @@ export class PlaylistsService extends Context.Service<
             });
           }
 
-          const maxResults = yield* trx.execute(
-            trx
-              .selectFrom("playlist_posts")
-              .select(trx.fn.max("playlist_posts.position").as("max_pos"))
-              .where("playlist_id", "=", data.playlistId),
-          );
-          // SAFETY: the aggregate row exposes max_pos under the alias used in
-          // select(); indexing via keyof keeps the lookup type-safe.
-          const maxPos =
-            maxResults[0]?.["max_pos" as keyof (typeof maxResults)[0]];
-          const nextPosition = (maxPos != null ? Number(maxPos) : -1) + 1;
-
+          const nextPositionValue = yield* nextPosition(trx, data.playlistId);
           return yield* trx.executeTakeFirstOrError(
             trx
               .insertInto("playlist_posts")
               .values({
                 playlist_id: data.playlistId,
-                position: nextPosition,
+                position: nextPositionValue,
                 post_id: data.postId,
               })
               .returningAll(),
@@ -422,8 +453,7 @@ export class PlaylistsService extends Context.Service<
     const removePost = Effect.fn("PlaylistsService.removePost")(function* (
       data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
     ) {
-      const user = yield* requireAuth();
-      yield* requirePlaylistOwnership(data.playlistId, user.id);
+      yield* requireOwnedPlaylist(data.playlistId);
 
       yield* db.transaction().execute((trx) =>
         Effect.gen(function* () {
@@ -434,26 +464,7 @@ export class PlaylistsService extends Context.Service<
               .where("post_id", "=", data.postId),
           );
 
-          const remaining = yield* trx.execute(
-            trx
-              .selectFrom("playlist_posts")
-              .select(["post_id"])
-              .where("playlist_id", "=", data.playlistId)
-              .orderBy("position", "asc")
-              .orderBy("created_at", "asc"),
-          );
-
-          let position = 0;
-          for (const row of remaining) {
-            yield* trx.execute(
-              trx
-                .updateTable("playlist_posts")
-                .set({ position })
-                .where("playlist_id", "=", data.playlistId)
-                .where("post_id", "=", row.post_id),
-            );
-            position++;
-          }
+          yield* resequencePositions(trx, data.playlistId);
         }),
       );
 
@@ -463,8 +474,7 @@ export class PlaylistsService extends Context.Service<
     const bulkAddPosts = Effect.fn("PlaylistsService.bulkAddPosts")(function* (
       data: Schema.Schema.Type<typeof bulkAddPostsToPlaylistInputSchema>,
     ) {
-      const user = yield* requireAuth();
-      yield* requirePlaylistOwnership(data.playlistId, user.id);
+      yield* requireOwnedPlaylist(data.playlistId);
 
       const uniqueIds = [...new Set(data.postIds)];
 
@@ -507,14 +517,7 @@ export class PlaylistsService extends Context.Service<
           ).length;
 
           if (toAdd.length > 0) {
-            const maxResults = yield* trx.execute(
-              trx
-                .selectFrom("playlist_posts")
-                .select(trx.fn.max("playlist_posts.position").as("max_pos"))
-                .where("playlist_id", "=", data.playlistId),
-            );
-            const maxPos = maxResults[0]?.max_pos;
-            let position = (maxPos != null ? Number(maxPos) : -1) + 1;
+            let position = yield* nextPosition(trx, data.playlistId);
 
             for (const postId of toAdd) {
               yield* trx.execute(
@@ -542,8 +545,7 @@ export class PlaylistsService extends Context.Service<
       function* (
         data: Schema.Schema.Type<typeof bulkRemovePostsFromPlaylistInputSchema>,
       ) {
-        const user = yield* requireAuth();
-        yield* requirePlaylistOwnership(data.playlistId, user.id);
+        yield* requireOwnedPlaylist(data.playlistId);
 
         const uniqueIds = [...new Set(data.postIds)];
 
@@ -565,26 +567,7 @@ export class PlaylistsService extends Context.Service<
                   .where("post_id", "in", uniqueIds),
               );
 
-              const remaining = yield* trx.execute(
-                trx
-                  .selectFrom("playlist_posts")
-                  .select(["post_id"])
-                  .where("playlist_id", "=", data.playlistId)
-                  .orderBy("position", "asc")
-                  .orderBy("created_at", "asc"),
-              );
-
-              let position = 0;
-              for (const row of remaining) {
-                yield* trx.execute(
-                  trx
-                    .updateTable("playlist_posts")
-                    .set({ position })
-                    .where("playlist_id", "=", data.playlistId)
-                    .where("post_id", "=", row.post_id),
-                );
-                position++;
-              }
+              yield* resequencePositions(trx, data.playlistId);
             }
 
             return {
@@ -599,8 +582,7 @@ export class PlaylistsService extends Context.Service<
     const reorder = Effect.fn("PlaylistsService.reorder")(function* (
       data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
     ) {
-      const user = yield* requireAuth();
-      yield* requirePlaylistOwnership(data.playlistId, user.id);
+      yield* requireOwnedPlaylist(data.playlistId);
 
       const currentPostIds = yield* db.execute(
         db
@@ -688,8 +670,9 @@ export class PlaylistsService extends Context.Service<
 
     const fetchUserPlaylists = Effect.fn("PlaylistsService.fetchUserPlaylists")(
       function* (userId: string) {
-        const session = yield* getSessionEffect();
-        const isOwner = session?.user?.id === userId;
+        const sessions = yield* SessionService;
+        const user = yield* sessions.getUser();
+        const isOwner = user?.id === userId;
 
         let query = db
           .selectFrom("playlists")
@@ -785,8 +768,9 @@ export class PlaylistsService extends Context.Service<
       data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>,
     ) {
       const { playlistId, page } = data;
-      const session = yield* getSessionEffect();
-      const currentUserId = session?.user?.id;
+      const sessions = yield* SessionService;
+      const user = yield* sessions.getUser();
+      const currentUserId = user?.id;
 
       const playlistOption = yield* db.executeTakeFirstOption(
         db.selectFrom("playlists").selectAll().where("id", "=", playlistId),

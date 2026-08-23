@@ -34,7 +34,7 @@ type EffectExecutor = {
   executeTakeFirstUnsafe: <O>(query: Query<O>) => Effect.Effect<O, SqlError>;
 };
 
-type EffectTransition<DB> = {} & Omit<
+export type EffectTransition<DB> = {} & Omit<
   Transaction<DB>,
   "transaction" | "startTransaction" | "executeQuery"
 > &
