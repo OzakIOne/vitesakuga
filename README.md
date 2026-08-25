@@ -17,7 +17,7 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
   - [ ] video duplication vote or vvv
     - [ ] report video system
 - [ ] support manga images share beautiful pannels
-- [ ] support 
+- [ ] detailed episode informations (when upload, put episode / season info)
 
 ## Secondary
 
