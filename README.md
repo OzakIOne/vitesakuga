@@ -13,6 +13,11 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
     - [ ] add test to this login, make it undependant of each service if possible
 - [x] captcha ?
 - [ ] better auth sentinel?
+- [ ] auto video duplication finder or vvv
+  - [ ] video duplication vote or vvv
+    - [ ] report video system
+- [ ] support manga images share beautiful pannels
+- [ ] support 
 
 ## Secondary
 
