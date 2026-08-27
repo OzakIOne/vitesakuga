@@ -4,7 +4,7 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "dev": "APP_ENV=development NODE_ENV=development vite dev --mode development --host",
+    "dev": "APP_ENV=development NODE_ENV=development VITE_TURNSTILE_SITEKEY=2x00000000000000000000AB TURNSTILE_SECRET=1x0000000000000000000000000000000AA vite dev --mode development --host",
     "dev:local": "APP_ENV=test NODE_ENV=test DATABASE_DRIVER=local vite dev --mode test --host",
     "dev:prod": "APP_ENV=production NODE_ENV=production vite dev --mode production",
     "build": "APP_ENV=production NODE_ENV=production vite build --mode production",

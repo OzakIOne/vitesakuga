@@ -30,6 +30,12 @@ export type TurnstileClient = {
       execution?: "render" | "execute";
       callback?: (token: string) => void;
       "expired-callback"?: () => void;
+      /**
+       * Without an error-callback, Turnstile throws an uncaught exception on
+       * any widget error (e.g. 600010 from Private Access Token failures on
+       * Brave/Chromium), even for transient errors that auto-retry.
+       */
+      "error-callback"?: (errorCode: string) => void;
     },
   ) => string;
   execute: (
@@ -68,6 +74,9 @@ function loadTurnstileScript(): Promise<void> {
 export function useTurnstile(sitekey: string | undefined) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const pendingResolveRef = useRef<((token: string | null) => void) | null>(
+    null,
+  );
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -84,6 +93,21 @@ export function useTurnstile(sitekey: string | undefined) {
           sitekey,
           size: "invisible",
           execution: "execute",
+          "error-callback": (errorCode) => {
+            // Resolve the pending execute() with null instead of letting the
+            // form hang: 600* errors are often transient (Private Access
+            // Token failures, network) and Turnstile auto-retries, but the
+            // token may never arrive for this attempt.
+            pendingResolveRef.current?.(null);
+            pendingResolveRef.current = null;
+            if (import.meta.env.DEV) {
+              // surfacing the code (e.g. 600010 = PAT failure on Brave)
+              console.warn(`Turnstile error: ${errorCode}`);
+            }
+            // Returning truthy marks the error as handled, so Turnstile does
+            // not throw an uncaught TurnstileError.
+            return true;
+          },
         });
         widgetIdRef.current = widgetId;
         setReady(true);
@@ -110,8 +134,12 @@ export function useTurnstile(sitekey: string | undefined) {
       return null;
     }
     return new Promise<string>((resolve) => {
+      pendingResolveRef.current = resolve;
       window.turnstile?.execute(widgetId, {
-        callback: (token) => resolve(token),
+        callback: (token) => {
+          pendingResolveRef.current = null;
+          resolve(token);
+        },
       });
     });
   }, [sitekey]);
