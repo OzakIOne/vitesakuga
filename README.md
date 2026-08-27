@@ -9,15 +9,17 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] cleanup post schemas and server fn
 - [x] passkey / TOTP
 - [x] github login
-  - [X] google login
+  - [x] google login
     - [ ] add test to this login, make it undependant of each service if possible
 - [x] captcha ?
 - [ ] better auth sentinel?
 - [ ] auto video duplication finder or vvv
   - [ ] video duplication vote or vvv
-    - [ ] report video system
+    - [ ] report video system (low quality, duplicate, ???)
 - [ ] support manga images share beautiful pannels
 - [ ] detailed episode informations (when upload, put episode / season info)
+- [ ] user roles, uploader, verified
+- [ ] WASM (or not) browser client side image upscaler
 
 ## Secondary
 

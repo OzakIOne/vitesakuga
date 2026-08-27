@@ -3,6 +3,7 @@ import { useReducer, useState } from "react";
 import { Comments } from "src/components/Comments";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
+import { ReportDialog } from "src/components/ReportDialog";
 import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
@@ -18,6 +19,7 @@ type PostDetailDisplayProps = {
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
+  images?: string[] | undefined;
   currentUserId?: string | undefined;
 };
 
@@ -73,10 +75,12 @@ export function PostDetailDisplay({
   user,
   initialTags,
   relatedPost,
+  images,
   currentUserId,
 }: PostDetailDisplayProps) {
   const queryClient = useQueryClient();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [editState, dispatchEdit] = useReducer(editReducer, {
     isEditing: false,
     titleDraft: post.title ?? "",
@@ -218,10 +222,18 @@ export function PostDetailDisplay({
         ) : (
           <Post
             currentUserId={currentUserId}
+            images={images}
             onAddToPlaylist={
               currentUserId ? () => setShowPlaylistModal(true) : undefined
             }
             onEditClick={isOwner ? startEditing : undefined}
+            onReportClick={
+              currentUserId && !isOwner
+                ? () => {
+                    setShowReportDialog(true);
+                  }
+                : undefined
+            }
             post={post}
             relatedPost={relatedPost}
             tags={initialTags}
@@ -237,6 +249,15 @@ export function PostDetailDisplay({
           }}
           postId={post.id}
           userId={currentUserId}
+        />
+      )}
+
+      {showReportDialog && currentUserId && (
+        <ReportDialog
+          onCancel={() => {
+            setShowReportDialog(false);
+          }}
+          postId={post.id}
         />
       )}
 

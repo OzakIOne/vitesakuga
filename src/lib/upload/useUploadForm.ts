@@ -11,6 +11,7 @@ import {
 import { postsKeys } from "../posts/posts.queries";
 import {
   FormFileUploadSchema,
+  MAX_IMAGE_SIZE_BYTES,
   MAX_VIDEO_SIZE_BYTES,
 } from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
@@ -18,18 +19,27 @@ import { createVideoUploadUrl, uploadPost } from "../posts/posts.service";
 import { buildFormData } from "./upload.processor";
 import type { UploadDraftData } from "./useUploadDraft";
 
+export type UploadMediaKind = "image" | "video";
+
 type UseUploadFormParams = {
   draft: UploadDraftData | null;
+  mediaKind: UploadMediaKind;
   videoFile: File | null;
+  imageFile: File | null;
   thumbnail: File | undefined;
   videoMetadata: VideoMetadata | undefined;
   onDraftClear: () => void;
 };
 
 type UploadFormValues = {
+  animeTitle: string | undefined;
   content: string;
+  episodeNumber: number | undefined;
+  images: File[] | undefined;
   relatedPostId: number | undefined;
+  seasonNumber: number | undefined;
   source: string | undefined;
+  sourceType: "movie" | "tv_series" | undefined;
   tags: Tag[];
   thumbnail: File | undefined;
   title: string;
@@ -38,7 +48,15 @@ type UploadFormValues = {
 };
 
 export function useUploadForm(params: UseUploadFormParams) {
-  const { draft, videoFile, thumbnail, videoMetadata, onDraftClear } = params;
+  const {
+    draft,
+    mediaKind,
+    videoFile,
+    imageFile,
+    thumbnail,
+    videoMetadata,
+    onDraftClear,
+  } = params;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
@@ -57,14 +75,19 @@ export function useUploadForm(params: UseUploadFormParams) {
     successTitle: "Upload successful",
   });
 
-  // The thumbnail file and videoKey are required by the submit schema but
-  // start unset; `submit()` populates them right before handleSubmit (the
-  // videoKey comes from the presigned direct-to-R2 upload), and the onSubmit
-  // validator rejects the form until the user provides them.
+  // The media file(s) are required by the submit schema but start unset;
+  // `submit()` populates them right before handleSubmit. Videos go through
+  // the presigned direct-to-R2 flow (videoKey + generated JPEG thumbnail);
+  // image posts send their files through the Worker under "images".
   const defaultValues: UploadFormValues = {
+    animeTitle: draft?.animeTitle,
     content: draft?.content ?? "",
+    episodeNumber: draft?.episodeNumber,
+    images: undefined,
     relatedPostId: draft?.relatedPostId,
+    seasonNumber: draft?.seasonNumber,
     source: draft?.source,
+    sourceType: draft?.sourceType,
     tags: draft?.tags ?? [],
     thumbnail: undefined,
     title: draft?.title ?? "",
@@ -75,7 +98,17 @@ export function useUploadForm(params: UseUploadFormParams) {
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      const formData = buildFormData(value);
+      // Empty strings from cleared inputs are stripped so the optional
+      // episode-info fields stay truly absent; movie posts never carry
+      // season/episode numbers.
+      const formData = buildFormData({
+        ...value,
+        animeTitle: value.animeTitle?.trim() || undefined,
+        episodeNumber:
+          value.sourceType === "tv_series" ? value.episodeNumber : undefined,
+        seasonNumber:
+          value.sourceType === "tv_series" ? value.seasonNumber : undefined,
+      });
       await uploadPostMutation.mutateAsync(formData);
     },
     validators: {
@@ -102,7 +135,27 @@ export function useUploadForm(params: UseUploadFormParams) {
     },
   });
 
-  const submit = async () => {
+  const submitImagePost = () => {
+    if (!imageFile) {
+      return false;
+    }
+    if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
+      toastError(
+        "Upload failed",
+        new Error(
+          `Image files must not exceed ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)} MB`,
+        ),
+        "There was an error uploading your post.",
+      );
+      return false;
+    }
+    // The image transits the Worker like thumbnails do and doubles as the
+    // post thumbnail server-side — no presigned flow or capture needed.
+    form.setFieldValue("images", [imageFile]);
+    return true;
+  };
+
+  const submitVideoPost = async (): Promise<boolean> => {
     if (thumbnail) {
       form.setFieldValue("thumbnail", thumbnail);
     }
@@ -113,7 +166,7 @@ export function useUploadForm(params: UseUploadFormParams) {
     // The video bytes never transit the Worker: presign a direct-to-R2 PUT,
     // upload from the browser, then hand the resulting key to the confirm step.
     if (!videoFile) {
-      return;
+      return false;
     }
     if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
       toastError(
@@ -123,7 +176,7 @@ export function useUploadForm(params: UseUploadFormParams) {
         ),
         "There was an error uploading your post.",
       );
-      return;
+      return false;
     }
 
     setIsUploadingVideo(true);
@@ -146,9 +199,18 @@ export function useUploadForm(params: UseUploadFormParams) {
         error,
         "There was an error uploading your post.",
       );
-      return;
+      return false;
     } finally {
       setIsUploadingVideo(false);
+    }
+    return true;
+  };
+
+  const submit = async () => {
+    const ready =
+      mediaKind === "image" ? submitImagePost() : await submitVideoPost();
+    if (!ready) {
+      return;
     }
 
     await form.handleSubmit();

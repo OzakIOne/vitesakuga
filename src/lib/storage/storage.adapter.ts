@@ -1,7 +1,11 @@
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Effect, Layer, Redacted } from "effect";
 
-import { THUMBNAIL_CONTENT_TYPE, videoContentType } from "./content-type";
+import {
+  THUMBNAIL_CONTENT_TYPE,
+  imageContentType,
+  videoContentType,
+} from "./content-type";
 import { PENDING_VIDEOS_PREFIX, finalizedVideoKey } from "./keys";
 import { StorageError, StorageModule } from "./storage.module";
 
@@ -138,6 +142,10 @@ const makeS3StorageService = (connection: S3Connection) =>
         }),
       uploadThumbnail: (userId, file) =>
         uploadFile("thumbnails", userId, file, "jpg", THUMBNAIL_CONTENT_TYPE),
+      uploadImage: (userId, file) => {
+        const ext = file.name.split(".").pop() ?? "png";
+        return uploadFile("images", userId, file, ext, imageContentType(ext));
+      },
       uploadVideo: (userId, file) => {
         const ext = file.name.split(".").pop() ?? "mp4";
         return uploadFile("videos", userId, file, ext, videoContentType(ext));
@@ -260,6 +268,47 @@ const makeS3StorageService = (connection: S3Connection) =>
           );
 
           return { key: finalKey };
+        }),
+      listKeys: (prefix) =>
+        Effect.gen(function* () {
+          const keys: string[] = [];
+          let continuationToken: string | undefined;
+          // Paginated listing: the bucket can hold more objects than a
+          // single response page returns (S3 caps at 1000 keys/page).
+          for (;;) {
+            const result = yield* Effect.tryPromise({
+              try: () =>
+                client.send(
+                  new s3Mod.ListObjectsV2Command({
+                    Bucket: connection.bucket,
+                    ContinuationToken: continuationToken,
+                    Prefix: prefix,
+                  }),
+                ),
+              catch: (cause) =>
+                new StorageError({
+                  cause,
+                  key: prefix,
+                  message: `Failed to list objects: ${String(cause)}`,
+                  operation: "head",
+                }),
+            });
+            for (const object of result.Contents ?? []) {
+              if (object.Key !== undefined) {
+                keys.push(object.Key);
+              }
+            }
+            if (
+              !result.IsTruncated ||
+              result.NextContinuationToken === undefined
+            ) {
+              break;
+            }
+            continuationToken = result.NextContinuationToken;
+          }
+          // SAFETY: only defined, non-empty string keys are pushed above,
+          // so the array is exactly the ReadonlyArray<string> contract.
+          return keys as ReadonlyArray<string>;
         }),
     } satisfies StorageModule["Service"];
   });

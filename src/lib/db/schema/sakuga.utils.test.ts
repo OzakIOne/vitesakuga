@@ -11,11 +11,15 @@ import { postsSelectSchema } from "./sakuga.utils";
 const dbTimestampString = "2026-08-07 11:52:43.626462";
 
 const postRow = {
+  animeTitle: null,
   content: "A test post",
   createdAt: dbTimestampString,
+  episodeNumber: null,
   id: 1,
   relatedPostId: null,
+  seasonNumber: null,
   source: null,
+  sourceType: null,
   thumbnailKey: "thumbnail-key",
   title: "Test title",
   userId: "user-1",
@@ -59,6 +63,7 @@ describe("userSelectSchema", () => {
       id: "user-1",
       image: null,
       name: "Alice",
+      role: "novice",
       updatedAt: dbTimestampString,
     });
     expect(parsed.createdAt).toBeInstanceOf(Date);

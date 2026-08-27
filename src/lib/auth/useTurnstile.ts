@@ -22,6 +22,12 @@ export type TurnstileClient = {
     params: {
       sitekey: string;
       size?: "normal" | "compact" | "invisible";
+      /**
+       * Defer the challenge until `execute()` is called. Without this, an
+       * invisible widget auto-runs its challenge on render and the later
+       * `execute()` call throws ("widget is already executing").
+       */
+      execution?: "render" | "execute";
       callback?: (token: string) => void;
       "expired-callback"?: () => void;
     },
@@ -77,6 +83,7 @@ export function useTurnstile(sitekey: string | undefined) {
         const widgetId = window.turnstile.render(containerRef.current, {
           sitekey,
           size: "invisible",
+          execution: "execute",
         });
         widgetIdRef.current = widgetId;
         setReady(true);

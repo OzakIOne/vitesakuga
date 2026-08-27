@@ -6,14 +6,14 @@ import {
 } from "@ark-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
-import { LuCamera, LuUpload } from "react-icons/lu";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LuCamera, LuImage, LuUpload } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
 import { Button } from "src/components/ui/button";
 import { Spinner } from "src/components/ui/feedback";
 import { Field } from "src/components/ui/field";
-import { Box, Grid } from "src/components/ui/layout";
+import { Box, Grid, HStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Combobox, FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
@@ -23,8 +23,15 @@ import { Video, type VideoRef } from "src/components/Video";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
 import { searchPosts } from "src/lib/posts/posts.service";
 import { useUploadDraft } from "src/lib/upload/useUploadDraft";
-import { useUploadForm } from "src/lib/upload/useUploadForm";
+import {
+  useUploadForm,
+  type UploadMediaKind,
+} from "src/lib/upload/useUploadForm";
 import { useVideoProcessing } from "src/lib/upload/useVideoProcessing";
+
+// Shared with the field primitives' base style so the native select/number
+// inputs match the rest of the form controls.
+const ANIME_INPUT_CLASS = `rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100`;
 
 export const Route = createLazyFileRoute("/upload")({
   component: RouteComponent,
@@ -36,11 +43,30 @@ export const Route = createLazyFileRoute("/upload")({
 });
 
 function RouteComponent() {
+  const [mediaKind, setMediaKind] = useState<UploadMediaKind>("video");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+
+  // Object URLs must be revoked when replaced or unmounted.
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [imageFile]);
+
   const video = useVideoProcessing();
   const draft = useUploadDraft();
 
   const form = useUploadForm({
     draft: draft.draft,
+    imageFile,
+    mediaKind,
     onDraftClear: draft.clear,
     thumbnail: video.thumbnails[video.selectedThumbnailIndex]?.file,
     videoFile: video.videoFile,
@@ -326,6 +352,123 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
+          <form.form.Field name="sourceType">
+            {(field) => (
+              <Field.Root>
+                <Field.Label>Anime info (optional)</Field.Label>
+                <Field.HelperText>
+                  Which anime or movie is this clip from?
+                </Field.HelperText>
+                <select
+                  aria-label="Anime source type"
+                  className={ANIME_INPUT_CLASS}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => {
+                    // SAFETY: the option values below are exactly "",
+                    // "movie" and "tv_series"; anything else is unset.
+                    const raw = e.target.value as string;
+                    const next =
+                      raw === "movie" || raw === "tv_series" ? raw : undefined;
+                    field.handleChange(next);
+                    if (next === undefined) {
+                      form.form.setFieldValue("animeTitle", undefined);
+                      form.form.setFieldValue("seasonNumber", undefined);
+                      form.form.setFieldValue("episodeNumber", undefined);
+                    }
+                  }}
+                  value={field.state.value ?? ""}
+                >
+                  <option value="">Not specified</option>
+                  <option value="tv_series">TV series</option>
+                  <option value="movie">Movie</option>
+                </select>
+              </Field.Root>
+            )}
+          </form.form.Field>
+        </Box>
+
+        <form.form.Subscribe selector={(state) => state.values.sourceType}>
+          {(sourceType) =>
+            sourceType !== undefined ? (
+              <>
+                <Box mb={6}>
+                  <form.form.Field name="animeTitle">
+                    {(field) => (
+                      <FormTextWrapper
+                        field={field}
+                        helper={
+                          sourceType === "movie"
+                            ? "e.g. One Piece Film: Red"
+                            : "e.g. My Hero Academia"
+                        }
+                        isRequired
+                        label={
+                          sourceType === "movie" ? "Movie title" : "Anime title"
+                        }
+                      />
+                    )}
+                  </form.form.Field>
+                </Box>
+                {sourceType === "tv_series" && (
+                  <Grid gap={4} mb={6} templateColumns="1fr 1fr">
+                    <form.form.Field name="seasonNumber">
+                      {(field) => (
+                        <Field.Root required>
+                          <Field.Label>
+                            Season <Field.RequiredIndicator />
+                          </Field.Label>
+                          <input
+                            aria-label="Season number"
+                            className={ANIME_INPUT_CLASS}
+                            min={1}
+                            onChange={(e) => {
+                              const parsed = Number(e.target.value);
+                              field.handleChange(
+                                e.target.value === "" || Number.isNaN(parsed)
+                                  ? undefined
+                                  : parsed,
+                              );
+                            }}
+                            type="number"
+                            value={field.state.value ?? ""}
+                          />
+                          <FieldInfo field={field} />
+                        </Field.Root>
+                      )}
+                    </form.form.Field>
+                    <form.form.Field name="episodeNumber">
+                      {(field) => (
+                        <Field.Root required>
+                          <Field.Label>
+                            Episode <Field.RequiredIndicator />
+                          </Field.Label>
+                          <input
+                            aria-label="Episode number"
+                            className={ANIME_INPUT_CLASS}
+                            min={1}
+                            onChange={(e) => {
+                              const parsed = Number(e.target.value);
+                              field.handleChange(
+                                e.target.value === "" || Number.isNaN(parsed)
+                                  ? undefined
+                                  : parsed,
+                              );
+                            }}
+                            type="number"
+                            value={field.state.value ?? ""}
+                          />
+                          <FieldInfo field={field} />
+                        </Field.Root>
+                      )}
+                    </form.form.Field>
+                  </Grid>
+                )}
+              </>
+            ) : null
+          }
+        </form.form.Subscribe>
+
+        <Box mb={6}>
           <form.form.Field name="tags">
             {(field) => (
               <Field.Root>
@@ -342,102 +485,177 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
-          <form.form.Field name="videoKey">
-            {(field) => (
-              <>
+          <Field.Root>
+            <Field.Label>Post type</Field.Label>
+            <HStack gap={2}>
+              <Button
+                colorPalette="blue"
+                onClick={() => {
+                  setMediaKind("video");
+                }}
+                size="sm"
+                variant={mediaKind === "video" ? "solid" : "outline"}
+              >
+                Video
+              </Button>
+              <Button
+                colorPalette="blue"
+                onClick={() => {
+                  setMediaKind("image");
+                }}
+                size="sm"
+                variant={mediaKind === "image" ? "solid" : "outline"}
+              >
+                Image
+              </Button>
+            </HStack>
+          </Field.Root>
+        </Box>
+
+        {mediaKind === "video" ? (
+          <Box mb={6}>
+            <form.form.Field name="videoKey">
+              {(field) => (
+                <>
+                  <Field.Root required>
+                    <Field.Label>
+                      Video <Field.RequiredIndicator />
+                    </Field.Label>
+                    <FileUpload.Root
+                      accept={["video/*,.mkv"]}
+                      alignItems="stretch"
+                      maxW="xl"
+                      onFileChange={async (details) => {
+                        const file = details.acceptedFiles[0] || null;
+                        await handleFileChange(file);
+                      }}
+                    >
+                      <FileUpload.HiddenInput />
+                      {!video.videoFile && (
+                        <>
+                          <FileUpload.Dropzone minHeight="32">
+                            <LuUpload className="h-5 w-5 text-neutral-400" />
+                            <FileUpload.DropzoneContent>
+                              <Box>Drag and drop files here</Box>
+                              <Box color="fg.muted">.mp4, .mov, .mkv</Box>
+                            </FileUpload.DropzoneContent>
+                          </FileUpload.Dropzone>
+                          {draft.draft?.videoName && (
+                            <Text color="gray.500" fontSize="sm" mt={1}>
+                              Previously selected: {draft.draft.videoName}
+                            </Text>
+                          )}
+                        </>
+                      )}
+                      <FileUpload.List clearable showSize />
+                    </FileUpload.Root>
+                    {video.previewUrl && (
+                      <>
+                        <Video
+                          bypass
+                          frameRate={video.frameRate ?? undefined}
+                          ref={videoRef}
+                          url={video.previewUrl}
+                        />
+                        <Box mt={4}>
+                          <Box
+                            alignItems="center"
+                            display="flex"
+                            justifyContent="space-between"
+                            mb={2}
+                          >
+                            <Text fontWeight="bold">Select Thumbnail:</Text>
+                            <Button
+                              onClick={handleCapture}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <LuCamera style={{ marginRight: "8px" }} />
+                              Capture Current Frame
+                            </Button>
+                          </Box>
+                          {video.thumbnails.length > 0 && (
+                            <Grid gap={2} templateColumns="repeat(5, 1fr)">
+                              {video.thumbnails.map((thumb, index) => (
+                                <Box
+                                  border="4px solid"
+                                  borderColor={
+                                    video.selectedThumbnailIndex === index
+                                      ? "blue.500"
+                                      : "transparent"
+                                  }
+                                  borderRadius="md"
+                                  cursor="pointer"
+                                  key={thumb.url}
+                                  onClick={() => {
+                                    video.selectThumbnail(index);
+                                  }}
+                                  overflow="hidden"
+                                  transition="border-color 0.2s"
+                                >
+                                  <Image
+                                    alt={`Thumbnail ${index + 1}`}
+                                    src={thumb.url}
+                                  />
+                                </Box>
+                              ))}
+                            </Grid>
+                          )}
+                        </Box>
+                      </>
+                    )}
+                  </Field.Root>
+                  <FieldInfo field={field} />
+                </>
+              )}
+            </form.form.Field>
+          </Box>
+        ) : (
+          <Box mb={6}>
+            <form.form.Field name="images">
+              {(field) => (
                 <Field.Root required>
                   <Field.Label>
-                    Video <Field.RequiredIndicator />
+                    Image <Field.RequiredIndicator />
                   </Field.Label>
                   <FileUpload.Root
-                    accept={["video/*,.mkv"]}
+                    accept={["image/jpeg", "image/png", "image/webp"]}
                     alignItems="stretch"
+                    maxFiles={1}
                     maxW="xl"
-                    onFileChange={async (details) => {
-                      const file = details.acceptedFiles[0] || null;
-                      await handleFileChange(file);
+                    onFileChange={(details) => {
+                      setImageFile(details.acceptedFiles[0] || null);
                     }}
                   >
                     <FileUpload.HiddenInput />
-                    {!video.videoFile && (
-                      <>
-                        <FileUpload.Dropzone minHeight="32">
-                          <LuUpload className="h-5 w-5 text-neutral-400" />
-                          <FileUpload.DropzoneContent>
-                            <Box>Drag and drop files here</Box>
-                            <Box color="fg.muted">.mp4, .mov, .mkv</Box>
-                          </FileUpload.DropzoneContent>
-                        </FileUpload.Dropzone>
-                        {draft.draft?.videoName && (
-                          <Text color="gray.500" fontSize="sm" mt={1}>
-                            Previously selected: {draft.draft.videoName}
-                          </Text>
-                        )}
-                      </>
+                    {!imageFile && (
+                      <FileUpload.Dropzone minHeight="32">
+                        <LuImage className="h-5 w-5 text-neutral-400" />
+                        <FileUpload.DropzoneContent>
+                          <Box>Drag and drop an image here</Box>
+                          <Box color="fg.muted">
+                            .jpg, .png, .webp (10 MB max)
+                          </Box>
+                        </FileUpload.DropzoneContent>
+                      </FileUpload.Dropzone>
                     )}
                     <FileUpload.List clearable showSize />
                   </FileUpload.Root>
-                  {video.previewUrl && (
-                    <>
-                      <Video
-                        bypass
-                        frameRate={video.frameRate ?? undefined}
-                        ref={videoRef}
-                        url={video.previewUrl}
+                  {imagePreviewUrl && (
+                    <Box mt={3}>
+                      <Image
+                        alt="Selected image preview"
+                        maxH="sm"
+                        objectFit="contain"
+                        src={imagePreviewUrl}
                       />
-                      <Box mt={4}>
-                        <Box
-                          alignItems="center"
-                          display="flex"
-                          justifyContent="space-between"
-                          mb={2}
-                        >
-                          <Text fontWeight="bold">Select Thumbnail:</Text>
-                          <Button
-                            onClick={handleCapture}
-                            size="sm"
-                            variant="outline"
-                          >
-                            <LuCamera style={{ marginRight: "8px" }} />
-                            Capture Current Frame
-                          </Button>
-                        </Box>
-                        {video.thumbnails.length > 0 && (
-                          <Grid gap={2} templateColumns="repeat(5, 1fr)">
-                            {video.thumbnails.map((thumb, index) => (
-                              <Box
-                                border="4px solid"
-                                borderColor={
-                                  video.selectedThumbnailIndex === index
-                                    ? "blue.500"
-                                    : "transparent"
-                                }
-                                borderRadius="md"
-                                cursor="pointer"
-                                key={thumb.url}
-                                onClick={() => {
-                                  video.selectThumbnail(index);
-                                }}
-                                overflow="hidden"
-                                transition="border-color 0.2s"
-                              >
-                                <Image
-                                  alt={`Thumbnail ${index + 1}`}
-                                  src={thumb.url}
-                                />
-                              </Box>
-                            ))}
-                          </Grid>
-                        )}
-                      </Box>
-                    </>
+                    </Box>
                   )}
                 </Field.Root>
-                <FieldInfo field={field} />
-              </>
-            )}
-          </form.form.Field>
-        </Box>
+              )}
+            </form.form.Field>
+          </Box>
+        )}
 
         <form.form.Subscribe selector={(state) => state.values}>
           {(values) => {
@@ -450,6 +668,10 @@ function RouteComponent() {
                 title: values.title ?? "",
                 videoName:
                   video.videoFile?.name ?? draft.draft?.videoName ?? "",
+                animeTitle: values.animeTitle,
+                seasonNumber: values.seasonNumber,
+                episodeNumber: values.episodeNumber,
+                sourceType: values.sourceType,
               });
             }
             return null;
@@ -466,7 +688,11 @@ function RouteComponent() {
           {([canSubmit, isSubmitting, isPristine]) => (
             <Button
               colorScheme="blue"
-              disabled={!canSubmit || isPristine || !video.videoFile}
+              disabled={
+                !canSubmit ||
+                isPristine ||
+                (mediaKind === "video" ? !video.videoFile : !imageFile)
+              }
               loading={isSubmitting === true}
               style={{ width: "100%" }}
               type="submit"

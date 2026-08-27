@@ -40,6 +40,15 @@ export class StorageModule extends Context.Service<
       file: File,
     ) => Effect.Effect<{ key: string }, StorageError>;
 
+    /**
+     * Store a user-uploaded post image (jpg/png/webp) under the private
+     * `images/{userId}/…` namespace; returns its storage key.
+     */
+    readonly uploadImage: (
+      userId: string,
+      file: File,
+    ) => Effect.Effect<{ key: string }, StorageError>;
+
     readonly deleteFile: (key: string) => Effect.Effect<void, StorageError>;
 
     readonly headFile: (
@@ -60,5 +69,13 @@ export class StorageModule extends Context.Service<
     readonly finalizeVideoUpload: (
       pendingKey: string,
     ) => Effect.Effect<{ key: string }, StorageError>;
+
+    /**
+     * Lists every live object key under a prefix (all pages). Read-only
+     * support for admin storage audits; never exposed to regular users.
+     */
+    readonly listKeys: (
+      prefix: string,
+    ) => Effect.Effect<ReadonlyArray<string>, StorageError>;
   }
 >()("StorageModule") {}

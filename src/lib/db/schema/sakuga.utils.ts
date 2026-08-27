@@ -16,29 +16,41 @@ export const tagsInsertSchema = Schema.Struct({
   name: Schema.String,
 });
 
+export const postSourceSchema = Schema.Literals(["movie", "tv_series"]);
+
+export type PostSource = Schema.Schema.Type<typeof postSourceSchema>;
+
 export const postsSelectSchema = Schema.Struct({
+  animeTitle: Schema.NullOr(Schema.String),
   content: Schema.String,
   createdAt: TimestampSchema,
+  episodeNumber: Schema.NullOr(Schema.Number),
   id: PostId,
   relatedPostId: Schema.NullOr(PostId),
+  seasonNumber: Schema.NullOr(Schema.Number),
   source: Schema.NullOr(Schema.String),
+  sourceType: Schema.NullOr(postSourceSchema),
   thumbnailKey: Schema.String,
   title: Schema.String,
   userId: Schema.String,
-  videoKey: Schema.String,
+  videoKey: Schema.NullOr(Schema.String),
   videoMetadata: Schema.Json,
 });
 
 export const postsInsertSchema = Schema.Struct({
+  animeTitle: Schema.optionalKey(Schema.NullOr(Schema.String)),
   content: Schema.String,
   createdAt: Schema.optionalKey(Schema.Date),
+  episodeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   id: Schema.optionalKey(Schema.Number),
   relatedPostId: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  seasonNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   source: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  sourceType: Schema.optionalKey(Schema.NullOr(postSourceSchema)),
   thumbnailKey: Schema.String,
   title: Schema.String,
   userId: Schema.String,
-  videoKey: Schema.String,
+  videoKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
   videoMetadata: Schema.Json,
 });
 
@@ -58,6 +70,36 @@ export const postVotesInsertSchema = Schema.Struct({
   postId: Schema.Number,
   userId: Schema.String,
   vote: postVoteSchema,
+});
+
+export const postReportReasonSchema = Schema.Literals([
+  "duplicate",
+  "poor_quality",
+  "unrelated",
+]);
+
+export type PostReportReason = Schema.Schema.Type<
+  typeof postReportReasonSchema
+>;
+
+export const REPORT_REASON_LABELS = {
+  duplicate: "Duplicate",
+  poor_quality: "Poor resolution / quality",
+  unrelated: "Unrelated content",
+} satisfies Record<PostReportReason, string>;
+
+export const postReportsSelectSchema = Schema.Struct({
+  createdAt: TimestampSchema,
+  postId: PostId,
+  reason: postReportReasonSchema,
+  userId: Schema.String,
+});
+
+export const postReportsInsertSchema = Schema.Struct({
+  createdAt: Schema.optionalKey(Schema.Date),
+  postId: Schema.Number,
+  reason: postReportReasonSchema,
+  userId: Schema.String,
 });
 
 export const postWithVotesSelectSchema = Schema.Struct({
@@ -129,6 +171,13 @@ export type DbSchemaSelect = {
   user: UserSelect;
   posts: PostsSelect;
   postVotes: Schema.Schema.Type<typeof postVotesSelectSchema>;
+  postReports: Schema.Schema.Type<typeof postReportsSelectSchema>;
+  postImages: {
+    createdAt: Date;
+    postId: number;
+    position: number;
+    storageKey: string;
+  };
   comments: CommentsSelect;
   tags: TagsSelect;
   playlists: Schema.Schema.Type<typeof playlistsSelectSchema>;
@@ -144,6 +193,13 @@ export type DbSchemaInsert = {
   user: UserInsert;
   posts: PostsInsert;
   postVotes: Schema.Schema.Type<typeof postVotesInsertSchema>;
+  postReports: Schema.Schema.Type<typeof postReportsInsertSchema>;
+  postImages: {
+    createdAt?: Date | undefined;
+    postId: number;
+    position?: number | undefined;
+    storageKey: string;
+  };
   comments: CommentsInsert;
   tags: TagsInsert;
   playlists: Schema.Schema.Type<typeof playlistsInsertSchema>;

@@ -13,6 +13,7 @@ import {
   UnauthorizedError,
 } from "../errors";
 import { asPostId, PostId } from "../ids";
+import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
 export type CommentWithUser = {
@@ -53,6 +54,7 @@ export class CommentsService extends Context.Service<
 >()("CommentsService", {
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
+    const points = yield* PointsService;
 
     const fetch = Effect.fn("CommentsService.fetch")(function* (
       postId: PostId,
@@ -101,6 +103,14 @@ export class CommentsService extends Context.Service<
       // SAFETY: postId is a comments.postId FK column; the row value satisfies
       // the PostId contract by construction.
       const created = { ...comment, postId: asPostId(comment.postId) };
+
+      // Points hook: commenting earns a small daily-capped reward.
+      yield* points.awardOrLog({
+        userId: user.id,
+        action: "comment-written",
+        refId: comment.id,
+        actorId: user.id,
+      });
 
       yield* Effect.logInfo("Comment added").pipe(
         Effect.annotateLogs({
@@ -181,7 +191,7 @@ export class CommentsService extends Context.Service<
 export const CommentsServiceLive = Layer.effect(
   CommentsService,
   CommentsService.make,
-);
+).pipe(Layer.provideMerge(PointsServiceLive));
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   // Scalar server-fn payloads stay unbranded on the wire (TanStack's ServerFnCtx

@@ -57,12 +57,13 @@ const toAuthSessionProvider = (auth: AuthInstance): AuthSessionProvider => ({
         returnHeaders: false,
       });
       if (!result) return null;
-      // SAFETY: the two-factor plugin registers `twoFactorEnabled` as a
-      // returned user field, so the runtime session user always carries it
-      // even though the rc.4 types only model the base `User`.
+      // SAFETY: plugins add `twoFactorEnabled` and this app adds `role` to
+      // the returned user at runtime, so the runtime session user always
+      // carries them even though the rc.4 types only model the base `User`;
+      // the double cast bridges better-auth's narrower inferred type.
       return {
         session: result.session,
-        user: result.user as UserWithTwoFactor,
+        user: result.user as unknown as UserWithTwoFactor,
       };
     },
   },

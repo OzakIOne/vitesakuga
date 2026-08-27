@@ -515,6 +515,12 @@ describe("PostsService.update", () => {
       .where("post_tags.postId", "=", postId)
       .execute();
 
-    expect(tags.map((t) => t.name).sort()).toEqual(["existing", "new-tag"]);
+    // The reserved media tag ("video" — the post has no post_images rows)
+    // is always re-applied by the server on update.
+    expect(tags.map((t) => t.name).sort()).toEqual([
+      "existing",
+      "new-tag",
+      "video",
+    ]);
   });
 });

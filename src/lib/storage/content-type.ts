@@ -18,3 +18,17 @@ const VIDEO_CONTENT_TYPE_LOOKUP = new Map<string, string>(VIDEO_CONTENT_TYPES);
 export const videoContentType = (ext: string): string =>
   VIDEO_CONTENT_TYPE_LOOKUP.get(ext.toLowerCase()) ??
   "application/octet-stream";
+
+const IMAGE_CONTENT_TYPES = [
+  ["gif", "image/gif"],
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+  ["webp", "image/webp"],
+] as const satisfies ReadonlyArray<readonly [string, string]>;
+
+const IMAGE_CONTENT_TYPE_LOOKUP = new Map<string, string>(IMAGE_CONTENT_TYPES);
+
+export const imageContentType = (ext: string): string =>
+  IMAGE_CONTENT_TYPE_LOOKUP.get(ext.toLowerCase()) ??
+  "application/octet-stream";

@@ -3,11 +3,12 @@ import { Context, Effect, Exit, Layer, Option, Schema } from "effect";
 import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 
-import { ensureOwned } from "../auth/ownership";
+import { ensureOwnedOrStaff } from "../auth/ownership";
+import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { DB } from "../db/kysely";
-import type { PostWithVotes } from "../db/schema";
+import type { postSourceSchema, PostWithVotes } from "../db/schema";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -22,6 +23,7 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
+import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { videoContentType } from "../storage/content-type";
 import { pendingVideoPrefix } from "../storage/keys";
@@ -29,12 +31,16 @@ import { StorageError, StorageModule } from "../storage/storage.module";
 import { isUploadedVideoValid } from "../storage/upload-policy";
 import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
 import { mergeVoteCounts } from "../votes/votes.utils";
-import { assertThumbnailIsJpeg } from "./file-validation";
+import {
+  assertSupportedImageFile,
+  assertThumbnailIsJpeg,
+} from "./file-validation";
 import {
   createVideoUploadUrlSchema,
   FormFileUploadSchema,
   MAX_VIDEO_SIZE_BYTES,
   postByTagSchema,
+  RESERVED_TAG_NAMES,
   searchPostsBaseSchema,
   updatePostInputSchema,
   VideoMetadataSchema,
@@ -66,15 +72,20 @@ type PostsSearchResult = {
 
 type PostDetailResult = {
   post: {
+    animeTitle: string | null;
     content: string;
     createdAt: Date;
+    episodeNumber: number | null;
     id: PostId;
     relatedPostId: PostId | null;
+    seasonNumber: number | null;
     source: string | null;
+    sourceType: Schema.Schema.Type<typeof postSourceSchema> | null;
     title: string;
-    videoKey: string;
+    videoKey: string | null;
     videoMetadata: Schema.Schema.Type<typeof VideoMetadataSchema>;
   };
+  images: string[];
   relatedPost: Schema.Schema.Type<typeof postsSelectSchema> | null;
   tags: { id: number; name: string }[];
   user: {
@@ -138,6 +149,7 @@ export class PostsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
+    const points = yield* PointsService;
 
     const search = Effect.fn("PostsService.search")(function* (
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
@@ -254,6 +266,10 @@ export class PostsService extends Context.Service<
             "posts.source",
             "posts.relatedPostId",
             "posts.videoMetadata",
+            "posts.animeTitle",
+            "posts.seasonNumber",
+            "posts.episodeNumber",
+            "posts.sourceType",
             "user.id as userId",
             "user.name as userName",
             "user.image as userImage",
@@ -277,7 +293,19 @@ export class PostsService extends Context.Service<
           .selectFrom("post_tags")
           .innerJoin("tags", "tags.id", "post_tags.tagId")
           .select(["tags.id", "tags.name"])
-          .where("post_tags.postId", "=", postWithUser.id),
+          .where("post_tags.postId", "=", postWithUser.id)
+          // Reserved media-kind tags are managed by the server; users never
+          // see or edit them in the tag UI.
+          .where("tags.name", "not in", [...RESERVED_TAG_NAMES])
+          .orderBy("tags.name", "asc"),
+      );
+
+      const imageRows = yield* db.execute(
+        db
+          .selectFrom("post_images")
+          .select(["post_images.position", "post_images.storageKey"])
+          .where("postId", "=", postWithUser.id)
+          .orderBy("position", "asc"),
       );
 
       // SAFETY: relatedPostId is a posts.id foreign key column; the row value
@@ -300,6 +328,7 @@ export class PostsService extends Context.Service<
 
       return {
         post: {
+          animeTitle: postWithUser.animeTitle,
           content: postWithUser.content,
           createdAt: postWithUser.createdAt,
           // SAFETY: posts.id is the table's primary key.
@@ -313,7 +342,11 @@ export class PostsService extends Context.Service<
           title: postWithUser.title,
           videoKey: postWithUser.videoKey,
           videoMetadata: parse(VideoMetadataSchema)(postWithUser.videoMetadata),
+          seasonNumber: postWithUser.seasonNumber,
+          episodeNumber: postWithUser.episodeNumber,
+          sourceType: postWithUser.sourceType,
         },
+        images: imageRows.map((row) => row.storageKey),
         relatedPost,
         tags,
         user: {
@@ -335,7 +368,6 @@ export class PostsService extends Context.Service<
       const userId = user.id;
 
       const {
-        thumbnail,
         title,
         content,
         source,
@@ -347,80 +379,109 @@ export class PostsService extends Context.Service<
 
       yield* Effect.logInfo("Upload started").pipe(
         Effect.annotateLogs({
+          mediaKind: videoKey === undefined ? "image" : "video",
           title,
           userId,
-          videoKey,
         }),
       );
+
+      let finalVideoKey: string | null = null;
 
       // Only keys from the caller's own staging namespace are acceptable:
       // presigned PUTs land under `videos/_pending/{userId}/` and are
       // promoted to their final key below, after validation.
-      if (!videoKey.startsWith(pendingVideoPrefix(userId))) {
-        return yield* Effect.fail(
-          new ValidationError({ message: "Invalid video upload key" }),
-        );
-      }
+      if (videoKey !== undefined) {
+        if (!videoKey.startsWith(pendingVideoPrefix(userId))) {
+          return yield* Effect.fail(
+            new ValidationError({ message: "Invalid video upload key" }),
+          );
+        }
 
-      const ext = videoKey.split(".").pop() ?? "";
-      const expectedContentType = videoContentType(ext);
-      const head = yield* storage.headFile(videoKey).pipe(
-        Effect.mapError(
-          (error) =>
-            new ValidationError({
-              cause: error,
-              message: `Video upload could not be verified: ${error.message}`,
-            }),
-        ),
-      );
-
-      if (!isUploadedVideoValid(head, expectedContentType)) {
-        yield* storage.deleteFile(videoKey).pipe(Effect.ignore);
-        return yield* Effect.fail(
-          new ValidationError({
-            message: `Video upload is invalid: expected ${expectedContentType}, at most ${MAX_VIDEO_SIZE_BYTES / (1024 * 1024)} MB`,
-          }),
-        );
-      }
-
-      // Promote the validated upload out of the staging namespace so only
-      // confirmed objects live under `videos/{userId}/`; anything abandoned
-      // in staging expires via the bucket lifecycle rule.
-      const { key: promotedVideoKey } = yield* storage
-        .finalizeVideoUpload(videoKey)
-        .pipe(
+        const ext = videoKey.split(".").pop() ?? "";
+        const expectedContentType = videoContentType(ext);
+        const head = yield* storage.headFile(videoKey).pipe(
           Effect.mapError(
             (error) =>
               new ValidationError({
                 cause: error,
-                message: `Video upload could not be promoted: ${error.message}`,
+                message: `Video upload could not be verified: ${error.message}`,
               }),
           ),
         );
 
-      // The thumbnail still transits the Worker. If any later step fails,
-      // roll the uploaded objects back so storage stays in sync with the DB.
+        if (!isUploadedVideoValid(head, expectedContentType)) {
+          yield* storage.deleteFile(videoKey).pipe(Effect.ignore);
+          return yield* Effect.fail(
+            new ValidationError({
+              message: `Video upload is invalid: expected ${expectedContentType}, at most ${MAX_VIDEO_SIZE_BYTES / (1024 * 1024)} MB`,
+            }),
+          );
+        }
+
+        // Promote the validated upload out of the staging namespace so only
+        // confirmed objects live under `videos/{userId}/`; anything abandoned
+        // in staging expires via the bucket lifecycle rule.
+        const { key: promotedVideoKey } = yield* storage
+          .finalizeVideoUpload(videoKey)
+          .pipe(
+            Effect.mapError(
+              (error) =>
+                new ValidationError({
+                  cause: error,
+                  message: `Video upload could not be promoted: ${error.message}`,
+                }),
+            ),
+          );
+        finalVideoKey = promotedVideoKey;
+      }
+
+      // Rollback list: every stored object is deleted if any later step
+      // fails, so storage stays in sync with the DB. The promoted video key
+      // was validated before this point, images/thumbnails upload below.
       const uploadedKeys: string[] = [];
+      if (finalVideoKey !== null) {
+        uploadedKeys.push(finalVideoKey);
+      }
 
       const outcome = yield* Effect.gen(function* () {
-        uploadedKeys.push(promotedVideoKey);
-        const { key: thumbnailKey } = yield* storage.uploadThumbnail(
-          userId,
-          thumbnail,
-        );
-        uploadedKeys.push(thumbnailKey);
+        let thumbnailKey: string;
+        const imageKeys: string[] = [];
+
+        if (data.images !== undefined && data.images.length > 0) {
+          for (const image of data.images) {
+            const { key } = yield* storage.uploadImage(userId, image);
+            uploadedKeys.push(key);
+            imageKeys.push(key);
+          }
+          // The first image doubles as the card thumbnail so grids and
+          // playlists keep working without knowing about post_images.
+          thumbnailKey = imageKeys[0] ?? "";
+        } else {
+          if (data.thumbnail === undefined) {
+            return yield* Effect.fail(
+              new ValidationError({ message: "Thumbnail is required" }),
+            );
+          }
+          const thumb = yield* storage.uploadThumbnail(userId, data.thumbnail);
+          thumbnailKey = thumb.key;
+          uploadedKeys.push(thumbnailKey);
+        }
 
         const newPost = yield* db.executeTakeFirstOrError(
           db
             .insertInto("posts")
             .values({
+              animeTitle: data.animeTitle ? data.animeTitle : null,
               content,
+              episodeNumber: data.episodeNumber ?? null,
               relatedPostId,
+              seasonNumber: data.seasonNumber ?? null,
               source,
+              sourceType: data.sourceType ?? null,
               thumbnailKey,
               title,
               userId,
-              videoKey: promotedVideoKey,
+              videoKey: finalVideoKey,
               videoMetadata:
                 videoMetadata === undefined
                   ? "{}"
@@ -431,18 +492,37 @@ export class PostsService extends Context.Service<
             .returningAll(),
         );
 
-        if (tags.length > 0) {
-          yield* resolveAndLinkTags(db, asPostId(newPost.id), tags);
-          yield* Effect.logInfo("Tags linked to post").pipe(
-            Effect.annotateLogs({
-              postId: String(newPost.id),
-              tagCount: tags.length,
-            }),
+        const postId = asPostId(newPost.id);
+
+        if (imageKeys.length > 0) {
+          yield* db.execute(
+            db.insertInto("post_images").values(
+              imageKeys.map((storageKey, index) => ({
+                postId,
+                position: index,
+                storageKey,
+              })),
+            ),
           );
         }
 
+        // Strip reserved tag names from user input, then append the correct
+        // one so every post always carries its implicit media-kind tag.
+        const reservedNames: ReadonlySet<string> = new Set(RESERVED_TAG_NAMES);
+        const effectiveTags = [
+          ...tags.filter((tag) => !reservedNames.has(tag.name)),
+          { name: finalVideoKey === null ? "image" : "video" },
+        ];
+        yield* resolveAndLinkTags(db, postId, effectiveTags);
+        yield* Effect.logInfo("Tags linked to post").pipe(
+          Effect.annotateLogs({
+            postId: String(postId),
+            tagCount: effectiveTags.length,
+          }),
+        );
+
         yield* Effect.logInfo("Upload completed").pipe(
-          Effect.annotateLogs("postId", String(newPost.id)),
+          Effect.annotateLogs("postId", String(postId)),
         );
 
         return newPost;
@@ -463,7 +543,16 @@ export class PostsService extends Context.Service<
             message: "There was an error processing the upload result",
             cause: error,
           }),
-      });
+      }).pipe(
+        Effect.tap((parsed) =>
+          points.awardOrLog({
+            userId,
+            action: "post-upload",
+            refId: parsed.id,
+            actorId: userId,
+          }),
+        ),
+      );
     });
 
     const createVideoUploadUrl = Effect.fn("PostsService.createVideoUploadUrl")(
@@ -562,10 +651,11 @@ export class PostsService extends Context.Service<
           .where("id", "=", postId),
       );
 
-      yield* ensureOwned({
+      yield* ensureOwnedOrStaff({
         resource: postOption,
         selectOwnerId: (row) => row.userId,
         userId: user.id,
+        userRole: getUserRole(user),
         notFound: new PostNotFoundError({
           message: `Post ${postId} not found`,
           postId,
@@ -592,14 +682,27 @@ export class PostsService extends Context.Service<
           }),
       });
 
-      // Tag links are rebuilt wholesale: delete-then-relink when new tags are
-      // supplied, plain clear otherwise.
+      // Tag links are rebuilt wholesale: delete-then-relink. Reserved media
+      // tags ("video"/"image") are stripped from user input and re-applied
+      // server-side so every post keeps its implicit media-kind tag.
       yield* db.execute(
         db.deleteFrom("post_tags").where("postId", "=", postId),
       );
-      if (tags && tags.length > 0) {
-        yield* resolveAndLinkTags(db, postId, tags);
-      }
+      const imageRow = yield* db.executeTakeFirstOrUndefined(
+        db
+          .selectFrom("post_images")
+          .select("postId")
+          .where("postId", "=", postId)
+          .limit(1),
+      );
+      const reservedNames: ReadonlySet<string> = new Set(RESERVED_TAG_NAMES);
+      const userTags = (tags ?? []).filter(
+        (tag) => !reservedNames.has(tag.name),
+      );
+      yield* resolveAndLinkTags(db, postId, [
+        ...userTags,
+        { name: imageRow ? "image" : "video" },
+      ]);
 
       yield* Effect.logInfo("Post updated").pipe(
         Effect.annotateLogs("postId", String(postId)),
@@ -692,7 +795,10 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   }
 });
 
-export const PostsServiceLive = Layer.effect(PostsService, PostsService.make);
+export const PostsServiceLive = Layer.effect(
+  PostsService,
+  PostsService.make,
+).pipe(Layer.provideMerge(PointsServiceLive));
 
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator(parseStrict(searchPostsBaseSchema))
@@ -722,20 +828,35 @@ export const uploadPost = createServerFn({ method: "POST" })
     const videoMetadata = raw["videoMetadata"]
       ? JSON.parse(raw["videoMetadata"] as string)
       : undefined;
+    // Multiple files arrive as repeated "images" entries, which
+    // Object.fromEntries collapses to the last one — collect them explicitly.
+    const imageFiles = data
+      .getAll("images")
+      .filter((entry): entry is File => entry instanceof File);
     // SAFETY: the object deliberately mixes arbitrary FormData keys (validated
-    // away by the strict schema) with the four known fields; the inferred
-    // value type is a string-keyed map whose values are validated downstream.
+    // away by the strict schema) with the known fields; the inferred value
+    // type is a string-keyed map whose values are validated downstream.
     const normalized = {
       relatedPostId: undefined,
       source: undefined,
       ...raw,
+      images: imageFiles.length > 0 ? imageFiles : undefined,
       tags,
       videoMetadata,
     };
     const parsed = parseStrict(FormFileUploadSchema)(normalized);
-    // Extension/size checks are sync in the schema; the JPEG magic-byte check
-    // requires reading file bytes, so it runs here before any storage/DB work.
-    await assertThumbnailIsJpeg(parsed.thumbnail);
+    // Magic-byte checks need reading file bytes, so they run here before any
+    // storage/DB work: supported-image bytes for image posts, JPEG bytes for
+    // generated video thumbnails.
+    if (parsed.images !== undefined && parsed.images.length > 0) {
+      for (const image of parsed.images) {
+        await assertSupportedImageFile(image);
+      }
+    } else {
+      // SAFETY: the schema filter rejects video-less payloads, so reaching
+      // this branch means the post carries a video key and its thumbnail.
+      await assertThumbnailIsJpeg(parsed.thumbnail as File);
+    }
     return parsed;
   })
   .handler(

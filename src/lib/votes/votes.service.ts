@@ -12,6 +12,7 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
+import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   fetchLikedPostsSchema,
@@ -44,7 +45,7 @@ export type LikedPostRow = {
   created_at: Date;
   user_id: string | null;
   user_name: string | null;
-  video_key: string;
+  video_key: string | null;
 };
 
 export type LikedPlaylistMeta = {
@@ -96,6 +97,7 @@ export class PostVotesService extends Context.Service<
 >()("PostVotesService", {
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
+    const points = yield* PointsService;
 
     const fetchSummary = Effect.fn("PostVotesService.fetchSummary")(function* (
       postId: PostId,
@@ -143,7 +145,10 @@ export class PostVotesService extends Context.Service<
       );
 
       const postOption = yield* db.executeTakeFirstOption(
-        db.selectFrom("posts").select("id").where("id", "=", data.postId),
+        db
+          .selectFrom("posts")
+          .select(["id", "userId"])
+          .where("id", "=", data.postId),
       );
 
       yield* Option.match(postOption, {
@@ -165,6 +170,22 @@ export class PostVotesService extends Context.Service<
             oc.columns(["postId", "userId"]).doUpdateSet({ vote: data.vote }),
           ),
       );
+
+      // Points hook: a like credits the post's author, not the voter. The
+      // ledger dedupes on (author, action, post, voter), so toggling the
+      // vote or removing and re-liking never pays out again.
+      if (
+        Option.isSome(postOption) &&
+        data.vote === "like" &&
+        postOption.value.userId !== session.id
+      ) {
+        yield* points.awardOrLog({
+          userId: postOption.value.userId,
+          action: "post-like-received",
+          refId: data.postId,
+          actorId: session.id,
+        });
+      }
 
       yield* Effect.logInfo("Post vote set").pipe(
         Effect.annotateLogs({
@@ -317,7 +338,7 @@ export class PostVotesService extends Context.Service<
 export const PostVotesServiceLive = Layer.effect(
   PostVotesService,
   PostVotesService.make,
-);
+).pipe(Layer.provideMerge(PointsServiceLive));
 
 export const fetchPostVotes = createServerFn({ strict: { output: false } })
   // Scalar payloads stay unbranded on the wire; see fetchComments note pattern.

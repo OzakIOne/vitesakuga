@@ -14,6 +14,8 @@ type UserTable = {
   emailVerified: boolean;
   image: string | null;
   twoFactorEnabled: boolean;
+  // Rank behind the authorization policies (src/lib/auth/policy.ts).
+  role: string;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -94,15 +96,26 @@ type PostTagsTable = {
 
 type PostsTable = {
   id: Generated<number>;
+  animeTitle: string | null;
   content: string;
   createdAt: Generated<Date>;
+  episodeNumber: number | null;
   relatedPostId: number | null;
+  seasonNumber: number | null;
   source: string | null;
+  sourceType: "movie" | "tv_series" | null;
   thumbnailKey: string;
   title: string;
   userId: string;
-  videoKey: string;
+  videoKey: string | null;
   videoMetadata: string;
+};
+
+type PostImagesTable = {
+  createdAt: Generated<Date>;
+  postId: number;
+  position: number;
+  storageKey: string;
 };
 
 type PlaylistsTable = {
@@ -137,6 +150,79 @@ type PostVotesTable = {
   vote: "like" | "dislike";
 };
 
+type PostReportsTable = {
+  createdAt: Generated<Date>;
+  postId: number;
+  reason: "duplicate" | "poor_quality" | "unrelated";
+  userId: string;
+};
+
+type PointsLedgerTable = {
+  id: Generated<number>;
+  userId: string;
+  action:
+    | "comment-written"
+    | "edit-suggestion-approved"
+    | "post-like-received"
+    | "post-upload";
+  points: number;
+  refId: number | null;
+  actorId: string | null;
+  createdAt: Generated<Date>;
+};
+
+type PromotionReviewsTable = {
+  id: Generated<number>;
+  userId: string;
+  status: "approved" | "rejected";
+  pointsAtReview: number;
+  reviewedBy: string | null;
+  createdAt: Generated<Date>;
+};
+
+type VideoRevisionsTable = {
+  id: Generated<number>;
+  postId: number;
+  replacedBy: string;
+  videoKey: string;
+  videoMetadata: unknown;
+  createdAt: Generated<Date>;
+};
+
+type PostEditsTable = {
+  id: Generated<number>;
+  postId: number;
+  suggestedBy: string;
+  status: "approved" | "pending" | "rejected";
+  // json column: the driver returns the parsed object; validated by
+  // decodePostEditPayload before use. Shape mirrors post-edits.schema.
+  payload: {
+    readonly animeTitle?: string | null;
+    readonly content?: string;
+    readonly episodeNumber?: number | null;
+    readonly seasonNumber?: number | null;
+    readonly source?: string | null;
+    readonly title?: string;
+  };
+  resolvedAt: Date | null;
+  resolvedBy: string | null;
+  createdAt: Generated<Date>;
+};
+
+type PostEditApprovalsTable = {
+  editId: number;
+  userId: string;
+  createdAt: Generated<Date>;
+};
+
+type NotificationsTable = {
+  id: Generated<number>;
+  userId: string;
+  type: "edit-suggestion-applied" | "promotion-approved" | "promotion-rejected";
+  readAt: Date | null;
+  createdAt: Generated<Date>;
+};
+
 export type DB = {
   account: AccountTable;
   session: SessionTable;
@@ -146,8 +232,16 @@ export type DB = {
   passkey: PasskeyTable;
   comments: CommentsTable;
   post_votes: PostVotesTable;
+  post_reports: PostReportsTable;
+  post_images: PostImagesTable;
   post_tags: PostTagsTable;
+  points_ledger: PointsLedgerTable;
   posts: PostsTable;
+  post_edits: PostEditsTable;
+  post_edit_approvals: PostEditApprovalsTable;
+  video_revisions: VideoRevisionsTable;
+  promotion_reviews: PromotionReviewsTable;
+  notifications: NotificationsTable;
   tags: TagsTable;
   playlists: PlaylistsTable;
   playlist_posts: PlaylistPostsTable;

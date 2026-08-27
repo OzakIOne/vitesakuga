@@ -33,14 +33,20 @@ import { Toaster } from "src/components/ui/toaster";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import { AuthClientContext } from "src/lib/auth/client-context";
+import { roleOf } from "src/lib/auth/roles";
 import {
   CommentsFnsContext,
   defaultCommentsFns,
 } from "src/lib/comments/comments.fn-context";
+import { useUnreadNotificationCount } from "src/lib/notifications/notifications.hooks";
 import {
   PlaylistsFnsContext,
   defaultPlaylistsFns,
 } from "src/lib/playlists/playlists.fn-context";
+import {
+  ReportsFnsContext,
+  defaultReportsFns,
+} from "src/lib/reports/reports.fn-context";
 import { usersKeys } from "src/lib/users/users.queries";
 import { seo } from "src/utils/seo";
 
@@ -104,9 +110,41 @@ export const Route = createRootRouteWithContext<{
   notFoundComponent: () => <NotFound />,
 });
 
+/**
+ * Header inbox link with an unread badge. Polls lightly only while the
+ * session exists; signed-out visitors never mount the query.
+ */
+function NotificationsLink() {
+  const unread = useUnreadNotificationCount();
+
+  return (
+    <Link
+      activeProps={{ className: "link" }}
+      className="relative inline-flex items-center"
+      to="/notifications"
+    >
+      Inbox
+      {unread > 0 && (
+        <Box
+          alignItems="center"
+          bg="red.500"
+          borderRadius="full"
+          color="white"
+          display="inline-flex"
+          fontSize="xs"
+          justifyContent="center"
+          minW={4}
+          px={1}
+        >
+          {unread > 9 ? "9+" : unread}
+        </Box>
+      )}
+    </Link>
+  );
+}
+
 function ThemeMenuItems() {
   const { theme, setColorMode } = useColorMode();
-
   return (
     <>
       {COLOR_MODE_OPTIONS.map(({ value, label, icon }) => (
@@ -130,6 +168,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const ctx = Route.useRouteContext();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const isStaff =
+    ctx.user !== null && ["moderator", "admin"].includes(roleOf(ctx.user));
 
   const currentPath = router.state.location.pathname;
   const authPaths = ["/login", "/signup"];
@@ -206,6 +246,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 to="/account/playlists"
               >
                 My Playlists
+              </Link>
+            )}{" "}
+            {ctx.user && <NotificationsLink />}{" "}
+            {ctx.user && isStaff && (
+              <Link
+                activeProps={{
+                  className: "link",
+                }}
+                to="/admin"
+              >
+                Admin
               </Link>
             )}{" "}
             <Link
@@ -398,9 +449,11 @@ function RootComponent() {
       <AuthClientContext.Provider value={authClient}>
         <CommentsFnsContext.Provider value={defaultCommentsFns}>
           <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
-            <RootDocument>
-              <Outlet />
-            </RootDocument>
+            <ReportsFnsContext.Provider value={defaultReportsFns}>
+              <RootDocument>
+                <Outlet />
+              </RootDocument>
+            </ReportsFnsContext.Provider>
           </PlaylistsFnsContext.Provider>
         </CommentsFnsContext.Provider>
       </AuthClientContext.Provider>

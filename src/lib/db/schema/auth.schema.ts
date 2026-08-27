@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { Schema } from "effect";
 
+import { RoleSchema } from "../../auth/roles";
 import { TimestampSchema } from "./timestamp";
 
 export const user = pgTable("user", {
@@ -27,6 +28,10 @@ export const user = pgTable("user", {
   id: text().primaryKey(),
   image: text(),
   name: text().notNull(),
+  // Rank used by the authorization policies (`src/lib/auth/policy.ts`);
+  // promoted through the points system and staff review, never set by users.
+  // Values are constrained at runtime by `RoleSchema` in the select schema.
+  role: text().notNull().default("novice"),
   twoFactorEnabled: boolean().notNull().default(false),
   updatedAt: timestamp()
     .$defaultFn(() => /* @__PURE__ */ new Date())
@@ -44,6 +49,7 @@ export const userSelectSchema = Schema.Struct({
   id: Schema.String,
   image: Schema.NullOr(Schema.String),
   name: Schema.String,
+  role: RoleSchema,
   twoFactorEnabled: Schema.optionalKey(Schema.Boolean),
   updatedAt: TimestampSchema,
 });
@@ -56,6 +62,7 @@ export const userInsertSchema = Schema.Struct({
   id: Schema.String,
   image: Schema.optionalKey(Schema.NullOr(Schema.String)),
   name: Schema.String,
+  role: Schema.optionalKey(RoleSchema),
   twoFactorEnabled: Schema.optionalKey(Schema.Boolean),
   updatedAt: Schema.optionalKey(Schema.Date),
 });

@@ -27,6 +27,15 @@ export function buildFormData<T extends object>(values: T) {
       continue;
     }
 
+    // Multiple files append as repeated entries so the server's
+    // FormData.getAll("images") sees them all.
+    if (Array.isArray(value) && value.every((item) => item instanceof File)) {
+      for (const file of value) {
+        formData.append(key, file);
+      }
+      continue;
+    }
+
     if (Array.isArray(value) || value instanceof Object) {
       formData.append(key, JSON.stringify(value));
       continue;

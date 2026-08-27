@@ -73,3 +73,40 @@ export class PostAlreadyInPlaylistError extends Schema.TaggedError<PostAlreadyIn
     postId: Schema.Number,
   },
 ) {}
+
+// Promotion review: the candidate was already moved out of "novice" by a
+// concurrent/previous decision, so approving/rejecting again would double-write.
+export class PromotionAlreadyReviewedError extends Schema.TaggedError<PromotionAlreadyReviewedError>()(
+  "PromotionAlreadyReviewedError",
+  {
+    message: Schema.String,
+  },
+) {}
+
+// Promotion review: the candidate no longer (or never did) meet the
+// eligibility rules (points threshold / account age / rank).
+export class PromotionNotEligibleError extends Schema.TaggedError<PromotionNotEligibleError>()(
+  "PromotionNotEligibleError",
+  {
+    message: Schema.String,
+  },
+) {}
+
+// Edit suggestion: the referenced suggestion does not exist.
+export class EditNotFoundError extends Schema.TaggedError<EditNotFoundError>()(
+  "EditNotFoundError",
+  {
+    editId: Schema.Number,
+    message: Schema.String,
+  },
+) {}
+
+// Edit suggestion: a decision (approval/rejection) was already applied, so
+// voting again would mutate settled history.
+export class EditAlreadyResolvedError extends Schema.TaggedError<EditAlreadyResolvedError>()(
+  "EditAlreadyResolvedError",
+  {
+    editId: Schema.Number,
+    message: Schema.String,
+  },
+) {}

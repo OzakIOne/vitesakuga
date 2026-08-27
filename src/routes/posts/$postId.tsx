@@ -32,7 +32,7 @@ function PostComponent() {
   const context = useRouteContext({ from: "/posts/$postId" });
 
   const {
-    data: { post, user, tags: initialTags, relatedPost },
+    data: { post, user, tags: initialTags, relatedPost, images },
   } = useSuspenseQuery(postQueryDetail(postId));
 
   const currentUserId = context.user?.id;
@@ -57,6 +57,7 @@ function PostComponent() {
       >
         <PostDetailDisplay
           currentUserId={currentUserId}
+          images={images}
           initialTags={initialTags}
           post={post}
           relatedPost={relatedPost}

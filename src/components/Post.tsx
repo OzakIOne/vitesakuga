@@ -2,8 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { PostVoteButtons } from "src/components/PostVoteButtons";
 import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
-import { Box, HStack, Stack } from "src/components/ui/layout";
+import { Box, HStack, Stack, VStack } from "src/components/ui/layout";
+import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
+import { assetUrl } from "src/lib/assets/url";
+import { formatEpisodeInfo } from "src/lib/posts/episode-info";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 
 import { User } from "./User";
@@ -15,25 +18,46 @@ export function Post({
   tags,
   relatedPost,
   currentUserId,
+  images,
   onEditClick,
   onAddToPlaylist,
+  onReportClick,
 }: {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   tags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
   currentUserId?: string | undefined;
+  images?: string[] | undefined;
   onEditClick?: (() => void) | undefined;
   onAddToPlaylist?: (() => void) | undefined;
+  onReportClick?: (() => void) | undefined;
 }) {
   const isOwner = currentUserId === user.id;
+  const episodeInfo = formatEpisodeInfo(post);
 
   return (
     <>
-      {post.videoKey && <Video bypass={false} url={post.videoKey} />}
+      {post.videoKey ? (
+        <Video bypass={false} url={post.videoKey} />
+      ) : images?.[0] ? (
+        <Image
+          alt={post.title || "Post image"}
+          borderRadius="md"
+          src={assetUrl(images[0])}
+          w="full"
+        />
+      ) : null}
       {post.title && (
         <HStack justify="space-between">
-          <Heading as="h3">{post.title}</Heading>
+          <VStack align="start" gap={1}>
+            <Heading as="h3">{post.title}</Heading>
+            {episodeInfo && (
+              <Text color="gray.500" fontSize="sm">
+                {episodeInfo}
+              </Text>
+            )}
+          </VStack>
           <HStack gap={2}>
             <PostVoteButtons currentUserId={currentUserId} postId={post.id} />
             {currentUserId && onAddToPlaylist && (
@@ -44,6 +68,16 @@ export function Post({
                 variant="outline"
               >
                 Add to playlist
+              </Button>
+            )}
+            {currentUserId && onReportClick && (
+              <Button
+                colorPalette="red"
+                onClick={onReportClick}
+                size="sm"
+                variant="outline"
+              >
+                Report
               </Button>
             )}
           </HStack>

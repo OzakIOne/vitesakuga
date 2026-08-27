@@ -41,6 +41,12 @@ export const TagSchema = Schema.Struct({
 
 export type Tag = Schema.Schema.Type<typeof TagSchema>;
 
+// Tags attached automatically to every post: videos get "video", image posts
+// get "image". The server strips them from user-supplied tag lists (upload
+// and edit) before re-appending the correct one, so users can neither see
+// them in their tag inputs nor remove them.
+export const RESERVED_TAG_NAMES = ["image", "video"] as const;
+
 // Videos upload direct-to-R2 via presigned PUTs, so bytes never buffer in the
 // Worker; the cap is a product/cost guard enforced at upload-confirm time.
 // Thumbnails still transit the Worker and stay small.
@@ -77,6 +83,14 @@ export const FormFileUploadTextSchema = Schema.Struct({
 
 export const VIDEO_EXTENSION_PATTERN = /\.(mp4|avi|mov|wmv|flv|mkv)$/i;
 
+export const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp)$/i;
+
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+
+// The UI currently exposes a single image per post; the schema/storage layer
+// already accepts several so raising this constant is enough to lift it.
+export const MAX_IMAGES_PER_POST = 5;
+
 const VideoKey = Schema.String.pipe(
   Schema.check(
     Schema.isMinLength(1, {
@@ -98,16 +112,76 @@ const ThumbnailFile = Schema.instanceOf(File).pipe(
   ),
 );
 
-export const FormFileUploadSchema = Schema.Struct({
+const ImageFile = Schema.instanceOf(File).pipe(
+  Schema.refine(
+    (file): file is File => IMAGE_EXTENSION_PATTERN.test(file.name),
+    {
+      message: "Images must be JPEG, PNG or WebP files",
+    },
+  ),
+  Schema.refine(
+    (file): file is File => file.size > 0 && file.size <= MAX_IMAGE_SIZE_BYTES,
+    {
+      message: `Images must not exceed ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)} MB`,
+    },
+  ),
+);
+
+export const PostSourceUploadSchema = Schema.optional(
+  Schema.Literals(["movie", "tv_series"]),
+);
+
+const SharedUploadFields = {
+  animeTitle: Schema.optional(sanitizeString(Schema.String)),
   content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  episodeNumber: Schema.optional(CoerceNumber),
   relatedPostId: Schema.optional(RelatedPostId),
+  seasonNumber: Schema.optional(CoerceNumber),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  sourceType: PostSourceUploadSchema,
   tags: Schema.Array(TagSchema),
-  thumbnail: ThumbnailFile,
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  videoKey: VideoKey,
+};
+
+export const FormFileUploadSchema = Schema.Struct({
+  ...SharedUploadFields,
+  images: Schema.optionalKey(Schema.Array(ImageFile)),
+  thumbnail: Schema.optionalKey(ThumbnailFile),
+  videoKey: Schema.optionalKey(VideoKey),
   videoMetadata: VideoMetadataSchema,
-});
+}).pipe(
+  // A post carries exactly one media kind. Videos keep the presigned
+  // direct-to-R2 flow (pending key + generated JPEG thumbnail); images
+  // transit the Worker and their first image doubles as the card thumbnail.
+  Schema.check(
+    Schema.makeFilter((value) => {
+      const issues: string[] = [];
+      const hasVideo = value.videoKey !== undefined;
+      const hasImages = (value.images?.length ?? 0) > 0;
+      if (hasVideo === hasImages) {
+        issues.push("A post must have either a video or images, not both");
+      }
+      if (hasVideo && value.thumbnail === undefined) {
+        issues.push("Video posts require a thumbnail");
+      }
+      if ((value.images?.length ?? 0) > MAX_IMAGES_PER_POST) {
+        issues.push(`At most ${MAX_IMAGES_PER_POST} images per post`);
+      }
+      if (value.sourceType && !value.animeTitle) {
+        issues.push("Anime title is required when the source type is set");
+      }
+      if (
+        value.sourceType === "tv_series" &&
+        (value.seasonNumber === undefined || value.episodeNumber === undefined)
+      ) {
+        issues.push(
+          "Season and episode numbers are required for TV series posts",
+        );
+      }
+      return issues;
+    }),
+  ),
+);
 
 export type FileUploadData = Schema.Schema.Type<typeof FormFileUploadSchema>;
 

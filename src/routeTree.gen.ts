@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
@@ -44,11 +46,21 @@ const AccountRoute = AccountRouteImport.update({
   path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConvertRoute = ConvertRouteImport.update({
   id: '/convert',
   path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/convert.lazy').then((d) => d.Route))
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TwoFactorRoute = TwoFactorRouteImport.update({
   id: '/two-factor',
   path: '/two-factor',
@@ -135,7 +147,9 @@ const UsersIdPlaylistsPlaylistIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/convert': typeof ConvertRoute
+  '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
@@ -156,7 +170,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/convert': typeof ConvertRoute
+  '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
@@ -179,7 +195,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/convert': typeof ConvertRoute
+  '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
@@ -202,7 +220,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/admin'
     | '/convert'
+    | '/notifications'
     | '/two-factor'
     | '/upload'
     | '/login'
@@ -223,7 +243,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/admin'
     | '/convert'
+    | '/notifications'
     | '/two-factor'
     | '/upload'
     | '/login'
@@ -245,7 +267,9 @@ export interface FileRouteTypes {
     | '/'
     | '/(auth)'
     | '/account'
+    | '/admin'
     | '/convert'
+    | '/notifications'
     | '/two-factor'
     | '/upload'
     | '/(auth)/login'
@@ -268,7 +292,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authRouteRoute: typeof authRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
+  AdminRoute: typeof AdminRoute
   ConvertRoute: typeof ConvertRoute
+  NotificationsRoute: typeof NotificationsRoute
   TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
@@ -306,11 +332,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/convert': {
       id: '/convert'
       path: '/convert'
       fullPath: '/convert'
       preLoaderRoute: typeof ConvertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/two-factor': {
@@ -459,7 +499,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
   AccountRoute: AccountRoute,
+  AdminRoute: AdminRoute,
   ConvertRoute: ConvertRoute,
+  NotificationsRoute: NotificationsRoute,
   TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
   PostsPostIdRoute: PostsPostIdRoute,

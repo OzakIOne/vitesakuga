@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  index,
   integer,
   json,
   pgTable,
@@ -13,6 +14,7 @@ import {
 import { Schema, SchemaGetter } from "effect";
 
 import { PostId } from "../../ids";
+import type { PointAction } from "../../points/points.config";
 import { sanitize } from "../../sanitize";
 import { user } from "./auth.schema";
 
@@ -37,19 +39,39 @@ export const postTags = pgTable(
 );
 
 export const posts = pgTable("posts", {
+  animeTitle: text(),
   content: text().notNull(),
   createdAt: timestamp().defaultNow().notNull(),
+  episodeNumber: integer(),
   id: serial("id").primaryKey(),
   relatedPostId: integer(),
+  seasonNumber: integer(),
   source: text(),
+  sourceType: text(),
   thumbnailKey: text().notNull(),
   title: text().notNull(),
   userId: text()
     .references(() => user.id)
     .notNull(),
-  videoKey: text().notNull(),
+  videoKey: text(),
   videoMetadata: json().$type<string>().notNull(),
 });
+
+// One row per attached image; `position` orders them for display. Posts
+// currently expose a single image in the UI, but the table already supports
+// several per post for a future multi-image upload.
+export const postImages = pgTable(
+  "post_images",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    postId: integer()
+      .references(() => posts.id, { onDelete: "cascade" })
+      .notNull(),
+    position: integer().notNull().default(0),
+    storageKey: text().notNull(),
+  },
+  (t) => [index("post_images_post_id_position_idx").on(t.postId, t.position)],
+);
 
 export const postVotes = pgTable(
   "post_votes",
@@ -62,6 +84,21 @@ export const postVotes = pgTable(
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
     vote: text().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+);
+
+export const postReports = pgTable(
+  "post_reports",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    postId: integer()
+      .references(() => posts.id, { onDelete: "cascade" })
+      .notNull(),
+    reason: text().notNull(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
   },
   (t) => [primaryKey({ columns: [t.postId, t.userId] })],
 );
@@ -105,6 +142,35 @@ export const comments = pgTable("comments", {
     .notNull(),
 });
 
+// Append-only points history (src/lib/points). One row per earning event;
+// totals and daily caps are derived by aggregation. The unique index makes
+// each (user, action, resource, actor) combination earn points only once,
+// so remove-and-relike cycles cannot farm likes.
+export const pointsLedger = pgTable(
+  "points_ledger",
+  {
+    // Who triggered the event (voter, commenter…); null when the event has
+    // no external actor. Like awards record the voter here.
+    action: text().$type<PointAction>().notNull(),
+    actorId: text(),
+    createdAt: timestamp().defaultNow().notNull(),
+    id: serial("id").primaryKey(),
+    points: integer().notNull(),
+    refId: integer(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("points_ledger_earning_unique").on(
+      t.userId,
+      t.action,
+      t.refId,
+      t.actorId,
+    ),
+  ],
+);
+
 // Comment insert input. No userId here: it is derived from the authenticated
 // session server-side (see CommentsService.add); trusting a client-sent userId
 // would let any caller impersonate another user.
@@ -117,3 +183,97 @@ export const commentInsertSchema = Schema.Struct({
   ),
   postId: PostId,
 });
+
+// Audit row for each novice → uploader decision (src/lib/promotions). The
+// review queue itself is derived live from points + account age; this table
+// records what staff decided and when, and keeps rejected candidates out of
+// the queue until they earn more points than the snapshot taken at rejection.
+export const promotionReviews = pgTable("promotion_reviews", {
+  createdAt: timestamp().defaultNow().notNull(),
+  id: serial().primaryKey(),
+  pointsAtReview: integer().notNull(),
+  reviewedBy: text(),
+  status: text().$type<"approved" | "rejected">().notNull(),
+  userId: text()
+    .references(() => user.id, { onDelete: "cascade" })
+    .notNull(),
+});
+
+// In-app notification inbox (src/lib/notifications). Rows are created
+// server-side by business events (promotion approved/rejected…); clients
+// fetch on load / after actions and flip readAt when the inbox is opened.
+export const notifications = pgTable(
+  "notifications",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    id: serial().primaryKey(),
+    readAt: timestamp(),
+    type: text()
+      .$type<
+        "edit-suggestion-applied" | "promotion-approved" | "promotion-rejected"
+      >()
+      .notNull(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)],
+);
+
+// Wiki-style edit suggestions on other users' posts (src/lib/post-edits).
+// `payload` holds the proposed field changes as a JSON string. A suggestion
+// applies when a moderator/admin decides so, or after two distinct uploader
+// approvals; the row then doubles as the applied-change history entry.
+export const postEdits = pgTable("post_edits", {
+  createdAt: timestamp().defaultNow().notNull(),
+  id: serial().primaryKey(),
+  payload: json().$type<string>().notNull(),
+  postId: integer()
+    .references(() => posts.id, { onDelete: "cascade" })
+    .notNull(),
+  resolvedAt: timestamp(),
+  resolvedBy: text(),
+  status: text().$type<"approved" | "pending" | "rejected">().notNull(),
+  suggestedBy: text()
+    .references(() => user.id)
+    .notNull(),
+});
+
+// One row per uploader backing a pending suggestion; two distinct rows (or
+// one staff/owner decision) make it apply. The suggester can never appear
+// here.
+export const postEditApprovals = pgTable(
+  "post_edit_approvals",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    editId: integer()
+      .references(() => postEdits.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text()
+      .references(() => user.id)
+      .notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.editId, t.userId] })],
+);
+
+// History of video replacements (src/lib/videos). Replacing a post's video
+// keeps its id, author, likes and comments; the old object key moves here so
+// staff can roll back. Rows are purged after RETENTION_DAYS without an
+// open report on their post.
+export const videoRevisions = pgTable(
+  "video_revisions",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    id: serial().primaryKey(),
+    postId: integer()
+      .references(() => posts.id, { onDelete: "cascade" })
+      .notNull(),
+    replacedBy: text()
+      .references(() => user.id)
+      .notNull(),
+    // Media metadata of the archived video at replacement time.
+    videoKey: text().notNull(),
+    videoMetadata: json().$type<unknown>().notNull(),
+  },
+  (t) => [index("video_revisions_post_idx").on(t.postId)],
+);

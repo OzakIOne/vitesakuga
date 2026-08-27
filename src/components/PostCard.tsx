@@ -3,12 +3,14 @@ import { Link, useRouteContext } from "@tanstack/react-router";
 import { memo, useState } from "react";
 import {
   LuEllipsisVertical,
+  LuFlag,
   LuListPlus,
   LuShare2,
   LuThumbsDown,
   LuThumbsUp,
 } from "react-icons/lu";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
+import { ReportDialog } from "src/components/ReportDialog";
 import { IconButton } from "src/components/ui/button";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
@@ -17,6 +19,7 @@ import { toaster } from "src/components/ui/toaster";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import type { PostWithVotes } from "src/lib/db/schema";
+import { formatEpisodeInfo } from "src/lib/posts/episode-info";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 
 type PostListProps = {
@@ -28,6 +31,7 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
   const { user } = useRouteContext({ from: "__root__" });
   const currentUserId = user?.id;
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   const handleShare = () => {
     const url = `${window.location.origin}/posts/${post.id}`;
@@ -81,6 +85,17 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
                   Add to playlist
                 </Menu.Item>
               )}
+              {currentUserId && (
+                <Menu.Item
+                  onClick={() => {
+                    setShowReportDialog(true);
+                  }}
+                  value="report"
+                >
+                  <LuFlag />
+                  Report
+                </Menu.Item>
+              )}
             </Menu.Content>
           </Menu.Positioner>
         </Portal>
@@ -94,11 +109,20 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
           userId={currentUserId}
         />
       )}
+      {showReportDialog && currentUserId && (
+        <ReportDialog
+          onCancel={() => {
+            setShowReportDialog(false);
+          }}
+          postId={post.id}
+        />
+      )}
     </>
   );
 }
 
 function PostCardComponent({ post, searchParams }: PostListProps) {
+  const episodeInfo = formatEpisodeInfo(post);
   return (
     <Link
       className="group"
@@ -159,6 +183,11 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
             <Text color="gray.600" fontSize="xs" lineClamp={1}>
               {post.content}
             </Text>
+            {episodeInfo && (
+              <Text color="blue.500" fontSize="xs" lineClamp={1}>
+                {episodeInfo}
+              </Text>
+            )}
             <Text color="gray.500" fontSize="xs">
               {new Date(post.createdAt).toLocaleDateString()}
             </Text>

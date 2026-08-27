@@ -105,6 +105,8 @@ export class SessionService extends Context.Service<
             id: "e2e-test-user",
             image: null,
             name: "E2E Test User",
+            // Staff rank so e2e scenarios can exercise moderator/admin paths.
+            role: "admin",
             twoFactorEnabled: false,
             updatedAt: DateTime.toDate(now),
           },

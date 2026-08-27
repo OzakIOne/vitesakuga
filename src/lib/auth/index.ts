@@ -186,6 +186,15 @@ export const auth = betterAuth({
   },
 
   user: {
+    // `role` backs the authorization policies in `src/lib/auth/policy.ts`.
+    // It is server-managed only (`input: false`): users can never set or
+    // change their rank through a Better Auth endpoint, promotions go
+    // through the points system and staff review instead. The column lives
+    // on `user` in `src/lib/db/schema/auth.schema.ts` with a DB-level
+    // default of "novice".
+    additionalFields: {
+      role: { type: "string", defaultValue: "novice", input: false },
+    },
     // Account deletion is NOT handled by Better Auth's built-in
     // `deleteUser` endpoint: it would hard-delete the `user` row and fail
     // on the posts/comments foreign keys, leaking nothing but errors.
