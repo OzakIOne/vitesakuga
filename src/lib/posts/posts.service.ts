@@ -836,13 +836,16 @@ export const uploadPost = createServerFn({ method: "POST" })
     // SAFETY: the object deliberately mixes arbitrary FormData keys (validated
     // away by the strict schema) with the known fields; the inferred value
     // type is a string-keyed map whose values are validated downstream.
+    // SAFETY: the object deliberately mixes arbitrary FormData keys (validated
+    // away by the strict schema) with the known fields; the inferred value
+    // type is a string-keyed map whose values are validated downstream.
+    // The images key is only added when files exist: `optionalKey` rejects an
+    // explicit `undefined` value, which would fail the strict parse below.
     const normalized = {
-      relatedPostId: undefined,
-      source: undefined,
       ...raw,
-      images: imageFiles.length > 0 ? imageFiles : undefined,
       tags,
       videoMetadata,
+      ...(imageFiles.length > 0 && { images: imageFiles }),
     };
     const parsed = parseStrict(FormFileUploadSchema)(normalized);
     // Magic-byte checks need reading file bytes, so they run here before any

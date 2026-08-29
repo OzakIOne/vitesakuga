@@ -27,8 +27,12 @@ function SignupForm() {
   const { redirectUrl } = Route.useRouteContext();
   const signUpMutation = useSignUp(redirectUrl);
   const socialLogin = useSocialLogin(redirectUrl);
+  const turnstileRequired =
+    envClient.VITE_TURNSTILE_REQUIRED === "1" ||
+    envClient.VITE_TURNSTILE_REQUIRED === "true";
   const { containerRef, execute: executeTurnstile } = useTurnstile(
     envClient.VITE_TURNSTILE_SITEKEY,
+    turnstileRequired,
   );
 
   const [serverError, setServerError] = useState("");
@@ -42,6 +46,10 @@ function SignupForm() {
     },
     onSubmit: async ({ value }) => {
       const captchaToken = (await executeTurnstile()) ?? undefined;
+      if (turnstileRequired && !captchaToken) {
+        setServerError("Captcha verification failed, please try again.");
+        return;
+      }
       const args: SignUpInput = {
         name: value.name,
         email: value.email,
@@ -62,6 +70,7 @@ function SignupForm() {
   return (
     <div className="with-full flex h-fit flex-col items-center justify-center p-4">
       <form
+        className="w-80 max-w-full"
         onSubmit={(e) => {
           e.preventDefault();
           void form.handleSubmit();
@@ -72,7 +81,7 @@ function SignupForm() {
             <form.Field name="name">
               {(field) => (
                 <>
-                  <Field.Root required>
+                  <Field.Root id={field.name} required>
                     <Field.Label>
                       Name <Field.RequiredIndicator />
                     </Field.Label>
@@ -95,7 +104,7 @@ function SignupForm() {
             <form.Field name="email">
               {(field) => (
                 <>
-                  <Field.Root required>
+                  <Field.Root id={field.name} required>
                     <Field.Label>
                       Email <Field.RequiredIndicator />
                     </Field.Label>
@@ -118,7 +127,7 @@ function SignupForm() {
                 const strength = getPasswordStrength(field.state.value);
                 return (
                   <>
-                    <Field.Root required>
+                    <Field.Root id={field.name} required>
                       <Field.Label>
                         Password <Field.RequiredIndicator />
                       </Field.Label>
@@ -162,7 +171,7 @@ function SignupForm() {
             >
               {(field) => (
                 <>
-                  <Field.Root required>
+                  <Field.Root id={field.name} required>
                     <Field.Label>
                       Confirm password <Field.RequiredIndicator />
                     </Field.Label>

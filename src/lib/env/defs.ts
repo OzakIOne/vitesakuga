@@ -153,6 +153,14 @@ const clientEnvConfig = Config.all({
   VITE_TURNSTILE_SITEKEY: Config.string("VITE_TURNSTILE_SITEKEY").pipe(
     Config.withDefault(""),
   ),
+  // "1" in stages where Better Auth verifies the captcha token server-side
+  // (deployed dev/prod: the Alchemy worker binds TURNSTILE_SECRET and runs
+  // with NODE_ENV=production). Local `nub run dev` / `dev:local` scripts
+  // override it to "0" so the widget is not mounted and forms submit without
+  // waiting on a challenge the server would ignore anyway.
+  VITE_TURNSTILE_REQUIRED: Config.string("VITE_TURNSTILE_REQUIRED").pipe(
+    Config.withDefault(""),
+  ),
 });
 
 const clientEnvSchema = Schema.Struct({
@@ -166,6 +174,9 @@ const clientEnvSchema = Schema.Struct({
   VITE_GOOGLE_CLIENT_ID: Schema.String,
   // Empty in environments without Turnstile; render the widget only when set.
   VITE_TURNSTILE_SITEKEY: Schema.String,
+  // Empty/"0"/"false" disables the client widget (captcha not verified in the
+  // local dev/test stages).
+  VITE_TURNSTILE_REQUIRED: Schema.String,
 });
 
 export const loadClientEnv = (source: ImportMetaEnv = import.meta.env) => {

@@ -12,10 +12,8 @@ export type UploadDraftData = {
   relatedPostId: number | undefined;
   tags: Tag[];
   videoName: string;
-  animeTitle: string | undefined;
   seasonNumber: number | undefined;
   episodeNumber: number | undefined;
-  sourceType: "movie" | "tv_series" | undefined;
 };
 
 type UseUploadDraftReturn = {
@@ -50,10 +48,8 @@ export function useUploadDraft(): UseUploadDraftReturn {
         tags: values.tags ?? [],
         title: values.title ?? "",
         videoName: values.videoName ?? "",
-        animeTitle: values.animeTitle,
         seasonNumber: values.seasonNumber,
         episodeNumber: values.episodeNumber,
-        sourceType: values.sourceType,
       };
 
       if (uploadDraftCollection.state.get(DRAFT_ID)) {
@@ -64,10 +60,8 @@ export function useUploadDraft(): UseUploadDraftReturn {
           d.relatedPostId = data.relatedPostId;
           d.tags = data.tags;
           d.videoName = data.videoName;
-          d.animeTitle = data.animeTitle;
           d.seasonNumber = data.seasonNumber;
           d.episodeNumber = data.episodeNumber;
-          d.sourceType = data.sourceType;
         });
       } else {
         uploadDraftCollection.insert(data);

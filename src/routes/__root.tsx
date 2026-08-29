@@ -120,7 +120,7 @@ function NotificationsLink() {
   return (
     <Link
       activeProps={{ className: "link" }}
-      className="relative inline-flex items-center"
+      className="relative inline-flex items-center whitespace-nowrap"
       to="/notifications"
     >
       Inbox
@@ -209,6 +209,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               activeProps={{
                 className: "link",
               }}
+              className="whitespace-nowrap"
               to="/"
             >
               Home
@@ -217,7 +218,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               activeProps={{
                 className: "link",
               }}
-              className=""
+              className="whitespace-nowrap"
               to="/posts"
             >
               Posts
@@ -226,6 +227,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               activeProps={{
                 className: "link",
               }}
+              className="whitespace-nowrap"
               to="/users"
             >
               Users
@@ -234,6 +236,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               activeProps={{
                 className: "link",
               }}
+              className="whitespace-nowrap"
               to="/playlists"
             >
               Playlists
@@ -244,6 +247,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   className: "link",
                 }}
                 to="/account/playlists"
+                className="whitespace-nowrap"
               >
                 My Playlists
               </Link>
@@ -255,6 +259,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   className: "link",
                 }}
                 to="/admin"
+                className="whitespace-nowrap"
               >
                 Admin
               </Link>
@@ -263,6 +268,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               activeProps={{
                 className: "link",
               }}
+              className="whitespace-nowrap"
               to="/upload"
             >
               Upload
@@ -271,6 +277,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               activeProps={{
                 className: "link",
               }}
+              className="whitespace-nowrap"
               to="/convert"
             >
               Convert video
@@ -278,7 +285,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <Box display={{ base: "none", md: "block" }}>
               <Menu.Root>
                 <Menu.Trigger asChild>
-                  <Button size="xs" variant="ghost">
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="whitespace-nowrap"
+                  >
                     Dev Tools
                   </Button>
                 </Menu.Trigger>

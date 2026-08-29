@@ -20,8 +20,12 @@ function LoginForm() {
   const { redirectUrl } = Route.useRouteContext();
   const loginMutation = useLogin(redirectUrl);
   const socialLogin = useSocialLogin(redirectUrl);
+  const turnstileRequired =
+    envClient.VITE_TURNSTILE_REQUIRED === "1" ||
+    envClient.VITE_TURNSTILE_REQUIRED === "true";
   const { containerRef, execute: executeTurnstile } = useTurnstile(
     envClient.VITE_TURNSTILE_SITEKEY,
+    turnstileRequired,
   );
 
   const [serverError, setServerError] = useState("");
@@ -41,6 +45,10 @@ function LoginForm() {
       return;
     }
     const captchaToken = (await executeTurnstile()) ?? undefined;
+    if (turnstileRequired && !captchaToken) {
+      setServerError("Captcha verification failed, please try again.");
+      return;
+    }
     setServerError("");
     const args: LoginInput = { email, password };
     if (captchaToken) {
@@ -63,10 +71,10 @@ function LoginForm() {
 
   return (
     <div className="with-full flex h-fit flex-col items-center justify-center p-4">
-      <form onSubmit={handleSubmit}>
+      <form className="w-80 max-w-full" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
-            <Field.Root required>
+            <Field.Root id="email" required>
               <Field.Label>
                 Email <Field.RequiredIndicator />
               </Field.Label>
@@ -79,7 +87,7 @@ function LoginForm() {
               />
             </Field.Root>
 
-            <Field.Root required>
+            <Field.Root id="password" required>
               <Field.Label>
                 Password <Field.RequiredIndicator />
               </Field.Label>

@@ -32,14 +32,12 @@ type UseUploadFormParams = {
 };
 
 type UploadFormValues = {
-  animeTitle: string | undefined;
   content: string;
   episodeNumber: number | undefined;
   images: File[] | undefined;
   relatedPostId: number | undefined;
   seasonNumber: number | undefined;
   source: string | undefined;
-  sourceType: "movie" | "tv_series" | undefined;
   tags: Tag[];
   thumbnail: File | undefined;
   title: string;
@@ -66,7 +64,7 @@ export function useUploadForm(params: UseUploadFormParams) {
     errorTitle: "Upload failed",
     mutationFn: async (data: FormData) => uploadPost({ data }),
     onSuccess: (newPost) => {
-      form.reset();
+      form.reset(emptyValues);
       onDraftClear();
       void queryClient.invalidateQueries({ queryKey: postsKeys.all });
       void navigate({ to: `/posts/${newPost.id}` });
@@ -79,41 +77,52 @@ export function useUploadForm(params: UseUploadFormParams) {
   // `submit()` populates them right before handleSubmit. Videos go through
   // the presigned direct-to-R2 flow (videoKey + generated JPEG thumbnail);
   // image posts send their files through the Worker under "images".
-  const defaultValues: UploadFormValues = {
-    animeTitle: draft?.animeTitle,
-    content: draft?.content ?? "",
-    episodeNumber: draft?.episodeNumber,
+  // Empty baseline for resets: resetting to `defaultValues` would re-fill the
+  // form with the draft the post was built from, and the autosave would then
+  // re-persist that draft right after a successful upload cleared it.
+  const emptyValues: UploadFormValues = {
+    content: "",
+    episodeNumber: undefined,
     images: undefined,
+    relatedPostId: undefined,
+    seasonNumber: undefined,
+    source: undefined,
+    tags: [],
+    thumbnail: undefined,
+    title: "",
+    videoKey: undefined,
+    videoMetadata: undefined,
+  };
+
+  const defaultValues: UploadFormValues = {
+    ...emptyValues,
+    content: draft?.content ?? "",
     relatedPostId: draft?.relatedPostId,
     seasonNumber: draft?.seasonNumber,
     source: draft?.source,
-    sourceType: draft?.sourceType,
     tags: draft?.tags ?? [],
-    thumbnail: undefined,
     title: draft?.title ?? "",
-    videoKey: undefined,
-    videoMetadata: undefined,
+    episodeNumber: draft?.episodeNumber,
   };
 
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      // Empty strings from cleared inputs are stripped so the optional
-      // episode-info fields stay truly absent; movie posts never carry
-      // season/episode numbers.
-      const formData = buildFormData({
-        ...value,
-        animeTitle: value.animeTitle?.trim() || undefined,
-        episodeNumber:
-          value.sourceType === "tv_series" ? value.episodeNumber : undefined,
-        seasonNumber:
-          value.sourceType === "tv_series" ? value.seasonNumber : undefined,
-      });
+      // The form value is already the submit shape; season/episode simply
+      // stay absent when the user left them empty.
+      const formData = buildFormData(value);
       await uploadPostMutation.mutateAsync(formData);
     },
     validators: {
       onSubmit: ({ value }) => {
-        const result = safeParseStrict(FormFileUploadSchema)(value);
+        // TanStack Form keeps keys set to `undefined`, but the schema's
+        // `optionalKey` fields require the key to be absent, so strip them.
+        const definedEntries = Object.entries(value).filter(
+          ([, v]) => v !== undefined,
+        );
+        const result = safeParseStrict(FormFileUploadSchema)(
+          Object.fromEntries(definedEntries),
+        );
         if (!result.success) {
           return result.message;
         }

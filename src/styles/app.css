@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Runtime-composed utilities: useChakraProps (src/components/ui/ui-utils.ts)
+   builds some class names at runtime from Chakra-style props, e.g.
+   `border-${color}` for borderColor="blue.500". Tailwind only generates CSS
+   for class strings it can see in source files at build time, so classes that
+   never appear as a literal (bare `border-blue-500` does not — only its
+   `focus:border-blue-500` variant does) silently don't exist. Safelist the
+   tokens that can be produced dynamically but never occur literally. */
+@source inline("border-transparent border-blue-500");
+
 /* Class-based dark mode: next-themes toggles the `dark` class on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
 

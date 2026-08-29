@@ -68,6 +68,19 @@ test.describe("Upload page", () => {
       timeout: 15000,
     });
 
+    // The selected thumbnail must be exposed via aria-pressed so selection
+    // feedback is asserted (regression guard: dynamic border classes were
+    // once missing from the generated CSS, leaving no visible selection).
+    const firstThumbnail = page.getByRole("button", { name: "Thumbnail 1" });
+    await expect(firstThumbnail).toHaveAttribute("aria-pressed", "true", {
+      timeout: 5000,
+    });
+    await page.getByRole("button", { name: "Thumbnail 2" }).click();
+    await expect(
+      page.getByRole("button", { name: "Thumbnail 2" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(firstThumbnail).toHaveAttribute("aria-pressed", "false");
+
     await expect(page.getByRole("button", { name: "Upload" })).not.toBeDisabled(
       { timeout: 5000 },
     );

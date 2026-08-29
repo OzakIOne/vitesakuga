@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+// Side-effect import: registers the real sanitize-html implementation.
+import "./sanitize.server";
 import { sanitize } from "./sanitize";
 
 describe("sanitize", () => {

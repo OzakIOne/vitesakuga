@@ -38,13 +38,13 @@ export const assertSupportedImageFile = async (file: File): Promise<void> => {
   if (matchesMagicBytes(head, JPEG_MAGIC_BYTES) && /\.jpe?g$/.test(name)) {
     return;
   }
-  if (matchesMagicBytes(head, PNG_MAGIC_BYTES) && /\.png$/.test(name)) {
+  if (matchesMagicBytes(head, PNG_MAGIC_BYTES) && name.endsWith(".png")) {
     return;
   }
   if (
     decodeAscii(head.slice(0, 4)) === WEBP_MAGIC_PREFIX &&
     decodeAscii(head.slice(8, 12)) === WEBP_MAGIC_FOURCC &&
-    /\.webp$/.test(name)
+    name.endsWith(".webp")
   ) {
     return;
   }

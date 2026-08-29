@@ -14,20 +14,22 @@ const OptionalString = Schema.optionalKey(Schema.String);
 
 export const VideoMetadataSchema = Schema.optional(
   Schema.Struct({
-    BitDepth: CoerceNumber,
-    BitRate: CoerceNumber,
+    // All fields optional: MediaInfo omits keys it cannot detect (e.g.
+    // BitDepth for some codecs), and stored JSON must stay decodable.
+    BitDepth: Schema.optional(CoerceNumber),
+    BitRate: Schema.optional(CoerceNumber),
     ChromaSubsampling: OptionalString,
     CodecID: OptionalString,
     ColorSpace: OptionalString,
     DisplayAspectRatio: OptionalString,
-    Duration: CoerceNumber,
+    Duration: Schema.optional(CoerceNumber),
     Encoded_Library_Name: OptionalString,
     Encoded_Library_Settings: OptionalString,
     Format_Profile: OptionalString,
-    FrameCount: CoerceNumber,
-    FrameRate: CoerceNumber,
-    Height: CoerceNumber,
-    Width: CoerceNumber,
+    FrameCount: Schema.optional(CoerceNumber),
+    FrameRate: Schema.optional(CoerceNumber),
+    Height: Schema.optional(CoerceNumber),
+    Width: Schema.optional(CoerceNumber),
     colour_primaries: OptionalString,
   }),
 );

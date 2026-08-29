@@ -40,7 +40,13 @@ export default defineConfig({
     devtools(),
     copyFilePlugin(),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      // TanStack Start's dev-styles middleware is skipped in `--mode test`
+      // (see dev-server-plugin `isTest` gate) while SSR still emits the
+      // `/@tanstack-start/styles.css` link, causing 404s on every page.
+      // The app loads CSS via `?url` imports, so this collection is unused.
+      dev: { ssrStyles: { enabled: false } },
+    }),
     nitro(),
     viteReact(),
   ],

@@ -63,10 +63,16 @@ export function useLogin(redirectUrl: string) {
       if (captchaToken) {
         options.headers = { "x-captcha-response": captchaToken };
       }
-      return authClient.signIn.email(
-        { email, password, callbackURL: redirectUrl },
-        options,
-      );
+      return authClient.signIn
+        .email({ email, password, callbackURL: redirectUrl }, options)
+        .then(({ data, error }) => {
+          // The Better Auth client resolves with `{ error }` instead of
+          // rejecting; surface it so React Query's `onError` fires.
+          if (error) {
+            throw new Error(error.message || "Failed to sign in");
+          }
+          return data;
+        });
     },
   });
 }
@@ -96,10 +102,16 @@ export function useSignUp(redirectUrl: string) {
       if (captchaToken) {
         options.headers = { "x-captcha-response": captchaToken };
       }
-      return authClient.signUp.email(
+      const { data, error } = await authClient.signUp.email(
         { name, email, password, callbackURL: redirectUrl },
         options,
       );
+      // The Better Auth client resolves with `{ error }` instead of
+      // rejecting; surface it so React Query's `onError` fires.
+      if (error) {
+        throw new Error(error.message || "Failed to sign up");
+      }
+      return data;
     },
   });
 }
@@ -185,7 +197,7 @@ export function useSocialLogin(redirectUrl: string) {
 
   const login = useCallback(
     async (provider: "github" | "google") => {
-      await authClient.signIn.social(
+      const { error } = await authClient.signIn.social(
         { provider, callbackURL: redirectUrl },
         {
           onSuccess: async () => {
@@ -196,6 +208,11 @@ export function useSocialLogin(redirectUrl: string) {
           },
         },
       );
+      // The Better Auth client resolves with `{ error }` instead of
+      // rejecting; surface it to callers.
+      if (error) {
+        throw new Error(error.message || `Failed to sign in with ${provider}`);
+      }
     },
     [redirectUrl, queryClient, navigate, authClient],
   );

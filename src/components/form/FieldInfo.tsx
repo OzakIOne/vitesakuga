@@ -18,7 +18,7 @@ export function FieldInfo({ field }: { field: AnyFieldApi }) {
   return (
     <>
       {field.state.meta.isTouched && errors.length > 0 ? (
-        <p className="text-sm text-red-700">{errors.join(", ")}</p>
+        <p className="text-sm break-words text-red-700">{errors.join(", ")}</p>
       ) : null}
       {field.state.meta.isValidating ? "Validating..." : null}
     </>

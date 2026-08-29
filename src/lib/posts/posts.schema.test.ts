@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStrict } from "../effect/schema.utils";
+import { parse, parseStrict } from "../effect/schema.utils";
 import {
   MAX_SEARCH_QUERY_LENGTH,
   MAX_SEARCH_TAGS_COUNT,
@@ -11,7 +11,37 @@ import {
   MAX_THUMBNAIL_SIZE_BYTES,
   searchPostsBaseSchema,
   updatePostInputSchema,
+  VideoMetadataSchema,
 } from "./posts.schema";
+
+describe("VideoMetadataSchema", () => {
+  it("decodes an empty metadata object (all fields optional)", () => {
+    expect(parse(VideoMetadataSchema)({})).toStrictEqual({});
+  });
+
+  it("decodes a partial MediaInfo track (e.g. missing BitDepth)", () => {
+    const result = parse(VideoMetadataSchema)({
+      BitRate: "182200",
+      Duration: "5.045",
+      FrameRate: "23.976",
+      Height: 720,
+      Width: 1280,
+    });
+    expect(result).toStrictEqual({
+      BitRate: 182200,
+      Duration: 5.045,
+      FrameRate: 23.976,
+      Height: 720,
+      Width: 1280,
+    });
+  });
+
+  it("decodes undefined as undefined", () => {
+    expect(
+      parse(VideoMetadataSchema)(undefined as unknown as object),
+    ).toBeUndefined();
+  });
+});
 
 describe("searchPostsBaseSchema", () => {
   it("should use default values for empty input", () => {

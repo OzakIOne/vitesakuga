@@ -8,12 +8,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * verification token. The token is sent to Better Auth via the
  * `x-captcha-response` header and verified server-side by the captcha plugin.
  *
- * When no sitekey is configured (dev/test), the hook is a no-op and
- * `execute()` resolves to `null`, so existing flows keep working.
+ * When no sitekey is configured, or the captcha is not required in the
+ * current stage (local dev/test: the server never verifies the token), the
+ * hook is a no-op and `execute()` resolves to `null` immediately, so forms
+ * submit without waiting on a challenge.
  */
 
 const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+/** How long execute() waits (covering Turnstile's internal retries) before
+ * giving up and resolving without a token. */
+const EXECUTE_TIMEOUT_MS = 15_000;
 
 /** Minimal client-side Turnstile JS API surface. */
 export type TurnstileClient = {
@@ -21,7 +27,7 @@ export type TurnstileClient = {
     container: HTMLElement,
     params: {
       sitekey: string;
-      size?: "normal" | "compact" | "invisible";
+      size?: "normal" | "compact" | "flexible";
       /**
        * Defer the challenge until `execute()` is called. Without this, an
        * invisible widget auto-runs its challenge on render and the later
@@ -42,6 +48,8 @@ export type TurnstileClient = {
     widgetId: string,
     params?: { callback?: (token: string) => void },
   ) => void;
+  /** Clears the widget state (used before re-running a challenge). */
+  reset: (widgetId: string) => void;
   remove: (widgetId: string) => void;
 };
 
@@ -71,16 +79,13 @@ function loadTurnstileScript(): Promise<void> {
   return scriptPromise;
 }
 
-export function useTurnstile(sitekey: string | undefined) {
+export function useTurnstile(sitekey: string | undefined, required: boolean) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const pendingResolveRef = useRef<((token: string | null) => void) | null>(
-    null,
-  );
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!sitekey) {
+    if (!sitekey || !required) {
       return;
     }
     let cancelled = false;
@@ -91,15 +96,18 @@ export function useTurnstile(sitekey: string | undefined) {
         }
         const widgetId = window.turnstile.render(containerRef.current, {
           sitekey,
-          size: "invisible",
+          // No `size`: "invisible" is no longer a valid value (Turnstile now
+          // only accepts "normal" | "compact" | "flexible"). Invisibility is
+          // a property of the sitekey's widget mode, not a render option.
           execution: "execute",
           "error-callback": (errorCode) => {
-            // Resolve the pending execute() with null instead of letting the
-            // form hang: 600* errors are often transient (Private Access
-            // Token failures, network) and Turnstile auto-retries, but the
-            // token may never arrive for this attempt.
-            pendingResolveRef.current?.(null);
-            pendingResolveRef.current = null;
+            // Do NOT resolve the pending execute() here: 600* errors are
+            // usually transient (Private Access Token failures, network) and
+            // Turnstile auto-retries. Cancelling on the first error would
+            // send the request without a captcha token, which the captcha
+            // plugin (active whenever TURNSTILE_SECRET is set) rejects.
+            // If the challenge never completes, execute()'s timeout resolves
+            // with null instead of hanging the form forever.
             if (import.meta.env.DEV) {
               // surfacing the code (e.g. 600010 = PAT failure on Brave)
               console.warn(`Turnstile error: ${errorCode}`);
@@ -126,23 +134,38 @@ export function useTurnstile(sitekey: string | undefined) {
         window.turnstile.remove(widgetId);
       }
     };
-  }, [sitekey]);
+  }, [required, sitekey]);
 
   const execute = useCallback(async (): Promise<string | null> => {
     const widgetId = widgetIdRef.current;
-    if (!sitekey || !widgetId || !window.turnstile) {
+    if (!sitekey || !required || !widgetId || !window.turnstile) {
       return null;
     }
-    return new Promise<string>((resolve) => {
-      pendingResolveRef.current = resolve;
+    // Reset first: if a previous challenge is still executing (e.g. after a
+    // failed attempt whose 15s timeout already gave up on the token), calling
+    // execute() again throws "widget is already executing". reset() clears
+    // the stale challenge state so the widget starts fresh.
+    window.turnstile.reset(widgetId);
+    return new Promise<string | null>((resolve) => {
+      // Failsafe: if the challenge never completes (persistent errors after
+      // Turnstile's internal retries), resolve with null instead of hanging
+      // the form. Without a token the captcha plugin rejects the request,
+      // which is the intended outcome when the challenge genuinely fails.
+      let settled = false;
+      const finish = (token: string | null) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timeout);
+        resolve(token);
+      };
+      const timeout = setTimeout(() => finish(null), EXECUTE_TIMEOUT_MS);
       window.turnstile?.execute(widgetId, {
-        callback: (token) => {
-          pendingResolveRef.current = null;
-          resolve(token);
-        },
+        callback: (token) => finish(token),
       });
     });
-  }, [sitekey]);
+  }, [required, sitekey]);
 
   return { containerRef, execute, ready };
 }

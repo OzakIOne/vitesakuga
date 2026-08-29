@@ -15,11 +15,13 @@ import { Spinner } from "src/components/ui/feedback";
 import { Field } from "src/components/ui/field";
 import { Box, Grid, HStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
+import { NumberInput } from "src/components/ui/number-input";
 import { Combobox, FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Text } from "src/components/ui/typography";
 import { Video, type VideoRef } from "src/components/Video";
+import { VideoMetadataDialog } from "src/components/VideoMetadataDialog";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
 import { searchPosts } from "src/lib/posts/posts.service";
 import { useUploadDraft } from "src/lib/upload/useUploadDraft";
@@ -28,10 +30,6 @@ import {
   type UploadMediaKind,
 } from "src/lib/upload/useUploadForm";
 import { useVideoProcessing } from "src/lib/upload/useVideoProcessing";
-
-// Shared with the field primitives' base style so the native select/number
-// inputs match the rest of the form controls.
-const ANIME_INPUT_CLASS = `rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100`;
 
 export const Route = createLazyFileRoute("/upload")({
   component: RouteComponent,
@@ -139,6 +137,9 @@ function RouteComponent() {
   const { data: postById, isFetching: isIdLookupLoading } = useQuery({
     enabled: isNumericSearch && numericId !== null && numericId > 0,
     ...postQueryDetail(numericId ?? -1),
+    // A wrong post ID is a definitive 404, not a transient failure: retrying
+    // just delays the "no post found" feedback by three failed attempts.
+    retry: false,
   });
 
   const isFetching = isSearchLoading || isIdLookupLoading;
@@ -352,121 +353,68 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
-          <form.form.Field name="sourceType">
-            {(field) => (
-              <Field.Root>
-                <Field.Label>Anime info (optional)</Field.Label>
-                <Field.HelperText>
-                  Which anime or movie is this clip from?
-                </Field.HelperText>
-                <select
-                  aria-label="Anime source type"
-                  className={ANIME_INPUT_CLASS}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => {
-                    // SAFETY: the option values below are exactly "",
-                    // "movie" and "tv_series"; anything else is unset.
-                    const raw = e.target.value as string;
-                    const next =
-                      raw === "movie" || raw === "tv_series" ? raw : undefined;
-                    field.handleChange(next);
-                    if (next === undefined) {
-                      form.form.setFieldValue("animeTitle", undefined);
-                      form.form.setFieldValue("seasonNumber", undefined);
-                      form.form.setFieldValue("episodeNumber", undefined);
-                    }
-                  }}
-                  value={field.state.value ?? ""}
-                >
-                  <option value="">Not specified</option>
-                  <option value="tv_series">TV series</option>
-                  <option value="movie">Movie</option>
-                </select>
-              </Field.Root>
-            )}
-          </form.form.Field>
+          {/* Literal class needed: Tailwind can't see dynamic grid-cols values. */}
+          <Grid className="grid-cols-2" gap={4}>
+            <form.form.Field name="seasonNumber">
+              {(field) => (
+                <Field.Root>
+                  <Field.Label>Season</Field.Label>
+                  <NumberInput.Root
+                    allowMouseWheel
+                    min={1}
+                    onBlur={field.handleBlur}
+                    onValueChange={(details) => {
+                      const parsed = details.valueAsNumber;
+                      field.handleChange(
+                        details.value === "" || Number.isNaN(parsed)
+                          ? undefined
+                          : parsed,
+                      );
+                    }}
+                    step={1}
+                    value={field.state.value?.toString() ?? ""}
+                  >
+                    <NumberInput.Control>
+                      <NumberInput.Input aria-label="Season number" />
+                      <NumberInput.DecrementTrigger aria-label="Decrease season number" />
+                      <NumberInput.IncrementTrigger aria-label="Increase season number" />
+                    </NumberInput.Control>
+                  </NumberInput.Root>
+                  <FieldInfo field={field} />
+                </Field.Root>
+              )}
+            </form.form.Field>
+            <form.form.Field name="episodeNumber">
+              {(field) => (
+                <Field.Root>
+                  <Field.Label>Episode</Field.Label>
+                  <NumberInput.Root
+                    allowMouseWheel
+                    min={1}
+                    onBlur={field.handleBlur}
+                    onValueChange={(details) => {
+                      const parsed = details.valueAsNumber;
+                      field.handleChange(
+                        details.value === "" || Number.isNaN(parsed)
+                          ? undefined
+                          : parsed,
+                      );
+                    }}
+                    step={1}
+                    value={field.state.value?.toString() ?? ""}
+                  >
+                    <NumberInput.Control>
+                      <NumberInput.Input aria-label="Episode number" />
+                      <NumberInput.DecrementTrigger aria-label="Decrease episode number" />
+                      <NumberInput.IncrementTrigger aria-label="Increase episode number" />
+                    </NumberInput.Control>
+                  </NumberInput.Root>
+                  <FieldInfo field={field} />
+                </Field.Root>
+              )}
+            </form.form.Field>
+          </Grid>
         </Box>
-
-        <form.form.Subscribe selector={(state) => state.values.sourceType}>
-          {(sourceType) =>
-            sourceType !== undefined ? (
-              <>
-                <Box mb={6}>
-                  <form.form.Field name="animeTitle">
-                    {(field) => (
-                      <FormTextWrapper
-                        field={field}
-                        helper={
-                          sourceType === "movie"
-                            ? "e.g. One Piece Film: Red"
-                            : "e.g. My Hero Academia"
-                        }
-                        isRequired
-                        label={
-                          sourceType === "movie" ? "Movie title" : "Anime title"
-                        }
-                      />
-                    )}
-                  </form.form.Field>
-                </Box>
-                {sourceType === "tv_series" && (
-                  <Grid gap={4} mb={6} templateColumns="1fr 1fr">
-                    <form.form.Field name="seasonNumber">
-                      {(field) => (
-                        <Field.Root required>
-                          <Field.Label>
-                            Season <Field.RequiredIndicator />
-                          </Field.Label>
-                          <input
-                            aria-label="Season number"
-                            className={ANIME_INPUT_CLASS}
-                            min={1}
-                            onChange={(e) => {
-                              const parsed = Number(e.target.value);
-                              field.handleChange(
-                                e.target.value === "" || Number.isNaN(parsed)
-                                  ? undefined
-                                  : parsed,
-                              );
-                            }}
-                            type="number"
-                            value={field.state.value ?? ""}
-                          />
-                          <FieldInfo field={field} />
-                        </Field.Root>
-                      )}
-                    </form.form.Field>
-                    <form.form.Field name="episodeNumber">
-                      {(field) => (
-                        <Field.Root required>
-                          <Field.Label>
-                            Episode <Field.RequiredIndicator />
-                          </Field.Label>
-                          <input
-                            aria-label="Episode number"
-                            className={ANIME_INPUT_CLASS}
-                            min={1}
-                            onChange={(e) => {
-                              const parsed = Number(e.target.value);
-                              field.handleChange(
-                                e.target.value === "" || Number.isNaN(parsed)
-                                  ? undefined
-                                  : parsed,
-                              );
-                            }}
-                            type="number"
-                            value={field.state.value ?? ""}
-                          />
-                          <FieldInfo field={field} />
-                        </Field.Root>
-                      )}
-                    </form.form.Field>
-                  </Grid>
-                )}
-              </>
-            ) : null
-          }
-        </form.form.Subscribe>
 
         <Box mb={6}>
           <form.form.Field name="tags">
@@ -565,40 +513,47 @@ function RouteComponent() {
                             mb={2}
                           >
                             <Text fontWeight="bold">Select Thumbnail:</Text>
-                            <Button
-                              onClick={handleCapture}
-                              size="sm"
-                              variant="outline"
-                            >
-                              <LuCamera style={{ marginRight: "8px" }} />
-                              Capture Current Frame
-                            </Button>
+                            <HStack gap={2}>
+                              <VideoMetadataDialog
+                                metadata={video.videoMetadata}
+                              />
+                              <Button
+                                onClick={handleCapture}
+                                size="sm"
+                                variant="outline"
+                              >
+                                <LuCamera style={{ marginRight: "8px" }} />
+                                Capture Current Frame
+                              </Button>
+                            </HStack>
                           </Box>
                           {video.thumbnails.length > 0 && (
-                            <Grid gap={2} templateColumns="repeat(5, 1fr)">
-                              {video.thumbnails.map((thumb, index) => (
-                                <Box
-                                  border="4px solid"
-                                  borderColor={
-                                    video.selectedThumbnailIndex === index
-                                      ? "blue.500"
-                                      : "transparent"
-                                  }
-                                  borderRadius="md"
-                                  cursor="pointer"
-                                  key={thumb.url}
-                                  onClick={() => {
-                                    video.selectThumbnail(index);
-                                  }}
-                                  overflow="hidden"
-                                  transition="border-color 0.2s"
-                                >
-                                  <Image
-                                    alt={`Thumbnail ${index + 1}`}
-                                    src={thumb.url}
-                                  />
-                                </Box>
-                              ))}
+                            <Grid className="grid-cols-5" gap={2}>
+                              {video.thumbnails.map((thumb, index) => {
+                                const isSelected =
+                                  video.selectedThumbnailIndex === index;
+                                return (
+                                  <button
+                                    aria-pressed={isSelected}
+                                    className={
+                                      isSelected
+                                        ? "block cursor-pointer overflow-hidden rounded-md border-4 border-blue-500 p-0 transition-colors duration-200"
+                                        : "block cursor-pointer overflow-hidden rounded-md border-4 border-transparent p-0 transition-colors duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                                    }
+                                    key={thumb.url}
+                                    onClick={() => {
+                                      video.selectThumbnail(index);
+                                    }}
+                                    type="button"
+                                  >
+                                    <Image
+                                      alt={`Thumbnail ${index + 1}`}
+                                      className="block w-full"
+                                      src={thumb.url}
+                                    />
+                                  </button>
+                                );
+                              })}
                             </Grid>
                           )}
                         </Box>
@@ -668,10 +623,8 @@ function RouteComponent() {
                 title: values.title ?? "",
                 videoName:
                   video.videoFile?.name ?? draft.draft?.videoName ?? "",
-                animeTitle: values.animeTitle,
                 seasonNumber: values.seasonNumber,
                 episodeNumber: values.episodeNumber,
-                sourceType: values.sourceType,
               });
             }
             return null;
@@ -685,19 +638,24 @@ function RouteComponent() {
             state.isPristine,
           ]}
         >
-          {([canSubmit, isSubmitting, isPristine]) => (
+          {([canSubmit, isFormSubmitting, isPristine]) => (
             <Button
               colorScheme="blue"
               disabled={
                 !canSubmit ||
                 isPristine ||
+                // The presign + direct-to-R2 PUT run before form submission,
+                // so the hook's pending state must disable the button too.
+                form.isSubmitting === true ||
                 (mediaKind === "video" ? !video.videoFile : !imageFile)
               }
-              loading={isSubmitting === true}
+              loading={isFormSubmitting === true || form.isSubmitting === true}
               style={{ width: "100%" }}
               type="submit"
             >
-              {isSubmitting ? "Uploading..." : "Upload"}
+              {isFormSubmitting || form.isSubmitting
+                ? "Uploading..."
+                : "Upload"}
             </Button>
           )}
         </form.form.Subscribe>

@@ -73,28 +73,36 @@ export function useVideoProcessing(): VideoProcessingState &
   );
   const { thumbnails, selectedThumbnailIndex } = thumbnailState;
 
-  const mediaInfoRef = useRef<MediaInfo<"JSON"> | null>(null);
+  const mediaInfoPromiseRef = useRef<Promise<MediaInfo<"JSON">> | null>(null);
+  // Latest thumbnail list for the unmount cleanup: the cleanup must run only
+  // when the component unmounts, not on every thumbnails change — revoking
+  // per change kills blob URLs still displayed in the grid.
+  const thumbnailsRef = useRef(thumbnails);
+  thumbnailsRef.current = thumbnails;
 
-  useEffect(() => {
-    void mediaInfoFactory({
+  // Lazy WASM init: `selectFile` awaits the promise, so picking a file before
+  // the module finished loading no longer silently skips metadata analysis.
+  const getMediaInfo = () => {
+    mediaInfoPromiseRef.current ??= mediaInfoFactory({
       format: "JSON",
       locateFile: () => "/MediaInfoModule.wasm",
-    }).then((mi) => {
-      mediaInfoRef.current = mi;
     });
-
-    return () => {
-      if (mediaInfoRef.current) {
-        mediaInfoRef.current.close();
-      }
-    };
-  }, []);
+    return mediaInfoPromiseRef.current;
+  };
 
   useEffect(
     () => () => {
-      thumbnails.forEach((t) => URL.revokeObjectURL(t.url));
+      void mediaInfoPromiseRef.current?.then((mi) => mi.close());
+      mediaInfoPromiseRef.current = null;
     },
-    [thumbnails],
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      thumbnailsRef.current.forEach((t) => URL.revokeObjectURL(t.url));
+    },
+    [],
   );
 
   const selectFile = async (file: File) => {
@@ -108,19 +116,28 @@ export function useVideoProcessing(): VideoProcessingState &
       return;
     }
 
+    // The current thumbnails are replaced below; revoke their object URLs so
+    // they do not leak (the unmount cleanup only sees the final list).
+    for (const t of thumbnailState.thumbnails) {
+      URL.revokeObjectURL(t.url);
+    }
     setVideoFile(file);
     setVideoMetadata(undefined);
     setFrameRate(null);
     dispatchThumbnails({ type: "set", thumbnails: [] });
 
-    if (mediaInfoRef.current) {
-      try {
-        const parsedData = await analyzeVideo(file, mediaInfoRef.current);
-        setFrameRate(parsedData?.FrameRate ?? null);
-        setVideoMetadata(parsedData);
-      } catch (error) {
-        console.error("MediaInfo analysis failed:", error);
-      }
+    try {
+      const parsedData = await analyzeVideo(file, await getMediaInfo());
+      setFrameRate(parsedData?.FrameRate ?? null);
+      setVideoMetadata(parsedData);
+    } catch (error) {
+      console.error("MediaInfo analysis failed:", error);
+      toaster.create({
+        description: "Video metadata could not be read from this file.",
+        duration: 5000,
+        title: "Metadata analysis failed",
+        type: "error",
+      });
     }
 
     try {
@@ -165,6 +182,10 @@ export function useVideoProcessing(): VideoProcessingState &
   const clearFile = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
+    }
+    // Same as selectFile: revoke replaced thumbnails before the reset.
+    for (const t of thumbnailState.thumbnails) {
+      URL.revokeObjectURL(t.url);
     }
     setVideoFile(null);
     setPreviewUrl(null);

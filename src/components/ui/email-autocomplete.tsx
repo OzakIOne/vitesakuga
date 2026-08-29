@@ -79,6 +79,7 @@ export function EmailAutocomplete({
   return (
     <Combobox.Root
       collection={collection}
+      inputValue={value}
       onInputValueChange={handleInputValueChange}
       onValueChange={handleValueChange}
       selectionBehavior="replace"
@@ -90,7 +91,6 @@ export function EmailAutocomplete({
           name={name}
           onBlur={onBlur}
           placeholder={placeholder}
-          value={value}
           {...inputProps}
         />
         <Combobox.IndicatorGroup>

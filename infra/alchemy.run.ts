@@ -184,7 +184,10 @@ export default Alchemy.Stack(
         // Turnstile widget keys: sitekey is public, secret is server-only.
         TURNSTILE_SITEKEY: turnstile.sitekey,
         TURNSTILE_SECRET: turnstile.secret,
-        VITE_BASE_URL: Config.string("VITE_BASE_URL"),
+        // Same stage-scoped domain as the worker itself (sakuga-dev.ozaki.one
+        // or sakuga.ozaki.one) — not read from the env file so it always
+        // matches the deployed app domain.
+        VITE_BASE_URL: `https://${appDomain}`,
       },
     });
 

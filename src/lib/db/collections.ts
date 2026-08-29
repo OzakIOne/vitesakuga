@@ -53,10 +53,8 @@ type UploadDraft = {
   relatedPostId: number | undefined;
   tags: Tag[];
   videoName: string;
-  animeTitle: string | undefined;
   seasonNumber: number | undefined;
   episodeNumber: number | undefined;
-  sourceType: "movie" | "tv_series" | undefined;
 };
 
 export const uploadDraftCollection = createCollection(
