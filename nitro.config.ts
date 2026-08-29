@@ -70,9 +70,13 @@ const connectSources = ["'self'", r2UploadOrigin, ...localUploadOrigins]
 // iframe. Both are required by the captcha plugin in the auth pages.
 const turnstileSource = "https://challenges.cloudflare.com";
 
+// script-src 'wasm-unsafe-eval': mediainfo.js compiles its WASM module
+// (/MediaInfoModule.wasm, self-hosted) via WebAssembly.instantiate, which the
+// CSP spec gates behind this source. It allows WebAssembly compilation only —
+// not eval — so it is safe to keep in every stage, including production.
 const scriptSource = isProductionStage
-  ? `'self' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA=' ${turnstileSource}`
-  : `'self' 'unsafe-inline' ${turnstileSource}`;
+  ? `'self' 'wasm-unsafe-eval' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA=' ${turnstileSource}`
+  : `'self' 'wasm-unsafe-eval' 'unsafe-inline' ${turnstileSource}`;
 
 // img-src allows any https image on purpose: profile pictures are
 // user-supplied URLs (any host), and CSP cannot match by file extension, so a

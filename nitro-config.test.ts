@@ -12,7 +12,7 @@ describe("nitro CSP", () => {
       >
     )["/**"].headers["content-security-policy"];
     expect(csp).toContain(
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+      "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com",
     );
     expect(csp).toContain("frame-src 'self' https://challenges.cloudflare.com");
     expect(imgSrc(csp)).toBe("'self' data: blob: https:");
@@ -29,7 +29,7 @@ describe("nitro CSP", () => {
       >
     )["/**"].headers["content-security-policy"];
     expect(csp).toContain(
-      "script-src 'self' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA=' https://challenges.cloudflare.com",
+      "script-src 'self' 'wasm-unsafe-eval' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA=' https://challenges.cloudflare.com",
     );
     expect(imgSrc(csp)).toBe("'self' data: blob: https:");
     vi.unstubAllEnvs();
