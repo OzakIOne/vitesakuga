@@ -40,6 +40,7 @@ export const Pagination = ({
       {showFirst && (
         <>
           <Button
+            aria-current={currentPage === 0 ? "page" : undefined}
             colorPalette={currentPage === 0 ? "blue" : "gray"}
             onClick={() => {
               onPageChange(0);
@@ -57,6 +58,7 @@ export const Pagination = ({
         (_, i) => leftRange + i,
       ).map((page) => (
         <Button
+          aria-current={currentPage === page ? "page" : undefined}
           colorPalette={currentPage === page ? "blue" : "gray"}
           key={page}
           onClick={() => {
@@ -72,6 +74,7 @@ export const Pagination = ({
         <>
           {rightRange < lastPageIndex - 1 && <Text>...</Text>}
           <Button
+            aria-current={currentPage === lastPageIndex ? "page" : undefined}
             colorPalette={currentPage === lastPageIndex ? "blue" : "gray"}
             onClick={() => {
               onPageChange(lastPageIndex);

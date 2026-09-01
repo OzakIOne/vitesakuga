@@ -18,7 +18,8 @@ import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
 export type CommentWithUser = {
   content: string;
-  createdAt: Date;
+  /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+  createdAt: string;
   id: number;
   postId: number;
   userId: string;
@@ -35,7 +36,7 @@ export class CommentsService extends Context.Service<
     readonly add: (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) => Effect.Effect<
-      Schema.Schema.Type<typeof commentsSelectSchema>,
+      Schema.Codec.Encoded<typeof commentsSelectSchema>,
       SqlError | SqlNoFirstResult | UnauthorizedError | SessionFetchError,
       SessionService
     >;
@@ -76,7 +77,10 @@ export class CommentsService extends Context.Service<
           ]),
       );
 
-      return comments;
+      return comments.map((row) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+      }));
     });
 
     const add = Effect.fn("CommentsService.add")(function* (
@@ -102,7 +106,11 @@ export class CommentsService extends Context.Service<
 
       // SAFETY: postId is a comments.postId FK column; the row value satisfies
       // the PostId contract by construction.
-      const created = { ...comment, postId: asPostId(comment.postId) };
+      const created = {
+        ...comment,
+        postId: asPostId(comment.postId),
+        createdAt: comment.createdAt.toISOString(),
+      };
 
       // Points hook: commenting earns a small daily-capped reward.
       yield* points.awardOrLog({

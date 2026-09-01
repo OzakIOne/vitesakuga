@@ -10,7 +10,8 @@ import { PostId } from "../ids";
  */
 const PostEditPayloadFields = Schema.Struct({
   animeTitle: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  content: Schema.optionalKey(Schema.String),
+  chapterNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  description: Schema.optionalKey(Schema.String),
   episodeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   seasonNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   source: Schema.optionalKey(Schema.NullOr(Schema.String)),
@@ -19,6 +20,7 @@ const PostEditPayloadFields = Schema.Struct({
       Schema.check(Schema.isMinLength(1, { message: "Title is required" })),
     ),
   ),
+  volumeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
 });
 
 // Derived from the base struct alone so the "at least one field" filter below
@@ -42,11 +44,13 @@ export const postEditPayloadSchema = PostEditPayloadFields.pipe(
  */
 export const decodePostEditPayload = (raw: {
   readonly animeTitle?: string | null;
-  readonly content?: string;
+  readonly chapterNumber?: number | null;
+  readonly description?: string;
   readonly episodeNumber?: number | null;
   readonly seasonNumber?: number | null;
   readonly source?: string | null;
   readonly title?: string;
+  readonly volumeNumber?: number | null;
 }): PostEditPayload => Schema.decodeUnknownSync(postEditPayloadSchema)(raw);
 
 export const proposeEditSchema = Schema.Struct({

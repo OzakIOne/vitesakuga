@@ -4,6 +4,7 @@ import {
   type ComboboxInputValueChangeDetails,
   type ComboboxValueChangeDetails,
 } from "@ark-ui/react";
+import type { AnyFieldApi } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +24,7 @@ import { Text } from "src/components/ui/typography";
 import { Video, type VideoRef } from "src/components/Video";
 import { VideoMetadataDialog } from "src/components/VideoMetadataDialog";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
+import { MIN_TEXT_LENGTH } from "src/lib/posts/posts.schema";
 import { searchPosts } from "src/lib/posts/posts.service";
 import { useUploadDraft } from "src/lib/upload/useUploadDraft";
 import {
@@ -39,6 +41,43 @@ export const Route = createLazyFileRoute("/upload")({
     </Box>
   ),
 });
+
+type MetaNumberFieldProps = {
+  field: AnyFieldApi;
+  label: string;
+  inputLabel: string;
+};
+
+// Shared NumberInput for the optional numeric metadata pairs: videos use
+// season/episode, image posts use volume/chapter. An empty input clears the
+// value back to undefined so the key is stripped before schema validation.
+function MetaNumberField({ field, label, inputLabel }: MetaNumberFieldProps) {
+  return (
+    <Field.Root>
+      <Field.Label>{label}</Field.Label>
+      <NumberInput.Root
+        allowMouseWheel
+        min={1}
+        onBlur={field.handleBlur}
+        onValueChange={(details) => {
+          const parsed = details.valueAsNumber;
+          field.handleChange(
+            details.value === "" || Number.isNaN(parsed) ? undefined : parsed,
+          );
+        }}
+        step={1}
+        value={field.state.value?.toString() ?? ""}
+      >
+        <NumberInput.Control>
+          <NumberInput.Input aria-label={inputLabel} />
+          <NumberInput.DecrementTrigger aria-label={`Decrease ${inputLabel}`} />
+          <NumberInput.IncrementTrigger aria-label={`Increase ${inputLabel}`} />
+        </NumberInput.Control>
+      </NumberInput.Root>
+      <FieldInfo field={field} />
+    </Field.Root>
+  );
+}
 
 function RouteComponent() {
   const [mediaKind, setMediaKind] = useState<UploadMediaKind>("video");
@@ -208,7 +247,15 @@ function RouteComponent() {
         }}
       >
         <Box mb={6}>
-          <form.form.Field name="title">
+          <form.form.Field
+            name="title"
+            validators={{
+              onBlur: ({ value }) =>
+                value.trim().length < MIN_TEXT_LENGTH
+                  ? `Title must be at least ${MIN_TEXT_LENGTH} characters`
+                  : undefined,
+            }}
+          >
             {(field) => (
               <FormTextWrapper field={field} isRequired label="Title" />
             )}
@@ -216,12 +263,20 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
-          <form.form.Field name="content">
+          <form.form.Field
+            name="description"
+            validators={{
+              onBlur: ({ value }) =>
+                value.trim().length < MIN_TEXT_LENGTH
+                  ? `Description must be at least ${MIN_TEXT_LENGTH} characters`
+                  : undefined,
+            }}
+          >
             {(field) => (
               <FormTextWrapper
                 asTextarea
                 field={field}
-                helper="A brief description of the animation"
+                helper={`A brief description of the animation (${MIN_TEXT_LENGTH} characters minimum)`}
                 isRequired
                 label="Description"
               />
@@ -235,6 +290,7 @@ function RouteComponent() {
               <FormTextWrapper
                 field={field}
                 helper="Link to the original source (Twitter, YouTube, etc.)"
+                inputProps={{ type: "url" }}
                 label="Source URL"
               />
             )}
@@ -353,66 +409,53 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
+          {/* Videos identify anime source material (season/episode); image
+              posts identify manga source material (volume/chapter). */}
           {/* Literal class needed: Tailwind can't see dynamic grid-cols values. */}
           <Grid className="grid-cols-2" gap={4}>
-            <form.form.Field name="seasonNumber">
-              {(field) => (
-                <Field.Root>
-                  <Field.Label>Season</Field.Label>
-                  <NumberInput.Root
-                    allowMouseWheel
-                    min={1}
-                    onBlur={field.handleBlur}
-                    onValueChange={(details) => {
-                      const parsed = details.valueAsNumber;
-                      field.handleChange(
-                        details.value === "" || Number.isNaN(parsed)
-                          ? undefined
-                          : parsed,
-                      );
-                    }}
-                    step={1}
-                    value={field.state.value?.toString() ?? ""}
-                  >
-                    <NumberInput.Control>
-                      <NumberInput.Input aria-label="Season number" />
-                      <NumberInput.DecrementTrigger aria-label="Decrease season number" />
-                      <NumberInput.IncrementTrigger aria-label="Increase season number" />
-                    </NumberInput.Control>
-                  </NumberInput.Root>
-                  <FieldInfo field={field} />
-                </Field.Root>
-              )}
-            </form.form.Field>
-            <form.form.Field name="episodeNumber">
-              {(field) => (
-                <Field.Root>
-                  <Field.Label>Episode</Field.Label>
-                  <NumberInput.Root
-                    allowMouseWheel
-                    min={1}
-                    onBlur={field.handleBlur}
-                    onValueChange={(details) => {
-                      const parsed = details.valueAsNumber;
-                      field.handleChange(
-                        details.value === "" || Number.isNaN(parsed)
-                          ? undefined
-                          : parsed,
-                      );
-                    }}
-                    step={1}
-                    value={field.state.value?.toString() ?? ""}
-                  >
-                    <NumberInput.Control>
-                      <NumberInput.Input aria-label="Episode number" />
-                      <NumberInput.DecrementTrigger aria-label="Decrease episode number" />
-                      <NumberInput.IncrementTrigger aria-label="Increase episode number" />
-                    </NumberInput.Control>
-                  </NumberInput.Root>
-                  <FieldInfo field={field} />
-                </Field.Root>
-              )}
-            </form.form.Field>
+            {mediaKind === "image" ? (
+              <>
+                <form.form.Field name="volumeNumber">
+                  {(field) => (
+                    <MetaNumberField
+                      field={field}
+                      inputLabel="Volume number"
+                      label="Volume"
+                    />
+                  )}
+                </form.form.Field>
+                <form.form.Field name="chapterNumber">
+                  {(field) => (
+                    <MetaNumberField
+                      field={field}
+                      inputLabel="Chapter number"
+                      label="Chapter"
+                    />
+                  )}
+                </form.form.Field>
+              </>
+            ) : (
+              <>
+                <form.form.Field name="seasonNumber">
+                  {(field) => (
+                    <MetaNumberField
+                      field={field}
+                      inputLabel="Season number"
+                      label="Season"
+                    />
+                  )}
+                </form.form.Field>
+                <form.form.Field name="episodeNumber">
+                  {(field) => (
+                    <MetaNumberField
+                      field={field}
+                      inputLabel="Episode number"
+                      label="Episode"
+                    />
+                  )}
+                </form.form.Field>
+              </>
+            )}
           </Grid>
         </Box>
 
@@ -614,17 +657,19 @@ function RouteComponent() {
 
         <form.form.Subscribe selector={(state) => state.values}>
           {(values) => {
-            if (values.title || values.content) {
+            if (values.title || values.description) {
               draft.persist({
-                content: values.content ?? "",
+                chapterNumber: values.chapterNumber,
+                description: values.description ?? "",
+                episodeNumber: values.episodeNumber,
                 relatedPostId: values.relatedPostId,
+                seasonNumber: values.seasonNumber,
                 source: values.source,
                 tags: values.tags ?? [],
                 title: values.title ?? "",
                 videoName:
                   video.videoFile?.name ?? draft.draft?.videoName ?? "",
-                seasonNumber: values.seasonNumber,
-                episodeNumber: values.episodeNumber,
+                volumeNumber: values.volumeNumber,
               });
             }
             return null;

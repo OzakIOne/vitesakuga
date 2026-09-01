@@ -103,7 +103,7 @@ export class UsersService extends Context.Service<
       if (q) {
         const pattern = `%${escapeLikePattern(q)}%`;
         query = query.where((eb) =>
-          eb("title", "ilike", pattern).or("content", "ilike", pattern),
+          eb("title", "ilike", pattern).or("description", "ilike", pattern),
         );
       }
 

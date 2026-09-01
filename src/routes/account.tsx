@@ -221,7 +221,10 @@ function RouteComponent() {
                     <Field.Label>Display name</Field.Label>
                     <InputGroup startElement={<LuUser />}>
                       <Input
+                        autoComplete="name"
                         className="h-12 w-full"
+                        id={field.name}
+                        name={field.name}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
                           field.handleChange(e.target.value);
@@ -241,7 +244,10 @@ function RouteComponent() {
                     <Field.Label>Profile picture URL</Field.Label>
                     <InputGroup startElement={<LuImage />}>
                       <Input
+                        autoComplete="off"
                         className="h-12 w-full"
+                        id={field.name}
+                        name={field.name}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
                           field.handleChange(e.target.value);
@@ -313,6 +319,8 @@ function RouteComponent() {
                     <PasswordInput
                       autoComplete="current-password"
                       className="h-12 w-full"
+                      id={field.name}
+                      name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => {
                         field.handleChange(e.target.value);
@@ -331,6 +339,8 @@ function RouteComponent() {
                     <PasswordInput
                       autoComplete="new-password"
                       className="h-12 w-full"
+                      id={field.name}
+                      name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => {
                         field.handleChange(e.target.value);

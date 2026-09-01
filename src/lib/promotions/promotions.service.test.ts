@@ -69,7 +69,7 @@ describe("PromotionsService.queue", () => {
     await db
       .insertInto("posts")
       .values({
-        content: "c",
+        description: "c",
         thumbnailKey: "t.jpg",
         title: "P",
         userId: "candidate-1",

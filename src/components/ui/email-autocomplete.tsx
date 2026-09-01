@@ -91,6 +91,7 @@ export function EmailAutocomplete({
           name={name}
           onBlur={onBlur}
           placeholder={placeholder}
+          spellCheck={false}
           {...inputProps}
         />
         <Combobox.IndicatorGroup>

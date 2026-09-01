@@ -22,7 +22,8 @@ export type PostSource = Schema.Schema.Type<typeof postSourceSchema>;
 
 export const postsSelectSchema = Schema.Struct({
   animeTitle: Schema.NullOr(Schema.String),
-  content: Schema.String,
+  chapterNumber: Schema.NullOr(Schema.Number),
+  description: Schema.String,
   createdAt: TimestampSchema,
   episodeNumber: Schema.NullOr(Schema.Number),
   id: PostId,
@@ -35,11 +36,13 @@ export const postsSelectSchema = Schema.Struct({
   userId: Schema.String,
   videoKey: Schema.NullOr(Schema.String),
   videoMetadata: Schema.Json,
+  volumeNumber: Schema.NullOr(Schema.Number),
 });
 
 export const postsInsertSchema = Schema.Struct({
   animeTitle: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  content: Schema.String,
+  chapterNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  description: Schema.String,
   createdAt: Schema.optionalKey(Schema.Date),
   episodeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   id: Schema.optionalKey(Schema.Number),
@@ -52,6 +55,7 @@ export const postsInsertSchema = Schema.Struct({
   userId: Schema.String,
   videoKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
   videoMetadata: Schema.Json,
+  volumeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
 });
 
 export const postVoteSchema = Schema.Literals(["like", "dislike"]);
@@ -108,7 +112,13 @@ export const postWithVotesSelectSchema = Schema.Struct({
   likes: Schema.Number,
 });
 
-export type PostWithVotes = Schema.Schema.Type<
+/**
+ * Wire shape of a post row with aggregate vote counts. The decoded schema type
+ * carries `Date` instances, but `Date` does not survive the JSON
+ * server-function transport — every payload that crosses to the client is
+ * re-encoded, so the public type is the schema's encoded side (ISO strings).
+ */
+export type PostWithVotes = Schema.Codec.Encoded<
   typeof postWithVotesSelectSchema
 >;
 

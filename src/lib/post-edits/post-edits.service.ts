@@ -36,16 +36,19 @@ const REQUIRED_VOTES = 2;
 /** Field iteration order for applying suggestion patches. */
 const PAYLOAD_KEYS: ReadonlyArray<keyof PostEditPayload> = [
   "animeTitle",
-  "content",
+  "chapterNumber",
+  "description",
   "episodeNumber",
   "seasonNumber",
   "source",
   "title",
+  "volumeNumber",
 ];
 
 export type PendingEdit = {
   readonly approvals: ReadonlyArray<string>;
-  readonly createdAt: Date;
+  /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+  readonly createdAt: string;
   readonly id: number;
   readonly payload: PostEditPayload;
   readonly postId: number;
@@ -413,7 +416,7 @@ export class PostEditsService extends Context.Service<
             const approvals = yield* approvalsFor(row.id);
             return {
               approvals: approvals.map((approval) => approval.userId),
-              createdAt: row.createdAt,
+              createdAt: row.createdAt.toISOString(),
               id: row.id,
               payload: decodePostEditPayload(row.payload),
               postId: row.postId,

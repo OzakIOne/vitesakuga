@@ -48,13 +48,15 @@ export const commentDraftsCollection = createCollection(
 type UploadDraft = {
   id: string;
   title: string;
-  content: string;
+  description: string;
   source: string | undefined;
   relatedPostId: number | undefined;
   tags: Tag[];
   videoName: string;
   seasonNumber: number | undefined;
   episodeNumber: number | undefined;
+  chapterNumber: number | undefined;
+  volumeNumber: number | undefined;
 };
 
 export const uploadDraftCollection = createCollection(

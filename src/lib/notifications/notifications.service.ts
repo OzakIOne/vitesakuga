@@ -14,8 +14,9 @@ export type NotificationType =
 export type NotificationRow = {
   readonly id: number;
   readonly type: NotificationType;
-  readonly readAt: Date | null;
-  readonly createdAt: Date;
+  readonly readAt: string | null;
+  /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+  readonly createdAt: string;
 };
 
 const INBOX_PAGE_SIZE = 50;
@@ -66,7 +67,7 @@ export class NotificationsService extends Context.Service<
     const list = Effect.fn("NotificationsService.list")(function* (
       userId: string,
     ) {
-      return yield* db.execute(
+      const rows = yield* db.execute(
         db
           .selectFrom("notifications")
           .select(["id", "type", "readAt", "createdAt"])
@@ -74,6 +75,11 @@ export class NotificationsService extends Context.Service<
           .orderBy("createdAt", "desc")
           .limit(INBOX_PAGE_SIZE),
       );
+      return rows.map((row) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        readAt: row.readAt ? row.readAt.toISOString() : null,
+      }));
     });
 
     const markAllRead = Effect.fn("NotificationsService.markAllRead")(

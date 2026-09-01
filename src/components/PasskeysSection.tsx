@@ -12,13 +12,7 @@ import {
   usePasskeys,
   useRenamePasskey,
 } from "src/lib/auth/auth.hooks";
-
-const createdFormatter = new Intl.DateTimeFormat("en-US", {
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-  year: "numeric",
-});
+import { formatDateUtc } from "src/utils/date-format";
 
 function passkeyLabel(passkey: Passkey): string {
   return passkey.name || getAuthenticatorName(passkey.aaguid) || "Passkey";
@@ -34,6 +28,7 @@ export function PasskeysSection() {
   const renamePasskey = useRenamePasskey();
   const { data: passkeys = [], isLoading } = usePasskeys();
   const [renameTarget, setRenameTarget] = useState<Passkey | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Passkey | null>(null);
   const [newName, setNewName] = useState("");
 
   const openRename = (passkey: Passkey) => {
@@ -108,7 +103,7 @@ export function PasskeysSection() {
                     {passkeyLabel(passkey)}
                   </Text>
                   <Text color="gray.500" fontSize="xs">
-                    Added {createdFormatter.format(new Date(passkey.createdAt))}
+                    Added {formatDateUtc(passkey.createdAt)}
                     {passkey.transports
                       ? ` \u00b7 ${passkey.transports.replaceAll(",", ", ")}`
                       : ""}
@@ -128,7 +123,7 @@ export function PasskeysSection() {
                   aria-label={`Delete ${passkeyLabel(passkey)}`}
                   colorPalette="red"
                   disabled={deletePasskey.isPending}
-                  onClick={() => deletePasskey.mutate({ id: passkey.id })}
+                  onClick={() => setDeleteTarget(passkey)}
                   size="sm"
                   variant="outline"
                 >
@@ -139,6 +134,56 @@ export function PasskeysSection() {
           ))
         )}
       </div>
+
+      <Dialog.Root
+        onOpenChange={(details) => {
+          if (!details.open) {
+            setDeleteTarget(null);
+          }
+        }}
+        open={deleteTarget !== null}
+        role="alertdialog"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Delete passkey?</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <p>
+                  {deleteTarget
+                    ? `“${passkeyLabel(deleteTarget)}” will no longer be able to sign in to your account. This cannot be undone.`
+                    : ""}
+                </p>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline">Cancel</Button>
+                </Dialog.ActionTrigger>
+                <Button
+                  colorPalette="red"
+                  loading={deletePasskey.isPending}
+                  onClick={() => {
+                    if (deleteTarget) {
+                      deletePasskey.mutate(
+                        { id: deleteTarget.id },
+                        { onSuccess: () => setDeleteTarget(null) },
+                      );
+                    }
+                  }}
+                >
+                  Delete passkey
+                </Button>
+              </Dialog.Footer>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton size="sm" />
+              </Dialog.CloseTrigger>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
 
       <Dialog.Root
         onOpenChange={(details) => {

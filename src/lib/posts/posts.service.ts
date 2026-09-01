@@ -73,8 +73,10 @@ type PostsSearchResult = {
 type PostDetailResult = {
   post: {
     animeTitle: string | null;
-    content: string;
-    createdAt: Date;
+    chapterNumber: number | null;
+    description: string;
+    /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+    createdAt: string;
     episodeNumber: number | null;
     id: PostId;
     relatedPostId: PostId | null;
@@ -84,9 +86,10 @@ type PostDetailResult = {
     title: string;
     videoKey: string | null;
     videoMetadata: Schema.Schema.Type<typeof VideoMetadataSchema>;
+    volumeNumber: number | null;
   };
   images: string[];
-  relatedPost: Schema.Schema.Type<typeof postsSelectSchema> | null;
+  relatedPost: Schema.Codec.Encoded<typeof postsSelectSchema> | null;
   tags: { id: number; name: string }[];
   user: {
     id: string;
@@ -162,7 +165,7 @@ export class PostsService extends Context.Service<
         const pattern = `%${escapeLikePattern(q)}%`;
         query = query.where((eb) =>
           eb("posts.title", "ilike", pattern).or(
-            "posts.content",
+            "posts.description",
             "ilike",
             pattern,
           ),
@@ -225,7 +228,7 @@ export class PostsService extends Context.Service<
         popularTagsPredicates.push((eb) =>
           eb.or([
             eb("posts.title", "ilike", pattern),
-            eb("posts.content", "ilike", pattern),
+            eb("posts.description", "ilike", pattern),
           ]),
         );
       }
@@ -260,7 +263,7 @@ export class PostsService extends Context.Service<
           .select([
             "posts.id",
             "posts.title",
-            "posts.content",
+            "posts.description",
             "posts.createdAt",
             "posts.videoKey",
             "posts.source",
@@ -269,6 +272,8 @@ export class PostsService extends Context.Service<
             "posts.animeTitle",
             "posts.seasonNumber",
             "posts.episodeNumber",
+            "posts.chapterNumber",
+            "posts.volumeNumber",
             "posts.sourceType",
             "user.id as userId",
             "user.name as userName",
@@ -322,15 +327,17 @@ export class PostsService extends Context.Service<
       const relatedPost = Option.match(relatedPostOption, {
         onNone: () => null,
         // Full posts row: run it through the select schema so its identity
-        // fields come out branded, consistent with every other post payload.
-        onSome: (row) => parse(postsSelectSchema)(row),
+        // fields come out branded, then re-encode so `createdAt` leaves as
+        // an ISO string (the wire format `postsSelectSchema` Encoded promises).
+        onSome: (row) =>
+          Schema.encodeSync(postsSelectSchema)(parse(postsSelectSchema)(row)),
       });
 
       return {
         post: {
           animeTitle: postWithUser.animeTitle,
-          content: postWithUser.content,
-          createdAt: postWithUser.createdAt,
+          description: postWithUser.description,
+          createdAt: postWithUser.createdAt.toISOString(),
           // SAFETY: posts.id is the table's primary key.
           id: asPostId(postWithUser.id),
           // SAFETY: relatedPostId is a posts.id FK column; the row value
@@ -344,6 +351,8 @@ export class PostsService extends Context.Service<
           videoMetadata: parse(VideoMetadataSchema)(postWithUser.videoMetadata),
           seasonNumber: postWithUser.seasonNumber,
           episodeNumber: postWithUser.episodeNumber,
+          chapterNumber: postWithUser.chapterNumber,
+          volumeNumber: postWithUser.volumeNumber,
           sourceType: postWithUser.sourceType,
         },
         images: imageRows.map((row) => row.storageKey),
@@ -369,7 +378,7 @@ export class PostsService extends Context.Service<
 
       const {
         title,
-        content,
+        description,
         source,
         relatedPostId,
         tags,
@@ -472,7 +481,8 @@ export class PostsService extends Context.Service<
             .insertInto("posts")
             .values({
               animeTitle: data.animeTitle ? data.animeTitle : null,
-              content,
+              chapterNumber: data.chapterNumber ?? null,
+              description,
               episodeNumber: data.episodeNumber ?? null,
               relatedPostId,
               seasonNumber: data.seasonNumber ?? null,
@@ -488,6 +498,7 @@ export class PostsService extends Context.Service<
                   : Schema.encodeSync(
                       Schema.fromJsonString(VideoMetadataSchema),
                     )(videoMetadata),
+              volumeNumber: data.volumeNumber ?? null,
             })
             .returningAll(),
         );
@@ -635,7 +646,7 @@ export class PostsService extends Context.Service<
         "You must be logged in to update a post",
       );
 
-      const { postId, title, content, source, relatedPostId, tags } = data;
+      const { postId, title, description, source, relatedPostId, tags } = data;
 
       yield* Effect.logInfo("Post update started").pipe(
         Effect.annotateLogs({
@@ -668,7 +679,7 @@ export class PostsService extends Context.Service<
       const updatedPost = yield* db.executeTakeFirstOrError(
         db
           .updateTable("posts")
-          .set({ content, relatedPostId, source, title })
+          .set({ description, relatedPostId, source, title })
           .where("id", "=", postId)
           .returningAll(),
       );

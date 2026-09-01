@@ -8,6 +8,7 @@ import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { formatEpisodeInfo } from "src/lib/posts/episode-info";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
+import { formatDateUtc } from "src/utils/date-format";
 
 import { User } from "./User";
 import { Video } from "./Video";
@@ -51,7 +52,9 @@ export function Post({
       {post.title && (
         <HStack justify="space-between">
           <VStack align="start" gap={1}>
-            <Heading as="h3">{post.title}</Heading>
+            <Heading as="h1" className="break-words">
+              {post.title}
+            </Heading>
             {episodeInfo && (
               <Text color="gray.500" fontSize="sm">
                 {episodeInfo}
@@ -83,10 +86,14 @@ export function Post({
           </HStack>
         </HStack>
       )}
-      {post.content && <Text mb={4}>{post.content}</Text>}
+      {post.description && (
+        <Text className="break-words" mb={4}>
+          {post.description}
+        </Text>
+      )}
       {post.createdAt && (
         <Text color="gray.500" fontSize="sm" mb={4}>
-          Posted {new Date(post.createdAt).toLocaleDateString()}
+          Posted {formatDateUtc(post.createdAt)}
         </Text>
       )}
 

@@ -325,7 +325,12 @@ export function TwoFactorSection({
                       Scan this code with your authenticator app, then enter the
                       6-digit code it shows.
                     </Text>
-                    <div className="rounded-xl bg-white p-3">
+                    <div
+                      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- QRCode renders an inline <svg>; the wrapper is the accessible image
+                      aria-label="Two-factor authentication setup QR code"
+                      className="rounded-xl bg-white p-3"
+                      role="img"
+                    >
                       <QRCode size={160} value={totpUri} />
                     </div>
                     <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
@@ -360,6 +365,8 @@ export function TwoFactorSection({
                       <Field.Root>
                         <Field.Label>6-digit code</Field.Label>
                         <Input
+                          aria-label="6-digit verification code"
+                          autoComplete="one-time-code"
                           autoFocus
                           inputMode="numeric"
                           maxLength={6}
@@ -368,6 +375,7 @@ export function TwoFactorSection({
                           }
                           pattern="[0-9]*"
                           placeholder="000000"
+                          spellCheck={false}
                           value={code}
                         />
                       </Field.Root>
@@ -406,7 +414,10 @@ export function TwoFactorSection({
                 )}
 
                 {enableError && (
-                  <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+                  <p
+                    className="mt-3 text-sm text-red-600 dark:text-red-400"
+                    role="alert"
+                  >
                     {enableError}
                   </p>
                 )}

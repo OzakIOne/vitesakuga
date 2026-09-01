@@ -33,7 +33,7 @@ beforeEach(async () => {
     .insertInto("posts")
     .values({
       title: "Test Post",
-      content: "Content",
+      description: "Content",
       userId: "user-1",
       videoKey: "videos/abc.mp4",
       thumbnailKey: "thumbnails/abc.jpg",
@@ -212,7 +212,7 @@ describe("PostVotesService.fetchLikedPosts", () => {
       .insertInto("posts")
       .values({
         title: "Disliked Post",
-        content: "Content",
+        description: "Content",
         userId: "user-1",
         videoKey: "videos/disliked.mp4",
         thumbnailKey: "thumbnails/disliked.jpg",
@@ -249,7 +249,7 @@ describe("PostVotesService.fetchLikedPosts", () => {
       .insertInto("posts")
       .values({
         title: "Older Post",
-        content: "Content",
+        description: "Content",
         userId: "user-1",
         videoKey: "videos/older.mp4",
         thumbnailKey: "thumbnails/older.jpg",

@@ -40,8 +40,9 @@ export const postTags = pgTable(
 
 export const posts = pgTable("posts", {
   animeTitle: text(),
-  content: text().notNull(),
+  chapterNumber: integer(),
   createdAt: timestamp().defaultNow().notNull(),
+  description: text().notNull(),
   episodeNumber: integer(),
   id: serial("id").primaryKey(),
   relatedPostId: integer(),
@@ -55,6 +56,7 @@ export const posts = pgTable("posts", {
     .notNull(),
   videoKey: text(),
   videoMetadata: json().$type<string>().notNull(),
+  volumeNumber: integer(),
 });
 
 // One row per attached image; `position` orders them for display. Posts

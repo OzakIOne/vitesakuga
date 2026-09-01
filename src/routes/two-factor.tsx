@@ -93,6 +93,7 @@ function TwoFactorVerifyPage() {
               {mode === "totp" ? "Authenticator code" : "Backup code"}
             </Field.Label>
             <Input
+              autoComplete={mode === "totp" ? "one-time-code" : "off"}
               autoFocus
               inputMode={mode === "totp" ? "numeric" : "text"}
               maxLength={mode === "totp" ? 6 : undefined}
@@ -105,6 +106,7 @@ function TwoFactorVerifyPage() {
               }
               pattern={mode === "totp" ? "[0-9]*" : undefined}
               placeholder={mode === "totp" ? "000000" : "Enter backup code"}
+              spellCheck={false}
               value={code}
             />
           </Field.Root>
@@ -146,7 +148,10 @@ function TwoFactorVerifyPage() {
           </button>
 
           {error && (
-            <p className="text-center text-sm text-red-600 dark:text-red-400">
+            <p
+              className="text-center text-sm text-red-600 dark:text-red-400"
+              role="alert"
+            >
               {error}
             </p>
           )}

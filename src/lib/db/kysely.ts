@@ -97,7 +97,8 @@ type PostTagsTable = {
 type PostsTable = {
   id: Generated<number>;
   animeTitle: string | null;
-  content: string;
+  chapterNumber: number | null;
+  description: string;
   createdAt: Generated<Date>;
   episodeNumber: number | null;
   relatedPostId: number | null;
@@ -109,6 +110,7 @@ type PostsTable = {
   userId: string;
   videoKey: string | null;
   videoMetadata: string;
+  volumeNumber: number | null;
 };
 
 type PostImagesTable = {
@@ -198,11 +200,13 @@ type PostEditsTable = {
   // decodePostEditPayload before use. Shape mirrors post-edits.schema.
   payload: {
     readonly animeTitle?: string | null;
-    readonly content?: string;
+    readonly chapterNumber?: number | null;
+    readonly description?: string;
     readonly episodeNumber?: number | null;
     readonly seasonNumber?: number | null;
     readonly source?: string | null;
     readonly title?: string;
+    readonly volumeNumber?: number | null;
   };
   resolvedAt: Date | null;
   resolvedBy: string | null;

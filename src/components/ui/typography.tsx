@@ -54,7 +54,7 @@ export function Heading({
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <Component
-      className={cx(className)}
+      className={cx("text-balance", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLElement>)}
     />

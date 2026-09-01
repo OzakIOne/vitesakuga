@@ -37,12 +37,14 @@ const LIKED_PLAYLIST_TITLE = "Liked posts";
 export type LikedPostRow = {
   post_id: number;
   position: number;
-  added_at: Date;
+  /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+  added_at: string;
   id: number;
   title: string;
-  content: string;
+  description: string;
   thumbnail_key: string;
-  created_at: Date;
+  /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+  created_at: string;
   user_id: string | null;
   user_name: string | null;
   video_key: string | null;
@@ -259,7 +261,7 @@ export class PostVotesService extends Context.Service<
               "post_votes.createdAt as added_at",
               "posts.id",
               "posts.title",
-              "posts.content",
+              "posts.description",
               "posts.thumbnailKey as thumbnail_key",
               "posts.createdAt as created_at",
               "posts.userId as user_id",
@@ -276,9 +278,9 @@ export class PostVotesService extends Context.Service<
         );
 
         const likedRows: LikedPostRow[] = rows.map((row, index) => ({
-          added_at: row.added_at,
-          content: row.content,
-          created_at: row.created_at,
+          added_at: row.added_at.toISOString(),
+          description: row.description,
+          created_at: row.created_at.toISOString(),
           id: row.id,
           position: pagination.offset + index,
           post_id: row.post_id,

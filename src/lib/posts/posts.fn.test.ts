@@ -50,7 +50,7 @@ const insertPost = async (
   overrides: Partial<{
     id: number;
     title: string;
-    content: string;
+    description: string;
     userId: string;
     videoKey: string;
     thumbnailKey: string;
@@ -62,7 +62,7 @@ const insertPost = async (
 ) => {
   const defaults = {
     title: "Test Post",
-    content: "<p>Test content</p>",
+    description: "<p>Test description</p>",
     userId: "user-1",
     videoKey: "videos/user-1/abc.mp4",
     thumbnailKey: "thumbnails/user-1/abc.jpg",
@@ -124,8 +124,8 @@ describe("PostsService.search", () => {
   });
 
   it("returns paginated posts with metadata", async () => {
-    await insertPost({ title: "Post 1", content: "Content 1" });
-    await insertPost({ title: "Post 2", content: "Content 2" });
+    await insertPost({ title: "Post 1", description: "Content 1" });
+    await insertPost({ title: "Post 2", description: "Content 2" });
 
     const result = await runEffect(
       PostsService.search({
@@ -145,8 +145,8 @@ describe("PostsService.search", () => {
   });
 
   it("filters by search query", async () => {
-    await insertPost({ title: "Anime Sakuga", content: "Great animation" });
-    await insertPost({ title: "Regular Post", content: "Nothing here" });
+    await insertPost({ title: "Anime Sakuga", description: "Great animation" });
+    await insertPost({ title: "Regular Post", description: "Nothing here" });
 
     const result = await runEffect(
       PostsService.search({
@@ -163,8 +163,8 @@ describe("PostsService.search", () => {
   });
 
   it("treats search wildcards as literals", async () => {
-    await insertPost({ title: "100% Anime", content: "literal percent" });
-    await insertPost({ title: "Plain Post", content: "no percent" });
+    await insertPost({ title: "100% Anime", description: "literal percent" });
+    await insertPost({ title: "Plain Post", description: "no percent" });
 
     const result = await runEffect(
       PostsService.search({
@@ -181,7 +181,7 @@ describe("PostsService.search", () => {
   });
 
   it("does not treat a bare percent query as match-all", async () => {
-    await insertPost({ title: "Anime", content: "Sakuga" });
+    await insertPost({ title: "Anime", description: "Sakuga" });
 
     const result = await runEffect(
       PostsService.search({
@@ -262,14 +262,14 @@ describe("PostsService.fetchDetail", () => {
   it("returns post details with user and empty tags", async () => {
     const postId = await insertPost({
       title: "Detail Post",
-      content: "<p>Rich content</p>",
+      description: "<p>Rich description</p>",
       source: "https://example.com",
     });
 
     const result = await runEffect(PostsService.fetchDetail(postId));
 
     expect(result.post.title).toBe("Detail Post");
-    expect(result.post.content).toBe("<p>Rich content</p>");
+    expect(result.post.description).toBe("<p>Rich description</p>");
     expect(result.post.source).toBe("https://example.com");
     expect(result.user.name).toBe("Alice");
     expect(result.user.id).toBe("user-1");
@@ -351,7 +351,7 @@ describe("PostsService.upload", () => {
   };
 
   const makeUploadInput = (videoKey: string) => ({
-    content: "<p>Test upload</p>",
+    description: "<p>Test upload</p>",
     relatedPostId: undefined,
     source: undefined,
     tags: [],
@@ -445,7 +445,7 @@ describe("PostsService.update", () => {
         PostsService.update({
           postId,
           title: "Hacked",
-          content: "Bad",
+          description: "Bad",
           source: "",
           relatedPostId: undefined,
           tags: [],
@@ -463,7 +463,7 @@ describe("PostsService.update", () => {
         PostsService.update({
           postId,
           title: "Hacked",
-          content: "Bad",
+          description: "Bad",
           source: "",
           relatedPostId: undefined,
           tags: [],
@@ -480,7 +480,7 @@ describe("PostsService.update", () => {
       PostsService.update({
         postId,
         title: "Updated",
-        content: "New content",
+        description: "New description",
         source: "https://new.example.com",
         relatedPostId: undefined,
         tags: [],
@@ -488,7 +488,7 @@ describe("PostsService.update", () => {
     );
 
     expect(result.title).toBe("Updated");
-    expect(result.content).toBe("New content");
+    expect(result.description).toBe("New description");
     expect(result.source).toBe("https://new.example.com");
   });
 
@@ -501,7 +501,7 @@ describe("PostsService.update", () => {
       PostsService.update({
         postId,
         title: "Tagged",
-        content: "Content",
+        description: "Content",
         source: "",
         relatedPostId: undefined,
         tags: [{ name: "new-tag" }, { id: existingTag, name: "existing" }],

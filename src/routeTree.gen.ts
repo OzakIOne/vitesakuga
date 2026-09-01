@@ -19,6 +19,12 @@ import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminRolesRouteImport } from './routes/admin.roles'
+import { Route as AdminStorageRouteImport } from './routes/admin.storage'
+import { Route as AdminSuggestionsRouteImport } from './routes/admin.suggestions'
 import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
 import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
@@ -80,6 +86,36 @@ const authSignupRoute = authSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
   getParentRoute: () => authRouteRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPromotionsRoute = AdminPromotionsRouteImport.update({
+  id: '/promotions',
+  path: '/promotions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRolesRoute = AdminRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStorageRoute = AdminStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSuggestionsRoute = AdminSuggestionsRouteImport.update({
+  id: '/suggestions',
+  path: '/suggestions',
+  getParentRoute: () => AdminRoute,
 } as any)
 const PlaylistsIndexRoute = PlaylistsIndexRouteImport.update({
   id: '/playlists/',
@@ -147,15 +183,21 @@ const UsersIdPlaylistsPlaylistIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/convert': typeof ConvertRoute
   '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
+  '/admin/promotions': typeof AdminPromotionsRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/storage': typeof AdminStorageRoute
+  '/admin/suggestions': typeof AdminSuggestionsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
@@ -170,15 +212,20 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/admin': typeof AdminRoute
   '/convert': typeof ConvertRoute
   '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
   '/signup': typeof authSignupRoute
+  '/admin/promotions': typeof AdminPromotionsRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/storage': typeof AdminStorageRoute
+  '/admin/suggestions': typeof AdminSuggestionsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRouteWithChildren
+  '/admin': typeof AdminIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
@@ -195,15 +242,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
   '/account': typeof AccountRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/convert': typeof ConvertRoute
   '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/signup': typeof authSignupRoute
+  '/admin/promotions': typeof AdminPromotionsRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/storage': typeof AdminStorageRoute
+  '/admin/suggestions': typeof AdminSuggestionsRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
@@ -227,8 +280,14 @@ export interface FileRouteTypes {
     | '/upload'
     | '/login'
     | '/signup'
+    | '/admin/promotions'
+    | '/admin/reports'
+    | '/admin/roles'
+    | '/admin/storage'
+    | '/admin/suggestions'
     | '/posts/$postId'
     | '/users/$id'
+    | '/admin/'
     | '/playlists/'
     | '/posts/'
     | '/users/'
@@ -243,15 +302,20 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
-    | '/admin'
     | '/convert'
     | '/notifications'
     | '/two-factor'
     | '/upload'
     | '/login'
     | '/signup'
+    | '/admin/promotions'
+    | '/admin/reports'
+    | '/admin/roles'
+    | '/admin/storage'
+    | '/admin/suggestions'
     | '/posts/$postId'
     | '/users/$id'
+    | '/admin'
     | '/playlists'
     | '/posts'
     | '/users'
@@ -274,8 +338,14 @@ export interface FileRouteTypes {
     | '/upload'
     | '/(auth)/login'
     | '/(auth)/signup'
+    | '/admin/promotions'
+    | '/admin/reports'
+    | '/admin/roles'
+    | '/admin/storage'
+    | '/admin/suggestions'
     | '/posts/$postId'
     | '/users/$id'
+    | '/admin/'
     | '/playlists/'
     | '/posts/'
     | '/users/'
@@ -292,7 +362,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authRouteRoute: typeof authRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   ConvertRoute: typeof ConvertRoute
   NotificationsRoute: typeof NotificationsRoute
   TwoFactorRoute: typeof TwoFactorRoute
@@ -380,6 +450,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/signup'
       preLoaderRoute: typeof authSignupRouteImport
       parentRoute: typeof authRouteRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/promotions': {
+      id: '/admin/promotions'
+      path: '/promotions'
+      fullPath: '/admin/promotions'
+      preLoaderRoute: typeof AdminPromotionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/roles': {
+      id: '/admin/roles'
+      path: '/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AdminRolesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/storage': {
+      id: '/admin/storage'
+      path: '/storage'
+      fullPath: '/admin/storage'
+      preLoaderRoute: typeof AdminStorageRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/suggestions': {
+      id: '/admin/suggestions'
+      path: '/suggestions'
+      fullPath: '/admin/suggestions'
+      preLoaderRoute: typeof AdminSuggestionsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/playlists/': {
       id: '/playlists/'
@@ -482,6 +594,26 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
 
+interface AdminRouteChildren {
+  AdminPromotionsRoute: typeof AdminPromotionsRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminRolesRoute: typeof AdminRolesRoute
+  AdminStorageRoute: typeof AdminStorageRoute
+  AdminSuggestionsRoute: typeof AdminSuggestionsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminPromotionsRoute: AdminPromotionsRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminRolesRoute: AdminRolesRoute,
+  AdminStorageRoute: AdminStorageRoute,
+  AdminSuggestionsRoute: AdminSuggestionsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface UsersIdRouteChildren {
   UsersIdPlaylistsPlaylistIdRoute: typeof UsersIdPlaylistsPlaylistIdRoute
   UsersIdPlaylistsIndexRoute: typeof UsersIdPlaylistsIndexRoute
@@ -499,7 +631,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
   AccountRoute: AccountRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   ConvertRoute: ConvertRoute,
   NotificationsRoute: NotificationsRoute,
   TwoFactorRoute: TwoFactorRoute,

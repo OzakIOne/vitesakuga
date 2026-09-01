@@ -11,7 +11,7 @@ import {
   VStack,
 } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
 
@@ -39,9 +39,9 @@ function PlaylistsContent() {
   return (
     <Box p={4}>
       <HStack align="center" justify="space-between" mb={4}>
-        <Text fontSize="2xl" fontWeight="bold">
+        <Heading as="h1" size="2xl">
           {isOwner ? "My Playlists" : "Playlists"}
-        </Text>
+        </Heading>
         {isOwner && (
           <Button asChild size="xs" variant="outline">
             <Link to="/account/playlists">Manage</Link>
@@ -86,7 +86,7 @@ function PlaylistsContent() {
                   overflow="hidden"
                   position="relative"
                   transitionDuration="200ms"
-                  transitionProperty="all"
+                  transitionProperty="filter"
                   w="full"
                 >
                   {playlist.thumbnail_key ? (

@@ -545,6 +545,7 @@ export function useChakraProps<P extends ChakraStyleProps>(
             if (v === "colors") return "transition-colors";
             if (v === "transform") return "transition-transform";
             if (v === "opacity") return "transition-opacity";
+            if (v === "filter") return "transition-[filter]";
             return "transition-all";
           }),
         );

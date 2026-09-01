@@ -18,7 +18,7 @@ import { LuCheck, LuChevronDown, LuX } from "react-icons/lu";
 import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
 
 const DIALOG_CONTENT_BASE =
-  "relative z-50 w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "relative z-50 w-full max-w-md overscroll-contain rounded-lg border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 export const Dialog = {
   Root: (props: React.ComponentProps<typeof ArkDialog.Root>) => (
@@ -616,8 +616,9 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.ItemDeleteTrigger
+        aria-label="Remove tag"
         className={cx(
-          "cursor-pointer rounded p-0.5 text-gray-500 transition-colors hover:text-red-600",
+          "cursor-pointer rounded p-0.5 text-gray-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40",
           className,
         )}
         style={style}
@@ -911,7 +912,7 @@ export const Slider = {
     return (
       <ArkSlider.Thumb
         className={cx(
-          "block h-4 w-4 rounded-full border border-gray-300 bg-white shadow-sm",
+          "block h-4 w-4 rounded-full border border-gray-300 bg-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2",
           className,
         )}
         style={style}

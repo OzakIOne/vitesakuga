@@ -92,7 +92,7 @@ function SignupForm() {
                       onChange={(e) => {
                         field.handleChange(e.target.value);
                       }}
-                      placeholder="John doe"
+                      placeholder="Jane Doe"
                       value={field.state.value}
                     />
                   </Field.Root>
@@ -218,8 +218,8 @@ function SignupForm() {
               onClick={() => void socialLogin("github").catch(setServerError)}
               type="button"
             >
-              <IoLogoGithub />
-              Login with GitHub
+              <IoLogoGithub aria-hidden="true" />
+              Sign up with GitHub
             </Button>
             {envClient.VITE_GOOGLE_CLIENT_ID && (
               <Button
@@ -227,8 +227,8 @@ function SignupForm() {
                 onClick={() => void socialLogin("google").catch(setServerError)}
                 type="button"
               >
-                <FcGoogle />
-                Login with Google
+                <FcGoogle aria-hidden="true" />
+                Sign up with Google
               </Button>
             )}
           </div>

@@ -12,7 +12,8 @@ const dbTimestampString = "2026-08-07 11:52:43.626462";
 
 const postRow = {
   animeTitle: null,
-  content: "A test post",
+  chapterNumber: null,
+  description: "A test post",
   createdAt: dbTimestampString,
   episodeNumber: null,
   id: 1,
@@ -25,6 +26,7 @@ const postRow = {
   userId: "user-1",
   videoKey: "video-key",
   videoMetadata: {},
+  volumeNumber: null,
 };
 
 describe("postsSelectSchema", () => {

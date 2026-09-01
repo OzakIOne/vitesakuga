@@ -3,7 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { safeParseStrict } from "../effect/schema.utils";
+import {
+  safeParseStrictIssues,
+  type SchemaFieldIssue,
+} from "../effect/schema.utils";
 import {
   toastError,
   useMutationWithFeedback,
@@ -32,7 +35,8 @@ type UseUploadFormParams = {
 };
 
 type UploadFormValues = {
-  content: string;
+  chapterNumber: number | undefined;
+  description: string;
   episodeNumber: number | undefined;
   images: File[] | undefined;
   relatedPostId: number | undefined;
@@ -43,6 +47,44 @@ type UploadFormValues = {
   title: string;
   videoKey: string | undefined;
   videoMetadata: VideoMetadata | undefined;
+  volumeNumber: number | undefined;
+};
+
+/** TanStack Form validator error shape that addresses individual fields. */
+export type FormValidationErrors = {
+  form?: string;
+  fields: Record<string, string>;
+};
+
+/**
+ * Route schema failures to the fields they belong to, so TanStack Form can
+ * display them inline next to the offending input instead of as one opaque
+ * form-level blob. Top-level property paths (e.g. ["description"]) map to
+ * that field; anything else (form-level checks, nested paths) becomes a form
+ * error.
+ */
+export const toFormValidationErrors = (
+  issues: SchemaFieldIssue[],
+): FormValidationErrors => {
+  const fields: Record<string, string> = {};
+  const form: string[] = [];
+  for (const issue of issues) {
+    const [head, ...rest] = issue.path;
+    if (head !== undefined && rest.length === 0) {
+      fields[head] ??= issue.message;
+    } else {
+      form.push(
+        issue.path.length > 0
+          ? `${issue.message} at [${issue.path.map((segment) => JSON.stringify(segment)).join(", ")}]`
+          : issue.message,
+      );
+    }
+  }
+  const result: FormValidationErrors = { fields };
+  if (form.length > 0) {
+    result.form = form.join("; ");
+  }
+  return result;
 };
 
 export function useUploadForm(params: UseUploadFormParams) {
@@ -81,7 +123,8 @@ export function useUploadForm(params: UseUploadFormParams) {
   // form with the draft the post was built from, and the autosave would then
   // re-persist that draft right after a successful upload cleared it.
   const emptyValues: UploadFormValues = {
-    content: "",
+    chapterNumber: undefined,
+    description: "",
     episodeNumber: undefined,
     images: undefined,
     relatedPostId: undefined,
@@ -92,24 +135,28 @@ export function useUploadForm(params: UseUploadFormParams) {
     title: "",
     videoKey: undefined,
     videoMetadata: undefined,
+    volumeNumber: undefined,
   };
 
   const defaultValues: UploadFormValues = {
     ...emptyValues,
-    content: draft?.content ?? "",
+    chapterNumber: draft?.chapterNumber,
+    description: draft?.description ?? "",
     relatedPostId: draft?.relatedPostId,
     seasonNumber: draft?.seasonNumber,
     source: draft?.source,
     tags: draft?.tags ?? [],
     title: draft?.title ?? "",
     episodeNumber: draft?.episodeNumber,
+    volumeNumber: draft?.volumeNumber,
   };
 
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      // The form value is already the submit shape; season/episode simply
-      // stay absent when the user left them empty.
+      // The form value is already the submit shape; optional numeric
+      // metadata (season/episode, volume/chapter) simply stays absent when
+      // the user left it empty.
       const formData = buildFormData(value);
       await uploadPostMutation.mutateAsync(formData);
     },
@@ -120,11 +167,13 @@ export function useUploadForm(params: UseUploadFormParams) {
         const definedEntries = Object.entries(value).filter(
           ([, v]) => v !== undefined,
         );
-        const result = safeParseStrict(FormFileUploadSchema)(
+        const result = safeParseStrictIssues(FormFileUploadSchema)(
           Object.fromEntries(definedEntries),
         );
         if (!result.success) {
-          return result.message;
+          // Field-addressable errors (e.g. ["description"]) are returned as a
+          // `fields` map so they render inline next to the offending input.
+          return toFormValidationErrors(result.issues);
         }
         return undefined;
       },

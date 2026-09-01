@@ -1,16 +1,28 @@
 import { ClientOnly } from "@ark-ui/react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  createFileRoute,
+  redirect,
+} from "@tanstack/react-router";
 import { Suspense } from "react";
-import { PromotionQueuePanel } from "src/components/admin/PromotionQueuePanel";
-import { ReportsPanel } from "src/components/admin/ReportsPanel";
-import { RolesPanel } from "src/components/admin/RolesPanel";
-import { StorageGcPanel } from "src/components/admin/StorageGcPanel";
-import { SuggestionsPanel } from "src/components/admin/SuggestionsPanel";
 import { Spinner } from "src/components/ui/feedback";
 import { Container, Stack } from "src/components/ui/layout";
-import { Tabs } from "src/components/ui/tabs";
+import {
+  TABS_LIST_BASE,
+  TABS_TRIGGER_BASE,
+  TABS_TRIGGER_SELECTED,
+} from "src/components/ui/tabs";
 import { Text } from "src/components/ui/typography";
 import { roleOf } from "src/lib/auth/roles";
+
+const ADMIN_TABS = [
+  { label: "Promotions", to: "/admin/promotions" },
+  { label: "Reports", to: "/admin/reports" },
+  { label: "Suggestions", to: "/admin/suggestions" },
+  { label: "Storage", to: "/admin/storage" },
+  { label: "Roles", to: "/admin/roles" },
+] as const;
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async ({ context }) => {
@@ -24,40 +36,36 @@ export const Route = createFileRoute("/admin")({
       throw redirect({ to: "/" });
     }
   },
-  component: AdminPage,
+  component: AdminLayout,
 });
 
-function AdminPage() {
+/**
+ * Routed admin shell: the tab strip links to real sub-routes
+ * (/admin/promotions, /admin/reports, …) so each panel is addressable.
+ */
+function AdminLayout() {
   return (
     <ClientOnly fallback={<AdminLoading />}>
       <Container py={6}>
         <Stack gap={4}>
-          <Tabs.Root defaultValue="promotions">
-            <Tabs.List>
-              <Tabs.Trigger value="promotions">Promotions</Tabs.Trigger>
-              <Tabs.Trigger value="reports">Reports</Tabs.Trigger>
-              <Tabs.Trigger value="suggestions">Suggestions</Tabs.Trigger>
-              <Tabs.Trigger value="storage">Storage</Tabs.Trigger>
-              <Tabs.Trigger value="roles">Roles</Tabs.Trigger>
-            </Tabs.List>
-            <Suspense fallback={<AdminLoading />}>
-              <Tabs.Content value="promotions" p={4}>
-                <PromotionQueuePanel />
-              </Tabs.Content>
-              <Tabs.Content value="reports" p={4}>
-                <ReportsPanel />
-              </Tabs.Content>
-              <Tabs.Content value="suggestions" p={4}>
-                <SuggestionsPanel />
-              </Tabs.Content>
-              <Tabs.Content value="storage" p={4}>
-                <StorageGcPanel />
-              </Tabs.Content>
-              <Tabs.Content value="roles" p={4}>
-                <RolesPanel />
-              </Tabs.Content>
-            </Suspense>
-          </Tabs.Root>
+          <nav aria-label="Admin sections">
+            <div className={TABS_LIST_BASE}>
+              {ADMIN_TABS.map((tab) => (
+                <Link
+                  activeOptions={{ exact: true }}
+                  activeProps={{ className: TABS_TRIGGER_SELECTED }}
+                  className={TABS_TRIGGER_BASE}
+                  key={tab.to}
+                  to={tab.to}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+          <Suspense fallback={<AdminLoading />}>
+            <Outlet />
+          </Suspense>
         </Stack>
       </Container>
     </ClientOnly>

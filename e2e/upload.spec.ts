@@ -32,7 +32,7 @@ test.describe("Upload page", () => {
     page,
   }) => {
     await page.locator("#title").fill("Test Video");
-    await page.locator("#content").fill("A test video description");
+    await page.locator("#description").fill("A test video description");
 
     const fileChooserPromise = page.waitForEvent("filechooser", {
       timeout: 10000,

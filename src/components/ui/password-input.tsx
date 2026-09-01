@@ -110,10 +110,20 @@ export const PasswordStrengthMeter = React.forwardRef<
   const { max = 4, value, label, ...rest } = props;
   const percent = (value / max) * 100;
   const { colorClass, label: defaultLabel } = getColorPalette(percent);
+  const accessibleLabel = label ?? defaultLabel;
 
   return (
     <div className="flex w-full flex-col gap-1" ref={ref} {...rest}>
-      <div className="flex w-full gap-1">
+      <meter
+        aria-label={`Password strength: ${accessibleLabel}`}
+        aria-valuetext={accessibleLabel}
+        className="sr-only"
+        low={max * 0.33}
+        max={max}
+        optimum={max}
+        value={value}
+      />
+      <div aria-hidden="true" className="flex w-full gap-1">
         {Array.from({ length: max }).map((_, index) => (
           <div
             className={cx(
@@ -124,7 +134,7 @@ export const PasswordStrengthMeter = React.forwardRef<
           />
         ))}
       </div>
-      {label && <div className="text-xs">{label ?? defaultLabel}</div>}
+      {label && <div className="text-xs">{accessibleLabel}</div>}
     </div>
   );
 });

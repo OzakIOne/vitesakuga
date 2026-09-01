@@ -1,7 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { Schema } from "effect";
 
-import type { PaginationMeta } from "../pagination/pagination";
 import type {
   fetchPlaylistDetailSchema,
   fetchPublicPlaylistsSchema,
@@ -11,6 +10,7 @@ import {
   fetchPlaylistsForPost,
   fetchPublicPlaylists,
   fetchUserPlaylists,
+  type PlaylistDetailResult,
 } from "./playlists.service";
 
 const PLAYLIST_QUERY_CACHE = {
@@ -18,41 +18,11 @@ const PLAYLIST_QUERY_CACHE = {
   staleTime: Infinity,
 } as const;
 
-export type PlaylistDetailPage = {
-  playlist: {
-    id: number;
-    user_id: string;
-    title: string;
-    description: string | null;
-    is_public: boolean;
-    created_at: Date;
-    updated_at: Date;
-    post_count: number;
-    thumbnail_key: string | null;
-  };
-  data: readonly (
-    | {
-        post_id: number;
-        position: number;
-        added_at: Date;
-        id: number | null;
-        title: string | null;
-        content: string | null;
-        thumbnail_key: string | null;
-        created_at: Date | null;
-        user_id: string | null;
-        user_name: string | null;
-        video_key: string | null;
-      }
-    | {
-        orphan: true;
-        post_id: number;
-        position: number;
-        added_at: Date;
-      }
-  )[];
-  meta: { pagination: PaginationMeta };
-};
+/**
+ * Derived from the service's wire result so the query cache shape can never
+ * drift from what the server function actually returns (ISO date strings).
+ */
+export type PlaylistDetailPage = PlaylistDetailResult;
 
 export const playlistsKeys = {
   all: ["playlists"] as const,

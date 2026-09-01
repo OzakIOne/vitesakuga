@@ -27,7 +27,7 @@ const insertPost = async (db: Kysely<DB>, ownerId: string) => {
   await db
     .insertInto("posts")
     .values({
-      content: "original content",
+      description: "original description",
       id: postSeq,
       thumbnailKey: `thumb-${postSeq}.jpg`,
       title: "Original title",
@@ -47,7 +47,7 @@ const editRow = (db: Kysely<DB>, editId: number) =>
     .executeTakeFirstOrThrow();
 
 const PAYLOAD: PostEditPayload = {
-  content: "improved content",
+  description: "improved description",
   title: "Improved title",
 };
 
@@ -122,7 +122,7 @@ describe("PostEditsService.approve", () => {
       .where("id", "=", postId)
       .executeTakeFirstOrThrow();
     expect(post.title).toBe("Improved title");
-    expect(post.content).toBe("improved content");
+    expect(post.description).toBe("improved description");
 
     const row = await editRow(db, editId);
     expect(row.status).toBe("approved");

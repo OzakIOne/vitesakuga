@@ -50,7 +50,7 @@ describe("TagsService.popular", () => {
       .insertInto("posts")
       .values({
         title: "Post",
-        content: "Content",
+        description: "Content",
         userId: user.id,
         videoKey: "videos/k.mp4",
         thumbnailKey: "thumbnails/k.jpg",

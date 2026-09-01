@@ -13,11 +13,12 @@ import {
   VStack,
 } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { parse } from "src/lib/effect/schema.utils";
 import { asPlaylistId } from "src/lib/ids";
 import { playlistQueryDetail } from "src/lib/playlists/playlists.queries";
+import { formatDateUtc } from "src/utils/date-format";
 
 const PlaylistSearchSchema = Schema.Struct({
   page: Schema.Number.pipe(
@@ -74,9 +75,9 @@ function PlaylistDetailContent() {
       {data && (
         <>
           <VStack align="start" gap={2} mb={6}>
-            <Text fontSize="2xl" fontWeight="bold">
+            <Heading as="h1" size="2xl">
               {data.playlist.title}
-            </Text>
+            </Heading>
             {data.playlist.description && (
               <Text color="gray.500">{data.playlist.description}</Text>
             )}
@@ -157,7 +158,7 @@ function PlaylistDetailContent() {
                           overflow="hidden"
                           position="relative"
                           transitionDuration="200ms"
-                          transitionProperty="all"
+                          transitionProperty="filter"
                           w="full"
                         >
                           {item.thumbnail_key && (
@@ -188,10 +189,7 @@ function PlaylistDetailContent() {
                           </Text>
                           {item.created_at && (
                             <Text color="gray.500" fontSize="xs">
-                              {new Date(item.created_at).toLocaleDateString(
-                                "en-US",
-                                { timeZone: "UTC" },
-                              )}
+                              {formatDateUtc(item.created_at)}
                             </Text>
                           )}
                         </VStack>

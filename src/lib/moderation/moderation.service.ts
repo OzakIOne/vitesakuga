@@ -14,7 +14,8 @@ const MOD_QUEUE_LIMIT = 50;
 
 /** A recent post report, joined with its post title and reporter name. */
 export type ModerationReportRow = {
-  readonly createdAt: Date;
+  /** ISO timestamp string — `Date` instances do not survive the JSON server-function transport. */
+  readonly createdAt: string;
   readonly postId: number;
   readonly postTitle: string;
   readonly reason: string;
@@ -24,7 +25,8 @@ export type ModerationReportRow = {
 /** A pending edit suggestion with its live approval count. */
 export type ModerationPendingEditRow = {
   readonly approvals: number;
-  readonly createdAt: Date;
+  /** ISO timestamp string — `Date` instances do not survive the JSON server-function transport. */
+  readonly createdAt: string;
   readonly editId: number;
   readonly postId: number;
   readonly postTitle: string;
@@ -122,14 +124,14 @@ export class ModerationService extends Context.Service<
       return {
         pendingEdits: pendingRows.map((row) => ({
           approvals: Number(row.approvals ?? 0),
-          createdAt: row.createdAt,
+          createdAt: row.createdAt.toISOString(),
           editId: row.editId,
           postId: row.postId,
           postTitle: row.postTitle,
           suggestedByName: row.suggestedByName,
         })),
         reports: reports.map((row) => ({
-          createdAt: row.createdAt,
+          createdAt: row.createdAt.toISOString(),
           postId: row.postId,
           postTitle: row.postTitle,
           reason: row.reason,

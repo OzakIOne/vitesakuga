@@ -33,7 +33,7 @@ beforeEach(async () => {
     .insertInto("posts")
     .values({
       title: "Test Post",
-      content: "Content",
+      description: "Content",
       userId: "user-1",
       videoKey: "videos/abc.mp4",
       thumbnailKey: "thumbnails/abc.jpg",

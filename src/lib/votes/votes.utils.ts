@@ -57,7 +57,17 @@ export const mergeVoteCounts = Effect.fn("mergeVoteCounts")(function* (
   });
 
   return yield* Effect.try({
-    try: () => parse(Schema.Array(postWithVotesSelectSchema))(withVotes),
+    // Decode validates the rows (normalizing timestamps to `Date`), then
+    // re-encode so `createdAt` leaves as an ISO string — the wire format the
+    // client's `PostWithVotes` type promises.
+    try: () => {
+      const decoded = parse(Schema.Array(postWithVotesSelectSchema))(
+        withVotes,
+      );
+      return Schema.encodeSync(Schema.Array(postWithVotesSelectSchema))(
+        decoded,
+      );
+    },
     catch: (error) =>
       new RowParseError({
         message: `Error processing post vote counts: ${String(error)}`,

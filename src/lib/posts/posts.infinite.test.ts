@@ -12,7 +12,7 @@ const makePage = (
   opts: { hasMore?: boolean; hasPrevious?: boolean; length?: number } = {},
 ): PostsInfinitePage => ({
   data: Array.from({ length: opts.length ?? 2 }, (_, i) => ({
-    content: "content",
+    description: "description",
     createdAt: new Date(),
     dislikes: 0,
     id: asPostId(i),

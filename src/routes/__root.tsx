@@ -101,6 +101,16 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
         name: "viewport",
       },
+      {
+        content: "#ffffff",
+        media: "(prefers-color-scheme: light)",
+        name: "theme-color",
+      },
+      {
+        content: "#0a0a0a",
+        media: "(prefers-color-scheme: dark)",
+        name: "theme-color",
+      },
       ...seo({
         description: "Sakugabooru clone made with tanstack.",
         title: "Vitesakuga",
@@ -195,6 +205,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Provider>
+          <Link
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-md dark:focus:bg-gray-900 dark:focus:text-gray-100"
+            to="/"
+          >
+            Skip to content
+          </Link>
           <Center
             gap={2}
             left={0}
@@ -361,6 +377,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 </Menu.Trigger>
                 <Menu.Positioner>
                   <Menu.Content>
+                    <Menu.Item asChild value="home">
+                      <Link to="/">Home</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="posts">
+                      <Link to="/posts">Posts</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="users">
+                      <Link to="/users">Users</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="playlists">
+                      <Link to="/playlists">Playlists</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="upload">
+                      <Link to="/upload">Upload</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="convert">
+                      <Link to="/convert">Convert video</Link>
+                    </Menu.Item>
+                    <Menu.Separator />
                     {ctx.user ? (
                       <>
                         <Menu.Item asChild value="account">
@@ -422,7 +457,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               </Menu.Root>
             </Box>
           </Center>
-          <Box pt={16}>{children}</Box>
+          <main className="pt-16">{children}</main>
           <ClientOnly fallback={null}>
             <Toaster />
             <TanStackDevtools

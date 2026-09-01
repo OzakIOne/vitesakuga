@@ -98,7 +98,7 @@ function LoginForm() {
               />
             </Field.Root>
 
-            <Button disabled={loginMutation.isPending} type="submit">
+            <Button loading={loginMutation.isPending} type="submit">
               {loginMutation.isPending ? "Logging in..." : "Login"}
             </Button>
 
@@ -111,7 +111,7 @@ function LoginForm() {
             <div className="hidden" ref={containerRef} />
           </div>
           {serverError && (
-            <span className="text-destructive text-center text-sm">
+            <span className="text-destructive text-center text-sm" role="alert">
               {serverError}
             </span>
           )}
@@ -121,7 +121,7 @@ function LoginForm() {
               onClick={() => void handleSocialLogin("github")}
               type="button"
             >
-              <IoLogoGithub />
+              <IoLogoGithub aria-hidden="true" />
               Login with GitHub
             </Button>
             {envClient.VITE_GOOGLE_CLIENT_ID && (
@@ -130,7 +130,7 @@ function LoginForm() {
                 onClick={() => void handleSocialLogin("google")}
                 type="button"
               >
-                <FcGoogle />
+                <FcGoogle aria-hidden="true" />
                 Login with Google
               </Button>
             )}

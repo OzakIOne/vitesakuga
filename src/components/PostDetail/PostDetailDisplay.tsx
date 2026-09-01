@@ -26,7 +26,7 @@ type PostDetailDisplayProps = {
 type EditState = {
   isEditing: boolean;
   titleDraft: string;
-  contentDraft: string;
+  descriptionDraft: string;
   sourceDraft: string;
   tagsDraft: Tag[];
 };
@@ -35,12 +35,12 @@ type EditAction =
   | {
       type: "startEditing";
       title: string;
-      content: string;
+      description: string;
       source: string;
       tags: Tag[];
     }
   | { type: "updateTitle"; title: string }
-  | { type: "updateContent"; content: string }
+  | { type: "updateDescription"; description: string }
   | { type: "updateSource"; source: string }
   | { type: "updateTags"; tags: Tag[] }
   | { type: "stopEditing" };
@@ -51,14 +51,14 @@ function editReducer(state: EditState, action: EditAction): EditState {
       return {
         isEditing: true,
         titleDraft: action.title,
-        contentDraft: action.content,
+        descriptionDraft: action.description,
         sourceDraft: action.source,
         tagsDraft: action.tags,
       };
     case "updateTitle":
       return { ...state, titleDraft: action.title };
-    case "updateContent":
-      return { ...state, contentDraft: action.content };
+    case "updateDescription":
+      return { ...state, descriptionDraft: action.description };
     case "updateSource":
       return { ...state, sourceDraft: action.source };
     case "updateTags":
@@ -84,11 +84,11 @@ export function PostDetailDisplay({
   const [editState, dispatchEdit] = useReducer(editReducer, {
     isEditing: false,
     titleDraft: post.title ?? "",
-    contentDraft: post.content ?? "",
+    descriptionDraft: post.description ?? "",
     sourceDraft: post.source ?? "",
     tagsDraft: initialTags,
   });
-  const { isEditing, titleDraft, contentDraft, sourceDraft, tagsDraft } =
+  const { isEditing, titleDraft, descriptionDraft, sourceDraft, tagsDraft } =
     editState;
 
   const isOwner = currentUserId === user.id;
@@ -98,13 +98,13 @@ export function PostDetailDisplay({
     errorTitle: "Error updating post",
     mutationFn: async (data: {
       title: string;
-      content: string;
+      description: string;
       source: string | undefined;
       tags: { id?: number; name: string }[];
     }) =>
       updatePost({
         data: {
-          content: data.content,
+          description: data.description,
           postId: post.id,
           relatedPostId: post.relatedPostId ?? undefined,
           source: data.source,
@@ -126,7 +126,7 @@ export function PostDetailDisplay({
     dispatchEdit({
       type: "startEditing",
       title: post.title ?? "",
-      content: post.content ?? "",
+      description: post.description ?? "",
       source: post.source ?? "",
       tags: initialTags,
     });
@@ -134,11 +134,11 @@ export function PostDetailDisplay({
 
   const save = () => {
     const trimmedTitle = titleDraft.trim();
-    if (!trimmedTitle || contentDraft.trim().length < 3) {
+    if (!trimmedTitle || descriptionDraft.trim().length < 3) {
       return;
     }
     updatePostMutation.mutate({
-      content: contentDraft,
+      description: descriptionDraft,
       source: sourceDraft.trim() || undefined,
       tags: tagsDraft,
       title: trimmedTitle,
@@ -161,17 +161,17 @@ export function PostDetailDisplay({
               value={titleDraft}
             />
             <Field.Root>
-              <Field.Label htmlFor="post-content">Content</Field.Label>
+              <Field.Label htmlFor="post-description">Description</Field.Label>
               <Textarea
                 disabled={updatePostMutation.isPending}
-                id="post-content"
+                id="post-description"
                 onChange={(e) => {
                   dispatchEdit({
-                    type: "updateContent",
-                    content: e.target.value,
+                    type: "updateDescription",
+                    description: e.target.value,
                   });
                 }}
-                value={contentDraft}
+                value={descriptionDraft}
               />
             </Field.Root>
             <Field.Root>
@@ -200,7 +200,7 @@ export function PostDetailDisplay({
               <Button
                 disabled={
                   !titleDraft.trim() ||
-                  contentDraft.trim().length < 3 ||
+                  descriptionDraft.trim().length < 3 ||
                   updatePostMutation.isPending
                 }
                 loading={updatePostMutation.isPending}

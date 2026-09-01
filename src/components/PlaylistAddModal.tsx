@@ -193,7 +193,9 @@ export function PlaylistAddModal({
                 <Box borderTop="1px" borderColor="gray.100" pt={3}>
                   <HStack>
                     <Input
+                      aria-label="New playlist name"
                       disabled={isCreating}
+                      name="new-playlist-title"
                       onChange={(e) => setNewTitle(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") void handleCreateAndAdd();

@@ -21,6 +21,7 @@ import { assetUrl } from "src/lib/assets/url";
 import type { PostWithVotes } from "src/lib/db/schema";
 import { formatEpisodeInfo } from "src/lib/posts/episode-info";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
+import { formatDateUtc } from "src/utils/date-format";
 
 type PostListProps = {
   post: PostWithVotes;
@@ -124,87 +125,79 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
 function PostCardComponent({ post, searchParams }: PostListProps) {
   const episodeInfo = formatEpisodeInfo(post);
   return (
-    <Link
-      className="group"
-      params={{ postId: post.id }}
-      to="/posts/$postId"
-      {...(searchParams ? { search: searchParams } : {})}
-    >
-      <VStack cursor="pointer" gap={2} h="full">
-        <Box
-          _groupHover={{
-            filter: "brightness(0.75)",
-          }}
-          aspectRatio="16 / 9"
-          bg="gray.900"
-          borderRadius="lg"
-          overflow="hidden"
-          position="relative"
-          transitionDuration="200ms"
-          transitionProperty="all"
-          w="full"
-        >
-          <Image
-            alt={post.title}
-            h="full"
-            objectFit="contain"
-            src={assetUrl(post.thumbnailKey)}
-            w="full"
-          />
+    <Box className="relative" h="full">
+      <Link
+        className="group"
+        params={{ postId: post.id }}
+        to="/posts/$postId"
+        {...(searchParams ? { search: searchParams } : {})}
+      >
+        <VStack cursor="pointer" gap={2} h="full">
           <Box
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
+            _groupHover={{
+              filter: "brightness(0.75)",
             }}
-            position="absolute"
-            right={2}
-            top={2}
-            zIndex={10}
+            aspectRatio="16 / 9"
+            bg="gray.900"
+            borderRadius="lg"
+            overflow="hidden"
+            transitionDuration="200ms"
+            transitionProperty="filter"
+            w="full"
           >
-            <PostCardMenu post={post} />
+            <Image
+              alt={post.title}
+              h="full"
+              objectFit="contain"
+              src={assetUrl(post.thumbnailKey)}
+              w="full"
+            />
           </Box>
-        </Box>
 
-        {/* Content Container */}
-        <HStack gap={3} px={1} w="full">
-          {/* Info Container */}
-          <VStack align="start" flex={1} gap={1} minW={0}>
-            <Heading
-              _groupHover={{
-                color: "gray.600",
-              }}
-              as="h3"
-              lineClamp={2}
-              size="sm"
-              transitionProperty="colors"
-            >
-              {post.title}
-            </Heading>
-            <Text color="gray.600" fontSize="xs" lineClamp={1}>
-              {post.content}
-            </Text>
-            {episodeInfo && (
-              <Text color="blue.500" fontSize="xs" lineClamp={1}>
-                {episodeInfo}
+          {/* Content Container */}
+          <HStack gap={3} px={1} w="full">
+            {/* Info Container */}
+            <VStack align="start" flex={1} gap={1} minW={0}>
+              <Heading
+                _groupHover={{
+                  color: "gray.600",
+                }}
+                as="h3"
+                lineClamp={2}
+                size="sm"
+                transitionProperty="colors"
+              >
+                {post.title}
+              </Heading>
+              <Text color="gray.600" fontSize="xs" lineClamp={1}>
+                {post.description}
               </Text>
-            )}
-            <Text color="gray.500" fontSize="xs">
-              {new Date(post.createdAt).toLocaleDateString()}
-            </Text>
-            <HStack gap={3}>
+              {episodeInfo && (
+                <Text color="blue.500" fontSize="xs" lineClamp={1}>
+                  {episodeInfo}
+                </Text>
+              )}
               <Text color="gray.500" fontSize="xs">
-                <LuThumbsUp aria-hidden className="mr-1 inline" />
-                {post.likes}
+                {formatDateUtc(post.createdAt)}
               </Text>
-              <Text color="gray.500" fontSize="xs">
-                <LuThumbsDown aria-hidden className="mr-1 inline" />
-                {post.dislikes}
-              </Text>
-            </HStack>
-          </VStack>
-        </HStack>
-      </VStack>
-    </Link>
+              <HStack gap={3}>
+                <Text className="tabular-nums" color="gray.500" fontSize="xs">
+                  <LuThumbsUp aria-hidden className="mr-1 inline" />
+                  {post.likes}
+                </Text>
+                <Text className="tabular-nums" color="gray.500" fontSize="xs">
+                  <LuThumbsDown aria-hidden className="mr-1 inline" />
+                  {post.dislikes}
+                </Text>
+              </HStack>
+            </VStack>
+          </HStack>
+        </VStack>
+      </Link>
+      <div className="absolute top-2 right-2 z-10">
+        <PostCardMenu post={post} />
+      </div>
+    </Box>
   );
 }
 

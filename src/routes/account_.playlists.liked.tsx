@@ -17,9 +17,10 @@ import {
   VStack,
 } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
+import { formatDateUtc } from "src/utils/date-format";
 
 const LikedSearchSchema = Schema.Struct({
   page: Schema.Number.pipe(
@@ -76,9 +77,9 @@ function LikedPostsContent() {
       {data && (
         <>
           <VStack align="start" gap={2} mb={6}>
-            <Text fontSize="2xl" fontWeight="bold">
+            <Heading as="h1" size="2xl">
               Liked posts
-            </Text>
+            </Heading>
             <HStack gap={4}>
               <Text color="gray.500" fontSize="sm">
                 {data.playlist.post_count} post
@@ -131,7 +132,7 @@ function LikedPostsContent() {
                         overflow="hidden"
                         position="relative"
                         transitionDuration="200ms"
-                        transitionProperty="all"
+                        transitionProperty="filter"
                         w="full"
                       >
                         {item.thumbnail_key && (
@@ -161,10 +162,7 @@ function LikedPostsContent() {
                           {item.title}
                         </Text>
                         <Text color="gray.500" fontSize="xs">
-                          Liked{" "}
-                          {new Date(item.added_at).toLocaleDateString("en-US", {
-                            timeZone: "UTC",
-                          })}
+                          Liked {formatDateUtc(item.added_at)}
                         </Text>
                       </VStack>
                     </VStack>

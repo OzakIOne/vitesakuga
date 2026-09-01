@@ -176,7 +176,7 @@ export const Progress = {
     props: React.ComponentProps<typeof ArkProgress.Range> & ChakraStyleProps,
   ) => (
     <ArkProgress.Range
-      className="h-full rounded-full bg-blue-600 transition-all"
+      className="h-full rounded-full bg-blue-600 transition-[width]"
       {...(props as React.ComponentProps<typeof ArkProgress.Range>)}
     />
   ),
@@ -196,11 +196,15 @@ export const Alert = {
       info: "border-blue-200 bg-blue-50 text-blue-800",
       warning: "border-orange-200 bg-orange-50 text-orange-800",
     }[status];
+    // Errors/warnings are urgent and should interrupt (role="alert");
+    // success/info updates are announced politely (role="status").
+    const role =
+      status === "error" || status === "warning" ? "alert" : "status";
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
         className={cx("rounded-md border p-4", statusClasses, className)}
-        role="alert"
+        role={role}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -230,7 +234,12 @@ export const Alert = {
       info: "text-blue-600",
       warning: "text-orange-600",
     }[status ?? "error"];
-    return <Icon className={cx("mt-0.5 h-5 w-5 shrink-0", iconClasses)} />;
+    return (
+      <Icon
+        aria-hidden="true"
+        className={cx("mt-0.5 h-5 w-5 shrink-0", iconClasses)}
+      />
+    );
   },
   Title: (
     props: React.HTMLAttributes<HTMLHeadingElement> & ChakraStyleProps,

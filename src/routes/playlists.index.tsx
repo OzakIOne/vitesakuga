@@ -12,7 +12,7 @@ import {
   VStack,
 } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { publicPlaylistsQueryOptions } from "src/lib/playlists/playlists.queries";
 
@@ -51,9 +51,9 @@ function PlaylistsContent() {
 
   return (
     <Box p={4} w="full">
-      <Text fontSize="2xl" fontWeight="bold" mb={4}>
+      <Heading as="h1" mb={4} size="2xl">
         Public Playlists
-      </Text>
+      </Heading>
 
       {isLoading && (
         <Stack align="center" justify="center" minH="200px">
@@ -94,7 +94,7 @@ function PlaylistsContent() {
                     overflow="hidden"
                     position="relative"
                     transitionDuration="200ms"
-                    transitionProperty="all"
+                    transitionProperty="filter"
                     w="full"
                   >
                     {playlist.thumbnail_key ? (

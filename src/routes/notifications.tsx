@@ -32,7 +32,7 @@ const notificationLabel = (type: string): string => {
   }
 };
 
-function formatWhen(date: Date): string {
+function formatWhen(date: Date | string): string {
   const diffMs = Date.now() - new Date(date).valueOf();
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) return "just now";

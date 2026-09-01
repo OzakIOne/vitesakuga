@@ -32,7 +32,7 @@ const insertVideoPost = async (
   await db
     .insertInto("posts")
     .values({
-      content: "content",
+      description: "content",
       id: postSeq,
       thumbnailKey: `thumbnails/x.jpg`,
       title: "Post",

@@ -10,7 +10,7 @@ import {
   VStack,
 } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
@@ -107,9 +107,9 @@ function ManagePlaylistsContent() {
   return (
     <Box p={4}>
       <VStack align="start" gap={1} mb={6}>
-        <Text fontSize="2xl" fontWeight="bold">
+        <Heading as="h1" size="2xl">
           My Playlists
-        </Text>
+        </Heading>
         <Text color="gray.500" fontSize="sm">
           Toggle visibility or open a playlist to manage its posts.
         </Text>

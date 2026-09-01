@@ -1,3 +1,4 @@
+import { Portal } from "@ark-ui/react";
 import {
   useQueryClient,
   useSuspenseInfiniteQuery,
@@ -7,11 +8,12 @@ import { Schema } from "effect";
 import { useCallback, useContext, useMemo, useState } from "react";
 import { PlaylistPostsTable } from "src/components/PlaylistPostsTable";
 import type { PlaylistPostTableRow } from "src/components/PlaylistPostsTable";
-import { Button } from "src/components/ui/button";
+import { Button, CloseButton } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
-import { Text } from "src/components/ui/typography";
+import { Dialog } from "src/components/ui/overlay";
+import { Heading, Text } from "src/components/ui/typography";
 import { parse } from "src/lib/effect/schema.utils";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
@@ -75,6 +77,7 @@ function ManagePlaylistContent() {
   );
   const [postIdsInput, setPostIdsInput] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useSuspenseInfiniteQuery(playlistsQueryDetailInfinite({ playlistId }));
@@ -93,7 +96,7 @@ function ManagePlaylistContent() {
               isOrphan: true,
               id: null,
               title: null,
-              content: null,
+              description: null,
               thumbnailKey: null,
               createdAt: null,
               userId: null,
@@ -107,7 +110,7 @@ function ManagePlaylistContent() {
             isOrphan: false,
             id: item.id,
             title: item.title,
-            content: item.content,
+            description: item.description,
             thumbnailKey: item.thumbnail_key,
             createdAt: item.created_at,
             userId: item.user_id,
@@ -191,9 +194,9 @@ function ManagePlaylistContent() {
       style={{ height: "calc(100dvh - 4rem)" }}
     >
       <VStack align="start" gap={2} mb={6}>
-        <Text fontSize="2xl" fontWeight="bold">
+        <Heading as="h1" size="2xl">
           {playlist.title}
-        </Text>
+        </Heading>
         {playlist.description && (
           <Text color="gray.500">{playlist.description}</Text>
         )}
@@ -282,16 +285,63 @@ function ManagePlaylistContent() {
       </Box>
 
       <HStack gap={2} mb={4}>
-        <Button
-          colorPalette="red"
-          disabled={selectedCount === 0}
-          loading={removePostsMutation.isPending}
-          onClick={() => removePostsMutation.mutate([...selectedPostIds])}
-          size="xs"
-          variant="outline"
+        <Dialog.Root
+          onOpenChange={(details) => {
+            if (!details.open) {
+              setRemoveConfirmOpen(false);
+            }
+          }}
+          open={removeConfirmOpen}
+          role="alertdialog"
         >
-          Remove selected ({selectedCount})
-        </Button>
+          <Dialog.Trigger asChild>
+            <Button
+              colorPalette="red"
+              disabled={selectedCount === 0}
+              onClick={() => setRemoveConfirmOpen(true)}
+              size="xs"
+              variant="outline"
+            >
+              Remove selected ({selectedCount})
+            </Button>
+          </Dialog.Trigger>
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content>
+                <Dialog.Header>
+                  <Dialog.Title>Remove posts from playlist?</Dialog.Title>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <p>
+                    {selectedCount} {selectedCount === 1 ? "post" : "posts"}{" "}
+                    will be removed from this playlist. You can add them back by
+                    their post ID.
+                  </p>
+                </Dialog.Body>
+                <Dialog.Footer>
+                  <Dialog.ActionTrigger asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </Dialog.ActionTrigger>
+                  <Button
+                    colorPalette="red"
+                    loading={removePostsMutation.isPending}
+                    onClick={() => {
+                      removePostsMutation.mutate([...selectedPostIds]);
+                      setRemoveConfirmOpen(false);
+                    }}
+                  >
+                    Remove {selectedCount}{" "}
+                    {selectedCount === 1 ? "post" : "posts"}
+                  </Button>
+                </Dialog.Footer>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
         {selectedCount > 0 && (
           <Button
             onClick={() => setSelectedPostIds(new Set())}

@@ -73,7 +73,9 @@ export function SearchBox({
       )}
       <Group attached mb={4} w="full">
         <Input
+          aria-label="Search posts"
           id="search-input"
+          name="q"
           onChange={(e) => {
             const newValue = e.target.value;
             setSearch(newValue);
@@ -87,6 +89,7 @@ export function SearchBox({
           }}
           placeholder={placeholder}
           size="sm"
+          type="search"
           value={search}
         />
         <Button
@@ -117,12 +120,16 @@ export function SearchBox({
                   py={1}
                 >
                   {tag}
-                  <LuX
-                    className="cursor-pointer transition-colors hover:text-red-500"
+                  <button
+                    aria-label={`Remove tag ${tag}`}
+                    className="cursor-pointer rounded transition-colors hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:outline-none"
                     onClick={() => {
                       handleRemoveTag(tag);
                     }}
-                  />
+                    type="button"
+                  >
+                    <LuX aria-hidden="true" />
+                  </button>
                 </Badge>
               ))}
             </Wrap>

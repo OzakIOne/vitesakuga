@@ -3,11 +3,15 @@ import * as React from "react";
 
 import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
 
-const TABS_LIST_BASE =
+export const TABS_LIST_BASE =
   "inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-100/60 p-1 dark:border-gray-700 dark:bg-gray-800/60";
 
-const TABS_TRIGGER_BASE =
+export const TABS_TRIGGER_BASE =
   "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-gray-600 outline-none transition-colors hover:bg-gray-200/70 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 data-[selected=true]:bg-white data-[selected=true]:text-gray-900 data-[selected=true]:shadow-sm dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-100 dark:data-[selected=true]:bg-gray-900 dark:data-[selected=true]:text-gray-100";
+
+/** Selected-state styles, for non-Ark tab-like links (e.g. routed tabs). */
+export const TABS_TRIGGER_SELECTED =
+  "bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-gray-100";
 
 export const Tabs = {
   Root: (

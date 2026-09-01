@@ -71,7 +71,7 @@ describe("UsersService.userPosts", () => {
       .insertInto("posts")
       .values({
         title: "Alice's Post",
-        content: "Content",
+        description: "Content",
         userId: "user-1",
         videoKey: "videos/k.mp4",
         thumbnailKey: "thumbnails/k.jpg",
@@ -110,7 +110,7 @@ describe("UsersService.userPosts", () => {
         .insertInto("posts")
         .values({
           title: `Post ${i}`,
-          content: "Content",
+          description: "Content",
           userId: "user-1",
           videoKey: `videos/k-${i}.mp4`,
           thumbnailKey: `thumbnails/k-${i}.jpg`,

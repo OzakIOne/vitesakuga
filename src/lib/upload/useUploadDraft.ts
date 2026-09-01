@@ -7,13 +7,15 @@ import type { Tag } from "../posts/posts.schema";
 
 export type UploadDraftData = {
   title: string;
-  content: string;
+  description: string;
   source: string | undefined;
   relatedPostId: number | undefined;
   tags: Tag[];
   videoName: string;
   seasonNumber: number | undefined;
   episodeNumber: number | undefined;
+  chapterNumber: number | undefined;
+  volumeNumber: number | undefined;
 };
 
 type UseUploadDraftReturn = {
@@ -41,7 +43,7 @@ export function useUploadDraft(): UseUploadDraftReturn {
     clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
       const data = {
-        content: values.content ?? "",
+        description: values.description ?? "",
         id: DRAFT_ID,
         relatedPostId: values.relatedPostId,
         source: values.source,
@@ -50,18 +52,22 @@ export function useUploadDraft(): UseUploadDraftReturn {
         videoName: values.videoName ?? "",
         seasonNumber: values.seasonNumber,
         episodeNumber: values.episodeNumber,
+        chapterNumber: values.chapterNumber,
+        volumeNumber: values.volumeNumber,
       };
 
       if (uploadDraftCollection.state.get(DRAFT_ID)) {
         uploadDraftCollection.update(DRAFT_ID, (d) => {
           d.title = data.title;
-          d.content = data.content;
+          d.description = data.description;
           d.source = data.source;
           d.relatedPostId = data.relatedPostId;
           d.tags = data.tags;
           d.videoName = data.videoName;
           d.seasonNumber = data.seasonNumber;
           d.episodeNumber = data.episodeNumber;
+          d.chapterNumber = data.chapterNumber;
+          d.volumeNumber = data.volumeNumber;
         });
       } else {
         uploadDraftCollection.insert(data);

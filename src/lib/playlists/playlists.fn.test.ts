@@ -38,7 +38,7 @@ const insertPost = async (
 ) => {
   const defaults = {
     title: "Test Post",
-    content: "Content",
+    description: "Content",
     userId: "user-1",
     videoKey: "videos/abc.mp4",
     thumbnailKey: "thumbnails/abc.jpg",

@@ -46,8 +46,8 @@ type PlaylistRow = {
   title: string;
   description: string | null;
   is_public: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
 };
 
 type PlaylistWithMeta = {
@@ -56,8 +56,8 @@ type PlaylistWithMeta = {
   title: string;
   description: string | null;
   is_public: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
   post_count: number;
   thumbnail_key: string | null;
 };
@@ -78,20 +78,20 @@ type PlaylistForPostCheck = {
   title: string;
   description: string | null;
   is_public: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
   contains_post: boolean;
 };
 
 type PlaylistPostRow = {
   post_id: number;
   position: number;
-  added_at: Date;
+  added_at: string;
   id: number | null;
   title: string | null;
-  content: string | null;
+  description: string | null;
   thumbnail_key: string | null;
-  created_at: Date | null;
+  created_at: string | null;
   user_id: string | null;
   user_name: string | null;
   video_key: string | null;
@@ -101,10 +101,10 @@ type PostOrphan = {
   orphan: true;
   post_id: number;
   position: number;
-  added_at: Date;
+  added_at: string;
 };
 
-type PlaylistDetailResult = {
+export type PlaylistDetailResult = {
   playlist: PlaylistWithMeta;
   data: (PlaylistPostRow | PostOrphan)[];
   meta: { pagination: PaginationMeta };
@@ -344,7 +344,11 @@ export class PlaylistsService extends Context.Service<
           .returningAll(),
       );
 
-      return playlist;
+      return {
+        ...playlist,
+        created_at: playlist.created_at.toISOString(),
+        updated_at: playlist.updated_at.toISOString(),
+      };
     });
 
     const update = Effect.fn("PlaylistsService.update")(function* (
@@ -369,7 +373,11 @@ export class PlaylistsService extends Context.Service<
           .returningAll(),
       );
 
-      return updated;
+      return {
+        ...updated,
+        created_at: updated.created_at.toISOString(),
+        updated_at: updated.updated_at.toISOString(),
+      };
     });
 
     const delete_ = Effect.fn("PlaylistsService.delete_")(function* (
@@ -700,6 +708,8 @@ export class PlaylistsService extends Context.Service<
 
         return playlists.map((p) => ({
           ...p,
+          created_at: p.created_at.toISOString(),
+          updated_at: p.updated_at.toISOString(),
           post_count: countMap.get(p.id) ?? 0,
           thumbnail_key: thumbnailMap.get(p.id) ?? null,
         }));
@@ -753,14 +763,14 @@ export class PlaylistsService extends Context.Service<
       const { countMap, thumbnailMap } = yield* fetchPlaylistMeta(playlistIds);
 
       const data_ = playlists.map((p) => ({
-        created_at: p.created_at,
+        created_at: p.created_at.toISOString(),
         description: p.description,
         id: p.id,
         is_public: p.is_public,
         post_count: countMap.get(p.id) ?? 0,
         thumbnail_key: thumbnailMap.get(p.id) ?? null,
         title: p.title,
-        updated_at: p.updated_at,
+        updated_at: p.updated_at.toISOString(),
         user_id: p.user_id,
         user_name: p.userName,
         user_image: p.userImage,
@@ -824,7 +834,7 @@ export class PlaylistsService extends Context.Service<
             "playlist_posts.created_at as added_at",
             "posts.id",
             "posts.title",
-            "posts.content",
+            "posts.description",
             "posts.thumbnailKey as thumbnail_key",
             "posts.createdAt as created_at",
             "posts.userId as user_id",
@@ -845,7 +855,7 @@ export class PlaylistsService extends Context.Service<
             orphan: true,
             post_id: pp.post_id,
             position: pp.position,
-            added_at: pp.added_at,
+            added_at: pp.added_at.toISOString(),
           };
         }
 
@@ -856,12 +866,12 @@ export class PlaylistsService extends Context.Service<
         return {
           post_id: pp.post_id,
           position: pp.position,
-          added_at: pp.added_at,
+          added_at: pp.added_at.toISOString(),
           id: pp.id,
           title: pp.title,
-          content: pp.content,
+          description: pp.description,
           thumbnail_key: pp.thumbnail_key,
-          created_at: pp.created_at,
+          created_at: pp.created_at === null ? null : pp.created_at.toISOString(),
           user_id: pp.user_id,
           user_name: pp.user_name,
           video_key: pp.video_key,
@@ -870,6 +880,8 @@ export class PlaylistsService extends Context.Service<
 
       const playlistMeta: PlaylistWithMeta = {
         ...playlist,
+        created_at: playlist.created_at.toISOString(),
+        updated_at: playlist.updated_at.toISOString(),
         post_count: totalCount,
         thumbnail_key: thumbnailKey,
       };
@@ -910,6 +922,8 @@ export class PlaylistsService extends Context.Service<
 
       return playlists.map((p) => ({
         ...p,
+        created_at: p.created_at.toISOString(),
+        updated_at: p.updated_at.toISOString(),
         contains_post: containingSet.has(p.id),
       }));
     });

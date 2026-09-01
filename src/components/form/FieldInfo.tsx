@@ -15,12 +15,19 @@ export function FieldInfo({ field }: { field: AnyFieldApi }) {
     }
   }
 
+  // Errors are rendered as soon as they exist: field validators only run on
+  // blur/submit, so a populated error list always reflects a real validation
+  // pass and does not need an extra "was the field touched" guard.
   return (
     <>
-      {field.state.meta.isTouched && errors.length > 0 ? (
-        <p className="text-sm break-words text-red-700">{errors.join(", ")}</p>
+      {errors.length > 0 ? (
+        <p className="text-sm break-words text-red-700" role="alert">
+          {errors.join(", ")}
+        </p>
       ) : null}
-      {field.state.meta.isValidating ? "Validating..." : null}
+      {field.state.meta.isValidating ? (
+        <p aria-live="polite">Validating...</p>
+      ) : null}
     </>
   );
 }

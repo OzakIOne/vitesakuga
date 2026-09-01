@@ -32,7 +32,7 @@ export function PostEditForm({
 
   const editForm = useForm({
     defaultValues: {
-      content: post.content,
+      description: post.description,
       relatedPostId: post.relatedPostId ?? undefined,
       source: post.source ?? undefined,
       tags: initialTags,
@@ -45,7 +45,7 @@ export function PostEditForm({
       }
 
       await updatePostMutation.mutateAsync({
-        content: value.content,
+        description: value.description,
         postId: post.id,
         relatedPostId: value.relatedPostId,
         source: value.source,
@@ -61,7 +61,7 @@ export function PostEditForm({
     mutationFn: async (data: {
       postId: number;
       title: string;
-      content: string;
+      description: string;
       source: string | undefined;
       relatedPostId: number | undefined;
       tags: { id?: number; name: string }[];
@@ -109,14 +109,14 @@ export function PostEditForm({
           )}
         </editForm.Field>
 
-        <editForm.Field name="content">
+        <editForm.Field name="description">
           {(field) => (
             <Box mb={4}>
               <FormTextWrapper
                 asTextarea
                 field={field}
                 isRequired
-                label="Content"
+                label="Description"
               />
             </Box>
           )}

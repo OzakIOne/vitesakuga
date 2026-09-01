@@ -36,7 +36,7 @@ export function ReportsPanel() {
           border="1px solid"
           borderRadius="md"
           justify="space-between"
-          key={`${report.postId}-${report.createdAt.toISOString()}`}
+          key={`${report.postId}-${String(report.createdAt)}`}
           p={3}
         >
           <Stack gap={0}>

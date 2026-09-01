@@ -27,7 +27,7 @@ const insertPost = async (
   const row = await db
     .insertInto("posts")
     .values({
-      content: "post content",
+      description: "post content",
       ...(args.id === undefined ? {} : { id: args.id }),
       thumbnailKey: "thumb.jpg",
       title: "Post",

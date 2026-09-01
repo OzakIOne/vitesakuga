@@ -16,6 +16,7 @@ import {
 } from "src/lib/comments/comments.hooks";
 import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
 import { commentDraftsCollection } from "src/lib/db/collections";
+import { formatDateUtc } from "src/utils/date-format";
 
 type CommentsProps = {
   postId: number;
@@ -71,12 +72,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
           >
             <Box flex="1">
               <Text color="gray.600" fontSize="sm" mb={1}>
-                {comment.userName} •{" "}
-                {new Date(comment.createdAt).toLocaleDateString("en-US", {
-                  timeZone: "UTC",
-                })}
+                {comment.userName} • {formatDateUtc(comment.createdAt)}
               </Text>
-              <Text>{comment.content}</Text>
+              <Text className="break-words">{comment.content}</Text>
             </Box>
             {currentUserId === comment.userId && (
               <IconButton
@@ -184,6 +182,7 @@ function CommentComposer({
   return (
     <Box mb={4}>
       <Textarea
+        aria-label="Write a comment"
         mb={2}
         onChange={(e) => {
           handleChange(e.target.value);

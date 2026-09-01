@@ -106,6 +106,14 @@
         "effecttsgo/schema-opaque-instance-member": "off",
         "effecttsgo/unsafe-effect-type-assertion": "off"
       }
+    },
+    {
+      "files": ["src/components/**", "src/routes/**"],
+      "rules": {
+        // Dates cross server-function boundaries as ISO strings and must be
+        // rendered through the shared formatter, never formatted inline.
+        "anti-slop/no-raw-date-formatting": "error"
+      }
     }
   ],
   "rules": {

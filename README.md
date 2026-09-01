@@ -16,9 +16,9 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] auto video duplication finder or vvv
   - [ ] video duplication vote or vvv
     - [ ] report video system (low quality, duplicate, ???)
-- [ ] support manga images share beautiful pannels
-- [ ] detailed episode informations (when upload, put episode / season info)
-- [ ] user roles, uploader, verified
+- [x] support manga images share beautiful pannels
+- [x] detailed episode informations (when upload, put episode / season info)
+- [x] user roles, uploader, verified
 - [ ] WASM (or not) browser client side image upscaler
 
 ## Secondary

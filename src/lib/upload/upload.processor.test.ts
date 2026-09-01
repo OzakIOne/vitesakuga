@@ -8,7 +8,7 @@ const thumb = new File(["t"], "t.jpg", { type: "image/jpeg" });
 
 const baseValues: FileUploadData = {
   title: "My Post Title",
-  content: "Some content here",
+  description: "Some content here",
   source: "https://example.com",
   relatedPostId: undefined,
   tags: [],
@@ -22,7 +22,7 @@ describe(buildFormData, () => {
     const formData = buildFormData(baseValues);
 
     expect(formData.get("title")).toBe("My Post Title");
-    expect(formData.get("content")).toBe("Some content here");
+    expect(formData.get("description")).toBe("Some content here");
     expect(formData.get("source")).toBe("https://example.com");
   });
 

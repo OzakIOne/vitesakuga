@@ -63,8 +63,10 @@ const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
     }),
   );
 
-const MinLen3 = Schema.isMinLength(3, {
-  message: "You must have a length of at least 3",
+export const MIN_TEXT_LENGTH = 3;
+
+const MinLen3 = Schema.isMinLength(MIN_TEXT_LENGTH, {
+  message: `Must be at least ${MIN_TEXT_LENGTH} characters`,
 });
 
 const HttpsUrl = Schema.String.pipe(
@@ -76,13 +78,12 @@ const RelatedPostId = PostId.pipe(
 );
 
 export const FormFileUploadTextSchema = Schema.Struct({
-  content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   relatedPostId: Schema.optional(RelatedPostId),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   tags: Schema.Array(TagSchema),
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
-
 export const VIDEO_EXTENSION_PATTERN = /\.(mp4|avi|mov|wmv|flv|mkv)$/i;
 
 export const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp)$/i;
@@ -135,7 +136,10 @@ export const PostSourceUploadSchema = Schema.optional(
 
 const SharedUploadFields = {
   animeTitle: Schema.optional(sanitizeString(Schema.String)),
-  content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  // Chapter/volume identify manga image posts; season/episode identify
+  // anime video posts. Both stay optional either way.
+  chapterNumber: Schema.optional(CoerceNumber),
+  description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   episodeNumber: Schema.optional(CoerceNumber),
   relatedPostId: Schema.optional(RelatedPostId),
   seasonNumber: Schema.optional(CoerceNumber),
@@ -143,6 +147,7 @@ const SharedUploadFields = {
   sourceType: PostSourceUploadSchema,
   tags: Schema.Array(TagSchema),
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  volumeNumber: Schema.optional(CoerceNumber),
 };
 
 export const FormFileUploadSchema = Schema.Struct({
@@ -202,7 +207,7 @@ export type CreateVideoUploadUrlInput = Schema.Schema.Type<
 >;
 
 export const updatePostInputSchema = Schema.Struct({
-  content: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
   relatedPostId: Schema.optional(RelatedPostId),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),

@@ -15,17 +15,19 @@ import { HStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
+import { formatDateUtc } from "src/utils/date-format";
 
 export type PlaylistPostTableRow = {
   postId: number;
   position: number;
-  addedAt: Date;
+  /** ISO timestamp strings — dates arrive as strings over the server-function transport. */
+  addedAt: string;
   isOrphan: boolean;
   id: number | null;
   title: string | null;
-  content: string | null;
+  description: string | null;
   thumbnailKey: string | null;
-  createdAt: Date | null;
+  createdAt: string | null;
   userId: string | null;
   userName: string | null;
 };
@@ -132,17 +134,17 @@ const columns = columnHelper.columns([
       );
     },
   }),
-  columnHelper.accessor("content", {
+  columnHelper.accessor("description", {
     header: "Description",
     meta: { grow: true },
     minSize: 240,
     size: 360,
     cell: ({ getValue }) => {
-      const content = getValue();
-      if (!content) return <Text color="gray.400">—</Text>;
+      const description = getValue();
+      if (!description) return <Text color="gray.400">—</Text>;
       return (
         <Text color="gray.600" fontSize="sm" lineClamp={2}>
-          {content}
+          {description}
         </Text>
       );
     },
@@ -169,12 +171,7 @@ const columns = columnHelper.columns([
     size: 150,
     cell: ({ getValue }) => (
       <Text color="gray.600" fontSize="sm">
-        {new Intl.DateTimeFormat("en-US", {
-          timeZone: "UTC",
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }).format(new Date(getValue()))}
+        {formatDateUtc(getValue())}
       </Text>
     ),
   }),
@@ -257,19 +254,26 @@ export function PlaylistPostsTable({
       ref={scrollRef}
       className="h-full overflow-auto rounded-lg border border-gray-200 dark:border-gray-700"
     >
-      <table className="w-full text-sm" style={{ display: "grid" }}>
+      {/* display:grid strips native table semantics; explicit roles restore them */}
+      <table
+        className="w-full text-sm"
+        
+        style={{ display: "grid" }}
+      >
         <thead
           className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"
+          
           style={{ display: "grid" }}
         >
           {table.getHeaderGroups().map((group) => (
-            <tr className="flex w-full" key={group.id}>
+            <tr className="flex w-full" key={group.id} >
               {group.headers.map((header) => {
                 const grow = header.column.columnDef.meta?.grow ?? false;
                 return (
                   <th
                     className="flex items-center overflow-hidden border-b border-gray-200 px-3 py-2.5 text-left font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
                     key={header.id}
+                    
                     style={{
                       flex: grow ? "1 1 0%" : "0 0 auto",
                       minWidth: grow ? 0 : header.column.getSize(),
@@ -289,6 +293,7 @@ export function PlaylistPostsTable({
         </thead>
         <tbody
           className="relative"
+          
           style={{
             display: "grid",
             height: `${virtualizer.getTotalSize()}px`,
@@ -303,6 +308,7 @@ export function PlaylistPostsTable({
                 data-index={virtualRow.index}
                 key={row.id}
                 ref={virtualizer.measureElement}
+                
                 style={{
                   display: "flex",
                   position: "absolute",
@@ -316,6 +322,7 @@ export function PlaylistPostsTable({
                     <td
                       className="flex min-w-0 items-center overflow-hidden px-3 py-2"
                       key={cell.id}
+                      
                       style={{
                         flex: grow ? "1 1 0%" : "0 0 auto",
                         minWidth: grow ? 0 : cell.column.getSize(),

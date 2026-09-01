@@ -120,7 +120,7 @@ describe("searchPostsBaseSchema", () => {
 
 describe("updatePostInputSchema", () => {
   const defaultValues = {
-    content: "qwe",
+    description: "qwe",
     postId: 1,
     relatedPostId: undefined,
     source: undefined,
@@ -130,7 +130,7 @@ describe("updatePostInputSchema", () => {
 
   it("should validate correct inputs", () => {
     const input = {
-      content: "content",
+      description: "description",
       postId: 1,
       relatedPostId: 2,
       source: "https://example.com",
@@ -191,21 +191,21 @@ describe("updatePostInputSchema", () => {
     ).toThrow();
   });
 
-  it("should throw on invalid content", () => {
+  it("should throw on invalid description", () => {
     expect(() =>
       parseStrict(updatePostInputSchema)({
         ...defaultValues,
-        content: "",
+        description: "",
       }),
     ).toThrow();
   });
 
-  it("should purify content", () => {
+  it("should purify description", () => {
     const result = parseStrict(updatePostInputSchema)({
       ...defaultValues,
-      content: "<script>alert('xss')</script>",
+      description: "<script>alert('xss')</script>",
     });
-    expect(result.content).toBe("");
+    expect(result.description).toBe("");
   });
 
   it("should purify title", () => {
@@ -221,7 +221,7 @@ describe("FormFileUploadSchema", () => {
   const thumbnailSizeMessage = `Thumbnails must not exceed ${MAX_THUMBNAIL_SIZE_BYTES / (1024 * 1024)} MB`;
 
   const makeUploadInput = () => ({
-    content: "content",
+    description: "description",
     relatedPostId: undefined,
     source: undefined,
     tags: [],

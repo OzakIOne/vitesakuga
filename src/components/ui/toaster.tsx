@@ -17,13 +17,26 @@ export const toaster = createToaster({
 
 function ToastIndicator({ type }: { type: string | undefined }) {
   if (type === "success") {
-    return <LuCircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />;
+    return (
+      <LuCircleCheck
+        aria-hidden="true"
+        className="mt-0.5 h-4 w-4 shrink-0 text-green-600"
+      />
+    );
   }
   if (type === "error") {
-    return <LuCircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />;
+    return (
+      <LuCircleAlert
+        aria-hidden="true"
+        className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+      />
+    );
   }
   return (
-    <LuLoader className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-blue-600" />
+    <LuLoader
+      aria-hidden="true"
+      className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-blue-600"
+    />
   );
 }
 
@@ -60,8 +73,11 @@ export const Toaster = () => (
             </Toast.ActionTrigger>
           )}
           {toast.closable && (
-            <Toast.CloseTrigger className="shrink-0 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
-              <LuX />
+            <Toast.CloseTrigger
+              aria-label="Dismiss notification"
+              className="shrink-0 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            >
+              <LuX aria-hidden="true" />
             </Toast.CloseTrigger>
           )}
         </Toast.Root>

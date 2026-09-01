@@ -50,7 +50,7 @@ function RouteComponent() {
     >
       <Box border="1px" borderRadius="md" p={4}>
         <Heading as="h1" mb={6}>
-          Posts tagged with "{tag}"
+          Posts tagged with “{tag}”
         </Heading>
 
         <VirtualPostsGrid

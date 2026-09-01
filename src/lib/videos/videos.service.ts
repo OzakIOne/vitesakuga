@@ -28,7 +28,8 @@ import {
 
 /** A restorable previous version of a post's video. */
 export type VideoRevision = {
-  readonly createdAt: Date;
+  /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
+  readonly createdAt: string;
   readonly id: number;
   readonly postId: number;
   readonly replacedBy: string;
@@ -131,13 +132,22 @@ export class VideosService extends Context.Service<
       );
 
     const revisionsForPost = (postId: number) =>
-      db.execute(
-        db
-          .selectFrom("video_revisions")
-          .select(["createdAt", "id", "postId", "replacedBy", "videoKey"])
-          .where("postId", "=", postId)
-          .orderBy("createdAt", "desc"),
-      );
+      db
+        .execute(
+          db
+            .selectFrom("video_revisions")
+            .select(["createdAt", "id", "postId", "replacedBy", "videoKey"])
+            .where("postId", "=", postId)
+            .orderBy("createdAt", "desc"),
+        )
+        .pipe(
+          Effect.map((rows) =>
+            rows.map((row) => ({
+              ...row,
+              createdAt: row.createdAt.toISOString(),
+            })),
+          ),
+        );
 
     const archiveRevision = (args: {
       readonly postId: number;
@@ -218,7 +228,7 @@ export class VideosService extends Context.Service<
       return {
         orphanKeys,
         purgeableRevisions: purgeableRevisions.map((revision) => ({
-          createdAt: revision.createdAt,
+          createdAt: revision.createdAt.toISOString(),
           id: revision.id,
           postId: revision.postId,
           replacedBy: revision.replacedBy,
