@@ -63,6 +63,7 @@ const toAuthSessionProvider = (auth: AuthInstance): AuthSessionProvider => ({
       // the double cast bridges better-auth's narrower inferred type.
       return {
         session: result.session,
+        // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- better-auth rc.4 types omit plugin-augmented fields; the runtime shape is guaranteed by the plugins above
         user: result.user as unknown as UserWithTwoFactor,
       };
     },

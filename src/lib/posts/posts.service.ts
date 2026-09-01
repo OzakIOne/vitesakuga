@@ -9,6 +9,7 @@ import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { DB } from "../db/kysely";
 import type { postSourceSchema, PostWithVotes } from "../db/schema";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -337,7 +338,7 @@ export class PostsService extends Context.Service<
         post: {
           animeTitle: postWithUser.animeTitle,
           description: postWithUser.description,
-          createdAt: postWithUser.createdAt.toISOString(),
+          createdAt: toIsoTimestamp(postWithUser.createdAt),
           // SAFETY: posts.id is the table's primary key.
           id: asPostId(postWithUser.id),
           // SAFETY: relatedPostId is a posts.id FK column; the row value

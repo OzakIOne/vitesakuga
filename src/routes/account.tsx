@@ -118,7 +118,7 @@ export const Route = createFileRoute("/account")({
         to: "/login",
       });
     }
-    const security = await context.queryClient.fetchQuery({
+    const security = await context.queryClient.query({
       queryKey: usersKeys.accountSecurity,
       queryFn: async ({ signal }) => getAccountSecurity({ signal }),
       staleTime: 60 * 60 * 1000,

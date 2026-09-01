@@ -6,6 +6,7 @@ import { roleAtLeast } from "../auth/roles";
 import { SessionService } from "../auth/session.effect";
 import { SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parseStrict } from "../effect/schema.utils";
 import {
@@ -144,7 +145,7 @@ export class VideosService extends Context.Service<
           Effect.map((rows) =>
             rows.map((row) => ({
               ...row,
-              createdAt: row.createdAt.toISOString(),
+              createdAt: toIsoTimestamp(row.createdAt),
             })),
           ),
         );
@@ -228,7 +229,7 @@ export class VideosService extends Context.Service<
       return {
         orphanKeys,
         purgeableRevisions: purgeableRevisions.map((revision) => ({
-          createdAt: revision.createdAt.toISOString(),
+          createdAt: toIsoTimestamp(revision.createdAt),
           id: revision.id,
           postId: revision.postId,
           replacedBy: revision.replacedBy,

@@ -5,6 +5,7 @@ import { getUserRole, userHasPermission } from "../auth/policy";
 import { isStaffRole } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parseStrict } from "../effect/schema.utils";
 import {
@@ -416,7 +417,7 @@ export class PostEditsService extends Context.Service<
             const approvals = yield* approvalsFor(row.id);
             return {
               approvals: approvals.map((approval) => approval.userId),
-              createdAt: row.createdAt.toISOString(),
+              createdAt: toIsoTimestamp(row.createdAt),
               id: row.id,
               payload: decodePostEditPayload(row.payload),
               postId: row.postId,

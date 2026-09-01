@@ -6,6 +6,7 @@ import { ensureOwned } from "../auth/ownership";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { DB } from "../db/kysely";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import {
   SqlError,
   SqlNoFirstResult,
@@ -346,8 +347,8 @@ export class PlaylistsService extends Context.Service<
 
       return {
         ...playlist,
-        created_at: playlist.created_at.toISOString(),
-        updated_at: playlist.updated_at.toISOString(),
+        created_at: toIsoTimestamp(playlist.created_at),
+        updated_at: toIsoTimestamp(playlist.updated_at),
       };
     });
 
@@ -375,8 +376,8 @@ export class PlaylistsService extends Context.Service<
 
       return {
         ...updated,
-        created_at: updated.created_at.toISOString(),
-        updated_at: updated.updated_at.toISOString(),
+        created_at: toIsoTimestamp(updated.created_at),
+        updated_at: toIsoTimestamp(updated.updated_at),
       };
     });
 
@@ -708,8 +709,8 @@ export class PlaylistsService extends Context.Service<
 
         return playlists.map((p) => ({
           ...p,
-          created_at: p.created_at.toISOString(),
-          updated_at: p.updated_at.toISOString(),
+          created_at: toIsoTimestamp(p.created_at),
+          updated_at: toIsoTimestamp(p.updated_at),
           post_count: countMap.get(p.id) ?? 0,
           thumbnail_key: thumbnailMap.get(p.id) ?? null,
         }));
@@ -763,14 +764,14 @@ export class PlaylistsService extends Context.Service<
       const { countMap, thumbnailMap } = yield* fetchPlaylistMeta(playlistIds);
 
       const data_ = playlists.map((p) => ({
-        created_at: p.created_at.toISOString(),
+        created_at: toIsoTimestamp(p.created_at),
         description: p.description,
         id: p.id,
         is_public: p.is_public,
         post_count: countMap.get(p.id) ?? 0,
         thumbnail_key: thumbnailMap.get(p.id) ?? null,
         title: p.title,
-        updated_at: p.updated_at.toISOString(),
+        updated_at: toIsoTimestamp(p.updated_at),
         user_id: p.user_id,
         user_name: p.userName,
         user_image: p.userImage,
@@ -855,7 +856,7 @@ export class PlaylistsService extends Context.Service<
             orphan: true,
             post_id: pp.post_id,
             position: pp.position,
-            added_at: pp.added_at.toISOString(),
+            added_at: toIsoTimestamp(pp.added_at),
           };
         }
 
@@ -866,12 +867,13 @@ export class PlaylistsService extends Context.Service<
         return {
           post_id: pp.post_id,
           position: pp.position,
-          added_at: pp.added_at.toISOString(),
+          added_at: toIsoTimestamp(pp.added_at),
           id: pp.id,
           title: pp.title,
           description: pp.description,
           thumbnail_key: pp.thumbnail_key,
-          created_at: pp.created_at === null ? null : pp.created_at.toISOString(),
+          created_at:
+            pp.created_at === null ? null : toIsoTimestamp(pp.created_at),
           user_id: pp.user_id,
           user_name: pp.user_name,
           video_key: pp.video_key,
@@ -880,8 +882,8 @@ export class PlaylistsService extends Context.Service<
 
       const playlistMeta: PlaylistWithMeta = {
         ...playlist,
-        created_at: playlist.created_at.toISOString(),
-        updated_at: playlist.updated_at.toISOString(),
+        created_at: toIsoTimestamp(playlist.created_at),
+        updated_at: toIsoTimestamp(playlist.updated_at),
         post_count: totalCount,
         thumbnail_key: thumbnailKey,
       };
@@ -922,8 +924,8 @@ export class PlaylistsService extends Context.Service<
 
       return playlists.map((p) => ({
         ...p,
-        created_at: p.created_at.toISOString(),
-        updated_at: p.updated_at.toISOString(),
+        created_at: toIsoTimestamp(p.created_at),
+        updated_at: toIsoTimestamp(p.updated_at),
         contains_post: containingSet.has(p.id),
       }));
     });

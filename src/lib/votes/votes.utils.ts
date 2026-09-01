@@ -61,9 +61,7 @@ export const mergeVoteCounts = Effect.fn("mergeVoteCounts")(function* (
     // re-encode so `createdAt` leaves as an ISO string — the wire format the
     // client's `PostWithVotes` type promises.
     try: () => {
-      const decoded = parse(Schema.Array(postWithVotesSelectSchema))(
-        withVotes,
-      );
+      const decoded = parse(Schema.Array(postWithVotesSelectSchema))(withVotes);
       return Schema.encodeSync(Schema.Array(postWithVotesSelectSchema))(
         decoded,
       );

@@ -5,6 +5,7 @@ import { ensureOwned } from "../auth/ownership";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
 import {
@@ -79,7 +80,7 @@ export class CommentsService extends Context.Service<
 
       return comments.map((row) => ({
         ...row,
-        createdAt: row.createdAt.toISOString(),
+        createdAt: toIsoTimestamp(row.createdAt),
       }));
     });
 
@@ -109,7 +110,7 @@ export class CommentsService extends Context.Service<
       const created = {
         ...comment,
         postId: asPostId(comment.postId),
-        createdAt: comment.createdAt.toISOString(),
+        createdAt: toIsoTimestamp(comment.createdAt),
       };
 
       // Points hook: commenting earns a small daily-capped reward.

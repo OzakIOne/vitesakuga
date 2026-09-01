@@ -3,6 +3,7 @@ import { Context, DateTime, Effect, Layer } from "effect";
 
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError } from "../effect/effect.utils";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
@@ -77,8 +78,8 @@ export class NotificationsService extends Context.Service<
       );
       return rows.map((row) => ({
         ...row,
-        createdAt: row.createdAt.toISOString(),
-        readAt: row.readAt ? row.readAt.toISOString() : null,
+        createdAt: toIsoTimestamp(row.createdAt),
+        readAt: row.readAt ? toIsoTimestamp(row.readAt) : null,
       }));
     });
 

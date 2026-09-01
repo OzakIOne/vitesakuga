@@ -5,6 +5,7 @@ import { getUserRole, userHasPermission } from "../auth/policy";
 import { RoleSchema, roleAtLeast, type Role } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError } from "../effect/effect.utils";
 import { parseStrict } from "../effect/schema.utils";
 import { ForbiddenError, UnauthorizedError } from "../errors";
@@ -124,14 +125,14 @@ export class ModerationService extends Context.Service<
       return {
         pendingEdits: pendingRows.map((row) => ({
           approvals: Number(row.approvals ?? 0),
-          createdAt: row.createdAt.toISOString(),
+          createdAt: toIsoTimestamp(row.createdAt),
           editId: row.editId,
           postId: row.postId,
           postTitle: row.postTitle,
           suggestedByName: row.suggestedByName,
         })),
         reports: reports.map((row) => ({
-          createdAt: row.createdAt.toISOString(),
+          createdAt: toIsoTimestamp(row.createdAt),
           postId: row.postId,
           postTitle: row.postTitle,
           reason: row.reason,

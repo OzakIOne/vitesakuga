@@ -4,6 +4,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { PostVote } from "../db/schema";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { PostNotFoundError, UnauthorizedError } from "../errors";
@@ -278,9 +279,9 @@ export class PostVotesService extends Context.Service<
         );
 
         const likedRows: LikedPostRow[] = rows.map((row, index) => ({
-          added_at: row.added_at.toISOString(),
+          added_at: toIsoTimestamp(row.added_at),
           description: row.description,
-          created_at: row.created_at.toISOString(),
+          created_at: toIsoTimestamp(row.created_at),
           id: row.id,
           position: pagination.offset + index,
           post_id: row.post_id,

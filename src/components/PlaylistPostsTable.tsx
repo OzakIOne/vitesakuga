@@ -257,23 +257,23 @@ export function PlaylistPostsTable({
       {/* display:grid strips native table semantics; explicit roles restore them */}
       <table
         className="w-full text-sm"
-        
+
         style={{ display: "grid" }}
       >
         <thead
           className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"
-          
+
           style={{ display: "grid" }}
         >
           {table.getHeaderGroups().map((group) => (
-            <tr className="flex w-full" key={group.id} >
+            <tr className="flex w-full" key={group.id}>
               {group.headers.map((header) => {
                 const grow = header.column.columnDef.meta?.grow ?? false;
                 return (
                   <th
                     className="flex items-center overflow-hidden border-b border-gray-200 px-3 py-2.5 text-left font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
                     key={header.id}
-                    
+
                     style={{
                       flex: grow ? "1 1 0%" : "0 0 auto",
                       minWidth: grow ? 0 : header.column.getSize(),
@@ -293,7 +293,7 @@ export function PlaylistPostsTable({
         </thead>
         <tbody
           className="relative"
-          
+
           style={{
             display: "grid",
             height: `${virtualizer.getTotalSize()}px`,
@@ -308,7 +308,7 @@ export function PlaylistPostsTable({
                 data-index={virtualRow.index}
                 key={row.id}
                 ref={virtualizer.measureElement}
-                
+
                 style={{
                   display: "flex",
                   position: "absolute",
@@ -322,7 +322,7 @@ export function PlaylistPostsTable({
                     <td
                       className="flex min-w-0 items-center overflow-hidden px-3 py-2"
                       key={cell.id}
-                      
+
                       style={{
                         flex: grow ? "1 1 0%" : "0 0 auto",
                         minWidth: grow ? 0 : cell.column.getSize(),

@@ -20,9 +20,11 @@ export const Route = createFileRoute("/users/$id/playlists/")({
   ssr: "data-only",
   notFoundComponent: () => <NotFound>User not found</NotFound>,
   loader: ({ context, params }) => {
-    void context.queryClient.prefetchQuery(
-      playlistsQueryUserPlaylists(params.id),
-    );
+    // Fire-and-forget prefetch: failures surface when the page actually reads
+    // the query, so they are intentionally swallowed here.
+    void context.queryClient
+      .query(playlistsQueryUserPlaylists(params.id))
+      .catch(() => {});
   },
 });
 
