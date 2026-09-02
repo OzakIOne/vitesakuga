@@ -155,6 +155,25 @@ export default Alchemy.Stack(
       },
       workersDev: false,
       domain: appDomain,
+      // Cloudflare Workers Observability: logs + automatic traces (fetch
+      // handler, R2/KV/rate-limit bindings) in the Cloudflare dashboard.
+      // Kept dashboard-only — OTLP export to external providers is billed
+      // from Oct 1, 2026 (see docs: exporting-opentelemetry-data).
+      observability: {
+        enabled: true,
+        headSamplingRate: 1,
+        logs: {
+          enabled: true,
+          invocationLogs: true,
+          headSamplingRate: 1,
+          persist: true,
+        },
+        traces: {
+          enabled: true,
+          headSamplingRate: 1,
+          persist: true,
+        },
+      },
       env: {
         BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
         CLOUDFLARE_ACCESS_KEY: Config.redacted("CLOUDFLARE_ACCESS_KEY"),
