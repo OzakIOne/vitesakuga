@@ -60,11 +60,7 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
     <>
       <Menu.Root>
         <Menu.Trigger asChild>
-          <IconButton
-            aria-label={`Post actions for ${post.title}`}
-            className="bg-black/30 text-white backdrop-blur-sm hover:bg-black/40"
-            size="xs"
-          >
+          <IconButton aria-label={`Post actions for ${post.title}`} size="xs">
             <LuEllipsisVertical />
           </IconButton>
         </Menu.Trigger>
@@ -125,14 +121,14 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
 function PostCardComponent({ post, searchParams }: PostListProps) {
   const episodeInfo = formatEpisodeInfo(post);
   return (
-    <Box className="relative" h="full">
-      <Link
-        className="group"
-        params={{ postId: post.id }}
-        to="/posts/$postId"
-        {...(searchParams ? { search: searchParams } : {})}
-      >
-        <VStack cursor="pointer" gap={2} h="full">
+    <Box h="full">
+      <VStack cursor="pointer" gap={2} h="full">
+        <Link
+          className="group"
+          params={{ postId: post.id }}
+          to="/posts/$postId"
+          {...(searchParams ? { search: searchParams } : {})}
+        >
           <Box
             _groupHover={{
               filter: "brightness(0.75)",
@@ -153,11 +149,17 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
               w="full"
             />
           </Box>
+        </Link>
 
-          {/* Content Container */}
-          <HStack gap={3} px={1} w="full">
-            {/* Info Container */}
-            <VStack align="start" flex={1} gap={1} minW={0}>
+        {/* Content Container */}
+        <VStack align="start" gap={1} px={1} w="full">
+          <HStack alignItems="start" gap={1} w="full">
+            <Link
+              className="group min-w-0 flex-1"
+              params={{ postId: post.id }}
+              to="/posts/$postId"
+              {...(searchParams ? { search: searchParams } : {})}
+            >
               <Heading
                 _groupHover={{
                   color: "gray.600",
@@ -169,6 +171,17 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
               >
                 {post.title}
               </Heading>
+            </Link>
+            <PostCardMenu post={post} />
+          </HStack>
+          {/* Info Container */}
+          <Link
+            className="group w-full"
+            params={{ postId: post.id }}
+            to="/posts/$postId"
+            {...(searchParams ? { search: searchParams } : {})}
+          >
+            <VStack align="start" gap={1} minW={0}>
               <Text color="gray.600" fontSize="xs" lineClamp={1}>
                 {post.description}
               </Text>
@@ -191,12 +204,9 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
                 </Text>
               </HStack>
             </VStack>
-          </HStack>
+          </Link>
         </VStack>
-      </Link>
-      <div className="absolute top-2 right-2 z-10">
-        <PostCardMenu post={post} />
-      </div>
+      </VStack>
     </Box>
   );
 }

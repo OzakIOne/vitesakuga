@@ -53,13 +53,49 @@ function isStyleObject(value: ChakraValue): value is StyleObject {
 
 function mapColor(value: string): string {
   if (value === "fg") return "text-neutral-900";
-  if (value === "fg.subtle") return "text-neutral-500";
-  if (value === "fg.muted") return "text-neutral-400";
+  if (value === "fg.subtle") return "text-neutral-500 dark:text-neutral-400";
+  if (value === "fg.muted") return "text-neutral-400 dark:text-neutral-500";
+  // Light-mode override: blue.500 on white fails WCAG AA for body-size text.
+  // SAFETY: the lookup keys are arbitrary token strings; a miss returns undefined and falls through to the generic mapping.
+  const override =
+    TEXT_LIGHT_OVERRIDES[value as keyof typeof TEXT_LIGHT_OVERRIDES];
+  const base =
+    override ??
+    `text-${value
+      .split(".")
+      .map((part) => part.replaceAll("_", "-"))
+      .join("-")}`;
+  // SAFETY: same miss-tolerant lookup; tokens without a dark counterpart keep the base class.
+  const dark = TEXT_DARK_VARIANTS[value as keyof typeof TEXT_DARK_VARIANTS];
+  return dark ? `${base} dark:${dark}` : base;
+}
+
+/** Dark-mode text classes for tokens whose light shade fails WCAG AA on the
+    dark background (gray-950). Applied on top of the base light class. */
+const TEXT_DARK_VARIANTS = {
+  "gray.500": "text-gray-400",
+  "gray.600": "text-gray-400",
+  "gray.700": "text-gray-300",
+  "gray.800": "text-gray-200",
+  "blue.500": "text-blue-400",
+  "blue.600": "text-blue-400",
+  "blue.700": "text-blue-300",
+  "red.600": "text-red-400",
+  "red.700": "text-red-300",
+} satisfies Record<string, string>;
+
+/** Light-mode replacements for tokens that fail WCAG AA on white. */
+const TEXT_LIGHT_OVERRIDES = {
+  "blue.500": "text-blue-600",
+} satisfies Record<string, string>;
+
+function mapBorderColor(value: string): string {
   if (value === "border") return "border-neutral-200";
-  return value
+  if (value === "fg") return "border-neutral-900";
+  return `border-${value
     .split(".")
     .map((part) => part.replaceAll("_", "-"))
-    .join("-");
+    .join("-")}`;
 }
 
 function mapResponsive(
@@ -139,7 +175,12 @@ function mapVariantClasses(value: StyleObject, prefix: string): string[] {
     if (v === undefined || v === null || v === "") continue;
     if (!HOVERABLE_KEYS.has(key)) continue;
     const str = String(v);
-    if (key === "color") classes.push(`${prefix}:${mapColor(str)}`);
+    if (key === "color") {
+      const mapped = mapColor(str);
+      const [base, dark] = mapped.split(" dark:");
+      classes.push(`${prefix}:${base}`);
+      if (dark) classes.push(`${prefix}:dark:${dark}`);
+    }
     if (key === "bg" || key === "backgroundColor") {
       classes.push(`${prefix}:bg-${str.split(".").join("-")}`);
     }
@@ -611,12 +652,7 @@ export function useChakraProps<P extends ChakraStyleProps>(
       }
       case "borderColor": {
         hasBorderColor = true;
-        classes.push(
-          ...mapResponsive(
-            value,
-            (v) => `border-${mapColor(v).replace("text-", "")}`,
-          ),
-        );
+        classes.push(...mapResponsive(value, (v) => mapBorderColor(String(v))));
         break;
       }
       case "bg":
