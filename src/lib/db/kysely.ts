@@ -16,6 +16,8 @@ type UserTable = {
   twoFactorEnabled: boolean;
   // Rank behind the authorization policies (src/lib/auth/policy.ts).
   role: string;
+  // Unique @mention handle (src/lib/mentions).
+  username: string;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -145,6 +147,13 @@ type CommentsTable = {
   userId: string;
 };
 
+// @mentions resolved in comment content (src/lib/mentions).
+type CommentMentionsTable = {
+  commentId: number;
+  userId: string;
+  createdAt: Generated<Date>;
+};
+
 type PostVotesTable = {
   createdAt: Generated<Date>;
   postId: number;
@@ -222,7 +231,13 @@ type PostEditApprovalsTable = {
 type NotificationsTable = {
   id: Generated<number>;
   userId: string;
-  type: "edit-suggestion-applied" | "promotion-approved" | "promotion-rejected";
+  type:
+    | "comment-mention"
+    | "edit-suggestion-applied"
+    | "promotion-approved"
+    | "promotion-rejected";
+  // Post the notification links to; null when there is no deep link.
+  postId: number | null;
   readAt: Date | null;
   createdAt: Generated<Date>;
 };
@@ -235,6 +250,7 @@ export type DB = {
   twoFactor: TwoFactorTable;
   passkey: PasskeyTable;
   comments: CommentsTable;
+  comment_mentions: CommentMentionsTable;
   post_votes: PostVotesTable;
   post_reports: PostReportsTable;
   post_images: PostImagesTable;

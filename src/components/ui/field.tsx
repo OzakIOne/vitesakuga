@@ -110,7 +110,10 @@ export function Input({ size = "md", ...props }: InputProps) {
   );
 }
 
-type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> &
+type TextareaProps = {
+  // React 19 ref-as-prop: the composer needs the element for caret math.
+  ref?: React.Ref<HTMLTextAreaElement>;
+} & React.TextareaHTMLAttributes<HTMLTextAreaElement> &
   ChakraStyleProps;
 
 export function Textarea(props: TextareaProps) {

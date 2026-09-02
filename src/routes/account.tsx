@@ -2,7 +2,7 @@ import { Portal } from "@ark-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-import { LuImage, LuUser } from "react-icons/lu";
+import { LuAtSign, LuImage, LuUser } from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { PasskeysSection } from "src/components/PasskeysSection";
 import { TwoFactorSection } from "src/components/TwoFactorSection";
@@ -138,6 +138,7 @@ function RouteComponent() {
     defaultValues: {
       image: user.image ?? "",
       name: user.name,
+      username: user.username,
     },
     onSubmit: async ({ value }) => {
       updateProfileMutation.mutate(value);
@@ -179,6 +180,9 @@ function RouteComponent() {
           </AvatarGroup>
           <div className="min-w-0 flex-1">
             <Heading size="lg">{user.name}</Heading>
+            <Text color="gray.500" fontSize="sm">
+              @{user.username}
+            </Text>
             <Text color="gray.600">{user.email}</Text>
             <Text color="gray.400" fontSize="sm" mt={1}>
               Member since {memberSince}
@@ -206,7 +210,7 @@ function RouteComponent() {
               Profile information
             </Heading>
             <Text color="gray.500" fontSize="sm" mb={5}>
-              Update your display name and avatar.
+              Update your display name, @mention handle and avatar.
             </Text>
             <form
               className="space-y-5"
@@ -230,6 +234,29 @@ function RouteComponent() {
                           field.handleChange(e.target.value);
                         }}
                         placeholder="Enter your display name"
+                        value={field.state.value}
+                      />
+                    </InputGroup>
+                    <FieldInfo field={field} />
+                  </Field.Root>
+                )}
+              </profileForm.Field>
+
+              <profileForm.Field name="username">
+                {(field) => (
+                  <Field.Root>
+                    <Field.Label>Username</Field.Label>
+                    <InputGroup startElement={<LuAtSign />}>
+                      <Input
+                        autoComplete="username"
+                        className="h-12 w-full"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value.toLowerCase());
+                        }}
+                        placeholder="unique_handle"
                         value={field.state.value}
                       />
                     </InputGroup>

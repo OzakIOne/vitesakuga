@@ -20,6 +20,7 @@ const insertUser = (db: Kysely<DB>, args: { id: string; role: string }) =>
       id: args.id,
       name: args.id,
       role: args.role,
+      username: args.id.toLowerCase(),
     })
     .execute();
 

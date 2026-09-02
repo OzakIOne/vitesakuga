@@ -124,8 +124,23 @@ export function useUpdateProfile() {
   return useMutationWithFeedback({
     errorFallback: "Failed to update profile",
     errorTitle: "Error updating profile",
-    mutationFn: async ({ name, image }: { name: string; image: string }) =>
-      authClient.updateUser({ name, image }),
+    mutationFn: async ({
+      image,
+      name,
+      username,
+    }: {
+      name: string;
+      image: string;
+      username: string;
+    }) => {
+      const { error } = await authClient.updateUser({ name, image, username });
+      // The Better Auth client resolves with `{ error }` instead of
+      // rejecting; surface it so React Query's `onError` fires (e.g. the
+      // username plugin's "already taken").
+      if (error) {
+        throw new Error(error.message || "Failed to update profile");
+      }
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: usersKeys.userInfo,

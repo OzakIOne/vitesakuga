@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Button } from "src/components/ui/button";
 import { Spinner } from "src/components/ui/feedback";
 import { Container, HStack, Stack } from "src/components/ui/layout";
@@ -21,6 +21,8 @@ export const Route = createFileRoute("/notifications")({
 
 const notificationLabel = (type: string): string => {
   switch (type) {
+    case "comment-mention":
+      return "You were mentioned in a comment.";
     case "edit-suggestion-applied":
       return "An edit suggestion on one of your posts was applied.";
     case "promotion-approved":
@@ -94,9 +96,21 @@ function NotificationsPage() {
               key={row.id}
               p={3}
             >
-              <Text fontWeight={row.readAt === null ? "bold" : "normal"}>
-                {label}
-              </Text>
+              {row.postId !== null ? (
+                <Link
+                  className="hover:underline"
+                  params={{ postId: row.postId }}
+                  to="/posts/$postId"
+                >
+                  <Text fontWeight={row.readAt === null ? "bold" : "normal"}>
+                    {label}
+                  </Text>
+                </Link>
+              ) : (
+                <Text fontWeight={row.readAt === null ? "bold" : "normal"}>
+                  {label}
+                </Text>
+              )}
               <Text fontSize="sm">{formatWhen(row.createdAt)}</Text>
             </Stack>
           );

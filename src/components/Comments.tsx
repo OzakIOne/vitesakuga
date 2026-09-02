@@ -3,6 +3,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Suspense, useState } from "react";
 import { LuPencil, LuTrash2 } from "react-icons/lu";
+import { CommentContent } from "src/components/mentions/CommentContent";
+import { MentionTextarea } from "src/components/mentions/MentionTextarea";
 import { Button, CloseButton, IconButton } from "src/components/ui/button";
 import { Spinner } from "src/components/ui/feedback";
 import { Textarea } from "src/components/ui/field";
@@ -230,9 +232,10 @@ function CommentItem({
             </HStack>
           </Box>
         ) : (
-          <Text className="break-words" mt={2}>
-            {comment.content}
-          </Text>
+          <CommentContent
+            content={comment.content}
+            mentions={comment.mentions}
+          />
         )}
       </Card.Body>
     </Card.Root>
@@ -265,13 +268,10 @@ function CommentComposer({
 
   return (
     <Box mb={4}>
-      <Textarea
-        aria-label="Write a comment"
-        mb={2}
-        onChange={(e) => {
-          setDraft(e.target.value);
-        }}
-        placeholder="Write a comment..."
+      <MentionTextarea
+        label="Write a comment"
+        onChange={setDraft}
+        placeholder="Write a comment... use @ to mention someone"
         value={comment}
       />
       <Button

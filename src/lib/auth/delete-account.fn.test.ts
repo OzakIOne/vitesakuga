@@ -17,6 +17,7 @@ const testUser = {
   name: "Alice",
   email: "alice@test.com",
   image: "https://example.com/alice.jpg",
+  username: "alice",
 };
 
 let postId: number;

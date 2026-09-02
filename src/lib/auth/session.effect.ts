@@ -13,12 +13,20 @@ export class SessionFetchError extends Schema.TaggedError<SessionFetchError>()(
   },
 ) {}
 
+/**
+ * The Better Auth session user plus the `username` @mention handle added by
+ * Better Auth's username plugin (NOT NULL in the schema, written for every
+ * account by the username generator; the stock `UserWithTwoFactor` shape
+ * does not surface the plugin field, hence the explicit intersection).
+ */
+export type AuthenticatedUser = UserWithTwoFactor & { username: string };
+
 export type AuthSession = {
   session: Session;
-  user: UserWithTwoFactor;
+  user: AuthenticatedUser;
 };
 
-export type SessionUser = UserWithTwoFactor | null;
+export type SessionUser = AuthenticatedUser | null;
 
 /**
  * Access to the current request's Better Auth session.
@@ -52,7 +60,7 @@ export class SessionService extends Context.Service<
     readonly requireUser: (
       message: string,
     ) => Effect.Effect<
-      UserWithTwoFactor,
+      AuthenticatedUser,
       UnauthorizedError | SessionFetchError
     >;
   }
@@ -105,15 +113,18 @@ export class SessionService extends Context.Service<
             id: "e2e-test-user",
             image: null,
             name: "E2E Test User",
-            // Staff rank so e2e scenarios can exercise moderator/admin paths.
             role: "admin",
             twoFactorEnabled: false,
             updatedAt: DateTime.toDate(now),
+            username: "e2e_test_user",
           },
         };
       }
 
-      const session = yield* Effect.tryPromise({
+      // SAFETY: the cast only widens Better Auth's inferred session user
+      // with `username`, which the DB guarantees (NOT NULL, written at
+      // sign-up by the username plugin/generator hook).
+      const session = (yield* Effect.tryPromise({
         try: () =>
           authSvc.api.getSession({
             headers,
@@ -124,7 +135,7 @@ export class SessionService extends Context.Service<
             message: "Failed to get session",
             cause: error,
           }),
-      });
+      })) as AuthSession | null;
 
       if (session?.user) {
         yield* Effect.logInfo("Session retrieved").pipe(

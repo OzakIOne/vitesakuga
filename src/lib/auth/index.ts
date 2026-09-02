@@ -2,14 +2,16 @@ import { getAuthenticatorName, passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { captcha, twoFactor } from "better-auth/plugins";
+import { captcha, twoFactor, username } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Option, Redacted, Schema } from "effect";
 import { envServer } from "src/lib/env/server";
 
 import { db } from "../db/pool";
 import * as schema from "../db/schema";
+import { USERNAME_MAX_LENGTH } from "../mentions/mentions";
 import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
+import { generateUsername } from "./username.server";
 
 const passkeyRpID = new URL(envServer.VITE_BASE_URL).hostname;
 const githubClientSecret = Redacted.value(envServer.GITHUB_CLIENT_SECRET);
@@ -73,6 +75,27 @@ export const auth = betterAuth({
     // Server-side floor for sign-up, password change and password reset.
     // Strength (character-class) rules live in hooks.before below.
     minPasswordLength: MIN_PASSWORD_LENGTH,
+  },
+
+  // https://www.better-auth.com/docs/concepts/database
+  // Generates the @mention handle for users who never pick one (social
+  // sign-ups); the username plugin normalizes and validates it afterwards.
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (createdUser) => {
+          if (createdUser["username"]) {
+            return;
+          }
+          return {
+            data: {
+              ...createdUser,
+              username: await generateUsername(createdUser.name),
+            },
+          };
+        },
+      },
+    },
   },
 
   // https://www.better-auth.com/docs/concepts/hooks
@@ -143,6 +166,20 @@ export const auth = betterAuth({
           }),
         ]
       : []),
+    // https://www.better-auth.com/docs/plugins/username
+    // Unique @mention handle on `user.username` (src/lib/db/schema/auth.schema.ts).
+    // Lowercase `[a-z0-9_]` only (dots would complicate mention parsing);
+    // validated after normalization, so `@Jane` mention text matches the
+    // stored `jane`. No separate displayUsername column — the display name
+    // (`user.name`) already handles presentation.
+    username({
+      displayUsername: false,
+      maxUsernameLength: USERNAME_MAX_LENGTH,
+      usernameValidator: (value) => /^[a-z0-9_]+$/.test(value),
+      validationOrder: {
+        username: "post-normalization",
+      },
+    }),
     // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
     // https://www.better-auth.com/docs/plugins/2fa
     twoFactor({

@@ -17,6 +17,7 @@ const testUser = {
   name: "Alice",
   email: "alice@test.com",
   image: null,
+  username: "alice",
 };
 
 beforeEach(async () => {

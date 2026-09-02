@@ -14,6 +14,31 @@ export const userPublicSchema = Schema.Struct({
 
 export type UserPublic = Schema.Schema.Type<typeof userPublicSchema>;
 
+/** Row for the comment @mention autocomplete (must carry the handle). */
+export const mentionableUserSchema = Schema.Struct({
+  id: Schema.String,
+  image: Schema.NullOr(Schema.String),
+  name: Schema.String,
+  username: Schema.String,
+});
+
+export type MentionableUser = Schema.Schema.Type<typeof mentionableUserSchema>;
+
+export const mentionSearchInputSchema = Schema.Struct({
+  query: Schema.String.pipe(
+    Schema.check(
+      Schema.isMaxLength(MAX_SEARCH_QUERY_LENGTH, {
+        message: `Search query must not exceed ${MAX_SEARCH_QUERY_LENGTH} characters`,
+      }),
+    ),
+    Schema.check(
+      Schema.isMinLength(1, {
+        message: "Search query must not be empty",
+      }),
+    ),
+  ),
+});
+
 export const fetchUserInputSchema = Schema.Struct({
   page: Schema.Number.pipe(
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),

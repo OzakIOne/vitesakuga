@@ -26,6 +26,9 @@ export function useAddComment(postId: number, userId: string) {
           createdAt: new Date(),
           userName: "You",
           userImage: null,
+          // Mentions resolve server-side; the cache is invalidated right
+          // after, so the optimistic row renders without links.
+          mentions: [],
         };
         // SAFETY: the optimistic comment list is homogeneous (all rows are
         // comment objects); unknown[] keeps the updater agnostic to the cache shape.

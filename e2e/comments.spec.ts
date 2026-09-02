@@ -9,6 +9,7 @@ const DATABASE_URL =
 // as this user, so the post and every comment created below is owned by it.
 const E2E_USER_ID = "e2e-test-user";
 const E2E_USER_NAME = "E2E Test User";
+const E2E_USER_USERNAME = "e2e_test_user";
 
 let postId = 0;
 let client: Client;
@@ -36,11 +37,12 @@ test.beforeAll(async () => {
   // The bypass session does not insert a user row, but posts and comments
   // reference user.id — upsert it so the FK constraints hold. Timestamps and
   // flags are set explicitly so the insert works with or without DB defaults.
+  // `username` is NOT NULL (the @mention handle).
   await client.query(
-    `INSERT INTO "user" (id, email, name, "emailVerified", "createdAt", "updatedAt")
-     VALUES ($1, 'e2e@test.local', $2, false, now(), now())
-     ON CONFLICT (id) DO UPDATE SET name = $2, "deletedAt" = NULL`,
-    [E2E_USER_ID, E2E_USER_NAME],
+    `INSERT INTO "user" (id, email, name, "emailVerified", "createdAt", "updatedAt", username)
+     VALUES ($1, 'e2e@test.local', $2, false, now(), now(), $3)
+     ON CONFLICT (id) DO UPDATE SET name = $2, "deletedAt" = NULL, username = $3`,
+    [E2E_USER_ID, E2E_USER_NAME, E2E_USER_USERNAME],
   );
 
   const result = await client.query<{ id: number }>(

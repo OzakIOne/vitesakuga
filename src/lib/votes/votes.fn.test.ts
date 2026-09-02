@@ -16,6 +16,7 @@ const testUser = {
   name: "Alice",
   email: "alice@test.com",
   image: null,
+  username: "alice",
 };
 
 let postId: PostId;
@@ -126,6 +127,7 @@ describe("PostVotesService.set", () => {
         name: "Bob",
         email: "bob@test.com",
         image: null,
+        username: "bob",
       })
       .execute();
     await db
@@ -206,6 +208,7 @@ describe("PostVotesService.fetchLikedPosts", () => {
         name: "Bob",
         email: "bob@test.com",
         image: null,
+        username: "bob",
       })
       .execute();
     const dislikedPost = await db

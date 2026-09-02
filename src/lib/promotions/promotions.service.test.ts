@@ -26,6 +26,7 @@ const insertUser = (
       id: args.id,
       name: args.id,
       role: args.role ?? "novice",
+      username: args.id.toLowerCase(),
     })
     .execute();
 

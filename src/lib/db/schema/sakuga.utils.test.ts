@@ -67,6 +67,7 @@ describe("userSelectSchema", () => {
       name: "Alice",
       role: "novice",
       updatedAt: dbTimestampString,
+      username: "alice",
     });
     expect(parsed.createdAt).toBeInstanceOf(Date);
     expect(parsed.updatedAt).toBeInstanceOf(Date);

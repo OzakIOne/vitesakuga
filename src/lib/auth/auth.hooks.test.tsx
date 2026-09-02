@@ -126,7 +126,7 @@ describe(useUpdateProfile, () => {
     mockAuth = createMockAuthClient();
   });
 
-  it("calls updateUser with name and image", async () => {
+  it("calls updateUser with name, username and image", async () => {
     mockAuth.updateUser.mockResolvedValueOnce({});
     const { result } = renderHook(() => useUpdateProfile(), {
       wrapper: createWrapper(queryClient, mockAuth),
@@ -135,12 +135,14 @@ describe(useUpdateProfile, () => {
     result.current.mutate({
       name: "Bob",
       image: "https://example.com/avatar.jpg",
+      username: "bob",
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockAuth.updateUser).toHaveBeenCalledWith({
       name: "Bob",
       image: "https://example.com/avatar.jpg",
+      username: "bob",
     });
   });
 
@@ -150,7 +152,7 @@ describe(useUpdateProfile, () => {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
-    result.current.mutate({ name: "Bob", image: "" });
+    result.current.mutate({ name: "Bob", image: "", username: "bob" });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     const { toaster } = await import("src/components/ui/toaster");

@@ -144,6 +144,27 @@ export const comments = pgTable("comments", {
     .notNull(),
 });
 
+// @mentions resolved in comment content (src/lib/mentions). One row per
+// (comment, mentioned user); notifications for new mentions are written
+// alongside these rows by CommentsService. The mention stays attached to the
+// user id, so a later username change never breaks an old comment.
+export const commentMentions = pgTable(
+  "comment_mentions",
+  {
+    commentId: integer()
+      .references(() => comments.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.commentId, t.userId] }),
+    index("comment_mentions_user_idx").on(t.userId),
+  ],
+);
+
 // Append-only points history (src/lib/points). One row per earning event;
 // totals and daily caps are derived by aggregation. The unique index makes
 // each (user, action, resource, actor) combination earn points only once,
@@ -220,10 +241,16 @@ export const notifications = pgTable(
   {
     createdAt: timestamp().defaultNow().notNull(),
     id: serial().primaryKey(),
+    // Post the notification points at (a mentioned user lands on the comment
+    // thread); null for notification types that have no deep link.
+    postId: integer(),
     readAt: timestamp(),
     type: text()
       .$type<
-        "edit-suggestion-applied" | "promotion-approved" | "promotion-rejected"
+        | "comment-mention"
+        | "edit-suggestion-applied"
+        | "promotion-approved"
+        | "promotion-rejected"
       >()
       .notNull(),
     userId: text()

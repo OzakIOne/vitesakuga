@@ -15,11 +15,21 @@ beforeEach(async () => {
 
   await db
     .insertInto("user")
-    .values({ id: "user-1", name: "Alice", email: "alice@test.com" })
+    .values({
+      id: "user-1",
+      name: "Alice",
+      email: "alice@test.com",
+      username: "alice",
+    })
     .execute();
   await db
     .insertInto("user")
-    .values({ id: "user-2", name: "Bob", email: "bob@test.com" })
+    .values({
+      id: "user-2",
+      name: "Bob",
+      email: "bob@test.com",
+      username: "bob",
+    })
     .execute();
 });
 

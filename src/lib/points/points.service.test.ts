@@ -16,7 +16,12 @@ type TestContext = Awaited<ReturnType<typeof makeServiceTestLayer>>;
 const insertUser = async (db: Kysely<DB>, id: string) => {
   await db
     .insertInto("user")
-    .values({ email: `${id}@test.com`, id, name: id })
+    .values({
+      email: `${id}@test.com`,
+      id,
+      name: id,
+      username: id.toLowerCase(),
+    })
     .execute();
 };
 

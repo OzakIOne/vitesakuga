@@ -11,15 +11,30 @@ import { escapeLikePattern } from "../posts/search-pattern";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
 import { mergeVoteCounts } from "../votes/votes.utils";
-import { fetchUserInputSchema, userPublicSchema } from "./users.schema";
+import {
+  fetchUserInputSchema,
+  mentionableUserSchema,
+  mentionSearchInputSchema,
+  userPublicSchema,
+} from "./users.schema";
 
 const PAGE_SIZE = 30;
+// The mention dropdown stays small: the composer shows a handful of
+// candidates for the prefix being typed.
+const MENTION_SEARCH_LIMIT = 8;
 
 export class UsersService extends Context.Service<
   UsersService,
   {
     readonly all: () => Effect.Effect<
       readonly Schema.Schema.Type<typeof userPublicSchema>[],
+      SqlError | RowParseError
+    >;
+    /** Active users whose username starts with the query, for @mention autocomplete. */
+    readonly searchMentionable: (
+      data: Schema.Schema.Type<typeof mentionSearchInputSchema>,
+    ) => Effect.Effect<
+      readonly Schema.Schema.Type<typeof mentionableUserSchema>[],
       SqlError | RowParseError
     >;
     readonly userPosts: (
@@ -66,6 +81,31 @@ export class UsersService extends Context.Service<
           }),
       });
     });
+
+    const searchMentionable = Effect.fn("UsersService.searchMentionable")(
+      function* (data: Schema.Schema.Type<typeof mentionSearchInputSchema>) {
+        // Prefix match on the handle; handles are stored lowercase, so the
+        // query is lowercased too (case-insensitive typing in the composer).
+        const pattern = `${escapeLikePattern(data.query.toLowerCase())}%`;
+        const rows = yield* db.execute(
+          db
+            .selectFrom("user")
+            .select(["id", "name", "image", "username"])
+            .where("deletedAt", "is", null)
+            .where("username", "like", pattern)
+            .orderBy("username", "asc")
+            .limit(MENTION_SEARCH_LIMIT),
+        );
+        return yield* Effect.try({
+          try: () => parse(Schema.Array(mentionableUserSchema))(rows),
+          catch: (error) =>
+            new RowParseError({
+              message: "Error processing mention search results",
+              cause: error,
+            }),
+        });
+      },
+    );
 
     const userPosts = Effect.fn("UsersService.userPosts")(function* (
       data: Schema.Schema.Type<typeof fetchUserInputSchema>,
@@ -158,12 +198,19 @@ export class UsersService extends Context.Service<
       };
     });
 
-    return { all, userPosts };
+    return { all, searchMentionable, userPosts };
   }),
 }) {
   static readonly all = Effect.fn("UsersService.all")(function* () {
     const svc = yield* UsersService;
     return yield* svc.all();
+  });
+
+  static readonly searchMentionable = Effect.fn(
+    "UsersService.searchMentionable",
+  )(function* (data: Schema.Schema.Type<typeof mentionSearchInputSchema>) {
+    const svc = yield* UsersService;
+    return yield* svc.searchMentionable(data);
   });
 
   static readonly userPosts = Effect.fn("UsersService.userPosts")(function* (
@@ -179,6 +226,17 @@ export const UsersServiceLive = Layer.effect(UsersService, UsersService.make);
 export const fetchUsers = createServerFn().handler(
   createHandler(UsersServiceLive, baseLayerFactories.db)(UsersService.all),
 );
+
+export const fetchMentionableUsers = createServerFn({
+  strict: { output: false },
+})
+  .validator(parseStrict(mentionSearchInputSchema))
+  .handler(
+    createHandler(
+      UsersServiceLive,
+      baseLayerFactories.db,
+    )(UsersService.searchMentionable),
+  );
 
 export const fetchUserPosts = createServerFn()
   .validator(parseStrict(fetchUserInputSchema))

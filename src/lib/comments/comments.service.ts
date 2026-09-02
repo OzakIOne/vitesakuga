@@ -18,6 +18,11 @@ import {
   UnauthorizedError,
 } from "../errors";
 import { asPostId, PostId } from "../ids";
+import { extractMentionHandles } from "../mentions/mentions";
+import {
+  NotificationsService,
+  NotificationsServiceLive,
+} from "../notifications/notifications.service";
 import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
@@ -30,6 +35,8 @@ export type CommentWithUser = {
   userId: string;
   userName: string;
   userImage: string | null;
+  /** @mentions resolved in `content`, for rendering profile links. */
+  mentions: readonly { readonly userId: string; readonly username: string }[];
 };
 
 export class CommentsService extends Context.Service<
@@ -72,6 +79,7 @@ export class CommentsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const points = yield* PointsService;
+    const notifications = yield* NotificationsService;
 
     const fetch = Effect.fn("CommentsService.fetch")(function* (
       postId: PostId,
@@ -93,11 +101,97 @@ export class CommentsService extends Context.Service<
           ]),
       );
 
+      // Second pass for @mentions: one query for the whole thread, grouped
+      // per comment client-side. Deleted users keep their row so old
+      // mentions still render (the profile shows "Deleted user").
+      const commentIds = comments.map((row) => row.id);
+      const mentionRows =
+        commentIds.length === 0
+          ? []
+          : yield* db.execute(
+              db
+                .selectFrom("comment_mentions")
+                .innerJoin("user", "user.id", "comment_mentions.userId")
+                .select([
+                  "comment_mentions.commentId",
+                  "user.id as userId",
+                  "user.username",
+                ])
+                .where("comment_mentions.commentId", "in", commentIds),
+            );
+      const mentionsByComment = new Map<number, typeof mentionRows>();
+      for (const row of mentionRows) {
+        const existing = mentionsByComment.get(row.commentId) ?? [];
+        existing.push(row);
+        mentionsByComment.set(row.commentId, existing);
+      }
+
       return comments.map((row) => ({
         ...row,
         createdAt: toIsoTimestamp(row.createdAt),
+        mentions: (mentionsByComment.get(row.id) ?? []).map((mention) => ({
+          userId: mention.userId,
+          username: mention.username,
+        })),
       }));
     });
+
+    /**
+     * Resolve `@handle` occurrences in a comment's content into
+     * `comment_mentions` rows + notifications. Best-effort: a mention that
+     * fails to persist must never fail the comment that carries it.
+     * `previousMentionedUserIds` lets edits notify only newly added users.
+     */
+    const applyMentions = Effect.fn("CommentsService.applyMentions")(
+      function* (args: {
+        readonly actorId: string;
+        readonly commentId: number;
+        readonly content: string;
+        readonly postId: PostId;
+        readonly previousMentionedUserIds: readonly string[];
+      }) {
+        const handles = extractMentionHandles(args.content);
+        if (handles.length === 0) {
+          return;
+        }
+
+        const mentioned = yield* db.execute(
+          db
+            .selectFrom("user")
+            .select(["id", "username"])
+            .where("deletedAt", "is", null)
+            .where("username", "in", handles)
+            .where("id", "!=", args.actorId),
+        );
+        if (mentioned.length === 0) {
+          return;
+        }
+
+        yield* db.execute(
+          db
+            .insertInto("comment_mentions")
+            .values(
+              mentioned.map((row) => ({
+                commentId: args.commentId,
+                userId: row.id,
+              })),
+            )
+            .onConflict((oc) => oc.doNothing()),
+        );
+
+        const previouslyMentioned = new Set(args.previousMentionedUserIds);
+        for (const row of mentioned) {
+          if (previouslyMentioned.has(row.id)) {
+            continue;
+          }
+          yield* notifications.notifyOrLog({
+            userId: row.id,
+            type: "comment-mention",
+            postId: args.postId,
+          });
+        }
+      },
+    );
 
     const add = Effect.fn("CommentsService.add")(function* (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
@@ -135,6 +229,24 @@ export class CommentsService extends Context.Service<
         refId: comment.id,
         actorId: user.id,
       });
+
+      // @mention hook: best-effort, never fails the comment.
+      yield* applyMentions({
+        actorId: user.id,
+        commentId: comment.id,
+        content: data.content,
+        postId: data.postId,
+        previousMentionedUserIds: [],
+      }).pipe(
+        Effect.catchTag("SqlError", (error) =>
+          Effect.logError("Failed to apply comment mentions").pipe(
+            Effect.annotateLogs({
+              commentId: String(comment.id),
+              error: String(error),
+            }),
+          ),
+        ),
+      );
 
       yield* Effect.logInfo("Comment added").pipe(
         Effect.annotateLogs({
@@ -198,11 +310,11 @@ export class CommentsService extends Context.Service<
       const commentOption = yield* db.executeTakeFirstOption(
         db
           .selectFrom("comments")
-          .select(["id", "userId"])
+          .select(["id", "userId", "postId"])
           .where("id", "=", data.commentId),
       );
 
-      yield* ensureOwned({
+      const comment = yield* ensureOwned({
         resource: commentOption,
         selectOwnerId: (row) => row.userId,
         userId: user.id,
@@ -220,6 +332,38 @@ export class CommentsService extends Context.Service<
           .updateTable("comments")
           .set({ content: data.content })
           .where("id", "=", data.commentId),
+      );
+
+      // Re-resolve @mentions: rows are rebuilt, and only newly mentioned
+      // users get a notification. Best-effort, like on creation.
+      const previousMentionedUserIds = yield* db.execute(
+        db
+          .selectFrom("comment_mentions")
+          .select("userId")
+          .where("commentId", "=", data.commentId),
+      );
+      yield* db.execute(
+        db
+          .deleteFrom("comment_mentions")
+          .where("commentId", "=", data.commentId),
+      );
+      yield* applyMentions({
+        actorId: user.id,
+        commentId: data.commentId,
+        content: data.content,
+        postId: asPostId(comment.postId),
+        previousMentionedUserIds: previousMentionedUserIds.map(
+          (row) => row.userId,
+        ),
+      }).pipe(
+        Effect.catchTag("SqlError", (error) =>
+          Effect.logError("Failed to apply comment mentions").pipe(
+            Effect.annotateLogs({
+              commentId: String(data.commentId),
+              error: String(error),
+            }),
+          ),
+        ),
       );
 
       yield* Effect.logInfo("Comment updated").pipe(
@@ -267,7 +411,10 @@ export class CommentsService extends Context.Service<
 export const CommentsServiceLive = Layer.effect(
   CommentsService,
   CommentsService.make,
-).pipe(Layer.provideMerge(PointsServiceLive));
+).pipe(
+  Layer.provideMerge(PointsServiceLive),
+  Layer.provideMerge(NotificationsServiceLive),
+);
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   // Scalar server-fn payloads stay unbranded on the wire (TanStack's ServerFnCtx

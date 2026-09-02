@@ -8,6 +8,7 @@ import { SqlError } from "../effect/effect.utils";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
 export type NotificationType =
+  | "comment-mention"
   | "edit-suggestion-applied"
   | "promotion-approved"
   | "promotion-rejected";
@@ -15,6 +16,8 @@ export type NotificationType =
 export type NotificationRow = {
   readonly id: number;
   readonly type: NotificationType;
+  /** Post the notification links to (mentions land on the comment thread). */
+  readonly postId: number | null;
   readonly readAt: string | null;
   /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
   readonly createdAt: string;
@@ -32,6 +35,8 @@ export class NotificationsService extends Context.Service<
     readonly notifyOrLog: (args: {
       readonly userId: string;
       readonly type: NotificationType;
+      /** Post the notification links to, when there is a deep link. */
+      readonly postId?: number;
     }) => Effect.Effect<void>;
 
     /** Newest-first inbox for one user. */
@@ -47,12 +52,17 @@ export class NotificationsService extends Context.Service<
     const db = yield* KyselyDB;
 
     const notifyOrLog = Effect.fn("NotificationsService.notifyOrLog")(
-      function* (args: { userId: string; type: NotificationType }) {
+      function* (args: {
+        userId: string;
+        type: NotificationType;
+        postId?: number;
+      }) {
         yield* db
           .execute(
             db.insertInto("notifications").values({
               type: args.type,
               userId: args.userId,
+              postId: args.postId ?? null,
             }),
           )
           .pipe(
@@ -71,7 +81,7 @@ export class NotificationsService extends Context.Service<
       const rows = yield* db.execute(
         db
           .selectFrom("notifications")
-          .select(["id", "type", "readAt", "createdAt"])
+          .select(["id", "type", "postId", "readAt", "createdAt"])
           .where("userId", "=", userId)
           .orderBy("createdAt", "desc")
           .limit(INBOX_PAGE_SIZE),

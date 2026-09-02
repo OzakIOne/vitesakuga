@@ -42,7 +42,12 @@ describe("TagsService.popular", () => {
   it("returns tags with post counts", async () => {
     const user = await db
       .insertInto("user")
-      .values({ id: "user-1", name: "Alice", email: "alice@test.com" })
+      .values({
+        id: "user-1",
+        name: "Alice",
+        email: "alice@test.com",
+        username: "alice",
+      })
       .returning("id")
       .executeTakeFirstOrThrow();
 

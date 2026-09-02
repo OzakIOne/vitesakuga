@@ -33,9 +33,14 @@ export const user = pgTable("user", {
   // Values are constrained at runtime by `RoleSchema` in the select schema.
   role: text().notNull().default("novice"),
   twoFactorEnabled: boolean().notNull().default(false),
+  // Unique public handle used for @mentions in comments. Lowercase
+  // `[a-z0-9_]`, 3–30 chars — normalized/validated by Better Auth's username
+  // plugin (src/lib/auth/index.ts). Generated at sign-up, changeable on
+  // /account. Backfilled for existing users by the column's migration.
   updatedAt: timestamp()
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
+  username: text().notNull().unique(),
 });
 
 // Display name shown for accounts that were deleted and anonymized.
@@ -52,6 +57,7 @@ export const userSelectSchema = Schema.Struct({
   role: RoleSchema,
   twoFactorEnabled: Schema.optionalKey(Schema.Boolean),
   updatedAt: TimestampSchema,
+  username: Schema.String,
 });
 
 export const userInsertSchema = Schema.Struct({
@@ -65,6 +71,7 @@ export const userInsertSchema = Schema.Struct({
   role: Schema.optionalKey(RoleSchema),
   twoFactorEnabled: Schema.optionalKey(Schema.Boolean),
   updatedAt: Schema.optionalKey(Schema.Date),
+  username: Schema.String,
 });
 
 export const session = pgTable("session", {

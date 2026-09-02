@@ -16,6 +16,7 @@ const testUser = {
   name: "Alice",
   email: "alice@test.com",
   image: null,
+  username: "alice",
 };
 
 let postId: PostId;
@@ -148,6 +149,88 @@ describe("CommentsService.add", () => {
       ),
     ).rejects.toThrow("SqlError");
   });
+
+  it("resolves @mentions into rows and notifies the mentioned user", async () => {
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-2",
+        name: "Bob",
+        email: "bob@test.com",
+        username: "bob",
+      })
+      .execute();
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    const result = await runEffect(
+      CommentsService.add({
+        content: "Hey @bob, look at this!",
+        postId,
+      }),
+    );
+
+    const mentions = await db
+      .selectFrom("comment_mentions")
+      .selectAll()
+      .where("commentId", "=", result.id)
+      .execute();
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0].userId).toBe("user-2");
+
+    const notifications = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("userId", "=", "user-2")
+      .execute();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].type).toBe("comment-mention");
+    expect(notifications[0].postId).toBe(postId);
+
+    const fetched = await runEffect(CommentsService.fetch(postId));
+    expect(fetched[0].mentions).toEqual([
+      { userId: "user-2", username: "bob" },
+    ]);
+  });
+
+  it("does not mention the author themself", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    await runEffect(
+      CommentsService.add({
+        content: "Note to @alice myself",
+        postId,
+      }),
+    );
+
+    const mentions = await db
+      .selectFrom("comment_mentions")
+      .selectAll()
+      .execute();
+    expect(mentions).toEqual([]);
+
+    const notifications = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .execute();
+    expect(notifications).toEqual([]);
+  });
+
+  it("leaves unknown handles unmentioned", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    await runEffect(
+      CommentsService.add({
+        content: "Pinging @ghost_who_does_not_exist",
+        postId,
+      }),
+    );
+
+    const mentions = await db
+      .selectFrom("comment_mentions")
+      .selectAll()
+      .execute();
+    expect(mentions).toEqual([]);
+  });
 });
 
 describe("CommentsService.delete_", () => {
@@ -205,5 +288,89 @@ describe("CommentsService.delete_", () => {
       .execute();
 
     expect(comments).toHaveLength(0);
+  });
+});
+
+describe("CommentsService.update mention re-resolution", () => {
+  let commentId: number;
+
+  beforeEach(async () => {
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-2",
+        name: "Bob",
+        email: "bob@test.com",
+        username: "bob",
+      })
+      .execute();
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-3",
+        name: "Carol",
+        email: "carol@test.com",
+        username: "carol",
+      })
+      .execute();
+
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const created = await runEffect(
+      CommentsService.add({
+        content: "Hey @bob",
+        postId,
+      }),
+    );
+    commentId = created.id;
+  });
+
+  it("notifies only newly mentioned users when editing", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    const result = await runEffect(
+      CommentsService.update({
+        commentId,
+        content: "Hey @bob and @carol",
+      }),
+    );
+    expect(result).toEqual({ success: true });
+
+    const notifications = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("type", "=", "comment-mention")
+      .execute();
+    expect(notifications.map((row) => row.userId).sort()).toEqual([
+      "user-2",
+      "user-3",
+    ]);
+
+    const mentions = await db
+      .selectFrom("comment_mentions")
+      .selectAll()
+      .where("commentId", "=", commentId)
+      .execute();
+    expect(mentions.map((row) => row.userId).sort()).toEqual([
+      "user-2",
+      "user-3",
+    ]);
+  });
+
+  it("does not re-notify on unrelated edits", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+
+    await runEffect(
+      CommentsService.update({
+        commentId,
+        content: "Hey @bob, edited typo",
+      }),
+    );
+
+    const notifications = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("type", "=", "comment-mention")
+      .execute();
+    expect(notifications).toHaveLength(1);
   });
 });

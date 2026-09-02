@@ -114,14 +114,16 @@ describe("loginSchema", () => {
 });
 
 describe("profileSchema", () => {
-  it("accepts a name and a valid URL for image", () => {
+  it("accepts a name, a valid URL for image and a username", () => {
     const result = parse(profileSchema)({
       name: "John Doe",
       image: "https://example.com/avatar.jpg",
+      username: "john_doe",
     });
     expect(result).toEqual({
       name: "John Doe",
       image: "https://example.com/avatar.jpg",
+      username: "john_doe",
     });
   });
 
@@ -129,11 +131,23 @@ describe("profileSchema", () => {
     const result = parse(profileSchema)({
       name: "John Doe",
       image: "",
+      username: "john_doe",
     });
     expect(result).toEqual({
       name: "John Doe",
       image: "",
+      username: "john_doe",
     });
+  });
+
+  it("rejects an invalid username", () => {
+    expect(() =>
+      parse(profileSchema)({
+        name: "John Doe",
+        image: "",
+        username: "Not Valid!",
+      }),
+    ).toThrow();
   });
 
   it("rejects an invalid URL for image", () => {

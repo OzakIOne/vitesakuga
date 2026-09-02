@@ -16,6 +16,7 @@ const testUser = {
   name: "Alice",
   email: "alice@test.com",
   image: null,
+  username: "alice",
 };
 
 const testUser2 = {
@@ -23,6 +24,7 @@ const testUser2 = {
   name: "Bob",
   email: "bob@test.com",
   image: null,
+  username: "bob",
 };
 
 let postId: PostId;

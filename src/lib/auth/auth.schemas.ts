@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 
+import { USERNAME_PATTERN } from "../mentions/mentions";
 import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
 
 const Email = Schema.String.pipe(
@@ -64,6 +65,16 @@ export const signUpSchema = Schema.Struct({
 export const profileSchema = Schema.Struct({
   image: Schema.Union([Url, Schema.Literal("")]),
   name: Schema.String,
+  // @mention handle: unique server-side (Better Auth username plugin + DB
+  // unique index); this check only gives fast, local feedback.
+  username: Schema.String.pipe(
+    Schema.check(
+      Schema.isPattern(USERNAME_PATTERN, {
+        message:
+          "Use 3–30 lowercase letters, digits or underscores (no spaces)",
+      }),
+    ),
+  ),
 });
 
 export const passwordSchema = Schema.Struct({
