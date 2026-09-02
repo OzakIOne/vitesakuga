@@ -186,6 +186,17 @@ export const commentInsertSchema = Schema.Struct({
   postId: PostId,
 });
 
+// Comment edit input. Ownership is checked server-side (CommentsService.update).
+export const commentUpdateSchema = Schema.Struct({
+  commentId: Schema.Number,
+  content: Schema.String.pipe(
+    Schema.decode({
+      decode: SchemaGetter.transform((val) => sanitize(val)),
+      encode: SchemaGetter.transform((val) => val),
+    }),
+  ),
+});
+
 // Audit row for each novice → uploader decision (src/lib/promotions). The
 // review queue itself is derived live from points + account age; this table
 // records what staff decided and when, and keeps rejected candidates out of

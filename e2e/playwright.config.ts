@@ -33,12 +33,18 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "nub run dev",
+      // Mode test (not development) so `.env.test` takes precedence over
+      // `.env` in the env-file cascade — nitro/c12 would otherwise override
+      // DATABASE_URL with the `.env` Neon connection and the app would run
+      // against the remote dev database instead of the local Postgres.
+      command: "nub exec vite dev --mode test --host",
       cwd: "..",
       port: 3000,
       reuseExistingServer: !CI,
       timeout: 120000,
       env: {
+        APP_ENV: "test",
+        NODE_ENV: "test",
         // "e2e" behaves like the local Postgres driver (see src/lib/db/pool.ts)
         // but is distinct so the e2e auth bypass in session.effect.ts stays
         // unreachable from `nub run dev:local`.

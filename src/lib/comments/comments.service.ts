@@ -4,7 +4,11 @@ import { Context, DateTime, Effect, Layer, Schema } from "effect";
 import { ensureOwned } from "../auth/ownership";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import { commentInsertSchema, commentsSelectSchema } from "../db/schema";
+import {
+  commentInsertSchema,
+  commentUpdateSchema,
+  commentsSelectSchema,
+} from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
@@ -43,6 +47,17 @@ export class CommentsService extends Context.Service<
     >;
     readonly delete_: (
       commentId: number,
+    ) => Effect.Effect<
+      { success: boolean },
+      | UnauthorizedError
+      | ForbiddenError
+      | CommentNotFoundError
+      | SessionFetchError
+      | SqlError,
+      SessionService
+    >;
+    readonly update: (
+      data: Schema.Schema.Type<typeof commentUpdateSchema>,
     ) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
@@ -172,7 +187,52 @@ export class CommentsService extends Context.Service<
       return { success: true };
     });
 
-    return { fetch, add, delete_ };
+    const update = Effect.fn("CommentsService.update")(function* (
+      data: Schema.Schema.Type<typeof commentUpdateSchema>,
+    ) {
+      const sessions = yield* SessionService;
+      const user = yield* sessions.requireUser(
+        "You must be logged in to edit a comment",
+      );
+
+      const commentOption = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("comments")
+          .select(["id", "userId"])
+          .where("id", "=", data.commentId),
+      );
+
+      yield* ensureOwned({
+        resource: commentOption,
+        selectOwnerId: (row) => row.userId,
+        userId: user.id,
+        notFound: new CommentNotFoundError({
+          commentId: data.commentId,
+          message: `Comment ${data.commentId} not found`,
+        }),
+        forbidden: new ForbiddenError({
+          message: "You can only edit your own comments",
+        }),
+      });
+
+      yield* db.execute(
+        db
+          .updateTable("comments")
+          .set({ content: data.content })
+          .where("id", "=", data.commentId),
+      );
+
+      yield* Effect.logInfo("Comment updated").pipe(
+        Effect.annotateLogs({
+          commentId: String(data.commentId),
+          userId: user.id,
+        }),
+      );
+
+      return { success: true };
+    });
+
+    return { fetch, add, delete_, update };
   }),
 }) {
   static readonly fetch = Effect.fn("CommentsService.fetch")(function* (
@@ -194,6 +254,13 @@ export class CommentsService extends Context.Service<
   ) {
     const svc = yield* CommentsService;
     return yield* svc.delete_(commentId);
+  });
+
+  static readonly update = Effect.fn("CommentsService.update")(function* (
+    data: Schema.Schema.Type<typeof commentUpdateSchema>,
+  ) {
+    const svc = yield* CommentsService;
+    return yield* svc.update(data);
   });
 }
 
@@ -232,4 +299,13 @@ export const deleteComment = createServerFn({ method: "POST" })
       CommentsServiceLive,
       baseLayerFactories.auth,
     )((data: { commentId: number }) => CommentsService.delete_(data.commentId)),
+  );
+
+export const updateComment = createServerFn({ method: "POST" })
+  .validator(parse(commentUpdateSchema))
+  .handler(
+    createHandler(
+      CommentsServiceLive,
+      baseLayerFactories.auth,
+    )(CommentsService.update),
   );

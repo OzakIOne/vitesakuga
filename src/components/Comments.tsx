@@ -1,27 +1,31 @@
 import { ClientOnly, Portal } from "@ark-ui/react";
-import { eq } from "@tanstack/db";
-import { useLiveQuery } from "@tanstack/react-db";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Suspense, useState } from "react";
-import { LuTrash2 } from "react-icons/lu";
+import { LuPencil, LuTrash2 } from "react-icons/lu";
 import { Button, CloseButton, IconButton } from "src/components/ui/button";
 import { Spinner } from "src/components/ui/feedback";
 import { Textarea } from "src/components/ui/field";
-import { Box, Stack } from "src/components/ui/layout";
+import { Box, HStack, Stack } from "src/components/ui/layout";
+import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { Text } from "src/components/ui/typography";
 import {
   useAddComment,
   useDeleteComment,
+  useUpdateComment,
 } from "src/lib/comments/comments.hooks";
 import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
-import { commentDraftsCollection } from "src/lib/db/collections";
+import type { fetchComments } from "src/lib/comments/comments.service";
+import { useCommentDraft } from "src/lib/comments/useCommentDraft";
 import { formatDateUtc } from "src/utils/date-format";
 
 type CommentsProps = {
   postId: number;
   currentUserId?: string | undefined;
 };
+
+type CommentRow = Awaited<ReturnType<typeof fetchComments>>[number];
 
 function CommentsContent({ postId, currentUserId }: CommentsProps) {
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
@@ -61,38 +65,14 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
 
       <Box>
         {comments?.map((comment) => (
-          <Box
-            alignItems="flex-start"
-            borderRadius="md"
-            display="flex"
-            justifyContent="space-between"
+          <CommentItem
+            currentUserId={currentUserId}
             key={comment.id}
-            mb={3}
-            p={3}
-          >
-            <Box flex="1">
-              <Text color="gray.600" fontSize="sm" mb={1}>
-                {comment.userName} • {formatDateUtc(comment.createdAt)}
-              </Text>
-              <Text className="break-words">{comment.content}</Text>
-            </Box>
-            {currentUserId === comment.userId && (
-              <IconButton
-                aria-label="Delete comment"
-                colorScheme="red"
-                flexShrink={0}
-                loading={deleteCommentMutation.isPending}
-                ms={2}
-                onClick={() => {
-                  setCommentIdToDelete(comment.id);
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                <LuTrash2 />
-              </IconButton>
-            )}
-          </Box>
+            comment={comment}
+            onDelete={() => {
+              setCommentIdToDelete(comment.id);
+            }}
+          />
         ))}
       </Box>
 
@@ -139,6 +119,126 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
   );
 }
 
+function CommentItem({
+  comment,
+  currentUserId,
+  onDelete,
+}: {
+  comment: CommentRow;
+  currentUserId: CommentsProps["currentUserId"];
+  onDelete: () => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+
+  const updateCommentMutation = useUpdateComment(comment.postId);
+  const isOwn = currentUserId === comment.userId;
+
+  const handleSave = () => {
+    const trimmed = editContent.trim();
+    if (!trimmed) {
+      return;
+    }
+    updateCommentMutation.mutate(
+      { commentId: comment.id, content: trimmed },
+      { onSuccess: () => setIsEditing(false) },
+    );
+  };
+
+  const handleCancel = () => {
+    setEditContent(comment.content);
+    setIsEditing(false);
+  };
+
+  return (
+    <Card.Root mb={3}>
+      <Card.Body>
+        <HStack align="center" justify="space-between">
+          <HStack align="center" gap={2}>
+            <Link
+              className="flex items-center gap-2 hover:underline"
+              params={{ id: comment.userId }}
+              to="/users/$id"
+            >
+              <Avatar.Root size="sm">
+                {comment.userImage && (
+                  <Avatar.Image
+                    src={comment.userImage}
+                    alt={comment.userName}
+                  />
+                )}
+                <Avatar.Fallback name={comment.userName} />
+              </Avatar.Root>
+              <Text fontSize="sm" fontWeight="semibold">
+                {comment.userName}
+              </Text>
+            </Link>
+            <Text color="gray.500" fontSize="xs">
+              {formatDateUtc(comment.createdAt)}
+            </Text>
+          </HStack>
+          {isOwn && (
+            <HStack gap={1}>
+              <IconButton
+                aria-label="Edit comment"
+                flexShrink={0}
+                onClick={() => {
+                  setIsEditing(true);
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                <LuPencil />
+              </IconButton>
+              <IconButton
+                aria-label="Delete comment"
+                colorScheme="red"
+                flexShrink={0}
+                onClick={onDelete}
+                size="sm"
+                variant="ghost"
+              >
+                <LuTrash2 />
+              </IconButton>
+            </HStack>
+          )}
+        </HStack>
+        {isEditing ? (
+          <Box mt={2}>
+            <Textarea
+              aria-label="Edit comment"
+              autoFocus
+              mb={2}
+              onChange={(e) => {
+                setEditContent(e.target.value);
+              }}
+              value={editContent}
+            />
+            <HStack gap={2}>
+              <Button
+                colorPalette="blue"
+                disabled={!editContent.trim()}
+                loading={updateCommentMutation.isPending}
+                onClick={handleSave}
+                size="sm"
+              >
+                Save
+              </Button>
+              <Button onClick={handleCancel} size="sm" variant="outline">
+                Cancel
+              </Button>
+            </HStack>
+          </Box>
+        ) : (
+          <Text className="break-words" mt={2}>
+            {comment.content}
+          </Text>
+        )}
+      </Card.Body>
+    </Card.Root>
+  );
+}
+
 function CommentComposer({
   postId,
   currentUserId,
@@ -146,15 +246,11 @@ function CommentComposer({
   postId: number;
   currentUserId: string;
 }) {
-  const postIdStr = postId.toString();
-
-  const { data: drafts } = useLiveQuery((query) =>
-    query
-      .from({ draft: commentDraftsCollection })
-      .where(({ draft }) => eq(draft.id, postIdStr)),
-  );
-  const draft = drafts?.[0];
-  const comment = draft?.content ?? "";
+  const {
+    draft: comment,
+    clear: clearDraft,
+    setDraft,
+  } = useCommentDraft(postId);
 
   const addCommentMutation = useAddComment(postId, currentUserId);
 
@@ -163,20 +259,8 @@ function CommentComposer({
       return;
     }
     addCommentMutation.mutate(comment.trim(), {
-      onSuccess: () => {
-        commentDraftsCollection.delete(postIdStr);
-      },
+      onSuccess: clearDraft,
     });
-  };
-
-  const handleChange = (value: string) => {
-    if (draft) {
-      commentDraftsCollection.update(postIdStr, (d) => {
-        d.content = value;
-      });
-    } else {
-      commentDraftsCollection.insert({ id: postIdStr, content: value });
-    }
   };
 
   return (
@@ -185,7 +269,7 @@ function CommentComposer({
         aria-label="Write a comment"
         mb={2}
         onChange={(e) => {
-          handleChange(e.target.value);
+          setDraft(e.target.value);
         }}
         placeholder="Write a comment..."
         value={comment}

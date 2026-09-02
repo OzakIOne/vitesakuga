@@ -48,6 +48,42 @@ export function useAddComment(postId: number, userId: string) {
   });
 }
 
+export function useUpdateComment(postId: number) {
+  const queryClient = useQueryClient();
+  const { updateComment } = useContext(CommentsFnsContext);
+
+  return useMutationWithFeedback({
+    errorFallback: "Failed to update comment",
+    errorTitle: "Error updating comment",
+    mutationFn: async (data: { commentId: number; content: string }) =>
+      updateComment({ data }),
+    onMutate: async ({ commentId, content }) => {
+      await queryClient.cancelQueries({ queryKey: commentsKeys.post(postId) });
+      const previous = queryClient.getQueryData(commentsKeys.post(postId));
+      // SAFETY: the cached list holds comment rows; matching on id and patching
+      // content only touches the fields the update mutates.
+      queryClient.setQueryData(commentsKeys.post(postId), (old) =>
+        (old as Array<{ id: number; content: string }> | undefined)?.map((c) =>
+          c.id === commentId ? { ...c, content } : c,
+        ),
+      );
+      return { previous };
+    },
+    onError: (error, _, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(commentsKeys.post(postId), context.previous);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: commentsKeys.post(postId),
+      });
+    },
+    successDescription: "Your comment has been successfully updated.",
+    successTitle: "Comment updated",
+  });
+}
+
 export function useDeleteComment(postId: number) {
   const queryClient = useQueryClient();
   const { deleteComment } = useContext(CommentsFnsContext);
