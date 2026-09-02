@@ -74,7 +74,7 @@ const signUp = async (request: APIRequestContext, email: string) => {
 
 const signOut = async (request: APIRequestContext, context: BrowserContext) => {
   await request.post("/api/auth/sign-out", {
-    headers: { origin: "http://localhost:3000" },
+    headers: { origin: "http://localhost:3100" },
   });
   await context.clearCookies();
 };

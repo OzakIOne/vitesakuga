@@ -1,6 +1,6 @@
 # Features — ViteSakuga
 
-Inventaire des fonctionnalités de ViteSakuga (clone de Sakugabooru). Basé sur le code au 2026-09-01.
+Inventaire des fonctionnalités de ViteSakuga (clone de Sakugabooru). Basé sur le code au 2026-09-02.
 
 ## Sommaire
 
@@ -10,6 +10,7 @@ Inventaire des fonctionnalités de ViteSakuga (clone de Sakugabooru). Basé sur 
 - [Authentification & comptes](#authentification--comptes)
 - [Espace admin / staff](#espace-admin--staff)
 - [API (server functions)](#api-server-functions)
+- [Tests & couverture](#tests--couverture)
 - [Infrastructure & configuration](#infrastructure--configuration)
 
 ---
@@ -49,13 +50,20 @@ Inventaire des fonctionnalités de ViteSakuga (clone de Sakugabooru). Basé sur 
 ## Interaction communautaire
 
 - **Votes** : up/down sur les posts, un vote par utilisateur ; playlist virtuelle « Liked posts » dérivée des likes — `src/lib/votes/*`
-- **Commentaires** : ajout/édition/suppression (propriétaire ou staff), sanitization serveur — `src/lib/comments/comments.service.ts`, `src/lib/sanitize.ts`, `src/components/Comments.tsx`
+- **Commentaires** : ajout/édition/suppression (propriétaire ou staff), sanitization serveur, **mentions @pseudo** avec autocomplétion (recherche par pseudo ou nom d'affichage) — `src/lib/comments/comments.service.ts`, `src/lib/sanitize.ts`, `src/components/Comments.tsx`, `src/components/mentions/*`, `src/lib/mentions/*`
 - **Playlists** : CRUD, publique/privée, ajout/retrait (unitaire + en masse), réordonnancement — `src/routes/account_.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`, `src/components/PlaylistAddModal.tsx`, `src/components/PlaylistPostsTable.tsx`
 - **Signalements** : reporter un post avec motif — `src/components/ReportDialog.tsx`, `src/lib/reports/reports.service.ts`
 - **Suggestions d'édition « wiki »** : modifications proposées sur le post d'un autre ; appliquées après 2 approbations d'uploaders ou 1 décision staff ; historique conservé — `src/lib/post-edits/post-edits.service.ts`, tables `post_edits` / `post_edit_approvals`
 - **Remplacement de vidéo** : le propriétaire (ou staff) remplace la vidéo en conservant id/likes/commentaires ; ancienne clé archivée dans `video_revisions` (rétention 90 j, restaurable par staff) — `src/lib/videos/videos.service.ts`
 - **Système de points** : registre append-only `points_ledger` — `post-upload` (25 pts, cap 3/j), `post-like-received` (5 pts, cap 50/j), `comment-written` (2 pts, cap 10/j), `edit-suggestion-approved` (10 pts, cap 5/j) ; anti-farm par index unique (user, action, ref, actor) — `src/lib/points/points.config.ts`, `points.service.ts`
-- **Notifications in-app** : inbox `/notifications`, badge non-lus, « Mark all read » ; types : promotion approuvée/rejetée, suggestion d'édition appliquée — `src/routes/notifications.tsx`, `src/lib/notifications/notifications.service.ts`
+- **Notifications in-app** : inbox `/notifications`, badge non-lus, « Mark all read » ; types : promotion approuvée/rejetée, suggestion d'édition appliquée, **mention dans un commentaire** (lien direct vers le post) — `src/routes/notifications.tsx`, `src/lib/notifications/notifications.service.ts`
+
+### Mentions @pseudo
+
+- Chaque compte a un **pseudo unique** (`user.username`, lowercase `[a-z0-9_]`, 3–30) : généré automatiquement à l'inscription (couvre aussi OAuth), modifiable sur `/account` — plugin `username` Better Auth, `src/lib/auth/index.ts`, `username.server.ts`
+- Dans un commentaire, `@` ouvre une autocomplétion (↑/↓/Entrée/Échap, ARIA combobox) sur les utilisateurs actifs ; le contenu stocké est canonisé en **tokens id** `[@handle](user:userId)` — renames de pseudo jamais cassent les anciennes mentions, le rendu affiche toujours le pseudo courant
+- Les nouvelles mentions écrivent `comment_mentions` (commentId, userId) + notif best-effort (jamais d'échec du commentaire) ; l'édition ne notifie que les nouveaux mentionnés ; auto-mention et comptes supprimés exclus
+- Rendu : tokens résolus en liens profil depuis le join `comment_mentions × user` — `src/components/mentions/CommentContent.tsx`, `MentionTextarea.tsx`, `src/lib/mentions/mentions.ts`
 
 ## Authentification & comptes
 
@@ -67,7 +75,7 @@ Better Auth monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/api/a
 - **2FA TOTP** : activation dans le compte, page `/two-factor` (code TOTP ou code de secours, option « trust device ») — `src/components/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`, `src/lib/auth/two-factor.hooks.ts`
 - **Captcha Cloudflare Turnstile** sur login/signup si activé par env (`src/lib/auth/useTurnstile.ts`)
 - **Rate limiting** en base avec règles renforcées sur `/sign-in/email` et `/sign-up/email`
-- **Compte** (`/account`) : profil, changement de mot de passe, suppression avec anonymisation (contenu conservé, attribué à « Deleted user ») — `src/lib/auth/delete-account.ts`, `account-security.ts`
+- **Compte** (`/account`) : profil (nom, **pseudo**, avatar), changement de mot de passe, suppression avec anonymisation (contenu conservé, attribué à « Deleted user ») — `src/lib/auth/delete-account.ts`, `account-security.ts`
 - **Rôles & permissions** : hiérarchie `novice → uploader → moderator → admin`, permissions (`posts:create`, `posts:suggest-edit`, `posts:edit-any`, `posts:delete-any`, `videos:replace-own/any`, `edits:approve`, `promotions:review`…) appliquées via policies Effect (`withPolicy`, `requireRole`, `requirePermission`) — `src/lib/auth/roles.ts`, `policy.ts`, `ownership.ts`
 
 ## Espace admin / staff
@@ -91,11 +99,59 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 - **Comments** : `fetchComments`, `addComment`, `updateComment`, `deleteComment`
 - **Votes** : `fetchPostVotes`, `setPostVote`, `removePostVote`, `fetchLikedPosts`
 - **Playlists** : `createPlaylist`, `updatePlaylist`, `deletePlaylist`, `addPostToPlaylist`, `removePostFromPlaylist`, `bulkAddPostsToPlaylist`, `bulkRemovePostsFromPlaylist`, `reorderPlaylistPosts`, `fetchUserPlaylists`, `fetchPublicPlaylists`, `fetchPlaylistDetail`, `fetchPlaylistsForPost`
-- **Tags / Users** : `getAllTags`, `getAllPopularTags`, `fetchUsers`, `fetchUserPosts`
+- **Tags / Users** : `getAllTags`, `getAllPopularTags`, `fetchUsers`, `fetchUserPosts`, `fetchMentionableUsers`
 - **Reports / Post-edits** : `submitPostReport`, `proposeEdit`, `approveEdit`, `rejectEdit`, `fetchPostEdits`
 - **Promotions / Modération** : `fetchPromotionQueue`, `approvePromotion`, `rejectPromotion`, `fetchModerationOverview`, `assignUserRole`
 - **Notifications** : `fetchNotifications`, `markAllNotificationsRead`
 - **Auth** : `getUserSession`, `getAccountSecurity`, `deleteAccount`
+
+## Tests & couverture
+
+État au 2026-09-02. Tests unitaires dans `src/**/*.test.{ts,tsx}` (vitest), e2e dans `e2e/*.spec.ts` (Playwright, stack locale Postgres + RustFS).
+
+### Unitaires + e2e
+
+| Feature | Unitaires | e2e |
+| --- | --- | --- |
+| Upload de post | `file-validation`, `upload-policy`, `upload.processor`, `useUploadForm`, `posts.fn`, `storage` | `upload.spec.ts` |
+| Convertisseur vidéo | `-convert.machine` | `convert.spec.ts` |
+| Commentaires | `comments.fn`, `comments.hooks`, `sanitize` | `comments.spec.ts` |
+| Mentions @pseudo | `mentions` | `mentions.spec.ts` |
+| Auth de base | `auth.config`, `auth.middleware`, `auth.schemas`, `password-policy`, `policy` | `auth.spec.ts` |
+| Passkeys | `passkey.hooks` | `passkey.spec.ts` |
+| 2FA TOTP | `two-factor.hooks`, `TwoFactorSection` | `two-factor.spec.ts` |
+
+### Unitaires seulement
+
+| Feature | Unitaires |
+| --- | --- |
+| Fil de posts / recherche / pagination | `posts.infinite`, `search-pattern`, `posts.schema` |
+| Tags | `tags.fn` |
+| Annuaire / profil utilisateurs | `users.fn` |
+| Playlists | `playlists.fn` |
+| Votes | `votes.fn`, `votes.hooks` |
+| Suggestions d'édition wiki | `post-edits.service` |
+| Remplacement vidéo + Storage GC | `videos.service` |
+| Système de points | `points.service` |
+| Promotions admin | `promotions.service` |
+| Compte / sécurité / suppression | `account-security`, `delete-account.fn`, `auth.hooks` |
+| Rate limiting | `rate-limiter` |
+| Stockage | `storage`, `content-type` |
+
+### Sans test
+
+- Signalements (`reports.service.ts`)
+- Notifications in-app (partiellement couvertes via `mentions.spec.ts` pour la notif de mention)
+- Onglets admin Reports et Roles (`moderation.service.ts`)
+- Raccourcis clavier (`GlobalShortcuts`)
+- Pages publiques en tant que telles (accueil, page de tag, détail de post) — couvertes seulement indirectement via les tests des services sous-jacents ; **aucun smoke test e2e du parcours feed → détail**
+
+### Priorités e2e identifiées
+
+1. **Smoke test de lecture** : feed (filtres + sync URL) → détail de post (tags, votes, commentaires visibles) — chemin de tous les visiteurs, zéro couverture e2e.
+2. **Votes** : updates optimistes + playlist « Liked posts » — bugs visibles uniquement en navigateur.
+3. **Playlists UI** : ajout en masse, réordonnancement (drag & drop).
+4. **Suppression de compte** : anonymisation + réattribution à « Deleted user ».
 
 ## Infrastructure & configuration
 
@@ -107,6 +163,6 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 
 ## Schéma de base de données (Drizzle/Postgres)
 
-`src/lib/db/schema/auth.schema.ts` : `user` (role, twoFactorEnabled, deletedAt), `session`, `account`, `verification`, `passkey`, `twoFactor`, `rateLimit`
+`src/lib/db/schema/auth.schema.ts` : `user` (role, **username** unique, twoFactorEnabled, deletedAt), `session`, `account`, `verification`, `passkey`, `twoFactor`, `rateLimit`
 
-`src/lib/db/schema/sakuga.schema.ts` : `tags`, `post_tags`, `posts`, `post_images`, `post_votes`, `post_reports`, `playlists`, `playlist_posts`, `comments`, `points_ledger`, `promotion_reviews`, `notifications`, `post_edits`, `post_edit_approvals`, `video_revisions`
+`src/lib/db/schema/sakuga.schema.ts` : `tags`, `post_tags`, `posts`, `post_images`, `post_votes`, `post_reports`, `playlists`, `playlist_posts`, `comments`, `comment_mentions`, `points_ledger`, `promotion_reviews`, `notifications`, `post_edits`, `post_edit_approvals`, `video_revisions`

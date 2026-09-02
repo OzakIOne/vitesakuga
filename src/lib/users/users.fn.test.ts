@@ -65,6 +65,51 @@ describe("UsersService.all", () => {
   });
 });
 
+describe("UsersService.searchMentionable", () => {
+  it("matches by username prefix", async () => {
+    const result = await runEffect(
+      UsersService.searchMentionable({ query: "ali" }),
+    );
+    expect(result.map((u) => u.username)).toEqual(["alice"]);
+  });
+
+  it("matches by display name prefix, case-insensitively, and returns the handle", async () => {
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-3",
+        name: "Charlie Brown",
+        email: "charlie@test.com",
+        username: "cbrown",
+      })
+      .execute();
+
+    const result = await runEffect(
+      UsersService.searchMentionable({ query: "charlie" }),
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      id: "user-3",
+      name: "Charlie Brown",
+      image: null,
+      username: "cbrown",
+    });
+  });
+
+  it("excludes deleted users", async () => {
+    await db
+      .updateTable("user")
+      .set({ deletedAt: new Date() })
+      .where("id", "=", "user-1")
+      .execute();
+
+    const result = await runEffect(
+      UsersService.searchMentionable({ query: "a" }),
+    );
+    expect(result.map((u) => u.username)).toEqual([]);
+  });
+});
+
 describe("UsersService.userPosts", () => {
   it("returns empty posts for user with no posts", async () => {
     const result = await runEffect(

@@ -16,7 +16,8 @@ export default defineConfig({
   testDir: ".",
   timeout: 60000,
   use: {
-    baseURL: "http://localhost:3000",
+    // Must match the e2e webServer port (playwright.config.ts, 3100).
+    baseURL: "http://localhost:3100",
     connectOptions: {
       wsEndpoint: CDP_WS_ENDPOINT,
     },

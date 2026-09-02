@@ -18,7 +18,10 @@ import {
   UnauthorizedError,
 } from "../errors";
 import { asPostId, PostId } from "../ids";
-import { extractMentionHandles } from "../mentions/mentions";
+import {
+  canonicalizeMentionContent,
+  extractPlainMentionHandles,
+} from "../mentions/mentions";
 import {
   NotificationsService,
   NotificationsServiceLive,
@@ -128,6 +131,11 @@ export class CommentsService extends Context.Service<
 
       return comments.map((row) => ({
         ...row,
+        // SAFETY: comments.postId is a bigint column and node-postgres
+        // returns int8 as a string; the value is the row's FK to posts.id,
+        // so Number() is exact and the client needs a real number for
+        // react-query cache keys.
+        postId: asPostId(Number(row.postId)),
         createdAt: toIsoTimestamp(row.createdAt),
         mentions: (mentionsByComment.get(row.id) ?? []).map((mention) => ({
           userId: mention.userId,
@@ -137,33 +145,49 @@ export class CommentsService extends Context.Service<
     });
 
     /**
-     * Resolve `@handle` occurrences in a comment's content into
-     * `comment_mentions` rows + notifications. Best-effort: a mention that
-     * fails to persist must never fail the comment that carries it.
-     * `previousMentionedUserIds` lets edits notify only newly added users.
+     * Canonicalize freshly typed `@handle` mentions into stored tokens.
+     * Handles resolve against active users other than the author; unknown
+     * handles stay plain text. Returns the content to persist plus the
+     * mentioned user ids (fresh resolutions + ids already stored in tokens).
+     */
+    const canonicalizeContent = Effect.fn("CommentsService.canonicalize")(
+      function* (args: { readonly actorId: string; readonly content: string }) {
+        const handles = extractPlainMentionHandles(args.content);
+        const mentioned =
+          handles.length === 0
+            ? []
+            : yield* db.execute(
+                db
+                  .selectFrom("user")
+                  .select(["id", "username"])
+                  .where("deletedAt", "is", null)
+                  .where("username", "in", handles)
+                  .where("id", "!=", args.actorId),
+              );
+        const userIdByHandle = new Map(
+          mentioned.map((row) => [row.username, row.id]),
+        );
+        return canonicalizeMentionContent(
+          args.content,
+          (handle) => userIdByHandle.get(handle) ?? null,
+        );
+      },
+    );
+
+    /**
+     * Persist `comment_mentions` rows for a canonicalized comment and notify
+     * newly mentioned users. Best-effort: a mention that fails to persist
+     * must never fail the comment that carries it. `previousMentionedUserIds`
+     * lets edits notify only newly added users.
      */
     const applyMentions = Effect.fn("CommentsService.applyMentions")(
       function* (args: {
-        readonly actorId: string;
         readonly commentId: number;
-        readonly content: string;
         readonly postId: PostId;
+        readonly userIds: readonly string[];
         readonly previousMentionedUserIds: readonly string[];
       }) {
-        const handles = extractMentionHandles(args.content);
-        if (handles.length === 0) {
-          return;
-        }
-
-        const mentioned = yield* db.execute(
-          db
-            .selectFrom("user")
-            .select(["id", "username"])
-            .where("deletedAt", "is", null)
-            .where("username", "in", handles)
-            .where("id", "!=", args.actorId),
-        );
-        if (mentioned.length === 0) {
+        if (args.userIds.length === 0) {
           return;
         }
 
@@ -171,19 +195,30 @@ export class CommentsService extends Context.Service<
           db
             .insertInto("comment_mentions")
             .values(
-              mentioned.map((row) => ({
+              args.userIds.map((userId) => ({
                 commentId: args.commentId,
-                userId: row.id,
+                userId,
               })),
             )
             .onConflict((oc) => oc.doNothing()),
         );
 
         const previouslyMentioned = new Set(args.previousMentionedUserIds);
-        for (const row of mentioned) {
-          if (previouslyMentioned.has(row.id)) {
-            continue;
-          }
+        const toNotify = args.userIds.filter(
+          (userId) => !previouslyMentioned.has(userId),
+        );
+        if (toNotify.length === 0) {
+          return;
+        }
+        // Only active users get notified; anonymized accounts have no inbox.
+        const active = yield* db.execute(
+          db
+            .selectFrom("user")
+            .select("id")
+            .where("deletedAt", "is", null)
+            .where("id", "in", toNotify),
+        );
+        for (const row of active) {
           yield* notifications.notifyOrLog({
             userId: row.id,
             type: "comment-mention",
@@ -201,12 +236,17 @@ export class CommentsService extends Context.Service<
         "You must be logged in to comment",
       );
 
+      const canonical = yield* canonicalizeContent({
+        actorId: user.id,
+        content: data.content,
+      });
+
       const now = yield* DateTime.now;
       const comment = yield* db.executeTakeFirstOrError(
         db
           .insertInto("comments")
           .values({
-            content: data.content,
+            content: canonical.content,
             createdAt: DateTime.toDate(now),
             postId: data.postId,
             userId: user.id,
@@ -215,10 +255,11 @@ export class CommentsService extends Context.Service<
       );
 
       // SAFETY: postId is a comments.postId FK column; the row value satisfies
-      // the PostId contract by construction.
+      // the PostId contract by construction. Number() undoes the string
+      // coercion node-postgres applies to bigint columns.
       const created = {
         ...comment,
-        postId: asPostId(comment.postId),
+        postId: asPostId(Number(comment.postId)),
         createdAt: toIsoTimestamp(comment.createdAt),
       };
 
@@ -232,10 +273,9 @@ export class CommentsService extends Context.Service<
 
       // @mention hook: best-effort, never fails the comment.
       yield* applyMentions({
-        actorId: user.id,
         commentId: comment.id,
-        content: data.content,
         postId: data.postId,
+        userIds: canonical.mentionUserIds,
         previousMentionedUserIds: [],
       }).pipe(
         Effect.catchTag("SqlError", (error) =>
@@ -327,15 +367,21 @@ export class CommentsService extends Context.Service<
         }),
       });
 
+      // Re-canonicalize @mentions (the editor sends de-tokenized text):
+      // content tokens are rebuilt, and only newly mentioned users get a
+      // notification. Best-effort, like on creation.
+      const canonical = yield* canonicalizeContent({
+        actorId: user.id,
+        content: data.content,
+      });
+
       yield* db.execute(
         db
           .updateTable("comments")
-          .set({ content: data.content })
+          .set({ content: canonical.content })
           .where("id", "=", data.commentId),
       );
 
-      // Re-resolve @mentions: rows are rebuilt, and only newly mentioned
-      // users get a notification. Best-effort, like on creation.
       const previousMentionedUserIds = yield* db.execute(
         db
           .selectFrom("comment_mentions")
@@ -348,10 +394,9 @@ export class CommentsService extends Context.Service<
           .where("commentId", "=", data.commentId),
       );
       yield* applyMentions({
-        actorId: user.id,
         commentId: data.commentId,
-        content: data.content,
         postId: asPostId(comment.postId),
+        userIds: canonical.mentionUserIds,
         previousMentionedUserIds: previousMentionedUserIds.map(
           (row) => row.userId,
         ),

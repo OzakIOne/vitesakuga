@@ -28,7 +28,10 @@ export default defineConfig({
   testDir: ".",
   timeout: 60000,
   use: {
-    baseURL: "http://localhost:3000",
+    // Dedicated port (3100) so e2e runs never collide with the dev server
+    // (`nub run dev` on 3000): reuseExistingServer would otherwise silently
+    // reuse it — and test against the wrong database.
+    baseURL: "http://localhost:3100",
     trace: "on-first-retry",
   },
   webServer: [
@@ -37,9 +40,9 @@ export default defineConfig({
       // `.env` in the env-file cascade — nitro/c12 would otherwise override
       // DATABASE_URL with the `.env` Neon connection and the app would run
       // against the remote dev database instead of the local Postgres.
-      command: "nub exec vite dev --mode test --host",
+      command: "nub exec vite dev --mode test --host --port 3100",
       cwd: "..",
-      port: 3000,
+      port: 3100,
       reuseExistingServer: !CI,
       timeout: 120000,
       env: {
@@ -61,7 +64,7 @@ export default defineConfig({
         // `VITE_BASE_URL` from `.env` (a remote dev origin), which would send
         // auth traffic off-machine and set Secure cookies that never persist
         // over http://localhost.
-        VITE_BASE_URL: "http://localhost:3000",
+        VITE_BASE_URL: "http://localhost:3100",
       },
     },
   ],

@@ -169,6 +169,9 @@ describe("CommentsService.add", () => {
       }),
     );
 
+    // Freshly typed handles are canonicalized to id-based tokens on storage.
+    expect(result.content).toBe("Hey [@bob](user:user-2), look at this!");
+
     const mentions = await db
       .selectFrom("comment_mentions")
       .selectAll()

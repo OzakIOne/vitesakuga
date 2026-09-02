@@ -84,15 +84,21 @@ export class UsersService extends Context.Service<
 
     const searchMentionable = Effect.fn("UsersService.searchMentionable")(
       function* (data: Schema.Schema.Type<typeof mentionSearchInputSchema>) {
-        // Prefix match on the handle; handles are stored lowercase, so the
-        // query is lowercased too (case-insensitive typing in the composer).
+        // Prefix match on the handle OR the display name; handles are stored
+        // lowercase so the query is lowercased too (case-insensitive typing
+        // in the composer). Names keep their casing, hence ilike.
         const pattern = `${escapeLikePattern(data.query.toLowerCase())}%`;
         const rows = yield* db.execute(
           db
             .selectFrom("user")
             .select(["id", "name", "image", "username"])
             .where("deletedAt", "is", null)
-            .where("username", "like", pattern)
+            .where((eb) =>
+              eb.or([
+                eb("username", "like", pattern),
+                eb("name", "ilike", pattern),
+              ]),
+            )
             .orderBy("username", "asc")
             .limit(MENTION_SEARCH_LIMIT),
         );

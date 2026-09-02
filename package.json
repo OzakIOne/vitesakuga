@@ -5,8 +5,8 @@
   "sideEffects": false,
   "scripts": {
     "dev": "APP_ENV=development NODE_ENV=development VITE_TURNSTILE_SITEKEY=2x00000000000000000000AB TURNSTILE_SECRET=1x0000000000000000000000000000000AA VITE_TURNSTILE_REQUIRED=0 vite dev --mode development --host",
-    "dev:local": "APP_ENV=test NODE_ENV=test DATABASE_DRIVER=local VITE_TURNSTILE_SITEKEY=2x00000000000000000000AB TURNSTILE_SECRET=1x0000000000000000000000000000000AA VITE_TURNSTILE_REQUIRED=0 vite dev --mode test --host",
-    "dev:prod": "APP_ENV=production NODE_ENV=production vite dev --mode production",
+    "dev:local": "APP_ENV=test NODE_ENV=test DATABASE_DRIVER=local VITE_TURNSTILE_SITEKEY=2x00000000000000000000AB TURNSTILE_SECRET=1x0000000000000000000000000000000AA VITE_TURNSTILE_REQUIRED=0 vite dev --mode test --host --port 3200",
+    "dev:prod": "APP_ENV=production NODE_ENV=production vite dev --mode production --port 3300",
     "build": "APP_ENV=production NODE_ENV=production vite build --mode production",
     "build:dev": "APP_ENV=development NODE_ENV=production vite build --mode development",
     "start": "nub .output/server/index.mjs",

@@ -20,6 +20,7 @@ import {
 import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
 import type { fetchComments } from "src/lib/comments/comments.service";
 import { useCommentDraft } from "src/lib/comments/useCommentDraft";
+import { deTokenizeForEditing } from "src/lib/mentions/mentions";
 import { formatDateUtc } from "src/utils/date-format";
 
 type CommentsProps = {
@@ -131,7 +132,14 @@ function CommentItem({
   onDelete: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(comment.content);
+  // Stored mention tokens are hydrated to their current handle so the editor
+  // only ever shows plain `@handle` text; the server re-canonicalizes on save.
+  const [editContent, setEditContent] = useState(() =>
+    deTokenizeForEditing(
+      comment.content,
+      new Map(comment.mentions.map((m) => [m.userId, m.username])),
+    ),
+  );
 
   const updateCommentMutation = useUpdateComment(comment.postId);
   const isOwn = currentUserId === comment.userId;
@@ -148,7 +156,12 @@ function CommentItem({
   };
 
   const handleCancel = () => {
-    setEditContent(comment.content);
+    setEditContent(
+      deTokenizeForEditing(
+        comment.content,
+        new Map(comment.mentions.map((m) => [m.userId, m.username])),
+      ),
+    );
     setIsEditing(false);
   };
 

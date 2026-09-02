@@ -1,15 +1,21 @@
 /**
- * @mention parsing for comments, safe to import from client and server code.
+ * @mention handling for comments, safe to import from client and server code.
  *
- * A mention is `@username` where `username` is a user handle (`username`
- * column on `user`, normalized to lowercase `[a-z0-9_]`, 3–30 chars — see the
- * Better Auth username plugin config in `src/lib/auth/index.ts`). Content
- * stays plain text: the handle is the mention's identity on the wire, while
- * the `comment_mentions` table resolves it to user ids server-side.
+ * A typed mention is `@username` where `username` is a user handle
+ * (`username` column on `user`, normalized to lowercase `[a-z0-9_]`, 3–30
+ * chars — see the Better Auth username plugin config in
+ * `src/lib/auth/index.ts`).
+ *
+ * Storage is id-based: the server canonicalizes comment content into
+ * `[@handle](user:userId)` tokens before persisting (the handle is cosmetic,
+ * the userId is the source of truth), so a username rename never breaks an
+ * old comment. Rendering resolves the current username from the
+ * `comment_mentions` join; editing re-hydrates tokens to `@handle` text and
+ * the server re-canonicalizes on save.
  */
 
 /** Username rules shared by Better Auth's username plugin and mention parsing. */
-export const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 30;
 export const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
 
@@ -65,6 +71,175 @@ export function splitContentByMentions(content: string): MentionToken[] {
     tokens.push({ kind: "text", text: content.slice(lastIndex) });
   }
   return tokens;
+}
+
+// --- Stored (canonical) mention tokens -------------------------------------
+
+/**
+ * Canonical in-DB token for a resolved mention. The userId is the source of
+ * truth (rename-proof); the handle is the one known at write time and is
+ * only a fallback for display when the user row is gone.
+ */
+const MENTION_TOKEN_REGEX = /\[@([a-z0-9_]+)\]\(user:([A-Za-z0-9_-]{1,64})\)/g;
+
+export type StoredMention = {
+  readonly handle: string;
+  readonly userId: string;
+};
+
+function buildMentionToken(handle: string, userId: string): string {
+  return `[@${handle}](user:${userId})`;
+}
+
+/** Replace every stored token with `replacer(token)`'s return value. */
+export function replaceMentionTokens(
+  content: string,
+  replacer: (token: StoredMention) => string,
+): string {
+  let result = "";
+  let lastIndex = 0;
+  for (const match of content.matchAll(MENTION_TOKEN_REGEX)) {
+    const handle = match[1];
+    const userId = match[2];
+    const start = match.index;
+    if (start === undefined || handle === undefined || userId === undefined) {
+      continue;
+    }
+    result += content.slice(lastIndex, start) + replacer({ handle, userId });
+    lastIndex = start + match[0].length;
+  }
+  return result + content.slice(lastIndex);
+}
+
+/** Split content into text and stored-token segments, preserving order. */
+export type StoredMentionSegment =
+  | { readonly kind: "text"; readonly text: string }
+  | {
+      readonly kind: "token";
+      readonly handle: string;
+      readonly userId: string;
+    };
+
+export function splitContentByStoredMentions(
+  content: string,
+): StoredMentionSegment[] {
+  const segments: StoredMentionSegment[] = [];
+  let lastIndex = 0;
+  for (const match of content.matchAll(MENTION_TOKEN_REGEX)) {
+    const start = match.index;
+    const handle = match[1];
+    const userId = match[2];
+    if (start === undefined || handle === undefined || userId === undefined) {
+      continue;
+    }
+    if (start > lastIndex) {
+      segments.push({ kind: "text", text: content.slice(lastIndex, start) });
+    }
+    segments.push({ kind: "token", handle, userId });
+    lastIndex = start + match[0].length;
+  }
+  if (lastIndex < content.length) {
+    segments.push({ kind: "text", text: content.slice(lastIndex) });
+  }
+  return segments;
+}
+
+/**
+ * Handles typed as plain `@handle` text, ignoring stored tokens (their
+ * handles may be stale after a rename and must not be re-resolved).
+ */
+export function extractPlainMentionHandles(content: string): string[] {
+  return extractMentionHandles(replaceMentionTokens(content, () => ""));
+}
+
+export type CanonicalizedMentions = {
+  /** Content with every recognized mention stored as a token. */
+  readonly content: string;
+  /** Unique mentioned user ids, in order of first appearance. */
+  readonly mentionUserIds: string[];
+};
+
+/**
+ * Canonicalize comment content for storage: plain `@handle` mentions the
+ * resolver recognizes become `[@handle](user:userId)` tokens; already-stored
+ * tokens pass through untouched (their handles may be stale by design).
+ */
+export function canonicalizeMentionContent(
+  content: string,
+  resolveHandle: (handle: string) => string | null,
+): CanonicalizedMentions {
+  // Stash existing tokens behind placeholders so their (possibly stale)
+  // handles are never re-resolved as freshly typed mentions.
+  const stashed: StoredMention[] = [];
+  let working = replaceMentionTokens(content, (token) => {
+    stashed.push(token);
+    return `\u0000${stashed.length - 1}\u0000`;
+  });
+
+  const mentionUserIds: string[] = [];
+  const pushId = (userId: string) => {
+    if (!mentionUserIds.includes(userId)) {
+      mentionUserIds.push(userId);
+    }
+  };
+
+  let canonicalized = "";
+  let lastIndex = 0;
+  for (const match of working.matchAll(MENTION_REGEX)) {
+    const raw = match[1];
+    const start = match.index;
+    if (raw === undefined || start === undefined) {
+      continue;
+    }
+    canonicalized += working.slice(lastIndex, start);
+    const handle = raw.toLowerCase();
+    const userId = resolveHandle(handle);
+    if (userId === null) {
+      canonicalized += match[0];
+    } else {
+      pushId(userId);
+      canonicalized += buildMentionToken(handle, userId);
+    }
+    lastIndex = start + match[0].length;
+  }
+  working = canonicalized + working.slice(lastIndex);
+
+  const restored: string[] = [];
+  let restoreIndex = 0;
+  for (const match of working.matchAll(/\u0000(\d+)\u0000/g)) {
+    const rawIndex = match[1];
+    const start = match.index;
+    if (rawIndex === undefined || start === undefined) {
+      continue;
+    }
+    restored.push(working.slice(restoreIndex, start));
+    const token = stashed[Number(rawIndex)];
+    if (token) {
+      pushId(token.userId);
+      restored.push(buildMentionToken(token.handle, token.userId));
+    } else {
+      restored.push(match[0]);
+    }
+    restoreIndex = start + match[0].length;
+  }
+  working = restored.join("") + working.slice(restoreIndex);
+
+  return { content: working, mentionUserIds };
+}
+
+/**
+ * Turn stored tokens back into `@handle` text for editing (the composer
+ * never shows raw tokens). Labels use the user's current username when
+ * known, falling back to the handle captured at write time.
+ */
+export function deTokenizeForEditing(
+  content: string,
+  usernameByUserId: ReadonlyMap<string, string>,
+): string {
+  return replaceMentionTokens(content, (token) => {
+    const username = usernameByUserId.get(token.userId);
+    return `@${username ?? token.handle}`;
+  });
 }
 
 /**
