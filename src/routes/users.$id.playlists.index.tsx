@@ -107,7 +107,7 @@ function PlaylistsContent() {
                       justifyContent="center"
                       w="full"
                     >
-                      <Text color="gray.500" fontSize="lg">
+                      <Text color="gray.300" fontSize="lg">
                         No posts
                       </Text>
                     </Box>

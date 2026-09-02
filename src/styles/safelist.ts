@@ -1,8 +1,10 @@
 /**
- * Tailwind v4 scans source text for class names; classes built dynamically
- * by the Chakra-compat layer in `src/components/ui/` (e.g. `max-w-xl`,
- * `grid-cols-5`, `min-h-[calc(100vh-4rem)]`) never appear as literals and
- * would be purged. Listing them here keeps them in the compiled CSS.
+ * Tailwind v4 scans all project source files as raw text (imports are
+ * irrelevant), so listing class names here keeps them in the compiled CSS
+ * even though nothing imports this module. Classes built dynamically by the
+ * Chakra-compat layer in `src/components/ui/` (e.g. `bg-${color}` from
+ * `bg="gray.800"`, `max-w-xl`, `min-h-[calc(100vh-4rem)]`) never appear as
+ * literals anywhere else and would be purged without this file.
  */
 export const tailwindSafelist = [
   // spacing
@@ -133,6 +135,7 @@ export const tailwindSafelist = [
   "shadow-sm",
   "shadow-md",
   "text-gray-400",
+  "text-gray-300",
   "text-gray-500",
   "text-gray-600",
   "text-gray-700",

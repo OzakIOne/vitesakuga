@@ -130,11 +130,10 @@ function PlaylistDetailContent() {
                         aspectRatio="16 / 9"
                         bg="gray.800"
                         borderRadius="lg"
-                        color="gray.500"
+                        color="gray.300"
                         display="flex"
                         fontSize="sm"
                         justifyContent="center"
-                        opacity={0.5}
                       >
                         <Text>Post deleted</Text>
                       </Box>
