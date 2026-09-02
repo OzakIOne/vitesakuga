@@ -11,7 +11,10 @@ import { Field, Input, InputGroup } from "src/components/ui/field";
 import { Box } from "src/components/ui/layout";
 import { Avatar, AvatarGroup } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
-import { PasswordInput } from "src/components/ui/password-input";
+import {
+  PasswordInput,
+  HiddenUsernameField,
+} from "src/components/ui/password-input";
 import { Heading, Text } from "src/components/ui/typography";
 import { getAccountSecurity } from "src/lib/auth/account-security";
 import {
@@ -31,12 +34,15 @@ const memberSinceFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 type DeleteAccountDialogProps = {
+  /** Account email, used as the hidden username field for password managers. */
+  email: string;
   hasPassword: boolean;
   isPending: boolean;
   onConfirm: (password?: string) => void;
 };
 
 function DeleteAccountDialog({
+  email,
   hasPassword,
   isPending,
   onConfirm,
@@ -73,18 +79,27 @@ function DeleteAccountDialog({
                 user&rdquo;. All your other data will be permanently removed.
               </Text>
               {hasPassword && (
-                <Field.Root>
-                  <Field.Label>Confirm your password</Field.Label>
-                  <PasswordInput
-                    autoComplete="current-password"
-                    className="h-12 w-full"
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                    }}
-                    placeholder="Enter your password"
-                    value={password}
-                  />
-                </Field.Root>
+                <form
+                  id="delete-account-confirm"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    onConfirm(password);
+                  }}
+                >
+                  <HiddenUsernameField value={email} />
+                  <Field.Root>
+                    <Field.Label>Confirm your password</Field.Label>
+                    <PasswordInput
+                      autoComplete="current-password"
+                      className="h-12 w-full"
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                      }}
+                      placeholder="Enter your password"
+                      value={password}
+                    />
+                  </Field.Root>
+                </form>
               )}
             </Dialog.Body>
             <Dialog.Footer>
@@ -94,8 +109,10 @@ function DeleteAccountDialog({
               <Button
                 colorPalette="red"
                 disabled={!canConfirm}
+                form={hasPassword ? "delete-account-confirm" : undefined}
                 loading={isPending}
-                onClick={() => onConfirm(hasPassword ? password : undefined)}
+                type={hasPassword ? "submit" : "button"}
+                onClick={hasPassword ? undefined : () => onConfirm(undefined)}
               >
                 Confirm account deletion
               </Button>
@@ -140,8 +157,11 @@ function RouteComponent() {
       name: user.name,
       username: user.username,
     },
-    onSubmit: async ({ value }) => {
-      updateProfileMutation.mutate(value);
+    onSubmit: async ({ value, formApi }) => {
+      updateProfileMutation.mutate(value, {
+        // Re-baseline the form so "Save" stays disabled until the next edit.
+        onSuccess: () => formApi.reset(value),
+      });
     },
     validators: {
       onChange: toStandardSchemaV1Strict(profileSchema),
@@ -164,6 +184,10 @@ function RouteComponent() {
   });
 
   const memberSince = memberSinceFormatter.format(new Date(user.createdAt));
+  // Disable actions while the profile update request is in flight; the
+  // form's own `isSubmitting` flips back early because `mutate` isn't awaited.
+  const isUpdatePending = updateProfileMutation.isPending;
+  const isChangePending = changePasswordMutation.isPending;
 
   return (
     <Box className="flex min-h-dvh flex-col items-center px-4 py-16 sm:px-8">
@@ -174,7 +198,7 @@ function RouteComponent() {
               <Avatar.Fallback />
               <Avatar.Image
                 className="rounded-full"
-                src={user.image ?? undefined}
+                src={user.image || undefined}
               />
             </Avatar.Root>
           </AvatarGroup>
@@ -306,18 +330,33 @@ function RouteComponent() {
               </profileForm.Field>
 
               <profileForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                selector={(state) => ({
+                  canSubmit: state.canSubmit,
+                  isDirty: state.isDirty,
+                })}
               >
-                {([canSubmit, isSubmitting]) => (
-                  <div className="flex justify-end pt-2">
+                {({ canSubmit, isDirty }) => (
+                  <div className="flex justify-end gap-3 pt-2">
                     <Button
-                      disabled={!canSubmit}
-                      loading={isSubmitting === true}
+                      disabled={!isDirty || isUpdatePending}
+                      fontWeight="medium"
+                      px={6}
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        profileForm.reset();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      disabled={!canSubmit || !isDirty || isUpdatePending}
+                      loading={isUpdatePending}
                       fontWeight="medium"
                       px={6}
                       type="submit"
                     >
-                      {isSubmitting ? "Saving\u2026" : "Save changes"}
+                      {isUpdatePending ? "Saving\u2026" : "Save changes"}
                     </Button>
                   </div>
                 )}
@@ -339,6 +378,7 @@ function RouteComponent() {
                 void passwordForm.handleSubmit();
               }}
             >
+              <HiddenUsernameField value={user.email} />
               <passwordForm.Field name="currentPassword">
                 {(field) => (
                   <Field.Root>
@@ -380,19 +420,27 @@ function RouteComponent() {
               </passwordForm.Field>
 
               <passwordForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                selector={(state) => ({
+                  canSubmit: state.canSubmit,
+                  values: [
+                    state.values.currentPassword,
+                    state.values.newPassword,
+                  ],
+                })}
               >
-                {([canSubmit, isSubmitting]) => (
+                {({ canSubmit, values }) => (
                   <div className="flex justify-end pt-2">
                     <Button
-                      disabled={!canSubmit}
-                      loading={isSubmitting === true}
+                      disabled={
+                        !canSubmit || values.some((v) => !v) || isChangePending
+                      }
+                      loading={isChangePending}
                       colorPalette="orange"
                       fontWeight="medium"
                       px={6}
                       type="submit"
                     >
-                      {isSubmitting ? "Updating\u2026" : "Update password"}
+                      {isChangePending ? "Updating\u2026" : "Update password"}
                     </Button>
                   </div>
                 )}
@@ -403,6 +451,7 @@ function RouteComponent() {
           <PasskeysSection />
 
           <TwoFactorSection
+            email={user.email}
             enabled={user.twoFactorEnabled}
             hasPassword={hasPassword}
           />
@@ -426,6 +475,7 @@ function RouteComponent() {
                 content is anonymized, not deleted.
               </Text>
               <DeleteAccountDialog
+                email={user.email}
                 hasPassword={hasPassword}
                 isPending={deleteAccountMutation.isPending}
                 onConfirm={(password) =>

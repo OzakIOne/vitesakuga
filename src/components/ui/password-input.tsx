@@ -80,8 +80,34 @@ export const PasswordInput = React.forwardRef<
   );
 });
 
-const STRENGTH_OPTIONS = PASSWORD_STRENGTH_OPTIONS;
+/**
+ * Invisible account identifier for password-only forms (change password,
+ * confirmation dialogs). Chromium's password-form heuristics expect every
+ * password form to include a username field; see
+ * https://www.chromium.org/developers/design-documents/create-amazing-password-forms/
+ */
+export function HiddenUsernameField({
+  name = "username",
+  value,
+}: {
+  name?: string;
+  /** Account identifier (email or username) known by the caller, if any. */
+  value?: string;
+}) {
+  return (
+    <input
+      autoComplete="username"
+      hidden
+      name={name}
+      readOnly
+      tabIndex={-1}
+      type="text"
+      value={value ?? ""}
+    />
+  );
+}
 
+const STRENGTH_OPTIONS = PASSWORD_STRENGTH_OPTIONS;
 export type PasswordStrengthResult = {
   /** 0 for an empty password, otherwise 1 (weak) to 4 (strong). */
   score: number;

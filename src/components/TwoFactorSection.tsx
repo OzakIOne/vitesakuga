@@ -7,7 +7,10 @@ import QRCode from "react-qr-code";
 import { Button, CloseButton } from "src/components/ui/button";
 import { Field, Input } from "src/components/ui/field";
 import { Dialog } from "src/components/ui/overlay";
-import { PasswordInput } from "src/components/ui/password-input";
+import {
+  PasswordInput,
+  HiddenUsernameField,
+} from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
 import { Text } from "src/components/ui/typography";
 import {
@@ -51,6 +54,8 @@ async function copyText(text: string, label: string): Promise<void> {
 
 type TwoFactorSectionProps = {
   enabled: boolean;
+  /** Account email, used as the hidden username field for password managers. */
+  email: string;
   /** Whether the current user has a credential (email/password) account. */
   hasPassword: boolean;
 };
@@ -61,6 +66,7 @@ type TwoFactorSectionProps = {
  * regenerate them and disable 2FA.
  */
 export function TwoFactorSection({
+  email,
   enabled,
   hasPassword,
 }: TwoFactorSectionProps) {
@@ -295,6 +301,7 @@ export function TwoFactorSection({
               <Dialog.Body>
                 {enableStep === "password" && (
                   <form id="enable-2fa" onSubmit={handleEnable}>
+                    <HiddenUsernameField value={email} />
                     <Text color="gray.500" fontSize="sm" mb={4}>
                       Enter your password to confirm. You&apos;ll then scan a QR
                       code with your authenticator app.
@@ -496,6 +503,7 @@ export function TwoFactorSection({
               <Dialog.Body>
                 {hasPassword ? (
                   <form id="disable-2fa" onSubmit={handleDisable}>
+                    <HiddenUsernameField value={email} />
                     <Text color="gray.500" fontSize="sm" mb={4}>
                       Your account will only be protected by your password.
                       Enter your password to confirm.
@@ -590,6 +598,7 @@ export function TwoFactorSection({
                   </div>
                 ) : hasPassword ? (
                   <form id="regenerate-2fa" onSubmit={handleRegenerate}>
+                    <HiddenUsernameField value={email} />
                     <Text color="gray.500" fontSize="sm" mb={4}>
                       Generate a fresh set of backup codes. Your current codes
                       will stop working immediately. Enter your password to

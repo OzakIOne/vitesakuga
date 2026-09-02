@@ -58,12 +58,18 @@ export const Avatar = {
     props: React.ComponentProps<typeof ArkAvatar.Image> & ChakraStyleProps,
   ) => {
     const { className, style, rest } = useChakraProps(props);
+    // An empty string src re-downloads the page URL as the "image";
+    // normalize it so the fallback avatar renders instead.
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
+    const { src, ...others } = rest as React.ComponentProps<
+      typeof ArkAvatar.Image
+    >;
     return (
       <ArkAvatar.Image
         className={cx("h-full w-full object-cover", className)}
+        src={src || undefined}
         style={style}
-        {...(rest as React.ComponentProps<typeof ArkAvatar.Image>)}
+        {...others}
       />
     );
   },

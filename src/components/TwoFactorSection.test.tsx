@@ -61,19 +61,28 @@ afterEach(() => cleanup());
 
 const renderSection = ({
   authClient,
+  email = "alice@test.com",
   enabled = false,
   hasPassword,
 }: {
   authClient: ReturnType<typeof createMockAuthClient>;
+  email?: string;
   enabled?: boolean;
   hasPassword: boolean;
 }) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(<TwoFactorSection enabled={enabled} hasPassword={hasPassword} />, {
-    wrapper: createWrapper(queryClient, authClient),
-  });
+  render(
+    <TwoFactorSection
+      email={email}
+      enabled={enabled}
+      hasPassword={hasPassword}
+    />,
+    {
+      wrapper: createWrapper(queryClient, authClient),
+    },
+  );
   return { queryClient };
 };
 
