@@ -2,7 +2,7 @@ import * as React from "react";
 
 import {
   classToken,
-  cx,
+  cn,
   useChakraProps,
   type ChakraStyleProps,
 } from "./ui-utils";
@@ -32,7 +32,7 @@ export function Text({ as = "p", ...props }: TextProps) {
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <Component
-      className={cx(className)}
+      className={cn(className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLElement>)}
     />
@@ -54,7 +54,7 @@ export function Heading({
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <Component
-      className={cx("text-balance", className)}
+      className={cn("text-balance", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLElement>)}
     />
@@ -77,7 +77,7 @@ export function Link({ children, ...props }: LinkProps) {
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <a
-      className={cx("hover:underline", className)}
+      className={cn("hover:underline", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLAnchorElement>)}
     >

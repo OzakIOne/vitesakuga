@@ -4,7 +4,7 @@ import { LuCircleAlert, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
 
 import {
   classToken,
-  cx,
+  cn,
   useChakraProps,
   type ChakraStyleProps,
 } from "./ui-utils";
@@ -71,7 +71,7 @@ export function Badge({
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <span
-      className={cx(
+      className={cn(
         "inline-flex items-center gap-1 rounded-md font-medium",
         classToken(BADGE_SIZES, size, "sm"),
         paletteClasses,
@@ -106,7 +106,7 @@ export function Spinner({ size = "md", color, ...props }: SpinnerProps) {
   return (
     <output
       aria-label="Loading"
-      className={cx(
+      className={cn(
         "inline-block animate-spin rounded-full border-current border-t-transparent",
         box,
         className,
@@ -125,7 +125,7 @@ export function Skeleton(props: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={cx("animate-pulse rounded bg-gray-200", className)}
+      className={cn("animate-pulse rounded bg-gray-200", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLDivElement>)}
     />
@@ -203,7 +203,7 @@ export const Alert = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
-        className={cx("rounded-md border p-4", statusClasses, className)}
+        className={cn("rounded-md border p-4", statusClasses, className)}
         role={role}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
@@ -215,7 +215,7 @@ export const Alert = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
-        className={cx("flex items-start gap-3", className)}
+        className={cn("flex items-start gap-3", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -237,7 +237,7 @@ export const Alert = {
     return (
       <Icon
         aria-hidden="true"
-        className={cx("mt-0.5 h-5 w-5 shrink-0", iconClasses)}
+        className={cn("mt-0.5 h-5 w-5 shrink-0", iconClasses)}
       />
     );
   },
@@ -248,7 +248,7 @@ export const Alert = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <p
-        className={cx("font-semibold", className)}
+        className={cn("font-semibold", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLHeadingElement>)}
       />
@@ -261,7 +261,7 @@ export const Alert = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
-        className={cx("mt-1 text-sm", className)}
+        className={cn("mt-1 text-sm", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -279,7 +279,7 @@ export const DataList = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dl
-        className={cx("flex flex-col gap-2 text-sm", className)}
+        className={cn("flex flex-col gap-2 text-sm", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDListElement>)}
       />
@@ -290,7 +290,7 @@ export const DataList = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
-        className={cx("grid grid-cols-2 gap-2", className)}
+        className={cn("grid grid-cols-2 gap-2", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -303,7 +303,7 @@ export const DataList = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dt
-        className={cx("text-gray-500", className)}
+        className={cn("text-gray-500", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -316,7 +316,7 @@ export const DataList = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dd
-        className={cx("min-w-0 break-words font-medium", className)}
+        className={cn("min-w-0 break-words font-medium", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />

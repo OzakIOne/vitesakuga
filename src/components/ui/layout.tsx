@@ -3,7 +3,7 @@ import * as React from "react";
 import {
   asDivProps,
   asSpanProps,
-  cx,
+  cn,
   useChakraProps,
   type ChakraStyleProps,
 } from "./ui-utils";
@@ -22,7 +22,7 @@ function mapTemplateColumns(value: string): string {
 
 export function Box(props: BoxProps) {
   const { className, style, rest } = useChakraProps(props);
-  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
+  return <div className={cn(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Flex(props: BoxProps) {
@@ -30,7 +30,7 @@ export function Flex(props: BoxProps) {
     ...props,
     display: "flex",
   });
-  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
+  return <div className={cn(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Center(props: BoxProps) {
@@ -40,7 +40,7 @@ export function Center(props: BoxProps) {
     alignItems: "center",
     justifyContent: "center",
   });
-  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
+  return <div className={cn(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Container(props: BoxProps) {
@@ -52,7 +52,7 @@ export function Container(props: BoxProps) {
     px: "4",
     w: "full",
   });
-  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
+  return <div className={cn(className)} style={style} {...asDivProps(rest)} />;
 }
 
 type StackProps = BoxProps;
@@ -74,7 +74,7 @@ export function Stack({
     gap,
     justifyContent: justify,
   });
-  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
+  return <div className={cn(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function HStack({ gap = 2, align = "center", ...props }: StackProps) {
@@ -107,7 +107,7 @@ export function Grid(
   );
   return (
     <div
-      className={cx(templateClasses, className)}
+      className={cn(templateClasses, className)}
       style={style}
       {...asDivProps(rest)}
     />
@@ -138,7 +138,7 @@ export function SimpleGrid({
   });
   return (
     <div
-      className={cx(columnClasses, className)}
+      className={cn(columnClasses, className)}
       style={style}
       {...asDivProps(rest)}
     />
@@ -156,7 +156,7 @@ function mapResponsiveColumns(
       if (bp === "base") classes.push(mapped);
       else classes.push(`${bp}:${mapped}`);
     }
-    return cx(classes);
+    return cn(classes);
   }
   if (value === undefined) return "";
   return makeClass(String(value));
@@ -169,7 +169,7 @@ export function Wrap(props: BoxProps) {
     flexWrap: "wrap",
     gap: 2,
   });
-  return <div className={cx(className)} style={style} {...asDivProps(rest)} />;
+  return <div className={cn(className)} style={style} {...asDivProps(rest)} />;
 }
 
 export function Group({
@@ -183,7 +183,7 @@ export function Group({
   });
   return (
     <div
-      className={cx(
+      className={cn(
         attached &&
           "[&>button]:first:rounded-l-md [&>button]:last:rounded-r-md [&>button:not(:first-child)]:rounded-l-none [&>button:not(:last-child)]:rounded-r-none [&>input]:first:rounded-l-md [&>input]:last:rounded-r-md [&>input:not(:first-child)]:rounded-l-none [&>input:not(:last-child)]:rounded-r-none",
         className,
@@ -199,6 +199,6 @@ export function Span(
 ) {
   const { className, style, rest } = useChakraProps(props);
   return (
-    <span className={cx(className)} style={style} {...asSpanProps(rest)} />
+    <span className={cn(className)} style={style} {...asSpanProps(rest)} />
   );
 }

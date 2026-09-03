@@ -3,7 +3,7 @@ import * as React from "react";
 
 import {
   classToken,
-  cx,
+  cn,
   useChakraProps,
   type ChakraStyleProps,
 } from "./ui-utils";
@@ -16,7 +16,7 @@ export function Image({ alt, ...props }: ImageProps) {
   return (
     <img
       alt={alt ?? ""}
-      className={cx(className)}
+      className={cn(className)}
       style={style}
       {...(rest as React.ImgHTMLAttributes<HTMLImageElement>)}
     />
@@ -44,7 +44,7 @@ export const Avatar = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkAvatar.Root
-        className={cx(
+        className={cn(
           "relative inline-flex shrink-0 overflow-hidden rounded-full bg-gray-200",
           classToken(AVATAR_SIZES, size, "md"),
           className,
@@ -66,7 +66,7 @@ export const Avatar = {
     >;
     return (
       <ArkAvatar.Image
-        className={cx("h-full w-full object-cover", className)}
+        className={cn("h-full w-full object-cover", className)}
         src={src || undefined}
         style={style}
         {...others}
@@ -81,7 +81,7 @@ export const Avatar = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkAvatar.Fallback
-        className={cx(
+        className={cn(
           "flex h-full w-full items-center justify-center bg-gray-200 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200",
           className,
         )}
@@ -99,7 +99,7 @@ export function AvatarGroup(
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <div
-      className={cx("flex items-center -space-x-2", className)}
+      className={cn("flex items-center -space-x-2", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLDivElement>)}
     />
@@ -112,7 +112,7 @@ export const Card = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
-        className={cx(
+        className={cn(
           "rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
@@ -126,7 +126,7 @@ export const Card = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <div
-        className={cx("p-4", className)}
+        className={cn("p-4", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />

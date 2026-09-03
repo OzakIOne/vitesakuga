@@ -7,7 +7,7 @@ import { LuEye, LuEyeOff } from "react-icons/lu";
 import { PASSWORD_STRENGTH_OPTIONS } from "src/lib/auth/password-policy";
 
 import { INPUT_BASE, INPUT_SIZES } from "./field";
-import { cx } from "./ui-utils";
+import { cn } from "./ui-utils";
 
 export type PasswordVisibilityProps = {
   defaultVisible?: boolean;
@@ -50,7 +50,7 @@ export const PasswordInput = React.forwardRef<
       autoComplete={
         autoComplete as "current-password" | "new-password" | undefined
       }
-      className={cx("relative w-full", rootProps?.className)}
+      className={cn("relative w-full", rootProps?.className)}
       defaultVisible={defaultVisible}
       disabled={disabled}
       invalid={invalid}
@@ -64,7 +64,7 @@ export const PasswordInput = React.forwardRef<
       <ArkPasswordInput.Control>
         <ArkPasswordInput.Input
           {...rest}
-          className={cx(INPUT_BASE, INPUT_SIZES["md"], "pe-10", className)}
+          className={cn(INPUT_BASE, INPUT_SIZES["md"], "pe-10", className)}
           ref={ref}
         />
         <ArkPasswordInput.VisibilityTrigger
@@ -152,7 +152,7 @@ export const PasswordStrengthMeter = React.forwardRef<
       <div aria-hidden="true" className="flex w-full gap-1">
         {Array.from({ length: max }).map((_, index) => (
           <div
-            className={cx(
+            className={cn(
               "h-1 flex-1 rounded-sm bg-gray-200",
               index < value ? colorClass : undefined,
             )}

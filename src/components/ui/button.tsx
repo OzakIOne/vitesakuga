@@ -3,7 +3,7 @@ import { LuX } from "react-icons/lu";
 
 import {
   classToken,
-  cx,
+  cn,
   Slot,
   useChakraProps,
   type ChakraStyleProps,
@@ -102,7 +102,7 @@ export function buttonClasses({
     ghost: GHOST_CLASSES[palette],
     subtle: SUBTLE_CLASSES[palette],
   }[variant];
-  return cx(BASE, classToken(SIZES, size, "md"), variantClasses);
+  return cn(BASE, classToken(SIZES, size, "md"), variantClasses);
 }
 
 function Spinner({ size = "sm" }: { size?: string }) {
@@ -112,7 +112,7 @@ function Spinner({ size = "sm" }: { size?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={cx(
+      className={cn(
         "inline-block shrink-0 animate-spin rounded-full border-current border-t-transparent",
         border,
         box,
@@ -134,7 +134,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const { className, style, rest } = useChakraProps(props);
-  const classes = cx(
+  const classes = cn(
     buttonClasses({ colorPalette, colorScheme, size, variant }),
     className,
   );
@@ -201,7 +201,7 @@ export function IconButton({
   return (
     <button
       aria-label={ariaLabel}
-      className={cx(
+      className={cn(
         BASE,
         classToken(ICON_SIZES, size, "md"),
         variantClasses,

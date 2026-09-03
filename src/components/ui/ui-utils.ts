@@ -1,10 +1,8 @@
-import { clsx, type ClassValue } from "clsx";
 import { isValidElement, cloneElement } from "react";
-import { twMerge } from "tailwind-merge";
 
-export function cx(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs));
-}
+import { cn } from "cn";
+
+export { cn };
 
 /** Look up a class token in a `satisfies`-validated size map by caller key. */
 export function classToken(
@@ -31,7 +29,7 @@ export function Slot({
   >;
   return cloneElement(element, {
     ...props,
-    className: cx(element.props.className, props.className),
+    className: cn(element.props.className, props.className),
   });
 }
 
@@ -746,5 +744,5 @@ export function useChakraProps<P extends ChakraStyleProps>(
     classes.push("border-gray-200 dark:border-gray-700");
   }
 
-  return { className: cx(classes), style, rest };
+  return { className: cn(classes), style, rest };
 }

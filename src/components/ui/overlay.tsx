@@ -15,7 +15,7 @@ import {
 import * as React from "react";
 import { LuCheck, LuChevronDown, LuX } from "react-icons/lu";
 
-import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
+import { cn, useChakraProps, type ChakraStyleProps } from "./ui-utils";
 
 const DIALOG_CONTENT_BASE =
   "relative z-50 w-full max-w-md overscroll-contain rounded-lg border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
@@ -35,7 +35,7 @@ export const Dialog = {
     // style; the remaining rest props spread onto the typed Ark component.
     return (
       <ArkDialog.Backdrop
-        className={cx("fixed inset-0 z-50 bg-black/50", className)}
+        className={cn("fixed inset-0 z-50 bg-black/50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkDialog.Backdrop>)}
       />
@@ -48,7 +48,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkDialog.Positioner
-        className={cx(
+        className={cn(
           "fixed inset-0 z-50 flex items-center justify-center p-4",
           className,
         )}
@@ -64,7 +64,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkDialog.Content
-        className={cx(DIALOG_CONTENT_BASE, className)}
+        className={cn(DIALOG_CONTENT_BASE, className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkDialog.Content>)}
       />
@@ -75,7 +75,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <div
-        className={cx(
+        className={cn(
           "mb-4 flex items-center justify-between gap-4",
           className,
         )}
@@ -91,7 +91,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkDialog.Title
-        className={cx("text-lg font-semibold", className)}
+        className={cn("text-lg font-semibold", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkDialog.Title>)}
       />
@@ -105,7 +105,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkDialog.Description
-        className={cx("text-sm text-gray-600 dark:text-gray-300", className)}
+        className={cn("text-sm text-gray-600 dark:text-gray-300", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkDialog.Description>)}
       />
@@ -116,7 +116,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <div
-        className={cx("text-sm text-gray-700 dark:text-gray-300", className)}
+        className={cn("text-sm text-gray-700 dark:text-gray-300", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -127,7 +127,7 @@ export const Dialog = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <div
-        className={cx("mt-4 flex justify-end gap-2", className)}
+        className={cn("mt-4 flex justify-end gap-2", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -142,7 +142,7 @@ export const Dialog = {
     return (
       <ArkDialog.CloseTrigger
         aria-label="Close dialog"
-        className={cx(
+        className={cn(
           "absolute top-4 right-4 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800",
           className,
         )}
@@ -172,7 +172,7 @@ export const Menu = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkMenu.Positioner
-        className={cx("z-50", className)}
+        className={cn("z-50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkMenu.Positioner>)}
       />
@@ -185,7 +185,7 @@ export const Menu = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkMenu.Content
-        className={cx(
+        className={cn(
           "min-w-44 rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
@@ -201,7 +201,7 @@ export const Menu = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkMenu.Item
-        className={cx(
+        className={cn(
           "flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 data-[highlighted]:bg-gray-100 dark:hover:bg-gray-700 dark:data-[highlighted]:bg-gray-700",
           className,
         )}
@@ -233,7 +233,7 @@ export const Popover = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkPopover.Positioner
-        className={cx("z-50", className)}
+        className={cn("z-50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkPopover.Positioner>)}
       />
@@ -246,7 +246,7 @@ export const Popover = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkPopover.Content
-        className={cx(
+        className={cn(
           "rounded-md border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
@@ -264,7 +264,7 @@ export const Popover = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <div
-        className={cx("text-sm text-gray-700 dark:text-gray-300", className)}
+        className={cn("text-sm text-gray-700 dark:text-gray-300", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -284,7 +284,7 @@ export const Collapsible = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCollapsible.Trigger
-        className={cx("cursor-pointer text-left", className)}
+        className={cn("cursor-pointer text-left", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCollapsible.Trigger>)}
       />
@@ -298,7 +298,7 @@ export const Collapsible = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCollapsible.Content
-        className={cx("mt-2", className)}
+        className={cn("mt-2", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCollapsible.Content>)}
       />
@@ -322,7 +322,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Root
-        className={cx("w-full", className)}
+        className={cn("w-full", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Root>)}
       />
@@ -341,7 +341,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.RootProvider
-        className={cx("w-full", className)}
+        className={cn("w-full", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.RootProvider>)}
       />
@@ -354,7 +354,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Label
-        className={cx(
+        className={cn(
           "mb-1 block text-sm font-medium text-gray-800 dark:text-gray-200",
           className,
         )}
@@ -370,7 +370,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Control
-        className={cx("relative", className)}
+        className={cn("relative", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Control>)}
       />
@@ -388,7 +388,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Input
-        className={cx(
+        className={cn(
           isComposed ? undefined : LIST_BASE,
           isComposed ? undefined : "pe-10",
           className,
@@ -413,7 +413,7 @@ export const Combobox = {
     return (
       <ArkCombobox.ClearTrigger
         aria-label="Clear"
-        className={cx("flex items-center text-gray-500", className)}
+        className={cn("flex items-center text-gray-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.ClearTrigger>)}
       >
@@ -438,7 +438,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Positioner
-        className={cx("z-50", className)}
+        className={cn("z-50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Positioner>)}
       />
@@ -451,7 +451,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Content
-        className={cx(
+        className={cn(
           "mt-1 max-h-60 w-[var(--reference-width)] overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
@@ -471,7 +471,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.ItemGroupLabel
-        className={cx("px-2 py-1 text-xs font-medium text-gray-500", className)}
+        className={cn("px-2 py-1 text-xs font-medium text-gray-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.ItemGroupLabel>)}
       />
@@ -484,7 +484,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Item
-        className={cx(
+        className={cn(
           "flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm outline-none hover:bg-gray-100 data-[highlighted]:bg-gray-100 dark:hover:bg-gray-700 dark:data-[highlighted]:bg-gray-700",
           className,
         )}
@@ -500,7 +500,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.ItemText
-        className={cx("min-w-0 flex-1", className)}
+        className={cn("min-w-0 flex-1", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.ItemText>)}
       />
@@ -520,7 +520,7 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Empty
-        className={cx("px-2 py-1.5 text-sm text-gray-500", className)}
+        className={cn("px-2 py-1.5 text-sm text-gray-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Empty>)}
       />
@@ -545,7 +545,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.RootProvider
-        className={cx("w-full", className)}
+        className={cn("w-full", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTagsInput.RootProvider>)}
       />
@@ -558,7 +558,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.Control
-        className={cx(TAGS_CONTROL_BASE, className)}
+        className={cn(TAGS_CONTROL_BASE, className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTagsInput.Control>)}
       />
@@ -571,7 +571,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.Item
-        className={cx("inline-flex items-center", className)}
+        className={cn("inline-flex items-center", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTagsInput.Item>)}
       />
@@ -585,7 +585,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.ItemPreview
-        className={cx(
+        className={cn(
           "flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-sm dark:bg-gray-700",
           className,
         )}
@@ -602,7 +602,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.ItemText
-        className={cx("text-sm", className)}
+        className={cn("text-sm", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTagsInput.ItemText>)}
       />
@@ -617,7 +617,7 @@ export const TagsInput = {
     return (
       <ArkTagsInput.ItemDeleteTrigger
         aria-label="Remove tag"
-        className={cx(
+        className={cn(
           "cursor-pointer rounded p-0.5 text-gray-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40",
           className,
         )}
@@ -638,7 +638,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.ItemInput
-        className={cx(
+        className={cn(
           "w-full rounded border border-gray-300 bg-white px-1 text-sm outline-none dark:border-gray-600 dark:bg-gray-800",
           className,
         )}
@@ -654,7 +654,7 @@ export const TagsInput = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTagsInput.Input
-        className={cx(
+        className={cn(
           "min-w-24 flex-1 bg-transparent px-1 py-1 text-sm outline-none placeholder:text-gray-400",
           className,
         )}
@@ -672,7 +672,7 @@ export const TagsInput = {
     return (
       <ArkTagsInput.ClearTrigger
         aria-label="Clear all tags"
-        className={cx(
+        className={cn(
           "cursor-pointer rounded p-1 text-gray-500 transition-colors hover:text-red-600",
           className,
         )}
@@ -696,7 +696,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Root
-        className={cx("w-full", className)}
+        className={cn("w-full", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSelect.Root>)}
       />
@@ -709,7 +709,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Label
-        className={cx(
+        className={cn(
           "mb-1 block text-sm font-medium text-gray-800 dark:text-gray-200",
           className,
         )}
@@ -725,7 +725,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Control
-        className={cx("relative", className)}
+        className={cn("relative", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSelect.Control>)}
       />
@@ -738,7 +738,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Trigger
-        className={cx(LIST_BASE, "h-10", className)}
+        className={cn(LIST_BASE, "h-10", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSelect.Trigger>)}
       >
@@ -753,7 +753,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.ValueText
-        className={cx(
+        className={cn(
           "text-gray-900 placeholder:text-gray-400 dark:text-gray-100",
           className,
         )}
@@ -775,7 +775,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Positioner
-        className={cx("z-50", className)}
+        className={cn("z-50", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSelect.Positioner>)}
       />
@@ -788,7 +788,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Content
-        className={cx(
+        className={cn(
           "mt-1 max-h-60 w-[var(--reference-width)] overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800",
           className,
         )}
@@ -804,7 +804,7 @@ export const Select = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSelect.Item
-        className={cx(
+        className={cn(
           "flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm outline-none hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 dark:hover:bg-gray-700 dark:data-[highlighted]:bg-gray-700",
           className,
         )}
@@ -830,7 +830,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.Root
-        className={cx("w-full touch-none select-none", className)}
+        className={cn("w-full touch-none select-none", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSlider.Root>)}
       />
@@ -843,7 +843,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.Label
-        className={cx("text-sm font-medium", className)}
+        className={cn("text-sm font-medium", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSlider.Label>)}
       />
@@ -856,7 +856,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.ValueText
-        className={cx("text-sm text-gray-500", className)}
+        className={cn("text-sm text-gray-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSlider.ValueText>)}
       />
@@ -869,7 +869,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.Control
-        className={cx("relative flex h-6 items-center", className)}
+        className={cn("relative flex h-6 items-center", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSlider.Control>)}
       />
@@ -882,7 +882,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.Track
-        className={cx(
+        className={cn(
           "relative h-1.5 w-full overflow-hidden rounded-full bg-gray-200",
           className,
         )}
@@ -898,7 +898,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.Range
-        className={cx("absolute h-full rounded-full bg-blue-600", className)}
+        className={cn("absolute h-full rounded-full bg-blue-600", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSlider.Range>)}
       />
@@ -911,7 +911,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.Thumb
-        className={cx(
+        className={cn(
           "block h-4 w-4 rounded-full border border-gray-300 bg-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2",
           className,
         )}
@@ -931,7 +931,7 @@ export const FileUpload = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkFileUpload.Root
-        className={cx("flex w-full flex-col", className)}
+        className={cn("flex w-full flex-col", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkFileUpload.Root>)}
       />
@@ -952,7 +952,7 @@ export const FileUpload = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkFileUpload.Dropzone
-        className={cx(
+        className={cn(
           "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-colors hover:border-gray-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500 dark:hover:bg-gray-700",
           className,
         )}
@@ -968,7 +968,7 @@ export const FileUpload = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <div
-        className={cx("flex flex-col items-center gap-1", className)}
+        className={cn("flex flex-col items-center gap-1", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />
@@ -987,7 +987,7 @@ export const FileUpload = {
     const files = api.acceptedFiles;
     if (files.length === 0) return null;
     return (
-      <div className={cx("mt-2 w-full", className)} {...props}>
+      <div className={cn("mt-2 w-full", className)} {...props}>
         <ArkFileUpload.ItemGroup className="space-y-2">
           {files.map((file) => (
             <ArkFileUpload.Item

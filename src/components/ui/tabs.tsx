@@ -1,7 +1,7 @@
 import { Tabs as ArkTabs } from "@ark-ui/react";
 import * as React from "react";
 
-import { cx, useChakraProps, type ChakraStyleProps } from "./ui-utils";
+import { cn, useChakraProps, type ChakraStyleProps } from "./ui-utils";
 
 export const TABS_LIST_BASE =
   "inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-100/60 p-1 dark:border-gray-700 dark:bg-gray-800/60";
@@ -21,7 +21,7 @@ export const Tabs = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Root
-        className={cx(className)}
+        className={cn(className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTabs.Root>)}
       />
@@ -34,7 +34,7 @@ export const Tabs = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.List
-        className={cx(TABS_LIST_BASE, className)}
+        className={cn(TABS_LIST_BASE, className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTabs.List>)}
       />
@@ -47,7 +47,7 @@ export const Tabs = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Trigger
-        className={cx(TABS_TRIGGER_BASE, className)}
+        className={cn(TABS_TRIGGER_BASE, className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTabs.Trigger>)}
       />
@@ -60,7 +60,7 @@ export const Tabs = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Content
-        className={cx(className)}
+        className={cn(className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTabs.Content>)}
       />
@@ -73,7 +73,7 @@ export const Tabs = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkTabs.Indicator
-        className={cx(className)}
+        className={cn(className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkTabs.Indicator>)}
       />

@@ -4,7 +4,7 @@ import { LuCheck } from "react-icons/lu";
 
 import {
   classToken,
-  cx,
+  cn,
   useChakraProps,
   type ChakraStyleProps,
 } from "./ui-utils";
@@ -17,7 +17,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.Root
-        className={cx("flex w-full flex-col gap-1.5", className)}
+        className={cn("flex w-full flex-col gap-1.5", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.Root>)}
       />
@@ -30,7 +30,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.Label
-        className={cx(
+        className={cn(
           "text-sm font-medium text-gray-800 dark:text-gray-200",
           className,
         )}
@@ -47,7 +47,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.RequiredIndicator
-        className={cx("text-red-500", className)}
+        className={cn("text-red-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.RequiredIndicator>)}
       />
@@ -60,7 +60,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.HelperText
-        className={cx("text-xs text-gray-500", className)}
+        className={cn("text-xs text-gray-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.HelperText>)}
       />
@@ -73,7 +73,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.ErrorText
-        className={cx("text-xs text-red-600", className)}
+        className={cn("text-xs text-red-600", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.ErrorText>)}
       />
@@ -103,7 +103,7 @@ export function Input({ size = "md", ...props }: InputProps) {
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <input
-      className={cx(INPUT_BASE, classToken(INPUT_SIZES, size, "md"), className)}
+      className={cn(INPUT_BASE, classToken(INPUT_SIZES, size, "md"), className)}
       style={style}
       {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
     />
@@ -121,7 +121,7 @@ export function Textarea(props: TextareaProps) {
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <textarea
-      className={cx(INPUT_BASE, "min-h-20 resize-y px-3 py-2", className)}
+      className={cn(INPUT_BASE, "min-h-20 resize-y px-3 py-2", className)}
       style={style}
       {...(rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
     />
@@ -146,7 +146,7 @@ export function InputGroup({
     className?: string;
   }>;
   const childWithPadding = React.cloneElement(child, {
-    className: cx(
+    className: cn(
       child.props.className,
       startElement ? "ps-10" : undefined,
       endElement ? "pe-10" : undefined,
@@ -155,7 +155,7 @@ export function InputGroup({
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <div
-      className={cx("relative flex w-full items-center", className)}
+      className={cn("relative flex w-full items-center", className)}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLDivElement>)}
     >
@@ -182,7 +182,7 @@ export const Checkbox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkCheckbox.Root
-        className={cx(
+        className={cn(
           "group inline-flex cursor-pointer items-center gap-2",
           className,
         )}
@@ -199,7 +199,7 @@ export const Checkbox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkCheckbox.Control
-        className={cx(
+        className={cn(
           "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white transition-colors data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 group-hover:border-gray-400",
           className,
         )}
@@ -220,7 +220,7 @@ export const Checkbox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkCheckbox.Label
-        className={cx("text-sm", className)}
+        className={cn("text-sm", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCheckbox.Label>)}
       />
