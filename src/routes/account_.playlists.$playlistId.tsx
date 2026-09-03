@@ -246,7 +246,7 @@ function ManagePlaylistContent() {
         mb={4}
         p={4}
       >
-        <Field.Root>
+        <Field.Root invalid={addError !== null}>
           <Field.Label>Add posts by ID</Field.Label>
           <HStack align="start" gap={2}>
             <Input
