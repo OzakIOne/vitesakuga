@@ -111,32 +111,32 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 
 ### Unitaires + e2e
 
-| Feature | Unitaires | e2e |
-| --- | --- | --- |
-| Upload de post | `file-validation`, `upload-policy`, `upload.processor`, `useUploadForm`, `posts.fn`, `storage` | `upload.spec.ts` |
-| Convertisseur vidéo | `-convert.machine` | `convert.spec.ts` |
-| Commentaires | `comments.fn`, `comments.hooks`, `sanitize` | `comments.spec.ts` |
-| Mentions @pseudo | `mentions` | `mentions.spec.ts` |
-| Auth de base | `auth.config`, `auth.middleware`, `auth.schemas`, `password-policy`, `policy` | `auth.spec.ts` |
-| Passkeys | `passkey.hooks` | `passkey.spec.ts` |
-| 2FA TOTP | `two-factor.hooks`, `TwoFactorSection` | `two-factor.spec.ts` |
+| Feature                         | Unitaires                                                                                      | e2e                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------ |
+| Upload de post                  | `file-validation`, `upload-policy`, `upload.processor`, `useUploadForm`, `posts.fn`, `storage` | `upload.spec.ts`         |
+| Convertisseur vidéo             | `-convert.machine`                                                                             | `convert.spec.ts`        |
+| Commentaires                    | `comments.fn`, `comments.hooks`, `sanitize`                                                    | `comments.spec.ts`       |
+| Mentions @pseudo                | `mentions`                                                                                     | `mentions.spec.ts`       |
+| Votes                           | `votes.fn`, `votes.hooks`                                                                      | `votes.spec.ts`          |
+| Compte / sécurité / suppression | `account-security`, `delete-account.fn`, `auth.hooks`                                          | `delete-account.spec.ts` |
+| Auth de base                    | `auth.config`, `auth.middleware`, `auth.schemas`, `password-policy`, `policy`                  | `auth.spec.ts`           |
+| Passkeys                        | `passkey.hooks`                                                                                | `passkey.spec.ts`        |
+| 2FA TOTP                        | `two-factor.hooks`, `TwoFactorSection`                                                         | `two-factor.spec.ts`     |
 
 ### Unitaires seulement
 
-| Feature | Unitaires |
-| --- | --- |
+| Feature                               | Unitaires                                          |
+| ------------------------------------- | -------------------------------------------------- |
 | Fil de posts / recherche / pagination | `posts.infinite`, `search-pattern`, `posts.schema` |
-| Tags | `tags.fn` |
-| Annuaire / profil utilisateurs | `users.fn` |
-| Playlists | `playlists.fn` |
-| Votes | `votes.fn`, `votes.hooks` |
-| Suggestions d'édition wiki | `post-edits.service` |
-| Remplacement vidéo + Storage GC | `videos.service` |
-| Système de points | `points.service` |
-| Promotions admin | `promotions.service` |
-| Compte / sécurité / suppression | `account-security`, `delete-account.fn`, `auth.hooks` |
-| Rate limiting | `rate-limiter` |
-| Stockage | `storage`, `content-type` |
+| Tags                                  | `tags.fn`                                          |
+| Annuaire / profil utilisateurs        | `users.fn`                                         |
+| Playlists                             | `playlists.fn`                                     |
+| Suggestions d'édition wiki            | `post-edits.service`                               |
+| Remplacement vidéo + Storage GC       | `videos.service`                                   |
+| Système de points                     | `points.service`                                   |
+| Promotions admin                      | `promotions.service`                               |
+| Rate limiting                         | `rate-limiter`                                     |
+| Stockage                              | `storage`, `content-type`                          |
 
 ### Sans test
 
@@ -146,12 +146,12 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 - Raccourcis clavier (`GlobalShortcuts`)
 - Pages publiques en tant que telles (accueil, page de tag, détail de post) — couvertes seulement indirectement via les tests des services sous-jacents ; **aucun smoke test e2e du parcours feed → détail**
 
-### Priorités e2e identifiées
+### Priorités e2e restantes
 
 1. **Smoke test de lecture** : feed (filtres + sync URL) → détail de post (tags, votes, commentaires visibles) — chemin de tous les visiteurs, zéro couverture e2e.
-2. **Votes** : updates optimistes + playlist « Liked posts » — bugs visibles uniquement en navigateur.
-3. **Playlists UI** : ajout en masse, réordonnancement (drag & drop).
-4. **Suppression de compte** : anonymisation + réattribution à « Deleted user ».
+2. **Playlists UI** : ajout en masse, réordonnancement (drag & drop).
+
+_(Votes et suppression de compte avec anonymisation : couverts depuis le 2026-09-02 par `votes.spec.ts` et `delete-account.spec.ts`.)_
 
 ## Infrastructure & configuration
 

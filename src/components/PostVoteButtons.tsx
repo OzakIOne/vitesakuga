@@ -39,6 +39,7 @@ function PostVoteButtonsComponent({
   return (
     <HStack gap={2}>
       <Button
+        aria-label="Like post"
         aria-pressed={isLikeActive}
         colorPalette="blue"
         disabled={isPending}
@@ -52,6 +53,7 @@ function PostVoteButtonsComponent({
         {data?.likes ?? 0}
       </Button>
       <Button
+        aria-label="Dislike post"
         aria-pressed={isDislikeActive}
         colorPalette="red"
         disabled={isPending}
