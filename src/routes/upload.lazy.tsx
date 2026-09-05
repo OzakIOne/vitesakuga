@@ -84,18 +84,16 @@ function RouteComponent() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-  // Object URLs must be revoked when replaced or unmounted.
+  // Object URLs are created in FileUpload's onFileChange handler and must be
+  // revoked whenever the preview changes or the component unmounts.
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreviewUrl(null);
+    if (!imagePreviewUrl) {
       return;
     }
-    const url = URL.createObjectURL(imageFile);
-    setImagePreviewUrl(url);
     return () => {
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(imagePreviewUrl);
     };
-  }, [imageFile]);
+  }, [imagePreviewUrl]);
 
   const video = useVideoProcessing();
   const draft = useUploadDraft();
@@ -611,7 +609,7 @@ function RouteComponent() {
         ) : (
           <Box mb={6}>
             <form.form.Field name="images">
-              {(field) => (
+              {(_field) => (
                 <Field.Root required>
                   <Field.Label>
                     Image <Field.RequiredIndicator />
@@ -622,7 +620,11 @@ function RouteComponent() {
                     maxFiles={1}
                     maxW="xl"
                     onFileChange={(details) => {
-                      setImageFile(details.acceptedFiles[0] || null);
+                      const file = details.acceptedFiles[0] || null;
+                      setImageFile(file);
+                      setImagePreviewUrl(
+                        file ? URL.createObjectURL(file) : null,
+                      );
                     }}
                   >
                     <FileUpload.HiddenInput />

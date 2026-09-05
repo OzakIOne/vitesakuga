@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import { asPostId } from "../ids";
 import { PostReportsService, PostReportsServiceLive } from "./reports.service";
 
 let closeCtx: (() => Promise<void>) | undefined;
@@ -43,7 +44,9 @@ const insertPost = async (
     })
     .returning("id")
     .executeTakeFirstOrThrow();
-  return row;
+  // The services take the branded PostId; the brand is erased on the wire
+  // and re-checked here so service calls stay type-checked.
+  return { ...row, id: asPostId(row.id) };
 };
 
 const reportRows = async (db: Kysely<DB>) =>
@@ -58,7 +61,7 @@ describe("PostReportsService.submit", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostReportsService.submit({ postId: 1, reason: "duplicate" }),
+        PostReportsService.submit({ postId: asPostId(1), reason: "duplicate" }),
       ),
     );
 
@@ -75,11 +78,17 @@ describe("PostReportsService.submit", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostReportsService.submit({ postId: 999_999, reason: "duplicate" }),
+        PostReportsService.submit({
+          postId: asPostId(999_999),
+          reason: "duplicate",
+        }),
       ),
     );
 
     expect(error._tag).toBe("PostNotFoundError");
+    if (error._tag !== "PostNotFoundError") {
+      throw new Error("unreachable: _tag asserted above");
+    }
     expect(error.postId).toBe(999_999);
     expect(await reportRows(db)).toHaveLength(0);
   });

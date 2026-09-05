@@ -185,7 +185,8 @@ describe("NotificationsService.list", () => {
     const storedRead = stored.find((row) => row.readAt !== null);
     expect(storedRead).toBeDefined();
     if (readRow && storedRead) {
-      expect(readRow.readAt).toBe(toIsoTimestamp(storedRead.readAt));
+      expect(storedRead.readAt).not.toBeNull();
+      expect(readRow.readAt).toBe(toIsoTimestamp(storedRead.readAt!));
       expect(readRow.createdAt).toBe(toIsoTimestamp(storedRead.createdAt));
     }
   });
@@ -271,8 +272,11 @@ describe("NotificationsService.markAllRead", () => {
     expect(firstUnread?.readAt).not.toBeNull();
     expect(secondUnread?.readAt).not.toBeNull();
     // An already-read row keeps its original instant untouched.
-    expect(alreadyRead && toIsoTimestamp(alreadyRead.readAt)).toBe(
-      toIsoTimestamp(readBefore.readAt),
+    expect(alreadyRead).toBeDefined();
+    expect(alreadyRead?.readAt).not.toBeNull();
+    expect(readBefore.readAt).not.toBeNull();
+    expect(toIsoTimestamp(alreadyRead?.readAt!)).toBe(
+      toIsoTimestamp(readBefore.readAt!),
     );
     // The other user's row was not touched.
     expect(otherUser?.readAt).toBeNull();

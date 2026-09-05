@@ -812,8 +812,8 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
     );
 
     expect(result).toHaveLength(2);
-    expect(result[0].title).toBe("Private List");
-    expect(result[1].title).toBe("Public List");
+    expect(result[0]!.title).toBe("Private List");
+    expect(result[1]!.title).toBe("Public List");
   });
 
   it("returns only public playlists for non-owner", async () => {
@@ -824,7 +824,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Public List");
+    expect(result[0]!.title).toBe("Public List");
   });
 
   it("returns playlist with post count", async () => {

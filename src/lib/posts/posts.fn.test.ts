@@ -170,7 +170,7 @@ describe("PostsService.search", () => {
     );
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].title).toBe("Anime Sakuga");
+    expect(result.data[0]!.title).toBe("Anime Sakuga");
   });
 
   it("treats search wildcards as literals", async () => {
@@ -188,7 +188,7 @@ describe("PostsService.search", () => {
     );
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].title).toBe("100% Anime");
+    expect(result.data[0]!.title).toBe("100% Anime");
   });
 
   it("does not treat a bare percent query as match-all", async () => {
@@ -209,7 +209,7 @@ describe("PostsService.search", () => {
 
   it("filters by tags", async () => {
     const postId1 = await insertPost({ title: "Tagged Post" });
-    const postId2 = await insertPost({ title: "Untagged Post" });
+    await insertPost({ title: "Untagged Post" });
     const tagId = await insertTag("anime");
     await linkTags(postId1, [tagId]);
 
@@ -224,7 +224,7 @@ describe("PostsService.search", () => {
     );
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].title).toBe("Tagged Post");
+    expect(result.data[0]!.title).toBe("Tagged Post");
   });
 
   it("provides correct pagination for multiple pages", async () => {
@@ -264,8 +264,8 @@ describe("PostsService.search", () => {
     );
 
     expect(result.meta.popularTags).toHaveLength(1);
-    expect(result.meta.popularTags[0].name).toBe("anime");
-    expect(result.meta.popularTags[0].postCount).toBe(1);
+    expect(result.meta.popularTags[0]!.name).toBe("anime");
+    expect(result.meta.popularTags[0]!.postCount).toBe(1);
   });
 
   it("filters by date range", async () => {
@@ -430,7 +430,7 @@ describe("PostsService.fetchDetail", () => {
     const result = await runEffect(PostsService.fetchDetail(postId));
 
     expect(result.tags).toHaveLength(1);
-    expect(result.tags[0].name).toBe("sakuga");
+    expect(result.tags[0]!.name).toBe("sakuga");
   });
 
   it("fails with PostNotFoundError when post is not found", async () => {
@@ -439,6 +439,9 @@ describe("PostsService.fetchDetail", () => {
     );
 
     expect(error._tag).toBe("PostNotFoundError");
+    if (error._tag !== "PostNotFoundError") {
+      throw new Error("unreachable: _tag asserted above");
+    }
     expect(error.postId).toBe(999);
     expect(error.message).toBe("Post 999 not found");
   });
@@ -450,7 +453,7 @@ describe("PostsService.getByTag", () => {
       title: "Anime Post",
       videoKey: "videos/1.mp4",
     });
-    const postId2 = await insertPost({
+    await insertPost({
       title: "Other Post",
       videoKey: "videos/2.mp4",
     });
@@ -462,7 +465,7 @@ describe("PostsService.getByTag", () => {
     );
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].title).toBe("Anime Post");
+    expect(result.data[0]!.title).toBe("Anime Post");
     expect(result.meta.pagination.total).toBe(1);
   });
 
@@ -672,7 +675,7 @@ describe("PostsService.update", () => {
     const postId = await insertPost();
     const existingTag = await insertTag("existing");
 
-    const result = await runEffect(
+    await runEffect(
       PostsService.update({
         postId,
         title: "Tagged",
@@ -891,6 +894,9 @@ describe("PostsService.upload (image posts)", () => {
       );
 
       expect(error._tag).toBe("StorageError");
+      if (error._tag !== "StorageError") {
+        throw new Error("unreachable: _tag asserted above");
+      }
       expect(error.operation).toBe("upload");
 
       // The DB never saw the post.

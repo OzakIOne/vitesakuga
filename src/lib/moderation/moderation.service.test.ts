@@ -54,7 +54,7 @@ const insertReport = (
     .values({
       createdAt: args.createdAt,
       postId: args.postId,
-      reason: "spam",
+      reason: "duplicate",
       userId: args.reporterId,
     })
     .execute();
@@ -72,7 +72,7 @@ const insertPendingEdit = async (
     .insertInto("post_edits")
     .values({
       createdAt: args.createdAt,
-      payload: '{"title":"Edited"}',
+      payload: { title: "Edited" },
       postId: args.postId,
       status: "pending",
       suggestedBy: args.suggestedById,
@@ -153,13 +153,13 @@ describe("ModerationService.overview", () => {
     expect(overview.reports[0]).toMatchObject({
       postId,
       postTitle: `Post ${postId}`,
-      reason: "spam",
+      reason: "duplicate",
       reporterName: "reporter-b",
     });
     expect(overview.reports[1]).toMatchObject({ reporterName: "reporter-a" });
     const times = overview.reports.map((row) => Date.parse(row.createdAt));
     expect(times.every(Number.isFinite)).toBe(true);
-    expect(times[0]).toBeGreaterThan(times[1]);
+    expect(times[0]!).toBeGreaterThan(times[1]!);
   });
 
   it("lists pending edits with live approval counts and excludes resolved ones", async () => {
@@ -176,7 +176,7 @@ describe("ModerationService.overview", () => {
       .insertInto("post_edits")
       .values({
         createdAt: new Date("2026-01-01T09:00:00.000Z"),
-        payload: '{"title":"Resolved"}',
+        payload: { title: "Resolved" },
         postId,
         status: "approved",
         suggestedBy: "suggester-1",

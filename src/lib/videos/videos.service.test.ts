@@ -247,10 +247,10 @@ describe("VideosService.listRevisions", () => {
     expect(revisions).toHaveLength(2);
     // Newest first: the second replacement archived the first staged video,
     // the oldest entry holds the post's original object.
-    expect(revisions[0].videoKey).toMatch(/^videos\/mod-4\//);
-    expect(revisions[1].videoKey).toBe("videos/author-4/v.mp4");
+    expect(revisions[0]!.videoKey).toMatch(/^videos\/mod-4\//);
+    expect(revisions[1]!.videoKey).toBe("videos/author-4/v.mp4");
     expect(
-      new Date(revisions[0].createdAt) >= new Date(revisions[1].createdAt),
+      new Date(revisions[0]!.createdAt) >= new Date(revisions[1]!.createdAt),
     ).toBe(true);
   });
 });

@@ -135,6 +135,7 @@ export function MentionTextarea({
         }}
         placeholder={placeholder}
         ref={textareaRef}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- custom ARIA combobox: the textarea holds inline @mention text and caret math; no native input/select/datalist can replace it
         role="combobox"
         value={value}
       />
@@ -143,6 +144,7 @@ export function MentionTextarea({
           aria-label="User suggestions"
           className="absolute right-0 bottom-full left-0 z-10 mb-1 max-h-56 overflow-y-auto rounded border bg-white shadow-lg dark:bg-gray-900"
           id={listId}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- custom ARIA listbox: ul/li carry the listbox role for the mention dropdown (avatars + active-descendant nav); a native datalist/select cannot render this inside a multiline textarea widget
           role="listbox"
         >
           {users.map((user, index) => (
@@ -160,6 +162,7 @@ export function MentionTextarea({
               onMouseEnter={() => {
                 setActiveIndex(index);
               }}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- custom ARIA option: li carries the option role for the mention dropdown; native <option> requires a select/datalist parent and cannot render avatar rows
               role="option"
             >
               <Avatar.Root size="xs">

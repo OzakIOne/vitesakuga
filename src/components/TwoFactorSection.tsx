@@ -332,13 +332,14 @@ export function TwoFactorSection({
                       Scan this code with your authenticator app, then enter the
                       6-digit code it shows.
                     </Text>
-                    <div
-                      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- QRCode renders an inline <svg>; the wrapper is the accessible image
-                      aria-label="Two-factor authentication setup QR code"
-                      className="rounded-xl bg-white p-3"
-                      role="img"
-                    >
-                      <QRCode size={160} value={totpUri} />
+                    <div className="rounded-xl bg-white p-3">
+                      <QRCode
+                        aria-label="Two-factor authentication setup QR code"
+                        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- QRCode renders an inline <svg> with no image URL, so a native <img> is impossible; role="img" on the svg keeps it announced as a labeled image
+                        role="img"
+                        size={160}
+                        value={totpUri}
+                      />
                     </div>
                     <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                       <div className="min-w-0">

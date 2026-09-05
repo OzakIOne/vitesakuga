@@ -1,4 +1,9 @@
-import { useForm } from "@tanstack/react-form";
+import {
+  useForm,
+  type FormAsyncValidateOrFn,
+  type FormValidateOrFn,
+  type ReactFormExtendedApi,
+} from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -87,7 +92,34 @@ export const toFormValidationErrors = (
   return result;
 };
 
-export function useUploadForm(params: UseUploadFormParams) {
+/**
+ * The hook's return surface, annotated explicitly: the inferred
+ * `ReactFormExtendedApi` type embeds validator types from
+ * `@tanstack/form-core` (a transitive dependency), which would not be
+ * nameable in an emitted declaration.
+ */
+type UseUploadFormResult = {
+  form: ReactFormExtendedApi<
+    UploadFormValues,
+    FormValidateOrFn<UploadFormValues> | undefined,
+    FormValidateOrFn<UploadFormValues> | undefined,
+    FormAsyncValidateOrFn<UploadFormValues> | undefined,
+    FormValidateOrFn<UploadFormValues> | undefined,
+    FormAsyncValidateOrFn<UploadFormValues> | undefined,
+    FormValidateOrFn<UploadFormValues> | undefined,
+    FormAsyncValidateOrFn<UploadFormValues> | undefined,
+    FormValidateOrFn<UploadFormValues> | undefined,
+    FormAsyncValidateOrFn<UploadFormValues> | undefined,
+    FormAsyncValidateOrFn<UploadFormValues> | undefined,
+    unknown
+  >;
+  isSubmitting: boolean;
+  submit: () => Promise<void>;
+};
+
+export function useUploadForm(
+  params: UseUploadFormParams,
+): UseUploadFormResult {
   const {
     draft,
     mediaKind,

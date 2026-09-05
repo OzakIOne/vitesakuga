@@ -78,7 +78,12 @@ export function useVideoProcessing(): VideoProcessingState &
   // when the component unmounts, not on every thumbnails change — revoking
   // per change kills blob URLs still displayed in the grid.
   const thumbnailsRef = useRef(thumbnails);
-  thumbnailsRef.current = thumbnails;
+  // Sync the ref outside render: ref writes during render are a stale-read
+  // hazard; the unmount cleanup only needs the final list, and this effect
+  // commits it after every thumbnails change.
+  useEffect(() => {
+    thumbnailsRef.current = thumbnails;
+  }, [thumbnails]);
 
   // Lazy WASM init: `selectFile` awaits the promise, so picking a file before
   // the module finished loading no longer silently skips metadata analysis.

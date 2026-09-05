@@ -70,6 +70,7 @@ export function VirtualPostsGrid({
     return Math.round(columnWidth * (9 / 16)) + 120 + ROW_GAP;
   }, [columns, containerWidth]);
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual returns a mutable Virtualizer instance whose methods are not referentially stable; memoizing them would produce stale UI, so the compiler skips this component
   const virtualizer = useVirtualizer({
     count: rows.length,
     estimateSize,

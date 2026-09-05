@@ -83,6 +83,7 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        // oxlint-disable-next-line effecttsgo/async-function -- Better Auth's databaseHooks.user.create.before contract requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
         before: async (createdUser) => {
           if (createdUser["username"]) {
             return;
@@ -103,6 +104,7 @@ export const auth = betterAuth({
   // new password. The client schema mirrors this (auth.schemas.ts), but the
   // check must not trust the client: this hook is the actual gate.
   hooks: {
+    // oxlint-disable-next-line effecttsgo/async-function -- createAuthMiddleware requires an async middleware handler per Better Auth's contract; the Effect runtime cannot own this interface boundary
     before: createAuthMiddleware(async (ctx) => {
       if (!PASSWORD_SET_PATHS.has(ctx.path)) {
         return;
@@ -195,6 +197,7 @@ export const auth = betterAuth({
       rpName: "ViteSakuga",
       origin: envServer.VITE_BASE_URL,
       registration: {
+        // oxlint-disable-next-line effecttsgo/async-function -- the passkey plugin's afterVerification hook requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
         afterVerification: async ({ verification }) => {
           const name = getAuthenticatorName(
             verification.registrationInfo?.aaguid,

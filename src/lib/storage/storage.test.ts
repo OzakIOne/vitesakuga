@@ -5,8 +5,9 @@ import { makeStorageKeyTracker } from "../db/test-utils";
 import { StorageModule } from "./storage.module";
 import type { StorageError } from "./storage.module";
 
-const runTest = <A>(effect: Effect.Effect<A, StorageError, StorageModule>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(tracked.storageLayer)));
+const runTest = <A, E = StorageError>(
+  effect: Effect.Effect<A, E, StorageModule>,
+) => Effect.runPromise(effect.pipe(Effect.provide(tracked.storageLayer)));
 
 const uploadImageKey = (name: string) =>
   runTest(
@@ -264,7 +265,7 @@ describe("StorageModule", () => {
         }),
       );
 
-      expect(keys.sort()).toEqual(imageKeys.sort());
+      expect([...keys].sort()).toEqual([...imageKeys].sort());
     });
 
     it("assembles listings that span multiple S3 result pages", async () => {

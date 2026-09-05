@@ -1,3 +1,4 @@
+// oxlint-disable effecttsgo/async-function -- this module implements Kysely's `Driver` and `DatabaseConnection` interfaces, whose methods must return Promises that Kysely awaits; converting them to Effect would break interface conformance
 import type { PGlite } from "@electric-sql/pglite";
 import {
   CompiledQuery,

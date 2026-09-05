@@ -206,6 +206,7 @@ export function canonicalizeMentionContent(
 
   const restored: string[] = [];
   let restoreIndex = 0;
+  // oxlint-disable-next-line eslint/no-control-regex -- NUL is the intentional stash delimiter for stored mention tokens (see replaceMentionTokens); real comment content never contains NUL, so it is an unambiguous placeholder
   for (const match of working.matchAll(/\u0000(\d+)\u0000/g)) {
     const rawIndex = match[1];
     const start = match.index;

@@ -58,7 +58,7 @@ describe("UsersService.all", () => {
     const result = await runEffect(UsersService.all());
 
     expect(result).toHaveLength(1);
-    expect(result[0].name).toBe("Alice");
+    expect(result[0]!.name).toBe("Alice");
   });
 
   it("returns validated user objects", async () => {
@@ -162,7 +162,7 @@ describe("UsersService.userPosts", () => {
     );
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].title).toBe("Alice's Post");
+    expect(result.data[0]!.title).toBe("Alice's Post");
     expect(result.meta.pagination.total).toBe(1);
   });
 

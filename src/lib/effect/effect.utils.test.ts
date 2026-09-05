@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { Effect, Exit, Option, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { Kysely, sql } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -145,6 +145,9 @@ describe("makeFromKysely", () => {
   });
 
   describe("first-row helpers", () => {
+    // The table is created ad hoc via raw SQL and is not part of the DB
+    // interface; the never-typed alias keeps Kysely's builder happy.
+    const firstRowTest = "first_row_test" as never;
     const setupTable = async (db: ReturnType<typeof makeFromKysely<DB>>) => {
       await Effect.runPromise(
         db.executeRaw(
@@ -159,9 +162,7 @@ describe("makeFromKysely", () => {
       await setupTable(db);
 
       const result = await Effect.runPromise(
-        db.executeTakeFirstOption(
-          kysely.selectFrom("first_row_test").selectAll(),
-        ),
+        db.executeTakeFirstOption(kysely.selectFrom(firstRowTest).selectAll()),
       );
 
       expect(Option.isNone(result)).toBe(true);
@@ -178,9 +179,7 @@ describe("makeFromKysely", () => {
       );
 
       const result = await Effect.runPromise(
-        db.executeTakeFirstOption(
-          kysely.selectFrom("first_row_test").selectAll(),
-        ),
+        db.executeTakeFirstOption(kysely.selectFrom(firstRowTest).selectAll()),
       );
 
       expect(Option.isSome(result)).toBe(true);
@@ -191,7 +190,7 @@ describe("makeFromKysely", () => {
       const kysely = await createKysely();
       const db = makeFromKysely(kysely);
       await setupTable(db);
-      const query = kysely.selectFrom("first_row_test").selectAll();
+      const query = kysely.selectFrom(firstRowTest).selectAll();
 
       expect(
         await Effect.runPromise(db.executeTakeFirstOrUndefined(query)),
@@ -213,9 +212,7 @@ describe("makeFromKysely", () => {
       await setupTable(db);
 
       const error = (await flipFailure(
-        db.executeTakeFirstOrError(
-          kysely.selectFrom("first_row_test").selectAll(),
-        ),
+        db.executeTakeFirstOrError(kysely.selectFrom(firstRowTest).selectAll()),
       )) as { _tag?: string };
 
       expect(error._tag).toBe("SqlNoFirstResult");
@@ -232,9 +229,7 @@ describe("makeFromKysely", () => {
       );
 
       const row = await Effect.runPromise(
-        db.executeTakeFirstOrError(
-          kysely.selectFrom("first_row_test").selectAll(),
-        ),
+        db.executeTakeFirstOrError(kysely.selectFrom(firstRowTest).selectAll()),
       );
 
       expect(row).toMatchObject({ name: "first" });
@@ -251,9 +246,7 @@ describe("makeFromKysely", () => {
       );
 
       const row = await Effect.runPromise(
-        db.executeTakeFirstUnsafe(
-          kysely.selectFrom("first_row_test").selectAll(),
-        ),
+        db.executeTakeFirstUnsafe(kysely.selectFrom(firstRowTest).selectAll()),
       );
 
       expect(row).toMatchObject({ name: "unsafe" });

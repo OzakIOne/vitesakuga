@@ -10,6 +10,7 @@ import {
 } from "../comments/comments.service";
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import { asPostId } from "../ids";
 import { PostVotesService, PostVotesServiceLive } from "../votes/votes.service";
 import { nextLocalMidnight } from "./local-day";
 import { POINTS_RULES, type PointAction } from "./points.config";
@@ -51,7 +52,8 @@ const insertPost = async (
     })
     .returning("id")
     .executeTakeFirstOrThrow();
-  return row;
+  // Services take the branded PostId; brand it here so callers stay typed.
+  return { ...row, id: asPostId(row.id) };
 };
 
 const ledgerRows = async (db: Kysely<DB>, userId: string) =>
@@ -78,8 +80,8 @@ describe("PointsService.award", () => {
     });
     const rows = await ledgerRows(db, "user-1");
     expect(rows).toHaveLength(1);
-    expect(rows[0].action).toBe("post-upload");
-    expect(rows[0].points).toBe(POINTS_RULES["post-upload"].points);
+    expect(rows[0]!.action).toBe("post-upload");
+    expect(rows[0]!.points).toBe(POINTS_RULES["post-upload"].points);
   });
 
   it("never awards the same (refId, actorId) twice", async () => {
@@ -332,8 +334,8 @@ describe("service hooks", () => {
 
     const rows = await ledgerRows(db, "commenter-1");
     expect(rows).toHaveLength(1);
-    expect(rows[0].action).toBe("comment-written");
-    expect(rows[0].refId).not.toBeNull();
+    expect(rows[0]!.action).toBe("comment-written");
+    expect(rows[0]!.refId).not.toBeNull();
   });
 
   it("PostVotesService.set credits the post author when someone likes", async () => {
@@ -354,8 +356,8 @@ describe("service hooks", () => {
     await runEffect(PostVotesService.set({ postId: post.id, vote: "like" }));
     let rows = await ledgerRows(db, "author-1");
     expect(rows).toHaveLength(1);
-    expect(rows[0].action).toBe("post-like-received");
-    expect(rows[0].actorId).toBe("voter-1");
+    expect(rows[0]!.action).toBe("post-like-received");
+    expect(rows[0]!.actorId).toBe("voter-1");
 
     // Dislike then re-like never pays twice.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));

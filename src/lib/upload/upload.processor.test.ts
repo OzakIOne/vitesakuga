@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { FileUploadData } from "../posts/posts.schema";
 import { buildFormData, makeReadChunk } from "./upload.processor";
 
-const file = new File(["v"], "v.mp4", { type: "video/mp4" });
 const thumb = new File(["t"], "t.jpg", { type: "image/jpeg" });
 
 const baseValues: FileUploadData = {
@@ -12,7 +11,6 @@ const baseValues: FileUploadData = {
   source: "https://example.com",
   relatedPostId: undefined,
   tags: [],
-  video: file,
   thumbnail: thumb,
   videoMetadata: undefined,
 };
@@ -29,9 +27,8 @@ describe(buildFormData, () => {
   it("appends File values directly", () => {
     const formData = buildFormData(baseValues);
 
-    expect(formData.get("video")).toBeInstanceOf(File);
     expect(formData.get("thumbnail")).toBeInstanceOf(File);
-    expect((formData.get("video") as File).name).toBe("v.mp4");
+    expect((formData.get("thumbnail") as File).name).toBe("t.jpg");
   });
 
   it("appends arrays and objects as JSON strings", () => {

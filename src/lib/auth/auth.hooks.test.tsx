@@ -167,7 +167,7 @@ describe(useUpdateProfile, () => {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
-    result.current.mutate({ name: "Bob", image: "" });
+    result.current.mutate({ name: "Bob", image: "", username: "bob" });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const { toaster } = await import("src/components/ui/toaster");

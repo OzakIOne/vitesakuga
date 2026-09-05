@@ -236,7 +236,7 @@ describe("FormFileUploadSchema", () => {
     const input = makeUploadInput();
     const result = parseStrict(FormFileUploadSchema)(input);
     expect(result.videoKey).toBe("videos/user-1/abc.mp4");
-    expect(result.thumbnail.name).toBe("thumb.jpg");
+    expect(result.thumbnail!.name).toBe("thumb.jpg");
   });
 
   it("rejects a missing video key", () => {

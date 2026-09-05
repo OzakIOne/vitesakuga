@@ -8,14 +8,14 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { Schema } from "effect";
+import { DateTime, Schema } from "effect";
 
 import { RoleSchema } from "../../auth/roles";
 import { TimestampSchema } from "./timestamp";
 
 export const user = pgTable("user", {
   createdAt: timestamp()
-    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .$defaultFn(() => /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()))
     .notNull(),
   // Set when the account has been deleted and anonymized: posts and comments
   // keep referencing this row so they stay public, attributed to
@@ -38,7 +38,7 @@ export const user = pgTable("user", {
   // plugin (src/lib/auth/index.ts). Generated at sign-up, changeable on
   // /account. Backfilled for existing users by the column's migration.
   updatedAt: timestamp()
-    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .$defaultFn(() => /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()))
     .notNull(),
   username: text().notNull().unique(),
 });
@@ -113,11 +113,15 @@ export const account = pgTable(
 );
 
 export const verification = pgTable("verification", {
-  createdAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
+  createdAt: timestamp().$defaultFn(() =>
+    /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()),
+  ),
   expiresAt: timestamp().notNull(),
   id: text().primaryKey(),
   identifier: text().notNull(),
-  updatedAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
+  updatedAt: timestamp().$defaultFn(() =>
+    /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()),
+  ),
   value: text().notNull(),
 });
 
@@ -127,7 +131,9 @@ export const passkey = pgTable(
     aaguid: text(),
     backedUp: boolean().notNull(),
     counter: integer().notNull(),
-    createdAt: timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
+    createdAt: timestamp().$defaultFn(() =>
+      /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()),
+    ),
     credentialID: text().notNull(),
     deviceType: text().notNull(),
     id: text().primaryKey(),

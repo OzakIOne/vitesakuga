@@ -1,5 +1,4 @@
 import { Effect, Option, Schema } from "effect";
-// oxlint-disable no-extra-bind
 import type {
   Compilable,
   Kysely,

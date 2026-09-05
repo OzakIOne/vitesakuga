@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { verifyPassword } from "better-auth/crypto";
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
 import { KyselyDB } from "../db/context";
 import { DELETED_USER_NAME } from "../db/schema";
@@ -91,7 +91,9 @@ export class DeleteAccountService extends Context.Service<
           }
         }
 
-        const anonymizedAt = new Date();
+        // Clock-driven instant (TestClock-controllable in tests) rendered as
+        // the Date object Kysely's `deletedAt`/`updatedAt` columns expect.
+        const anonymizedAt = yield* DateTime.nowAsDate;
         const placeholderEmail = `deleted-${userId}@deleted.local`;
 
         yield* db.transaction().execute((trx) =>

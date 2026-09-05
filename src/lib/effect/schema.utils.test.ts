@@ -175,7 +175,7 @@ describe("safeParseStrictIssues", () => {
       throw new Error("expected failure");
     }
     expect(result.issues).toHaveLength(1);
-    expect(result.issues[0].path).toEqual(["user", "name"]);
+    expect(result.issues[0]!.path).toEqual(["user", "name"]);
   });
 
   it("reports array index paths", () => {
@@ -187,7 +187,7 @@ describe("safeParseStrictIssues", () => {
       throw new Error("expected failure");
     }
     expect(result.issues).toHaveLength(1);
-    expect(result.issues[0].path).toEqual(["items", "0", "qty"]);
+    expect(result.issues[0]!.path).toEqual(["items", "0", "qty"]);
   });
 
   it("collects multiple simultaneous issues across fields", () => {
@@ -223,12 +223,23 @@ describe("safeParseStrictIssues", () => {
 describe("toStandardSchemaV1Strict", () => {
   const standard = toStandardSchemaV1Strict(TestSchema);
 
-  const validate = (input: unknown) =>
-    standard["~standard"].validate(input) as ReturnType<
-      (typeof standard)["~standard"]["validate"]
-    > extends Promise<infer T>
-      ? T | Promise<T>
-      : never;
+  // Structural view of Standard Schema results: validation may be sync or
+  // async, so the helper keeps that union instead of a conditional type that
+  // collapses to `never` on the sync branch.
+  type StandardSchemaOutcome = {
+    readonly value?: unknown;
+    readonly issues?: ReadonlyArray<{
+      readonly message: string;
+      readonly path?: ReadonlyArray<unknown>;
+    }>;
+  };
+
+  const validate = (
+    input: unknown,
+  ): StandardSchemaOutcome | Promise<StandardSchemaOutcome> =>
+    standard["~standard"].validate(input) as
+      | StandardSchemaOutcome
+      | Promise<StandardSchemaOutcome>;
 
   it("exposes a Standard Schema v1 interface", () => {
     expect(standard["~standard"].version).toBe(1);
@@ -268,7 +279,9 @@ describe("toStandardSchemaV1Strict", () => {
     expect(result.value).toBeUndefined();
     const path = result.issues?.[0]?.path ?? [];
     const segments = path.map((segment) =>
-      typeof segment === "object" && "key" in segment ? segment.key : segment,
+      typeof segment === "object" && segment !== null && "key" in segment
+        ? segment.key
+        : segment,
     );
     expect(segments).toEqual(["content"]);
   });

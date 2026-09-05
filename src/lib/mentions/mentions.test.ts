@@ -72,7 +72,7 @@ describe(splitContentByMentions, () => {
   });
 });
 
-describe(USERNAME_PATTERN, () => {
+describe("USERNAME_PATTERN", () => {
   it.each(["jane", "jane_doe", "a".repeat(30)])(
     "accepts %s",
     (username: string) => {

@@ -19,11 +19,11 @@ const makeHandler =
   (effect: Effect.Effect<string, unknown, never>) =>
   ({ data }: { data: string }): Promise<string> =>
     createHandler(Layer.empty, () => Promise.resolve(Layer.empty))(
-      () => effect,
+      (_data: string) => effect,
     )({ data });
 
 /** The boundary surfaces failures as rejections, exactly like TanStack Start. */
-const rejectionOf = async (promise: Promise<string>): Promise<Error> => {
+const rejectionOf = async (promise: Promise<unknown>): Promise<Error> => {
   try {
     await promise;
   } catch (error: unknown) {
@@ -82,6 +82,9 @@ describe("server-fn failure boundary", () => {
     );
 
     expect(error).toBeInstanceOf(ValidationError);
+    if (!(error instanceof ValidationError)) {
+      throw new Error("unreachable: instance asserted above");
+    }
     expect(error._tag).toBe("ValidationError");
     expect(error.message).toBe("Invalid input.");
     expect(error.cause).toBeUndefined();
@@ -149,7 +152,7 @@ describe("server-fn failure boundary", () => {
   it("sanitizes a synchronous throw from the effect factory", async () => {
     const handler = createHandler(Layer.empty, () =>
       Promise.resolve(Layer.empty),
-    )(() => {
+    )((_data: string) => {
       throw new Error("arg validation boom");
     });
 
@@ -160,7 +163,7 @@ describe("server-fn failure boundary", () => {
   it("sanitizes a rejected makeBase() promise", async () => {
     const handler = createHandler(Layer.empty, () =>
       Promise.reject(new Error("env validation failed")),
-    )(() => Effect.succeed("never"));
+    )((_data: string) => Effect.succeed("never"));
 
     const error = await rejectionOf(handler({ data: "x" }));
     expect(error.message).toMatch(DEBUG_ID_PATTERN);
@@ -180,7 +183,7 @@ describe("server-fn failure boundary", () => {
         ),
       ),
       () => Promise.resolve(Layer.empty),
-    )(() => Effect.succeed("never"));
+    )((_data: string) => Effect.succeed("never"));
     const typedError = await rejectionOf(failingLayer({ data: "x" }));
     expect(typedError.message).toMatch(DEBUG_ID_PATTERN);
 
@@ -193,7 +196,7 @@ describe("server-fn failure boundary", () => {
         }),
       ),
       () => Promise.resolve(Layer.empty),
-    )(() => Effect.succeed("never"));
+    )((_data: string) => Effect.succeed("never"));
     const error = await rejectionOf(defectingLayer({ data: "x" }));
     expect(error.message).toMatch(DEBUG_ID_PATTERN);
   });

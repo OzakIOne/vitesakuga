@@ -49,7 +49,9 @@ const createWrapper = (
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <AuthClientContext.Provider
-        value={authClient as unknown as typeof import("./client").default}
+        value={
+          authClient as unknown as typeof import("../lib/auth/client").default
+        }
       >
         {children}
       </AuthClientContext.Provider>

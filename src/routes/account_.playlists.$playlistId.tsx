@@ -125,9 +125,12 @@ function ManagePlaylistContent() {
     [data],
   );
 
-  const handleSelectionChange = useCallback((ids: ReadonlySet<number>) => {
-    setSelectedPostIds(ids);
-  }, []);
+  const handleSelectionChange = useCallback(
+    (ids: ReadonlySet<number>) => {
+      setSelectedPostIds(ids);
+    },
+    [setSelectedPostIds],
+  );
 
   const invalidatePlaylistQueries = useCallback(() => {
     void queryClient.invalidateQueries({

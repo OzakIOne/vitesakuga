@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-const imgSrc = (csp: string) => csp.split("img-src ")[1].split("; ")[0];
+const imgSrc = (csp: string) => csp.split("img-src ")[1]!.split("; ")[0]!;
 
 describe("nitro CSP", () => {
   it("allows the Turnstile script and widget iframe", async () => {
@@ -10,7 +10,7 @@ describe("nitro CSP", () => {
         string,
         { headers: Record<string, string> }
       >
-    )["/**"].headers["content-security-policy"];
+    )["/**"]!.headers["content-security-policy"]!;
     expect(csp).toContain(
       "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com",
     );
@@ -27,7 +27,7 @@ describe("nitro CSP", () => {
         string,
         { headers: Record<string, string> }
       >
-    )["/**"].headers["content-security-policy"];
+    )["/**"]!.headers["content-security-policy"]!;
     expect(csp).toContain(
       "script-src 'self' 'wasm-unsafe-eval' 'sha256-gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA=' https://challenges.cloudflare.com",
     );

@@ -415,6 +415,7 @@ export function PlaylistPostsTable({
   const { FlexRender } = table;
 
   const tableRows = table.getRowModel().rows;
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual returns a mutable Virtualizer instance whose methods are not referentially stable; memoizing them would produce stale UI, so the compiler skips this component
   const virtualizer = useVirtualizer({
     count: tableRows.length,
     estimateSize: () => ROW_ESTIMATE,

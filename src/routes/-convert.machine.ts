@@ -219,6 +219,7 @@ export const convertMachine = createMachine({
   actors: {
     probeFile: createAsyncLogic({
       id: "probeFile",
+      // oxlint-disable-next-line effecttsgo/async-function -- XState v5 actor `run` must return a Promise; the mediabunny API is promise-based and loaded via dynamic import
       run: async ({ input }: { input: { file: File } }) => {
         const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
         const mediainput = new Input({
@@ -247,6 +248,7 @@ export const convertMachine = createMachine({
       ConvertProgressEvent | ConvertDoneEvent | ConvertErrorEvent,
       { file: File; output: OutputFormat; videoQuality: number }
     >(({ sendBack, input }) => {
+      // oxlint-disable-next-line effecttsgo/async-function -- createCallbackLogic callbacks must return void; conversion progress is streamed via sendBack from this fire-and-forget promise chain
       void (async () => {
         try {
           const {
@@ -384,8 +386,16 @@ export const convertMachine = createMachine({
     ready: {
       invoke: {
         src: "probeFile",
-        // oxlint-disable-next-line
-        input: ({ context }) => ({ file: context.file! }),
+        input: ({ context }) => {
+          // `ready` is only entered via `file.selected`, which always sets a
+          // file — but the machine context type cannot express that. Fail
+          // fast here rather than asserting: the invoke's `onError` clears
+          // the codecs and stays in `ready`.
+          if (context.file === null) {
+            throw new Error("probeFile invoked without a file");
+          }
+          return { file: context.file };
+        },
         onDone: ({ event }) => ({
           context: setCodecs(event.output.videoCodec, event.output.audioCodec),
         }),
@@ -414,9 +424,9 @@ export const convertMachine = createMachine({
       invoke: {
         src: "runConversion",
         input: ({ context }) => ({
-          // oxlint-disable-next-line
+          // oxlint-disable-next-line typescript/no-non-null-assertion -- converting is only entered via the convert guard checking file and output non-null; the machine type cannot express this
           file: context.file!,
-          // oxlint-disable-next-line
+          // oxlint-disable-next-line typescript/no-non-null-assertion -- see file above
           output: context.output!,
           videoQuality: context.videoQuality,
         }),

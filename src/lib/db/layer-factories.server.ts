@@ -1,3 +1,4 @@
+// oxlint-disable effecttsgo/async-function -- this module's whole contract is Promise-returning: `baseLayerFactories`/`resolveMiddlewareLayer` in server-fn.handler.ts consume makeDBLayer/makeAuthLayer/makeMiddlewareLayer via `.then((m) => m.makeX())`, and `toAuthSessionProvider.getSession` implements `AuthSessionProvider`, which returns a Promise; converting any of these to Effect would ripple through the handler contract
 import type { UserWithTwoFactor } from "better-auth/plugins";
 import { Layer } from "effect";
 

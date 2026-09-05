@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { VotesFnsContext } from "./votes.fn-context";
+import { VotesFnsContext, defaultVotesFns } from "./votes.fn-context";
 import { usePostVotes, useSetVote } from "./votes.hooks";
 
 vi.mock("src/lib/votes/votes.service", () => ({
@@ -33,11 +33,15 @@ const createWrapper = (
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <VotesFnsContext.Provider
-        value={{
-          fetchPostVotes: fns.fetchPostVotes ?? vi.fn(),
-          removePostVote: fns.removePostVote ?? vi.fn(),
-          setPostVote: fns.setPostVote ?? vi.fn(),
-        }}
+        value={
+          // Mocks stand in for the TanStack Start fetchers; the cast keeps
+          // the provider's value type aligned with the context's shape.
+          {
+            fetchPostVotes: fns.fetchPostVotes ?? vi.fn(),
+            removePostVote: fns.removePostVote ?? vi.fn(),
+            setPostVote: fns.setPostVote ?? vi.fn(),
+          } as unknown as typeof defaultVotesFns
+        }
       >
         {children}
       </VotesFnsContext.Provider>

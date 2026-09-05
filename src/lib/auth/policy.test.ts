@@ -13,10 +13,14 @@ import {
 } from "./policy";
 import type { AuthSession, AuthenticatedUser } from "./session.effect";
 import { SessionService, type SessionUser } from "./session.effect";
-import { makeAuthSession, makeSessionUser } from "./session.fixture";
+import {
+  makeAuthSession,
+  makeSessionUser,
+  type SessionUserFixture,
+} from "./session.fixture";
 
 const sessionUser = (
-  overrides: Partial<AuthenticatedUser> = {},
+  overrides: Partial<SessionUserFixture> = {},
 ): AuthenticatedUser => makeSessionUser(overrides);
 
 const sessionServiceLayer = (

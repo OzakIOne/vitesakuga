@@ -38,7 +38,7 @@ export function getRouter() {
 }
 
 declare module "@tanstack/react-router" {
-  // oxlint-disable-next-line typescript/consistent-type-definitions
+  // oxlint-disable-next-line typescript/consistent-type-definitions -- module augmentation must be an interface to merge with TanStack Router's Register declaration; a type alias cannot express this
   interface Register {
     router: ReturnType<typeof getRouter>;
   }

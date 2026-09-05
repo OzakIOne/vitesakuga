@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CommentsFnsContext } from "./comments.fn-context";
+import { CommentsFnsContext, defaultCommentsFns } from "./comments.fn-context";
 import { useAddComment, useDeleteComment } from "./comments.hooks";
 
 vi.mock("src/components/ui/toaster", () => ({
@@ -22,10 +22,14 @@ const createWrapper = (
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <CommentsFnsContext.Provider
-        value={{
-          addComment: fns.addComment ?? vi.fn(),
-          deleteComment: fns.deleteComment ?? vi.fn(),
-        }}
+        value={
+          // Mocks stand in for the TanStack Start fetchers; the cast keeps
+          // the provider's value type aligned with the context's shape.
+          {
+            addComment: fns.addComment ?? vi.fn(),
+            deleteComment: fns.deleteComment ?? vi.fn(),
+          } as unknown as typeof defaultCommentsFns
+        }
       >
         {children}
       </CommentsFnsContext.Provider>

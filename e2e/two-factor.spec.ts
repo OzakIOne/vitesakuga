@@ -17,7 +17,7 @@ const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 function base32Decode(value: string): Buffer {
   const clean = value.replace(/=+$/u, "").toUpperCase();
-  const bits = [...clean]
+  const bits = Array.from(clean)
     .map((char) => {
       const index = BASE32_ALPHABET.indexOf(char);
       if (index === -1) {
@@ -116,7 +116,7 @@ const enableTwoFactorOnce = async (page: Page) => {
     await expect(dialog.getByText("Save your backup codes")).toBeVisible({
       timeout: 10000,
     });
-  } catch (error) {
+  } catch {
     // The first click can be dropped while React is still settling; retry it.
     for (let attempt = 0; attempt < 3; attempt++) {
       await verifyCodeButton.click();

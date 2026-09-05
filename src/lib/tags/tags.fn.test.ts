@@ -101,7 +101,7 @@ describe("TagsService.popular", () => {
     const result = await runEffect(TagsService.popular());
 
     expect(result).toHaveLength(1);
-    expect(result[0].name).toBe("anime");
-    expect(result[0].postCount).toBe(1);
+    expect(result[0]!.name).toBe("anime");
+    expect(result[0]!.postCount).toBe(1);
   });
 });

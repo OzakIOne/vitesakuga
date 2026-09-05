@@ -5,6 +5,7 @@ import { envServer } from "src/lib/env/server";
 
 import { posts } from "./sakuga.schema";
 
+// oxlint-disable-next-line effecttsgo/async-function -- standalone CLI script entrypoint: drizzle-seed returns a plain Promise and this file has no other Effect surface, so an async main run via `void main()` is the simplest shape
 async function main() {
   const db = drizzle(envServer.DATABASE_URL);
   process.stdout.write("Seeding database...\n");

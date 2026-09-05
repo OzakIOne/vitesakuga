@@ -1,6 +1,7 @@
 import type { RateLimit } from "@cloudflare/workers-types";
 import { Effect } from "effect";
 import { defineMiddleware } from "nitro";
+import type { H3Event } from "nitro";
 
 import {
   RateLimitExceeded,
@@ -70,7 +71,20 @@ const ipFromEvent = (
   return "unknown";
 };
 
-export default defineMiddleware(async (event) => {
+type MaybePromise<T> = T | Promise<T>;
+
+/**
+ * h3's `Middleware` type spelled with portable names: nitro does not re-export
+ * it, and an unannotated `defineMiddleware(...)` default export embeds the
+ * non-portable type in the emitted declaration (TS2883).
+ */
+type NitroMiddleware = (
+  event: H3Event,
+  next: () => MaybePromise<unknown>,
+) => MaybePromise<unknown>;
+
+// oxlint-disable-next-line effecttsgo/async-function -- Nitro's defineMiddleware contract requires a Promise-capable handler (it awaits the Cloudflare binding and Effect.runPromise); the Effect runtime cannot own this interface boundary
+const middleware: NitroMiddleware = defineMiddleware(async (event) => {
   // Only guard state-changing requests.
   if (event.req.method !== "POST") {
     return;
@@ -113,6 +127,8 @@ export default defineMiddleware(async (event) => {
     return rateLimitResponse(retryAfter);
   }
 });
+
+export default middleware;
 
 const rateLimitResponse = (retryAfter: number | undefined) => {
   const headers = new Headers({ "content-type": "application/json" });

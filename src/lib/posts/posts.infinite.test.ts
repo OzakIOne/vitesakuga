@@ -12,18 +12,24 @@ const makePage = (
   opts: { hasMore?: boolean; hasPrevious?: boolean; length?: number } = {},
 ): PostsInfinitePage => ({
   data: Array.from({ length: opts.length ?? 2 }, (_, i) => ({
+    animeTitle: null,
+    chapterNumber: null,
     description: "description",
     createdAt: new Date(),
     dislikes: 0,
+    episodeNumber: null,
     id: asPostId(i),
     likes: 0,
     relatedPostId: null,
+    seasonNumber: null,
     source: null,
+    sourceType: null,
     thumbnailKey: "thumb",
     title: `post-${i}`,
     userId: "user-1",
     videoKey: "video",
     videoMetadata: {},
+    volumeNumber: null,
   })),
   meta: {
     pagination: {

@@ -105,10 +105,10 @@ describe("PromotionsService.queue", () => {
 
     const queue = await ctx.runEffect(PromotionsService.queue());
     expect(queue).toHaveLength(1);
-    expect(queue[0].userId).toBe("candidate-1");
-    expect(queue[0].activity.uploads).toBeGreaterThanOrEqual(1);
-    expect(queue[0].activity.likesReceived).toBe(1);
-    expect(queue[0].activity.comments).toBe(1);
+    expect(queue[0]!.userId).toBe("candidate-1");
+    expect(queue[0]!.activity.uploads).toBeGreaterThanOrEqual(1);
+    expect(queue[0]!.activity.likesReceived).toBe(1);
+    expect(queue[0]!.activity.comments).toBe(1);
   });
 
   it("excludes candidates below the points or age thresholds", async () => {
@@ -161,9 +161,9 @@ describe("PromotionsService.approve", () => {
       .where("userId", "=", "future-uploader")
       .execute();
     expect(reviews).toHaveLength(1);
-    expect(reviews[0].status).toBe("approved");
-    expect(reviews[0].reviewedBy).toBe("mod-1");
-    expect(reviews[0].pointsAtReview).toBeGreaterThanOrEqual(
+    expect(reviews[0]!.status).toBe("approved");
+    expect(reviews[0]!.reviewedBy).toBe("mod-1");
+    expect(reviews[0]!.pointsAtReview).toBeGreaterThanOrEqual(
       PROMOTION_RULES.minPoints,
     );
 

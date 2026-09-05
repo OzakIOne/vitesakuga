@@ -21,8 +21,9 @@ export const TimestampSchema = Schema.Union([
  * strings — mirroring `TimestampSchema`.
  */
 export function toIsoTimestamp(value: Date | string): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
   // oxlint-disable-next-line effecttsgo/global-date -- normalizing driver-dependent row values requires a Date round-trip
-  return value instanceof Date
-    ? value.toISOString()
-    : new Date(value).toISOString();
+  return new Date(value).toISOString();
 }

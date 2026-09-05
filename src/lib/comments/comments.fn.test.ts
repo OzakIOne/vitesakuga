@@ -73,11 +73,11 @@ describe("CommentsService.fetch", () => {
     const result = await runEffect(CommentsService.fetch(postId));
 
     expect(result).toHaveLength(1);
-    expect(result[0].content).toBe("Great post!");
-    expect(result[0].userName).toBe("Alice");
-    expect(result[0].userImage).toBeNull();
-    expect(result[0].postId).toBe(postId);
-    expect(result[0].userId).toBe("user-1");
+    expect(result[0]!.content).toBe("Great post!");
+    expect(result[0]!.userName).toBe("Alice");
+    expect(result[0]!.userImage).toBeNull();
+    expect(result[0]!.postId).toBe(postId);
+    expect(result[0]!.userId).toBe("user-1");
   });
 
   it("returns comments ordered by newest first", async () => {
@@ -103,8 +103,8 @@ describe("CommentsService.fetch", () => {
     const result = await runEffect(CommentsService.fetch(postId));
 
     expect(result).toHaveLength(2);
-    expect(result[0].content).toBe("Second");
-    expect(result[1].content).toBe("First");
+    expect(result[0]!.content).toBe("Second");
+    expect(result[1]!.content).toBe("First");
   });
 });
 
@@ -148,7 +148,7 @@ describe("CommentsService.add", () => {
       .execute();
 
     expect(comments).toHaveLength(1);
-    expect(comments[0].content).toBe("Nice!");
+    expect(comments[0]!.content).toBe("Nice!");
   });
 
   it("fails with SqlError when the post does not exist", async () => {
@@ -197,7 +197,7 @@ describe("CommentsService.add", () => {
       .where("commentId", "=", result.id)
       .execute();
     expect(mentions).toHaveLength(1);
-    expect(mentions[0].userId).toBe("user-2");
+    expect(mentions[0]!.userId).toBe("user-2");
 
     const notifications = await db
       .selectFrom("notifications")
@@ -205,11 +205,11 @@ describe("CommentsService.add", () => {
       .where("userId", "=", "user-2")
       .execute();
     expect(notifications).toHaveLength(1);
-    expect(notifications[0].type).toBe("comment-mention");
-    expect(notifications[0].postId).toBe(postId);
+    expect(notifications[0]!.type).toBe("comment-mention");
+    expect(notifications[0]!.postId).toBe(postId);
 
     const fetched = await runEffect(CommentsService.fetch(postId));
-    expect(fetched[0].mentions).toEqual([
+    expect(fetched[0]!.mentions).toEqual([
       { userId: "user-2", username: "bob" },
     ]);
   });

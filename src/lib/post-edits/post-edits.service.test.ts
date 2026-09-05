@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
+import { asPostId } from "../ids";
 import {
   decodePostEditPayload,
   type PostEditPayload,
@@ -46,7 +47,8 @@ const insertPost = async (db: Kysely<DB>, ownerId: string) => {
       videoMetadata: "{}",
     })
     .execute();
-  return postSeq;
+  // Services take the branded PostId; brand the seed id so callers stay typed.
+  return asPostId(postSeq);
 };
 
 const editRow = (db: Kysely<DB>, editId: number) =>
@@ -191,7 +193,7 @@ describe("PostEditsService.approve", () => {
       .where("userId", "=", "uploader-1")
       .execute();
     expect(ledger).toHaveLength(1);
-    expect(ledger[0].points).toBe(10);
+    expect(ledger[0]!.points).toBe(10);
 
     const ownerInbox = await db
       .selectFrom("notifications")
@@ -537,6 +539,6 @@ describe("PostEditsService.listPendingForPost", () => {
     );
 
     expect(pending).toHaveLength(1);
-    expect(pending[0].approvals).toEqual(["second-voter"]);
+    expect(pending[0]!.approvals).toEqual(["second-voter"]);
   });
 });

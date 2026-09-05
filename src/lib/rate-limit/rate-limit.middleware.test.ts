@@ -10,18 +10,26 @@ import middleware, { setRateLimiterForTests } from "./rate-limit.middleware";
 // so the fixture restates that shape with a single documented cast.
 type MiddlewareEvent = Parameters<typeof middleware>[0];
 
+// h3's Middleware type carries a required `next` continuation the app
+// middleware never uses; the alias narrows the signature to the surface this
+// test drives (event only, returning a Response or nothing).
+const handler = middleware as unknown as (
+  event: MiddlewareEvent,
+  next?: () => unknown,
+) => Promise<Response | undefined> | Response | undefined;
+
 type CloudflareRateLimitStub = {
   limit: (args: { key: string }) => Promise<{ success: boolean }>;
 };
 
 const makeEvent = (args: {
-  headers?: ReadonlyArray<readonly [string, string]>;
+  headers?: Array<[string, string]>;
   method?: string;
   rateLimit?: CloudflareRateLimitStub;
 }): MiddlewareEvent =>
   ({
     req: {
-      headers: new Headers(args.headers),
+      headers: new Headers(args.headers ?? []),
       method: args.method ?? "POST",
       ...(args.rateLimit
         ? { runtime: { cloudflare: { env: { RATE_LIMIT: args.rateLimit } } } }
@@ -48,10 +56,10 @@ afterEach(() => {
 describe("rate-limit middleware", () => {
   it("lets non-POST requests through untouched", async () => {
     await expect(
-      middleware(makeEvent({ method: "GET" })),
+      handler(makeEvent({ method: "GET" })),
     ).resolves.toBeUndefined();
     await expect(
-      middleware(makeEvent({ method: "PUT" })),
+      handler(makeEvent({ method: "PUT" })),
     ).resolves.toBeUndefined();
   });
 
@@ -59,7 +67,7 @@ describe("rate-limit middleware", () => {
     const limit = vi.fn(async () => ({ success: true }));
     const ip = nextIp();
 
-    const result = await middleware(
+    const result = await handler(
       makeEvent({
         headers: [["cf-connecting-ip", ip]],
         rateLimit: { limit },
@@ -73,7 +81,7 @@ describe("rate-limit middleware", () => {
   it("returns a bare 429 when the edge binding denies", async () => {
     const limit = vi.fn(async () => ({ success: false }));
 
-    const response = await middleware(
+    const response = await handler(
       makeEvent({
         headers: [["cf-connecting-ip", nextIp()]],
         rateLimit: { limit },
@@ -89,7 +97,7 @@ describe("rate-limit middleware", () => {
   it("prefers cf-connecting-ip over x-forwarded-for and takes the first hop", async () => {
     const limit = vi.fn(async () => ({ success: true }));
 
-    await middleware(
+    await handler(
       makeEvent({
         headers: [
           ["cf-connecting-ip", "203.0.113.9"],
@@ -100,7 +108,7 @@ describe("rate-limit middleware", () => {
     );
     expect(limit).toHaveBeenCalledWith({ key: "mut:203.0.113.9" });
 
-    await middleware(
+    await handler(
       makeEvent({
         headers: [["x-forwarded-for", "198.51.100.7 , 10.0.0.1"]],
         rateLimit: { limit },
@@ -115,9 +123,9 @@ describe("rate-limit middleware", () => {
 
     // The in-memory budget (60 POSTs / 60s window) absorbs the first 60 hits.
     for (let i = 0; i < 60; i += 1) {
-      await expect(middleware(event)).resolves.toBeUndefined();
+      await expect(handler(event)).resolves.toBeUndefined();
     }
-    const denied = await middleware(event);
+    const denied = await handler(event);
 
     expect(denied).toBeInstanceOf(Response);
     expect(denied?.status).toBe(429);
@@ -148,7 +156,7 @@ describe("rate-limit middleware", () => {
     });
     try {
       await expect(
-        middleware(makeEvent({ headers: [["cf-connecting-ip", nextIp()]] })),
+        handler(makeEvent({ headers: [["cf-connecting-ip", nextIp()]] })),
       ).rejects.toThrow("redis connection lost");
     } finally {
       setRateLimiterForTests(previous);

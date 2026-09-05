@@ -11,11 +11,15 @@ type UserTable = {
   id: string;
   name: string;
   email: string;
-  emailVerified: boolean;
+  // `Generated`: the DB supplies the default (migration
+  // 20260105161257_add_timestamp_defaults) when the insert omits it.
+  emailVerified: Generated<boolean>;
   image: string | null;
-  twoFactorEnabled: boolean;
+  // `Generated`: DB default false (migration 20260819233253_brainy_betty_brant).
+  twoFactorEnabled: Generated<boolean>;
   // Rank behind the authorization policies (src/lib/auth/policy.ts).
-  role: string;
+  // `Generated`: DB default 'novice' (migration 20260826165320_previous_silvermane).
+  role: Generated<string>;
   // Unique @mention handle (src/lib/mentions).
   username: string;
   deletedAt: Date | null;
@@ -39,6 +43,7 @@ type AccountTable = {
   userId: string;
   accountId: string;
   providerId: string;
+  issuer: Generated<string>;
   accessToken: string | null;
   refreshToken: string | null;
   idToken: string | null;
@@ -65,8 +70,9 @@ type TwoFactorTable = {
   userId: string;
   secret: string;
   backupCodes: string;
-  verified: boolean;
-  failedVerificationCount: number;
+  // Both columns have DB defaults; the plugin inserts omit them.
+  verified: Generated<boolean>;
+  failedVerificationCount: Generated<number>;
   lockedUntil: Date | null;
 };
 

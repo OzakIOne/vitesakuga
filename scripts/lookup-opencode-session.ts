@@ -35,14 +35,14 @@ function collectFlags(raw: string[]): FlagArgs {
   const flags: Record<string, string> = {};
   const positional: string[] = [];
   for (let i = 0; i < raw.length; i++) {
-    const a = raw[i];
+    const a = raw[i]!;
     if (a.startsWith("--") || a.startsWith("-")) {
       const eqIdx = a.indexOf("=");
       if (eqIdx !== -1) {
         flags[a.slice(0, eqIdx)] = a.slice(eqIdx + 1);
-      } else if (i + 1 < raw.length && !raw[i + 1].startsWith("-")) {
+      } else if (i + 1 < raw.length && !raw[i + 1]!.startsWith("-")) {
         i++;
-        flags[a] = raw[i];
+        flags[a] = raw[i]!;
       } else {
         flags[a] = "";
       }

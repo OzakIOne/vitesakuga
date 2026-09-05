@@ -52,8 +52,13 @@ export function RolesPanel() {
         onSubmit={(event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
-          const userId = String(form.get("userId") ?? "").trim();
-          const role = String(form.get("role") ?? "");
+          // SAFETY: the form renders the <input name="userId">; FormData.get
+          // returns its string value, and the non-empty check below guards
+          // empty input.
+          const userId = ((form.get("userId") ?? "") as string).trim();
+          // SAFETY: the form renders the <select name="role">; FormData.get
+          // returns its string value.
+          const role = (form.get("role") ?? "") as string;
           if (userId !== "" && role !== "") {
             handleAssign(userId, role);
           }

@@ -98,7 +98,7 @@ describe("DeleteAccountService.deleteAccount", () => {
     expect(posts).toHaveLength(1);
     const comments = await db.selectFrom("comments").selectAll().execute();
     expect(comments).toHaveLength(1);
-    expect(comments[0].userId).toBe("user-1");
+    expect(comments[0]!.userId).toBe("user-1");
     const votes = await db.selectFrom("post_votes").selectAll().execute();
     expect(votes).toHaveLength(1);
   });
