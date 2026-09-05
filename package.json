@@ -44,6 +44,8 @@
     "@aws-sdk/s3-request-presigner": "^3.1115.0",
     "@better-auth/infra": "^0.4.1",
     "@better-auth/passkey": "^1.7.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@effect/opentelemetry": "4.0.0-beta.102",
     "@effect/platform-node": "4.0.0-beta.107",
     "@neondatabase/serverless": "^1.1.0",
@@ -129,7 +131,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.2.1",
-    "vitest": "^4.1.10",
+    "vitest": "^5.0.0",
     "wrangler": "^4.121.0",
     "ws": "8.21.3"
   },

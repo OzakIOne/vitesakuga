@@ -194,28 +194,35 @@ export const pointsLedger = pgTable(
   ],
 );
 
+// Comments are written at high volume and each resolved mention fans out
+// into a `comment_mentions` row plus a notification, so unbounded content is
+// a storage/notification spam amplifier (security audit M2).
+export const MAX_COMMENT_LENGTH = 2000;
+
+const commentContent = Schema.String.pipe(
+  Schema.decode({
+    decode: SchemaGetter.transform((val) => sanitize(val)),
+    encode: SchemaGetter.transform((val) => val),
+  }),
+  Schema.check(
+    Schema.isMaxLength(MAX_COMMENT_LENGTH, {
+      message: `Comments must not exceed ${MAX_COMMENT_LENGTH} characters`,
+    }),
+  ),
+);
+
 // Comment insert input. No userId here: it is derived from the authenticated
 // session server-side (see CommentsService.add); trusting a client-sent userId
 // would let any caller impersonate another user.
 export const commentInsertSchema = Schema.Struct({
-  content: Schema.String.pipe(
-    Schema.decode({
-      decode: SchemaGetter.transform((val) => sanitize(val)),
-      encode: SchemaGetter.transform((val) => val),
-    }),
-  ),
+  content: commentContent,
   postId: PostId,
 });
 
 // Comment edit input. Ownership is checked server-side (CommentsService.update).
 export const commentUpdateSchema = Schema.Struct({
   commentId: Schema.Number,
-  content: Schema.String.pipe(
-    Schema.decode({
-      decode: SchemaGetter.transform((val) => sanitize(val)),
-      encode: SchemaGetter.transform((val) => val),
-    }),
-  ),
+  content: commentContent,
 });
 
 // Audit row for each novice → uploader decision (src/lib/promotions). The

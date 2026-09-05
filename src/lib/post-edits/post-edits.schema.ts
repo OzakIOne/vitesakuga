@@ -1,24 +1,32 @@
 import { Schema } from "effect";
 
 import { PostId } from "../ids";
+// Edit suggestions end up on the post exactly like a direct edit, so the
+// payload must pass through the same sanitization and URL invariants
+// (security audit M1 — approval used to bypass them).
+import { HttpsUrl, MinLen3, sanitizeString } from "../posts/posts.schema";
 
 /**
  * Fields an edit suggestion may change. Deliberately narrow: media keys
  * (video/thumbnail swap) belong to the video-replacement flow, and tag
  * relinking has its own pipeline. The filter requires at least one field so
  * empty suggestions cannot clog the review queue.
+ *
+ * Text fields are sanitized and length-capped and `source` must be an
+ * http(s) URL — identical to `updatePostInputSchema` — so peer approval can
+ * never smuggle content a direct edit would reject.
  */
 const PostEditPayloadFields = Schema.Struct({
-  animeTitle: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  animeTitle: Schema.optionalKey(Schema.NullOr(sanitizeString(Schema.String))),
   chapterNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
-  description: Schema.optionalKey(Schema.String),
+  description: Schema.optionalKey(
+    sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  ),
   episodeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   seasonNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
-  source: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  source: Schema.optionalKey(Schema.NullOr(HttpsUrl)),
   title: Schema.optionalKey(
-    Schema.String.pipe(
-      Schema.check(Schema.isMinLength(1, { message: "Title is required" })),
-    ),
+    sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   ),
   volumeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
 });

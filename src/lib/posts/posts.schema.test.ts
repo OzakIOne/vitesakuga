@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parse, parseStrict } from "../effect/schema.utils";
+import "../sanitize.server";
 import {
   MAX_SEARCH_QUERY_LENGTH,
   MAX_SEARCH_TAGS_COUNT,

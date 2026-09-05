@@ -1,16 +1,22 @@
 import type { Kysely } from "kysely";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
-import { makeServiceTestLayer } from "../db/test-utils";
+import {
+  makeServiceTestLayer,
+  type ServiceTestContext,
+} from "../db/test-utils";
 import {
   AccountSecurityService,
   AccountSecurityServiceLive,
 } from "./account-security";
+import { makeAuthSession } from "./session.fixture";
 
 let db: Kysely<DB>;
-let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
+let runEffect: ServiceTestContext["runEffect"];
+let runFailure: ServiceTestContext["runFailure"];
 let mockGetSession: ReturnType<typeof vi.fn>;
+let closeCtx: () => Promise<void>;
 
 const testUser = {
   id: "user-1",
@@ -45,15 +51,19 @@ beforeEach(async () => {
   const ctx = await makeServiceTestLayer(AccountSecurityServiceLive);
   db = ctx.db;
   runEffect = ctx.runEffect;
+  runFailure = ctx.runFailure;
   mockGetSession = ctx.mockGetSession;
+  closeCtx = ctx.close;
 
   await db.insertInto("user").values(testUser).execute();
 });
 
+afterEach(() => closeCtx());
+
 describe(AccountSecurityService.getHasPassword, () => {
   it("returns hasPassword true when a credential account has a password", async () => {
     await insertAccount({ password: "hashed-password" });
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
       runEffect(AccountSecurityService.getHasPassword()),
@@ -62,7 +72,7 @@ describe(AccountSecurityService.getHasPassword, () => {
 
   it("returns hasPassword false for OAuth-only users", async () => {
     await insertAccount({ password: null, providerId: "github" });
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
       runEffect(AccountSecurityService.getHasPassword()),
@@ -70,7 +80,7 @@ describe(AccountSecurityService.getHasPassword, () => {
   });
 
   it("returns hasPassword false when no account rows exist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
       runEffect(AccountSecurityService.getHasPassword()),
@@ -80,8 +90,10 @@ describe(AccountSecurityService.getHasPassword, () => {
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    await expect(
-      runEffect(AccountSecurityService.getHasPassword()),
-    ).rejects.toThrow("You must be logged in");
+    const error = await runFailure(AccountSecurityService.getHasPassword());
+    expect(error).toMatchObject({
+      _tag: "UnauthorizedError",
+      message: "You must be logged in",
+    });
   });
 });

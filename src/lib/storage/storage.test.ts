@@ -1,14 +1,45 @@
 import { Effect } from "effect";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { makeRustFSStorageLayer } from "./storage.adapter";
+import { makeStorageKeyTracker } from "../db/test-utils";
 import { StorageModule } from "./storage.module";
 import type { StorageError } from "./storage.module";
 
-const runTest = <A>(effect: Effect.Effect<A, StorageError, StorageModule>) => {
-  const layer = makeRustFSStorageLayer();
-  return Effect.runPromise(effect.pipe(Effect.provide(layer)));
-};
+const runTest = <A>(effect: Effect.Effect<A, StorageError, StorageModule>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(tracked.storageLayer)));
+
+const uploadImageKey = (name: string) =>
+  runTest(
+    Effect.gen(function* () {
+      const storage = yield* StorageModule;
+      return yield* storage.uploadImage(
+        "user-list",
+        new File(["x"], name, { type: "image/png" }),
+      );
+    }),
+  ).then(({ key }) => key);
+
+const uploadVideoKey = () =>
+  runTest(
+    Effect.gen(function* () {
+      const storage = yield* StorageModule;
+      return yield* storage.uploadVideo(
+        "user-list",
+        new File(["x"], "clip.mp4", { type: "video/mp4" }),
+      );
+    }),
+  ).then(({ key }) => key);
+
+// The bucket is shared across parallel workers: each test journals the keys
+// it creates through its own storage operations and cleanup deletes exactly
+// those — a bucket-wide listing sweep would race with other workers' uploads.
+let tracked: ReturnType<typeof makeStorageKeyTracker>;
+
+beforeEach(() => {
+  tracked = makeStorageKeyTracker();
+});
+
+afterEach(() => tracked.tracker.cleanup(), 60_000);
 
 describe("StorageModule", () => {
   describe("uploadVideo", () => {
@@ -147,15 +178,19 @@ describe("StorageModule", () => {
       );
       expect(head.contentLength).toBe(12);
       expect(head.contentType).toBe("video/mp4");
-      // The staging copy is gone.
-      await expect(
-        runTest(
+      // The staging copy is gone: the head failure is the typed storage
+      // error for the `head` operation on exactly the requested key.
+      const error = await runTest(
+        Effect.flip(
           Effect.gen(function* () {
             const storage = yield* StorageModule;
             return yield* storage.headFile(pendingKey);
           }),
         ),
-      ).rejects.toThrow();
+      );
+      expect(error._tag).toBe("StorageError");
+      expect(error.operation).toBe("head");
+      expect(error.key).toBe(pendingKey);
     });
   });
 
@@ -168,5 +203,119 @@ describe("StorageModule", () => {
         }),
       );
     });
+  });
+
+  describe("uploadImage", () => {
+    it.each(["jpg", "png", "webp"] as const)(
+      "stores post images under images/{userId}/ preserving the .%s extension",
+      async (ext) => {
+        const file = new File(["image bytes"], `pic.${ext}`, {
+          type: "image/png",
+        });
+        const { key } = await runTest(
+          Effect.gen(function* () {
+            const storage = yield* StorageModule;
+            return yield* storage.uploadImage("user-img", file);
+          }),
+        );
+
+        expect(key).toMatch(
+          new RegExp(`^images\\/user-img\\/[a-f0-9-]+\\.${ext}$`),
+        );
+      },
+    );
+
+    it("derives the stored content type from the extension, not the client File.type", async () => {
+      const file = new File(["png bytes"], "pic.png", {
+        // Spoofed client type must not leak into the bucket.
+        type: "text/html",
+      });
+      const { key } = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.uploadImage("user-img", file);
+        }),
+      );
+
+      const head = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(key);
+        }),
+      );
+      expect(head.contentType).toBe("image/png");
+      expect(head.contentLength).toBe("png bytes".length);
+    });
+  });
+
+  describe("listKeys", () => {
+    it("lists every key under a prefix and nothing outside it", async () => {
+      const imageKeys = [
+        await uploadImageKey("a.png"),
+        await uploadImageKey("b.png"),
+      ];
+      // A sibling namespace that must never appear in the listing.
+      await uploadVideoKey();
+
+      const keys = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.listKeys("images/user-list/");
+        }),
+      );
+
+      expect(keys.sort()).toEqual(imageKeys.sort());
+    });
+
+    it("assembles listings that span multiple S3 result pages", async () => {
+      // S3 caps ListObjectsV2 at 1000 keys per page, so only >1000 objects
+      // under one prefix actually exercise the ContinuationToken loop. The
+      // per-run user id keeps the prefix free of leftovers from other runs.
+      const totalCount = 1001;
+      const userId = `user-paging-${crypto.randomUUID().slice(0, 8)}`;
+      const prefix = `images/${userId}/`;
+      const uploaded = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          // The 1001 PUTs are independent; bounded concurrency keeps the
+          // wall time sane without hammering the local store.
+          return yield* Effect.forEach(
+            Array.from({ length: totalCount }, (_, i) => i),
+            (i) =>
+              storage
+                .uploadImage(
+                  userId,
+                  new File(["x"], `bulk-${i}.png`, { type: "image/png" }),
+                )
+                .pipe(Effect.map(({ key }) => key)),
+            { concurrency: 25 },
+          );
+        }),
+      );
+      const keys = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          // Under load the local store's listing index can lag the last
+          // writes; poll until the paginated result covers the full static
+          // bucket, then assert the pagination contract on a stable state.
+          let listed = yield* storage.listKeys(prefix);
+          for (
+            let attempt = 0;
+            attempt < 15 && listed.length !== totalCount;
+            attempt += 1
+          ) {
+            yield* Effect.sleep("1 second");
+            listed = yield* storage.listKeys(prefix);
+          }
+          return listed;
+        }),
+      );
+
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(keys.every((key) => key.startsWith(prefix))).toBe(true);
+      // Every uploaded object is listed exactly once — across page borders.
+      expect(new Set(keys)).toEqual(new Set(uploaded));
+      expect(keys).toHaveLength(totalCount);
+    }, 60_000);
   });
 });

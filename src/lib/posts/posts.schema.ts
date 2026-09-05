@@ -55,7 +55,10 @@ export const RESERVED_TAG_NAMES = ["image", "video"] as const;
 export const MAX_VIDEO_SIZE_BYTES = 200 * 1024 * 1024;
 export const MAX_THUMBNAIL_SIZE_BYTES = 5 * 1024 * 1024;
 
-const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
+// Exported for the edit-suggestion schema, which must enforce the exact same
+// text/URL invariants as direct edits (security audit M1: an approval used to
+// bypass sanitization and the source URL check).
+export const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
   schema.pipe(
     Schema.decodeTo(Schema.String, {
       decode: SchemaGetter.transform((val) => sanitize(val)),
@@ -65,11 +68,11 @@ const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
 
 export const MIN_TEXT_LENGTH = 3;
 
-const MinLen3 = Schema.isMinLength(MIN_TEXT_LENGTH, {
+export const MinLen3 = Schema.isMinLength(MIN_TEXT_LENGTH, {
   message: `Must be at least ${MIN_TEXT_LENGTH} characters`,
 });
 
-const HttpsUrl = Schema.String.pipe(
+export const HttpsUrl = Schema.String.pipe(
   Schema.check(Schema.isPattern(/^https?:\/\//)),
 );
 

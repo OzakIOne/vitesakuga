@@ -1,17 +1,22 @@
 import type { Kysely } from "kysely";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
-import { makeServiceTestLayer } from "../db/test-utils";
+import {
+  makeServiceTestLayer,
+  type ServiceTestContext,
+} from "../db/test-utils";
 import { UsersService, UsersServiceLive } from "./users.service";
 
 let db: Kysely<DB>;
-let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
+let runEffect: ServiceTestContext["runEffect"];
+let closeCtx: () => Promise<void>;
 
 beforeEach(async () => {
   const ctx = await makeServiceTestLayer(UsersServiceLive);
   db = ctx.db;
   runEffect = ctx.runEffect;
+  closeCtx = ctx.close;
 
   await db
     .insertInto("user")
@@ -32,6 +37,8 @@ beforeEach(async () => {
     })
     .execute();
 });
+
+afterEach(() => closeCtx());
 
 describe("UsersService.all", () => {
   it("returns all users", async () => {

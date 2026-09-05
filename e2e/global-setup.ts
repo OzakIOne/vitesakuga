@@ -139,14 +139,21 @@ const setup = Effect.gen(function* () {
   yield* ensurePostgres;
   yield* migrateDatabase;
   yield* createBucket;
-}).pipe(
-  Effect.catch((error) =>
-    Effect.logWarning(
-      `Setup warning: ${error instanceof Error ? error.message : error}`,
-    ),
-  ),
-);
+});
 
 export default async function globalSetup(): Promise<void> {
-  await Effect.runPromise(setup);
+  // A failed environment must fail the Playwright run here, loudly — the
+  // alternative (logging a warning and continuing) sends the suite against a
+  // broken stack and every test fails with confusing downstream errors.
+  await Effect.runPromise(
+    setup.pipe(
+      Effect.tapError((error) =>
+        Effect.logError("E2E environment setup failed").pipe(
+          Effect.annotateLogs({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        ),
+      ),
+    ),
+  );
 }

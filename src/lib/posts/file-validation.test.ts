@@ -17,6 +17,8 @@ describe("file-validation", () => {
   });
 
   it("rejects an HTML payload disguised as a JPEG", async () => {
+    // Plain (non-Effect) validation helper: it throws a bare Error with
+    // caller-supplied copy, so the message assert is the contract.
     const file = new File(["<!doctype html>"], "a.jpg");
     await expect(assertThumbnailIsJpeg(file)).rejects.toThrow(
       "Thumbnail is not a valid JPEG image",

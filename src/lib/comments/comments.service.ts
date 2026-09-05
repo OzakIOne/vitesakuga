@@ -29,6 +29,12 @@ import {
 import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
+// Each resolved mention fans out into a mention row + notification, so the
+// count is capped per comment (security audit M2). Applies to freshly typed
+// handles AND to ids smuggled in via pre-canonicalized tokens, because both
+// end up in `mentionUserIds`.
+const MAX_MENTIONS_PER_COMMENT = 10;
+
 export type CommentWithUser = {
   content: string;
   /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
@@ -152,7 +158,10 @@ export class CommentsService extends Context.Service<
      */
     const canonicalizeContent = Effect.fn("CommentsService.canonicalize")(
       function* (args: { readonly actorId: string; readonly content: string }) {
-        const handles = extractPlainMentionHandles(args.content);
+        const handles = extractPlainMentionHandles(args.content).slice(
+          0,
+          MAX_MENTIONS_PER_COMMENT,
+        );
         const mentioned =
           handles.length === 0
             ? []
@@ -275,7 +284,7 @@ export class CommentsService extends Context.Service<
       yield* applyMentions({
         commentId: comment.id,
         postId: data.postId,
-        userIds: canonical.mentionUserIds,
+        userIds: canonical.mentionUserIds.slice(0, MAX_MENTIONS_PER_COMMENT),
         previousMentionedUserIds: [],
       }).pipe(
         Effect.catchTag("SqlError", (error) =>
@@ -396,7 +405,7 @@ export class CommentsService extends Context.Service<
       yield* applyMentions({
         commentId: data.commentId,
         postId: asPostId(comment.postId),
-        userIds: canonical.mentionUserIds,
+        userIds: canonical.mentionUserIds.slice(0, MAX_MENTIONS_PER_COMMENT),
         previousMentionedUserIds: previousMentionedUserIds.map(
           (row) => row.userId,
         ),

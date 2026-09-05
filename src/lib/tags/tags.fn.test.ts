@@ -1,18 +1,25 @@
 import type { Kysely } from "kysely";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { DB } from "../db/kysely";
-import { makeServiceTestLayer } from "../db/test-utils";
+import {
+  makeServiceTestLayer,
+  type ServiceTestContext,
+} from "../db/test-utils";
 import { TagsService, TagsServiceLive } from "./tags.service";
 
 let db: Kysely<DB>;
-let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
+let runEffect: ServiceTestContext["runEffect"];
+let closeCtx: () => Promise<void>;
 
 beforeEach(async () => {
   const ctx = await makeServiceTestLayer(TagsServiceLive);
   db = ctx.db;
   runEffect = ctx.runEffect;
+  closeCtx = ctx.close;
 });
+
+afterEach(() => closeCtx());
 
 describe("TagsService.all", () => {
   it("returns empty array when no tags", async () => {

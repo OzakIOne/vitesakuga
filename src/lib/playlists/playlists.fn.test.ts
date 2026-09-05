@@ -1,15 +1,23 @@
-import type { Kysely } from "kysely";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { sql, type Kysely } from "kysely";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
-import { makeServiceTestLayer } from "../db/test-utils";
+import {
+  makeServiceTestLayer,
+  type ServiceTestContext,
+} from "../db/test-utils";
+import { safeParseStrict } from "../effect/schema.utils";
 import type { PlaylistId, PostId } from "../ids";
 import { asPlaylistId, asPostId } from "../ids";
+import { bulkAddPostsToPlaylistInputSchema } from "./playlists.schema";
 import { PlaylistsService, PlaylistsServiceLive } from "./playlists.service";
 
 let db: Kysely<DB>;
-let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
+let runEffect: ServiceTestContext["runEffect"];
+let runFailure: ServiceTestContext["runFailure"];
 let mockGetSession: ReturnType<typeof vi.fn>;
+let closeCtx: () => Promise<void>;
 
 const testUser = {
   id: "user-1",
@@ -60,7 +68,9 @@ beforeEach(async () => {
   const ctx = await makeServiceTestLayer(PlaylistsServiceLive);
   db = ctx.db;
   runEffect = ctx.runEffect;
+  runFailure = ctx.runFailure;
   mockGetSession = ctx.mockGetSession;
+  closeCtx = ctx.close;
 
   await db.insertInto("user").values(testUser).execute();
   await db.insertInto("user").values(testUser2).execute();
@@ -76,9 +86,11 @@ beforeEach(async () => {
   });
 });
 
+afterEach(() => closeCtx());
+
 describe(PlaylistsService.create, () => {
   it("creates a playlist for the authenticated user", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.create({
@@ -98,7 +110,7 @@ describe(PlaylistsService.create, () => {
   });
 
   it("defaults isPublic to false", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.create({ title: "Private", isPublic: false }),
@@ -110,9 +122,13 @@ describe(PlaylistsService.create, () => {
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    await expect(
-      runEffect(PlaylistsService.create({ title: "Nope", isPublic: false })),
-    ).rejects.toThrow("You must be logged in");
+    const error = await runFailure(
+      PlaylistsService.create({ title: "Nope", isPublic: false }),
+    );
+    expect(error).toMatchObject({
+      _tag: "UnauthorizedError",
+      message: "You must be logged in",
+    });
   });
 });
 
@@ -134,7 +150,7 @@ describe(PlaylistsService.update, () => {
   });
 
   it("updates title and description", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.update({
@@ -156,7 +172,7 @@ describe(PlaylistsService.update, () => {
   });
 
   it("toggles visibility", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.update({ playlistId, isPublic: true }),
@@ -168,27 +184,34 @@ describe(PlaylistsService.update, () => {
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    await expect(
-      runEffect(PlaylistsService.update({ playlistId, title: "Hack" })),
-    ).rejects.toThrow("You must be logged in");
+    const error = await runFailure(
+      PlaylistsService.update({ playlistId, title: "Hack" }),
+    );
+    expect(error).toMatchObject({
+      _tag: "UnauthorizedError",
+      message: "You must be logged in",
+    });
   });
 
   it("throws forbidden when not the owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    await expect(
-      runEffect(PlaylistsService.update({ playlistId, title: "Hack" })),
-    ).rejects.toThrow("can only modify your own");
+    const error = await runFailure(
+      PlaylistsService.update({ playlistId, title: "Hack" }),
+    );
+    expect(error._tag).toBe("ForbiddenError");
   });
 
   it("throws not found for non-existent playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await expect(
-      runEffect(
-        PlaylistsService.update({ playlistId: asPlaylistId(9999), title: "X" }),
-      ),
-    ).rejects.toThrow("Playlist 9999 not found");
+    const error = await runFailure(
+      PlaylistsService.update({ playlistId: asPlaylistId(9999), title: "X" }),
+    );
+    expect(error).toMatchObject({
+      _tag: "PlaylistNotFoundError",
+      playlistId: 9999,
+    });
   });
 });
 
@@ -209,7 +232,7 @@ describe(PlaylistsService.delete_, () => {
   });
 
   it("deletes the playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(PlaylistsService.delete_(playlistId));
 
@@ -229,7 +252,7 @@ describe(PlaylistsService.delete_, () => {
       .values({ playlist_id: playlistId, post_id: postId, position: 0 })
       .execute();
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await runEffect(PlaylistsService.delete_(playlistId));
 
@@ -241,11 +264,10 @@ describe(PlaylistsService.delete_, () => {
   });
 
   it("throws forbidden when not the owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    await expect(
-      runEffect(PlaylistsService.delete_(playlistId)),
-    ).rejects.toThrow("can only modify your own");
+    const error = await runFailure(PlaylistsService.delete_(playlistId));
+    expect(error._tag).toBe("ForbiddenError");
   });
 });
 
@@ -268,7 +290,7 @@ describe(PlaylistsService.addPost, () => {
   });
 
   it("adds a post to the playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.addPost({ playlistId, postId }),
@@ -283,11 +305,11 @@ describe(PlaylistsService.addPost, () => {
   });
 
   it("increments position for subsequent posts", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await runEffect(PlaylistsService.addPost({ playlistId, postId }));
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.addPost({ playlistId, postId: postId2 }),
@@ -297,32 +319,37 @@ describe(PlaylistsService.addPost, () => {
   });
 
   it("throws when adding a duplicate post", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
     await runEffect(PlaylistsService.addPost({ playlistId, postId }));
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await expect(
-      runEffect(PlaylistsService.addPost({ playlistId, postId })),
-    ).rejects.toThrow("already in playlist");
+    const error = await runFailure(
+      PlaylistsService.addPost({ playlistId, postId }),
+    );
+    expect(error).toMatchObject({
+      _tag: "PostAlreadyInPlaylistError",
+      playlistId,
+      postId,
+    });
   });
 
   it("throws when post does not exist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await expect(
-      runEffect(
-        PlaylistsService.addPost({ playlistId, postId: asPostId(9999) }),
-      ),
-    ).rejects.toThrow("Post 9999 not found");
+    const error = await runFailure(
+      PlaylistsService.addPost({ playlistId, postId: asPostId(9999) }),
+    );
+    expect(error).toMatchObject({ _tag: "PostNotFoundError", postId: 9999 });
   });
 
   it("throws forbidden when not the playlist owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    await expect(
-      runEffect(PlaylistsService.addPost({ playlistId, postId })),
-    ).rejects.toThrow("can only modify your own");
+    const error = await runFailure(
+      PlaylistsService.addPost({ playlistId, postId }),
+    );
+    expect(error._tag).toBe("ForbiddenError");
   });
 });
 
@@ -348,7 +375,7 @@ describe(PlaylistsService.removePost, () => {
   });
 
   it("removes a post from the playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.removePost({ playlistId, postId }),
@@ -361,7 +388,7 @@ describe(PlaylistsService.removePost, () => {
   });
 
   it("does nothing when the post is not in playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.removePost({
@@ -374,11 +401,12 @@ describe(PlaylistsService.removePost, () => {
   });
 
   it("throws forbidden when not the playlist owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    await expect(
-      runEffect(PlaylistsService.removePost({ playlistId, postId })),
-    ).rejects.toThrow("can only modify your own");
+    const error = await runFailure(
+      PlaylistsService.removePost({ playlistId, postId }),
+    );
+    expect(error._tag).toBe("ForbiddenError");
   });
 });
 
@@ -401,7 +429,7 @@ describe(PlaylistsService.bulkAddPosts, () => {
   });
 
   it("adds multiple posts at the end of the playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.bulkAddPosts({
@@ -439,7 +467,7 @@ describe(PlaylistsService.bulkAddPosts, () => {
       })
       .execute();
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.bulkAddPosts({
@@ -463,7 +491,7 @@ describe(PlaylistsService.bulkAddPosts, () => {
   });
 
   it("dedupes input and reports not found posts", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.bulkAddPosts({
@@ -480,17 +508,27 @@ describe(PlaylistsService.bulkAddPosts, () => {
     });
   });
 
-  it("throws forbidden when not the owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+  it("rejects an empty bulk at the schema boundary", () => {
+    // `postIds` is a NonEmptyArray: an empty bulk never reaches the service
+    // (whose SQL would emit an invalid `in ()`), so the validator is the
+    // protection.
+    const result = safeParseStrict(bulkAddPostsToPlaylistInputSchema)({
+      playlistId,
+      postIds: [],
+    });
+    expect(result.success).toBe(false);
+  });
 
-    await expect(
-      runEffect(
-        PlaylistsService.bulkAddPosts({
-          playlistId,
-          postIds: [postId],
-        }),
-      ),
-    ).rejects.toThrow("can only modify your own");
+  it("throws forbidden when not the owner", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
+
+    const error = await runFailure(
+      PlaylistsService.bulkAddPosts({
+        playlistId,
+        postIds: [postId],
+      }),
+    );
+    expect(error._tag).toBe("ForbiddenError");
   });
 });
 
@@ -530,7 +568,7 @@ describe(PlaylistsService.bulkRemovePosts, () => {
   });
 
   it("removes selected posts and renumbers the rest", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.bulkRemovePosts({
@@ -552,7 +590,7 @@ describe(PlaylistsService.bulkRemovePosts, () => {
   });
 
   it("returns removed 0 when none of the posts are in the playlist", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.bulkRemovePosts({
@@ -568,16 +606,15 @@ describe(PlaylistsService.bulkRemovePosts, () => {
   });
 
   it("throws forbidden when not the owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    await expect(
-      runEffect(
-        PlaylistsService.bulkRemovePosts({
-          playlistId,
-          postIds: [postId],
-        }),
-      ),
-    ).rejects.toThrow("can only modify your own");
+    const error = await runFailure(
+      PlaylistsService.bulkRemovePosts({
+        playlistId,
+        postIds: [postId],
+      }),
+    );
+    expect(error._tag).toBe("ForbiddenError");
   });
 });
 
@@ -611,7 +648,7 @@ describe(PlaylistsService.reorder, () => {
   });
 
   it("reorders posts", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.reorder({
@@ -634,17 +671,114 @@ describe(PlaylistsService.reorder, () => {
     expect(entries[1]!.post_id).toBe(postId);
   });
 
-  it("throws forbidden when not the playlist owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+  it("rejects an incomplete reorder with ValidationError", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await expect(
-      runEffect(
-        PlaylistsService.reorder({
-          playlistId,
-          items: [{ postId, position: 0 }],
-        }),
-      ),
-    ).rejects.toThrow("can only modify your own");
+    // Missing postId2: the submitted set does not cover the playlist.
+    const error = await runFailure(
+      PlaylistsService.reorder({
+        playlistId,
+        items: [{ postId, position: 0 }],
+      }),
+    );
+    expect(error._tag).toBe("ValidationError");
+    expect(error.message).toBe(
+      "Reorder items must cover every post in the playlist exactly once",
+    );
+
+    // Entries untouched by the rejected reorder.
+    const entries = await db
+      .selectFrom("playlist_posts")
+      .selectAll()
+      .orderBy("position", "asc")
+      .execute();
+    expect(entries[0]!.position).toBe(0);
+    expect(entries[1]!.position).toBe(1);
+  });
+
+  it("rejects a reorder containing an unknown post", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
+
+    const error = await runFailure(
+      PlaylistsService.reorder({
+        playlistId,
+        items: [
+          { postId, position: 0 },
+          { postId: postId2, position: 1 },
+          { postId: asPostId(9999), position: 2 },
+        ],
+      }),
+    );
+    expect(error._tag).toBe("ValidationError");
+  });
+
+  it("accepts duplicate positions (no uniqueness enforced)", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
+
+    // As implemented: positions are written verbatim; colliding positions
+    // are the client's problem (ordering falls back to insertion order).
+    const result = await runEffect(
+      PlaylistsService.reorder({
+        playlistId,
+        items: [
+          { postId, position: 0 },
+          { postId: postId2, position: 0 },
+        ],
+      }),
+    );
+    expect(result).toEqual({ success: true });
+
+    const entries = await db
+      .selectFrom("playlist_posts")
+      .selectAll()
+      .orderBy("post_id", "asc")
+      .execute();
+    expect(entries.map((row) => row.position)).toEqual([0, 0]);
+  });
+
+  it("rolls back the whole removal when resequencing fails mid-transaction", async () => {
+    // Fail the resequence (position 0 violates the constraint) AFTER the
+    // delete already ran: the transaction must roll the delete back too.
+    // NOT VALID skips validating the existing rows — the constraint only
+    // bites the resequence's UPDATE.
+    await sql`ALTER TABLE playlist_posts ADD CONSTRAINT test_pos_floor CHECK (position < 0) NOT VALID`.execute(
+      db,
+    );
+    try {
+      mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
+      const error = await runFailure(
+        PlaylistsService.removePost({ playlistId, postId }),
+      );
+      expect(error._tag).toBe("SqlError");
+    } finally {
+      await sql`ALTER TABLE playlist_posts DROP CONSTRAINT test_pos_floor`.execute(
+        db,
+      );
+    }
+
+    // Nothing was removed: both rows keep their original positions.
+    const entries = await db
+      .selectFrom("playlist_posts")
+      .selectAll()
+      .orderBy("position", "asc")
+      .execute();
+    expect(entries).toHaveLength(2);
+    expect(entries[0]!.post_id).toBe(postId);
+    expect(entries[0]!.position).toBe(0);
+    expect(entries[1]!.post_id).toBe(postId2);
+    expect(entries[1]!.position).toBe(1);
+  });
+
+  it("throws forbidden when not the playlist owner", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
+
+    const error = await runFailure(
+      PlaylistsService.reorder({
+        playlistId,
+        items: [{ postId, position: 0 }],
+      }),
+    );
+    expect(error._tag).toBe("ForbiddenError");
   });
 });
 
@@ -671,7 +805,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
   });
 
   it("returns all playlists for the owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.fetchUserPlaylists("user-1"),
@@ -683,7 +817,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
   });
 
   it("returns only public playlists for non-owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const result = await runEffect(
       PlaylistsService.fetchUserPlaylists("user-1"),
@@ -694,7 +828,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
   });
 
   it("returns playlist with post count", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const playlists = await db
       .selectFrom("playlists")
@@ -720,7 +854,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
       .execute();
 
     mockGetSession.mockReset();
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.fetchUserPlaylists("user-1"),
@@ -738,7 +872,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
   });
 
   it("returns playlist with thumbnail from first post", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const playlists = await db
       .selectFrom("playlists")
@@ -756,7 +890,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
       .execute();
 
     mockGetSession.mockReset();
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.fetchUserPlaylists("user-1"),
@@ -903,7 +1037,7 @@ describe(PlaylistsService.fetchDetail, () => {
   });
 
   it("returns playlist with posts for owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.fetchDetail({ playlistId, page: 0 }),
@@ -923,7 +1057,7 @@ describe(PlaylistsService.fetchDetail, () => {
   });
 
   it("returns playlist for public playlist when not owner", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const result = await runEffect(
       PlaylistsService.fetchDetail({ playlistId, page: 0 }),
@@ -944,16 +1078,18 @@ describe(PlaylistsService.fetchDetail, () => {
       .returning("id")
       .executeTakeFirstOrThrow();
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    await expect(
-      runEffect(
-        PlaylistsService.fetchDetail({
-          playlistId: asPlaylistId(row.id),
-          page: 0,
-        }),
-      ),
-    ).rejects.toThrow("Playlist " + row.id + " not found");
+    const error = await runFailure(
+      PlaylistsService.fetchDetail({
+        playlistId: asPlaylistId(row.id),
+        page: 0,
+      }),
+    );
+    expect(error).toMatchObject({
+      _tag: "PlaylistNotFoundError",
+      playlistId: row.id,
+    });
   });
 
   it("marks orphan posts in playlist", async () => {
@@ -974,7 +1110,7 @@ describe(PlaylistsService.fetchDetail, () => {
 
     await db.deleteFrom("posts").where("id", "=", deletedPostId).execute();
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
       PlaylistsService.fetchDetail({ playlistId, page: 0 }),
@@ -1037,7 +1173,7 @@ describe(PlaylistsService.fetchForPost, () => {
       })
       .execute();
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(PlaylistsService.fetchForPost(postId));
 
@@ -1055,7 +1191,7 @@ describe(PlaylistsService.fetchForPost, () => {
   });
 
   it("returns empty array when user has no playlists", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: testUser2 });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const result = await runEffect(PlaylistsService.fetchForPost(postId));
 
@@ -1065,9 +1201,11 @@ describe(PlaylistsService.fetchForPost, () => {
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    await expect(
-      runEffect(PlaylistsService.fetchForPost(postId)),
-    ).rejects.toThrow("You must be logged in");
+    const error = await runFailure(PlaylistsService.fetchForPost(postId));
+    expect(error).toMatchObject({
+      _tag: "UnauthorizedError",
+      message: "You must be logged in",
+    });
   });
 });
 
@@ -1088,7 +1226,7 @@ describe("PlaylistsService.delete_ cascading", () => {
       })
       .execute();
 
-    mockGetSession.mockResolvedValueOnce({ user: testUser });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
     await runEffect(PlaylistsService.delete_(asPlaylistId(row.id)));
 
     const posts = await db

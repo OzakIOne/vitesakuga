@@ -1,6 +1,8 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
 import { PROMOTION_RULES } from "./promotions.config";
@@ -8,7 +10,12 @@ import { PromotionsService, PromotionsServiceLive } from "./promotions.service";
 
 const DAY_MS = 86_400_000;
 
-type TestContext = Awaited<ReturnType<typeof makeServiceTestLayer>>;
+let closeCtx: (() => Promise<void>) | undefined;
+
+afterEach(async () => {
+  await closeCtx?.();
+  closeCtx = undefined;
+});
 
 const insertUser = (
   db: Kysely<DB>,
@@ -49,21 +56,24 @@ const earn = async (db: Kysely<DB>, userId: string, points: number) => {
 
 describe("PromotionsService.queue", () => {
   it("is staff-only", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
-    ctx.mockGetSession.mockResolvedValueOnce({
-      user: { id: "novice-1", role: "novice" },
-    });
-    await expect(
-      ctx.runEffect(PromotionsService.queue()),
-    ).rejects.toMatchObject({ _tag: "ForbiddenError" });
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "novice-1", role: "novice" }),
+    );
+    const queueError = await ctx.runEffect(
+      Effect.flip(PromotionsService.queue()),
+    );
+    expect(queueError._tag).toBe("ForbiddenError");
   });
 
   it("lists eligible novices with their activity", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
     const { db } = ctx;
-    ctx.mockGetSession.mockResolvedValueOnce({
-      user: { id: "mod-1", role: "moderator" },
-    });
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
 
     await insertUser(db, { createdAtDaysAgo: 10, id: "candidate-1" });
     await insertUser(db, { createdAtDaysAgo: 10, id: "peer-voter" });
@@ -102,11 +112,12 @@ describe("PromotionsService.queue", () => {
   });
 
   it("excludes candidates below the points or age thresholds", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
     const { db } = ctx;
-    ctx.mockGetSession.mockResolvedValueOnce({
-      user: { id: "mod-1", role: "moderator" },
-    });
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
 
     // Enough points but brand-new account.
     await insertUser(db, { id: "fresh-whale" });
@@ -123,13 +134,14 @@ describe("PromotionsService.queue", () => {
 
 describe("PromotionsService.approve", () => {
   it("promotes the candidate, records the review and notifies", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
     const { db } = ctx;
     await insertUser(db, { createdAtDaysAgo: 9, id: "future-uploader" });
     await earn(db, "future-uploader", PROMOTION_RULES.minPoints);
-    ctx.mockGetSession.mockResolvedValue({
-      user: { id: "mod-1", role: "moderator" },
-    });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
 
     const result = await ctx.runEffect(
       PromotionsService.approve("future-uploader"),
@@ -166,46 +178,57 @@ describe("PromotionsService.approve", () => {
   });
 
   it("refuses a second review of an already-promoted user", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
     const { db } = ctx;
     await insertUser(db, { createdAtDaysAgo: 9, id: "once-only" });
     await earn(db, "once-only", PROMOTION_RULES.minPoints);
-    ctx.mockGetSession.mockResolvedValue({
-      user: { id: "mod-1", role: "moderator" },
-    });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
 
     await ctx.runEffect(PromotionsService.approve("once-only"));
-    await expect(
-      ctx.runEffect(PromotionsService.reject("once-only")),
-    ).rejects.toMatchObject({ _tag: "PromotionAlreadyReviewedError" });
-
-    void db;
+    const reviewedError = await ctx.runEffect(
+      Effect.flip(PromotionsService.reject("once-only")),
+    );
+    expect(reviewedError._tag).toBe("PromotionAlreadyReviewedError");
+    expect(reviewedError.message).toBe(
+      "User once-only is not awaiting promotion",
+    );
   });
 
   it("re-checks eligibility against the live total", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
-    const { db, runEffect } = ctx;
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
     // Account old enough but with (almost) no points: a stale queue entry.
     await insertUser(db, { createdAtDaysAgo: 9, id: "stale-entry" });
-    ctx.mockGetSession.mockResolvedValue({
-      user: { id: "mod-1", role: "moderator" },
-    });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
 
-    await expect(
-      runEffect(PromotionsService.approve("stale-entry")),
-    ).rejects.toMatchObject({ _tag: "PromotionNotEligibleError" });
+    const eligibilityError = await ctx.runEffect(
+      Effect.flip(PromotionsService.approve("stale-entry")),
+    );
+    expect(eligibilityError._tag).toBe("PromotionNotEligibleError");
+    // The live total (0 — the queue never persisted a snapshot), drives the
+    // message.
+    expect(eligibilityError.message).toBe(
+      `Candidate has 0 points but ${PROMOTION_RULES.minPoints} are required`,
+    );
   });
 });
 
 describe("PromotionsService.reject", () => {
   it("hides the candidate until they out-earn the rejection snapshot", async () => {
-    const ctx: TestContext = await makeServiceTestLayer(PromotionsServiceLive);
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
     const { db } = ctx;
     await insertUser(db, { createdAtDaysAgo: 9, id: "comeback-kid" });
     await earn(db, "comeback-kid", PROMOTION_RULES.minPoints);
-    ctx.mockGetSession.mockResolvedValue({
-      user: { id: "mod-1", role: "moderator" },
-    });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
 
     await ctx.runEffect(PromotionsService.reject("comeback-kid"));
 
@@ -218,7 +241,5 @@ describe("PromotionsService.reject", () => {
     await earn(db, "comeback-kid", 200);
     const visibleAgain = await ctx.runEffect(PromotionsService.queue());
     expect(visibleAgain.map((entry) => entry.userId)).toContain("comeback-kid");
-
-    void db;
   });
 });

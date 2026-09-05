@@ -72,4 +72,4 @@ const ensureRustFS = Effect.gen(function* () {
   yield* waitForHealth;
 });
 
-Effect.runSync(ensureRustFS);
+await Effect.runPromise(ensureRustFS);

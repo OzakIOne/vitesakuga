@@ -11,44 +11,18 @@ import {
   requireRole,
   withPolicy,
 } from "./policy";
-import type { AuthSession } from "./session.effect";
+import type { AuthSession, AuthenticatedUser } from "./session.effect";
 import { SessionService, type SessionUser } from "./session.effect";
+import { makeAuthSession, makeSessionUser } from "./session.fixture";
 
 const sessionUser = (
-  overrides: Partial<Record<string, unknown>> = {},
-): Parameters<typeof getUserRole>[0] =>
-  ({
-    createdAt: new Date(),
-    email: "user@test.com",
-    emailVerified: true,
-    id: "user-1",
-    image: null,
-    name: "Test User",
-    twoFactorEnabled: false,
-    updatedAt: new Date(),
-    ...overrides,
-  }) as Parameters<typeof getUserRole>[0];
+  overrides: Partial<AuthenticatedUser> = {},
+): AuthenticatedUser => makeSessionUser(overrides);
 
-// SAFETY: the inline object implements the full SessionService contract; a
-// cast keeps the test double readable without stubbing unused plumbing.
 const sessionServiceLayer = (
   user: SessionUser | null,
 ): Layer.Layer<SessionService> => {
-  const authSession: AuthSession | null = user
-    ? {
-        session: {
-          createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 60_000),
-          id: "session-1",
-          ipAddress: "127.0.0.1",
-          token: "token-1",
-          updatedAt: new Date(),
-          userAgent: "vitest",
-          userId: user.id,
-        },
-        user,
-      }
-    : null;
+  const authSession: AuthSession | null = user ? makeAuthSession(user) : null;
   return Layer.succeed(SessionService, {
     getSession: () => Effect.succeed(authSession),
     getUser: () => Effect.succeed(user),
@@ -56,13 +30,15 @@ const sessionServiceLayer = (
       user
         ? Effect.succeed(user)
         : new UnauthorizedError({ message: "not signed in" }),
-  }) as unknown as Layer.Layer<SessionService>;
+  });
 };
 
 /** Builds a policy effect already provided with a session for `role`. */
 const asRole =
   (role: string) =>
-  <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+  <A, E, R>(
+    effect: Effect.Effect<A, E, R>,
+  ): Effect.Effect<A, E, Exclude<R, SessionService>> =>
     effect.pipe(Effect.provide(sessionServiceLayer(sessionUser({ role }))));
 
 describe("getUserRole", () => {

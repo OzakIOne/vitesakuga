@@ -1,16 +1,22 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DB } from "../db/kysely";
-import { makeServiceTestLayer } from "../db/test-utils";
+import {
+  makeServiceTestLayer,
+  type ServiceTestContext,
+} from "../db/test-utils";
 import {
   DeleteAccountService,
   DeleteAccountServiceLive,
 } from "./delete-account";
+import { makeAuthSession } from "./session.fixture";
 
 let db: Kysely<DB>;
-let runEffect: ReturnType<typeof makeServiceTestLayer>["runEffect"];
+let runEffect: ServiceTestContext["runEffect"];
 let mockGetSession: ReturnType<typeof vi.fn>;
+let closeCtx: () => Promise<void>;
 
 const testUser = {
   id: "user-1",
@@ -27,6 +33,7 @@ beforeEach(async () => {
   db = ctx.db;
   runEffect = ctx.runEffect;
   mockGetSession = ctx.mockGetSession;
+  closeCtx = ctx.close;
 
   await db.insertInto("user").values(testUser).execute();
 
@@ -46,17 +53,21 @@ beforeEach(async () => {
   postId = post.id;
 });
 
+afterEach(() => closeCtx());
+
 describe("DeleteAccountService.deleteAccount", () => {
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    await expect(
-      runEffect(DeleteAccountService.deleteAccount({})),
-    ).rejects.toMatchObject({ _tag: "UnauthorizedError" });
+    const error = await runEffect(
+      Effect.flip(DeleteAccountService.deleteAccount({})),
+    );
+    expect(error._tag).toBe("UnauthorizedError");
+    expect(error.message).toBe("You must be logged in");
   });
 
   it("anonymizes the user but keeps posts, comments and votes", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     await db
       .insertInto("comments")
@@ -93,7 +104,7 @@ describe("DeleteAccountService.deleteAccount", () => {
   });
 
   it("deletes sessions, accounts, passkeys, two-factor and playlists", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     await db
       .insertInto("session")
@@ -155,7 +166,7 @@ describe("DeleteAccountService.deleteAccount", () => {
 
   it("requires and verifies the password for credential accounts", async () => {
     // Every invocation below runs against an authenticated session.
-    mockGetSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
 
     // Insert a credential account with a real Better Auth scrypt hash of
     // "correct-horse" so verifyPassword exercises the actual algorithm.
@@ -174,18 +185,19 @@ describe("DeleteAccountService.deleteAccount", () => {
       })
       .execute();
 
-    const noPassword = runEffect(DeleteAccountService.deleteAccount({}));
-    await expect(noPassword).rejects.toMatchObject({
-      _tag: "ForbiddenError",
-    });
-
-    const wrongPassword = runEffect(
-      DeleteAccountService.deleteAccount({ password: "wrong" }),
+    const noPasswordError = await runEffect(
+      Effect.flip(DeleteAccountService.deleteAccount({})),
     );
-    await expect(wrongPassword).rejects.toMatchObject({
-      _tag: "ForbiddenError",
-      message: "Incorrect password",
-    });
+    expect(noPasswordError._tag).toBe("ForbiddenError");
+    expect(noPasswordError.message).toBe(
+      "Your password is required to delete your account",
+    );
+
+    const wrongPasswordError = await runEffect(
+      Effect.flip(DeleteAccountService.deleteAccount({ password: "wrong" })),
+    );
+    expect(wrongPasswordError._tag).toBe("ForbiddenError");
+    expect(wrongPasswordError.message).toBe("Incorrect password");
 
     // Nothing was deleted by the failed attempts.
     expect(await db.selectFrom("account").execute()).toHaveLength(1);

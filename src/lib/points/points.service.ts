@@ -1,7 +1,8 @@
-import { Context, Effect, Layer } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../effect/effect.utils";
+import { startOfLocalDay } from "./local-day";
 import { POINTS_RULES, type PointAction } from "./points.config";
 
 export type AwardInput = {
@@ -43,22 +44,26 @@ export class PointsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
-    // oxlint-disable effecttsgo/global-date -- daily caps use calendar-day boundaries in the server's local timezone so "today" matches user expectations; Effect DateTime has no local-midnight equivalent
-    const startOfToday = () => {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      return now;
-    };
-
     const countTodayEarnings = (userId: string, action: PointAction) =>
-      db.executeTakeFirstOrUndefined(
-        db
-          .selectFrom("points_ledger")
-          .select((eb) => eb.fn.countAll<number>().as("count"))
-          .where("userId", "=", userId)
-          .where("action", "=", action)
-          .where("createdAt", ">=", startOfToday()),
-      );
+      Effect.gen(function* () {
+        // Daily caps use calendar-day boundaries in the server's local
+        // timezone so "today" matches user expectations. The instant comes
+        // from the clock (so a TestClock controls the window deterministically
+        // in tests); local midnight is resolved through the zone's own rules,
+        // which stays correct across DST transitions.
+        const now = yield* Clock.currentTimeMillis;
+        // oxlint-disable-next-line effecttsgo/global-date-in-effect -- the instant comes from Clock; the Date wrapper only satisfies Kysely's Date-typed `createdAt` column
+        const startOfToday = new Date(startOfLocalDay(now));
+
+        return yield* db.executeTakeFirstOrUndefined(
+          db
+            .selectFrom("points_ledger")
+            .select((eb) => eb.fn.countAll<number>().as("count"))
+            .where("userId", "=", userId)
+            .where("action", "=", action)
+            .where("createdAt", ">=", startOfToday),
+        );
+      });
 
     const hasAlreadyEarned = (input: AwardInput) =>
       db.executeTakeFirstOrUndefined(
@@ -100,6 +105,12 @@ export class PointsService extends Context.Service<
         db.insertInto("points_ledger").values({
           action: input.action,
           actorId: input.actorId ?? null,
+          // Stamp the row with the clock instant (the DB default `now()` is
+          // wall-clock), so the daily-cap window and the rows it counts are
+          // always derived from the same time source — deterministic under a
+          // TestClock, identical to `now()` in production.
+          // oxlint-disable-next-line effecttsgo/global-date-in-effect -- the instant comes from Clock; the Date wrapper only satisfies Kysely's Date-typed `createdAt` column
+          createdAt: new Date(yield* Clock.currentTimeMillis),
           points: rule.points,
           refId: input.refId ?? null,
           userId: input.userId,

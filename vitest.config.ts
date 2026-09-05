@@ -5,6 +5,12 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    // Ceiling, not a feature: service tests normally finish in well under a
+    // second, but the first test in each file pays the one-time shared-PGlite
+    // migration and parallel workers contend for CPU. Timeouts must never be
+    // load-sensitive, so the budget is generous.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
     env: {
       BASE_URL: "/",
       BETTER_AUTH_SECRET: "test-secret-with-at-least-32-characters!!",
