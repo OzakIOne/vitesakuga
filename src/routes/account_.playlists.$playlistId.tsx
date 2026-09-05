@@ -17,7 +17,10 @@ import { Heading, Text } from "src/components/ui/typography";
 import { parse } from "src/lib/effect/schema.utils";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
-import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
+import {
+  useUpdatePlaylist,
+  useReorderPlaylistPosts,
+} from "src/lib/playlists/playlists.hooks";
 import {
   playlistsKeys,
   playlistsQueryDetailInfinite,
@@ -71,6 +74,7 @@ function ManagePlaylistContent() {
   const { bulkAddPostsToPlaylist, bulkRemovePostsFromPlaylist } =
     useContext(PlaylistsFnsContext);
   const updatePlaylist = useUpdatePlaylist(user.id);
+  const reorderPosts = useReorderPlaylistPosts();
 
   const [selectedPostIds, setSelectedPostIds] = useState<ReadonlySet<number>>(
     new Set(),
@@ -368,14 +372,30 @@ function ManagePlaylistContent() {
             <Text color="gray.500">This playlist is empty</Text>
           </Box>
         ) : (
-          <PlaylistPostsTable
-            fetchNextPage={fetchNextPage}
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            onSelectionChange={handleSelectionChange}
-            rows={rows}
-            selectedPostIds={selectedPostIds}
-          />
+          <Box
+            display="flex"
+            direction="column"
+            flex={1}
+            style={{ minHeight: 0 }}
+          >
+            {hasNextPage && (
+              <Text color="gray.500" fontSize="xs" mb={2}>
+                Scroll to the end of the playlist to enable drag &amp; drop
+                reordering.
+              </Text>
+            )}
+            <PlaylistPostsTable
+              fetchNextPage={fetchNextPage}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onReorder={(postIds) =>
+                reorderPosts.mutate({ playlistId, postIds })
+              }
+              onSelectionChange={handleSelectionChange}
+              rows={rows}
+              selectedPostIds={selectedPostIds}
+            />
+          </Box>
         )}
       </Box>
     </Box>

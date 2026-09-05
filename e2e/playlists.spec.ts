@@ -11,10 +11,10 @@ const E2E_USER_ID = "e2e-test-user";
 const E2E_USER_NAME = "E2E Test User";
 const E2E_USER_USERNAME = "e2e_test_user";
 
-// Drag & drop reordering (docs/features.md priority 3) has no UI yet — only
-// the `reorderPlaylistPosts` server function, covered by playlists.fn.test.ts.
-// This suite covers the playlist management UI that exists today: bulk add
-// by ID and bulk remove.
+// Reordering (docs/features.md priority 3) is implemented via dnd-kit: the
+// manage table enables dragging once every playlist page is loaded, since the
+// `reorderPlaylistPosts` server function requires the submitted items to
+// cover every post exactly once.
 
 let playlistId = 0;
 let postIds: number[] = [];
@@ -35,7 +35,38 @@ async function gotoPlaylist(page: Page) {
   await page.waitForLoadState("networkidle");
 }
 
-test.beforeAll(async () => {
+/** Seed all e2e posts into the playlist at their natural order. */
+async function seedAllPosts() {
+  for (const [index, postId] of postIds.entries()) {
+    await client.query(
+      `INSERT INTO playlist_posts (playlist_id, post_id, position)
+       VALUES ($1, $2, $3)`,
+      [playlistId, postId, index],
+    );
+  }
+}
+
+/** Post-title links appear in DOM order, which matches the row order. */
+async function expectRowOrder(page: Page, expected: number[]) {
+  const rendered = await page
+    .getByRole("link", { name: /E2E Playlists/ })
+    .allTextContents();
+  expect(rendered).toEqual(expected.map((index) => title(index)));
+}
+
+async function expectDbOrder(expected: number[]) {
+  const result = await client.query<{ post_id: number }>(
+    `SELECT post_id FROM playlist_posts WHERE playlist_id = $1 ORDER BY position ASC`,
+    [playlistId],
+  );
+  expect(result.rows.map((row) => row.post_id)).toEqual(
+    expected.map((index) => postIds[index]),
+  );
+}
+
+test.beforeAll(async ({ browser }) => {
+  test.setTimeout(120000);
+
   client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
 
@@ -76,6 +107,24 @@ test.beforeAll(async () => {
     throw new Error("Failed to create the e2e playlists test playlist");
   }
   playlistId = insertedPlaylist.id;
+
+  // Warm up the route: the first navigation after a fresh dev-server start
+  // triggers on-demand compilation and can exceed the per-test goto timeout.
+  const context = await browser.newContext();
+  await context.addCookies([
+    {
+      domain: "localhost",
+      name: "e2e-test-auth",
+      path: "/",
+      value: "bypass",
+    },
+  ]);
+  const warmup = await context.newPage();
+  await warmup.goto(`/account/playlists/${playlistId}`, {
+    timeout: 60000,
+    waitUntil: "load",
+  });
+  await context.close();
 });
 
 test.afterAll(async () => {
@@ -181,5 +230,54 @@ test.describe("Playlists UI", () => {
 
     await expect(page.getByText("This playlist is empty")).toBeVisible();
     await expect(page.getByRole("link", { name: title(0) })).toBeHidden();
+  });
+
+  test("reorders posts via drag and drop", async ({ page }) => {
+    await seedAllPosts();
+    await page.reload({ waitUntil: "load" });
+    await page.waitForLoadState("networkidle");
+    await expectRowOrder(page, [0, 1, 2]);
+
+    // Drag the first row's handle onto the last row.
+    await page.getByLabel(`Drag to reorder ${title(0)}`).hover();
+    await page.mouse.down();
+    const target = await page
+      .getByRole("link", { name: title(2) })
+      .boundingBox();
+    if (!target) {
+      throw new Error("Target row not rendered");
+    }
+    await page.mouse.move(
+      target.x + target.width / 2,
+      target.y + target.height / 2,
+      {
+        steps: 10,
+      },
+    );
+    await page.mouse.up();
+
+    // The success toast doubles as a sync point for the reorder mutation.
+    await expect(page.getByText("Playlist reordered")).toBeVisible();
+    await expectRowOrder(page, [1, 2, 0]);
+    await expectDbOrder([1, 2, 0]);
+  });
+
+  test("reorders posts with the keyboard", async ({ page }) => {
+    await seedAllPosts();
+    await page.reload({ waitUntil: "load" });
+    await page.waitForLoadState("networkidle");
+    await expectRowOrder(page, [0, 1, 2]);
+
+    const handle = page.getByLabel(`Drag to reorder ${title(1)}`);
+    await handle.focus();
+    await page.keyboard.press("Space"); // lift
+    await page.waitForTimeout(200);
+    await page.keyboard.press("ArrowDown"); // move below the last row
+    await page.waitForTimeout(200);
+    await page.keyboard.press("Space"); // drop
+
+    await expect(page.getByText("Playlist reordered")).toBeVisible();
+    await expectRowOrder(page, [0, 2, 1]);
+    await expectDbOrder([0, 2, 1]);
   });
 });

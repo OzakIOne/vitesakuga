@@ -5,6 +5,31 @@ import { Config, Context, DateTime, Effect, Layer, Schema } from "effect";
 import { UnauthorizedError } from "../errors";
 import { AuthService, RequestHeadersService } from "./context";
 
+/** Reads the e2e bypass cookie value out of a raw `Cookie` header. */
+const E2E_BYPASS_COOKIE_PATTERN = /(?:^|;\s*)e2e-test-auth=([^;\s]+)/;
+
+/**
+ * Hardcoded e2e bypass identities, selected by the bypass cookie value:
+ * `bypass` is the default shared user (seeded with a credential account by
+ * suites that need a password), `bypass-oauth` is an OAuth-only user without
+ * a password so suites can exercise passwordless flows (delete-account
+ * confirmation). Both rows are seeded/restored by the suites themselves.
+ */
+const E2E_BYPASS_USERS = {
+  bypass: {
+    email: "e2e@test.local",
+    id: "e2e-test-user",
+    name: "E2E Test User",
+    username: "e2e_test_user",
+  },
+  "bypass-oauth": {
+    email: "e2e-oauth@test.local",
+    id: "e2e-oauth-user",
+    name: "E2E OAuth User",
+    username: "e2e_oauth_user",
+  },
+} as const;
+
 export class SessionFetchError extends Schema.TaggedError<SessionFetchError>()(
   "SessionFetchError",
   {
@@ -88,10 +113,18 @@ export class SessionService extends Context.Service<
       );
       const isE2E = databaseDriver === "e2e" && nodeEnv !== "production";
 
+      const bypassValue = isE2E
+        ? E2E_BYPASS_COOKIE_PATTERN.exec(cookie)?.[1]
+        : undefined;
+      const bypassUser =
+        bypassValue === "bypass" || bypassValue === "bypass-oauth"
+          ? E2E_BYPASS_USERS[bypassValue]
+          : undefined;
+
       if (
         import.meta.env.MODE !== "production" &&
         isE2E &&
-        cookie.includes("e2e-test-auth=bypass")
+        bypassUser !== undefined
       ) {
         const now = yield* DateTime.now;
         const expiresAt = DateTime.add(now, { days: 1 });
@@ -104,19 +137,19 @@ export class SessionService extends Context.Service<
             token: "e2e-token",
             updatedAt: DateTime.toDate(now),
             userAgent: "e2e-test",
-            userId: "e2e-test-user",
+            userId: bypassUser.id,
           },
           user: {
             createdAt: DateTime.toDate(now),
-            email: "e2e@test.local",
+            email: bypassUser.email,
             emailVerified: true,
-            id: "e2e-test-user",
+            id: bypassUser.id,
             image: null,
-            name: "E2E Test User",
+            name: bypassUser.name,
             role: "admin",
             twoFactorEnabled: false,
             updatedAt: DateTime.toDate(now),
-            username: "e2e_test_user",
+            username: bypassUser.username,
           },
         };
       }

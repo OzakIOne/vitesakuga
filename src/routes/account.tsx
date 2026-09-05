@@ -41,21 +41,26 @@ type DeleteAccountDialogProps = {
   onConfirm: (password?: string) => void;
 };
 
+/** Exact phrase a passwordless account must type to confirm deletion. */
+const DELETE_CONFIRMATION_PHRASE = "DELETE";
+
 function DeleteAccountDialog({
   email,
   hasPassword,
   isPending,
   onConfirm,
 }: DeleteAccountDialogProps) {
-  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
 
-  const canConfirm = !hasPassword || password.trim().length > 0;
+  const canConfirm = hasPassword
+    ? confirmation.trim().length > 0
+    : confirmation === DELETE_CONFIRMATION_PHRASE;
 
   return (
     <Dialog.Root
       onOpenChange={(details) => {
         if (!details.open) {
-          setPassword("");
+          setConfirmation("");
         }
       }}
       role="alertdialog"
@@ -78,29 +83,45 @@ function DeleteAccountDialog({
                 remain publicly visible, published as &ldquo;Deleted
                 user&rdquo;. All your other data will be permanently removed.
               </Text>
-              {hasPassword && (
-                <form
-                  id="delete-account-confirm"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    onConfirm(password);
-                  }}
-                >
-                  <HiddenUsernameField value={email} />
+              <form
+                id="delete-account-confirm"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onConfirm(hasPassword ? confirmation : undefined);
+                }}
+              >
+                {hasPassword && <HiddenUsernameField value={email} />}
+                {hasPassword ? (
                   <Field.Root>
                     <Field.Label>Confirm your password</Field.Label>
                     <PasswordInput
                       autoComplete="current-password"
                       className="h-12 w-full"
                       onChange={(e) => {
-                        setPassword(e.target.value);
+                        setConfirmation(e.target.value);
                       }}
                       placeholder="Enter your password"
-                      value={password}
+                      value={confirmation}
                     />
                   </Field.Root>
-                </form>
-              )}
+                ) : (
+                  <Field.Root>
+                    <Field.Label htmlFor="delete-account-confirmation">
+                      Type &ldquo;{DELETE_CONFIRMATION_PHRASE}&rdquo; to confirm
+                    </Field.Label>
+                    <Input
+                      autoComplete="off"
+                      className="h-12 w-full"
+                      id="delete-account-confirmation"
+                      onChange={(e) => {
+                        setConfirmation(e.target.value);
+                      }}
+                      placeholder={DELETE_CONFIRMATION_PHRASE}
+                      value={confirmation}
+                    />
+                  </Field.Root>
+                )}
+              </form>
             </Dialog.Body>
             <Dialog.Footer>
               <Dialog.ActionTrigger asChild>
@@ -109,10 +130,9 @@ function DeleteAccountDialog({
               <Button
                 colorPalette="red"
                 disabled={!canConfirm}
-                form={hasPassword ? "delete-account-confirm" : undefined}
+                form="delete-account-confirm"
                 loading={isPending}
-                type={hasPassword ? "submit" : "button"}
-                onClick={hasPassword ? undefined : () => onConfirm(undefined)}
+                type="submit"
               >
                 Confirm account deletion
               </Button>

@@ -107,7 +107,7 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 
 ## Tests & couverture
 
-État au 2026-09-02. Tests unitaires dans `src/**/*.test.{ts,tsx}` (vitest), e2e dans `e2e/*.spec.ts` (Playwright, stack locale Postgres + RustFS).
+État au 2026-09-03. Tests unitaires dans `src/**/*.test.{ts,tsx}` (vitest), e2e dans `e2e/*.spec.ts` (Playwright, stack locale Postgres + RustFS).
 
 ### Unitaires + e2e
 
@@ -117,6 +117,7 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 | Convertisseur vidéo             | `-convert.machine`                                                                             | `convert.spec.ts`        |
 | Commentaires                    | `comments.fn`, `comments.hooks`, `sanitize`                                                    | `comments.spec.ts`       |
 | Mentions @pseudo                | `mentions`                                                                                     | `mentions.spec.ts`       |
+| Playlists UI                    | `playlists.fn`                                                                                 | `playlists.spec.ts`      |
 | Votes                           | `votes.fn`, `votes.hooks`                                                                      | `votes.spec.ts`          |
 | Compte / sécurité / suppression | `account-security`, `delete-account.fn`, `auth.hooks`                                          | `delete-account.spec.ts` |
 | Auth de base                    | `auth.config`, `auth.middleware`, `auth.schemas`, `password-policy`, `policy`                  | `auth.spec.ts`           |
@@ -130,7 +131,6 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 | Fil de posts / recherche / pagination | `posts.infinite`, `search-pattern`, `posts.schema` |
 | Tags                                  | `tags.fn`                                          |
 | Annuaire / profil utilisateurs        | `users.fn`                                         |
-| Playlists                             | `playlists.fn`                                     |
 | Suggestions d'édition wiki            | `post-edits.service`                               |
 | Remplacement vidéo + Storage GC       | `videos.service`                                   |
 | Système de points                     | `points.service`                                   |
@@ -149,9 +149,8 @@ Aucune route REST hors `/api/auth/$` (Better Auth). Tout passe par des server fu
 ### Priorités e2e restantes
 
 1. **Smoke test de lecture** : feed (filtres + sync URL) → détail de post (tags, votes, commentaires visibles) — chemin de tous les visiteurs, zéro couverture e2e.
-2. **Playlists UI** : ajout en masse, réordonnancement (drag & drop).
 
-_(Votes et suppression de compte avec anonymisation : couverts depuis le 2026-09-02 par `votes.spec.ts` et `delete-account.spec.ts`.)_
+_(Playlists UI (ajout en masse + réordonnancement drag & drop, souris et clavier), votes et suppression de compte avec anonymisation : couverts par `playlists.spec.ts`, `votes.spec.ts` et `delete-account.spec.ts`.)_
 
 ## Infrastructure & configuration
 

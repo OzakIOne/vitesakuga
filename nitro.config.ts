@@ -132,11 +132,11 @@ export default defineNitroConfig({
       },
     },
   },
-  // Override Nitro's `npx wrangler` preview default: `npx` resolves to the system
-  // npm (Node 24), which rejects nub's Node 26-only NODE_OPTIONS flags (e.g.
-  // `--experimental-import-text`) and crashes `vite preview`. The local wrangler
-  // bin runs under the project's Node 26 via the node PATH shim, so NODE_OPTIONS
-  // is always compatible.
+  // Override Nitro's `npx wrangler` preview default: `npx` may fetch/download
+  // wrangler instead of using the local one. The local wrangler bin runs under
+  // the project's Node 26 via the node PATH shim. (Since nub 0.8.3, version-gated
+  // Node flags ride argv instead of NODE_OPTIONS, so Node version mismatches from
+  // the old npx path no longer crash the preview.)
   commands: {
     preview: "node_modules/.bin/wrangler --cwd ./ dev",
   },

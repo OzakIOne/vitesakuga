@@ -162,7 +162,9 @@ export const DeleteAccountServiceLive = Layer.effect(
   DeleteAccountService.make,
 );
 
-export const deleteAccount = createServerFn()
+// POST so the destructive endpoint is never reachable via a cross-site GET
+// navigation (SameSite=Lax cookies ride along on top-level GETs).
+export const deleteAccount = createServerFn({ method: "POST" })
   .validator(parseStrict(deleteAccountInputSchema))
   .handler(
     createHandler(

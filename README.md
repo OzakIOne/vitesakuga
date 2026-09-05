@@ -20,6 +20,8 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [x] detailed episode informations (when upload, put episode / season info)
 - [x] user roles, uploader, verified
 - [ ] WASM (or not) browser client side image upscaler
+- [ ] accessibility check
+- [ ] advance filter (exclude words, post with minimum of likes, width, height)
 
 ## Secondary
 

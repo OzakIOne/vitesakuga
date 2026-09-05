@@ -15,7 +15,9 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
     strict: false,
   });
 
-  console.error("DefaultCatchBoundary Error:", error);
+  // No client-side console.error: the error may carry server internals. The
+  // server logs the full failure annotated with a debug ID (see
+  // `createHandler` in src/lib/server-fn.handler.ts).
 
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-6 p-4">
