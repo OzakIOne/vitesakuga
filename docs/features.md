@@ -20,7 +20,7 @@ Inventaire des fonctionnalités de ViteSakuga (clone de Sakugabooru). Basé sur 
 | Fonctionnalité            | Description                                                                                                                                           | Fichiers clés                                                                                                                                                          |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Accueil**               | Recherche globale + tags populaires                                                                                                                   | `src/routes/index.tsx`, `src/components/SearchBox.tsx`, `src/components/PopularTagsSection.tsx`                                                                        |
-| **Fil de posts**          | Grille virtuelle avec scroll infini bidirectionnel, tri, filtres (date, tags), recherche plein-texte, pagination synchronisée à l'URL (SSR data-only) | `src/routes/posts/index.tsx`, `src/components/VirtualPostsGrid.tsx`, `src/components/PostFilters.tsx`, `src/components/Pagination.tsx`, `src/lib/posts/posts.hooks.ts` |
+| **Fil de posts**          | Grille virtuelle avec scroll infini bidirectionnel, tri, filtres (date, tags), recherche plein-texte et filtres numériques avancés, pagination synchronisée à l'URL (SSR data-only) | `src/routes/posts/index.tsx`, `src/components/VirtualPostsGrid.tsx`, `src/components/PostFilters.tsx`, `src/components/Pagination.tsx`, `src/lib/posts/posts.hooks.ts` |
 | **Page de tag**           | Tous les posts d'un tag                                                                                                                               | `src/routes/posts/tags/$tag.tsx`                                                                                                                                       |
 | **Détail d'un post**      | Lecteur vidéo/image, métadonnées (saison/épisode, méta technique), post lié, tags, votes, commentaires, édition propriétaire, signalement             | `src/routes/posts/$postId.tsx`, `src/components/PostDetail/PostDetailDisplay.tsx`, `src/components/VideoMetadataDialog.tsx`                                            |
 | **Annuaire utilisateurs** | Liste des utilisateurs (TanStack DB, `useLiveSuspenseQuery`)                                                                                          | `src/routes/users.index.tsx`, `src/lib/db/collections.ts`                                                                                                              |
@@ -28,6 +28,20 @@ Inventaire des fonctionnalités de ViteSakuga (clone de Sakugabooru). Basé sur 
 | **Playlists publiques**   | Liste paginée des playlists publiques                                                                                                                 | `src/routes/playlists.index.tsx`, `src/lib/playlists/playlists.service.ts`                                                                                             |
 | **Raccourcis clavier**    | `?` (aide), `Mod+K` (recherche), séquences `G P` / `G U` / `G S`                                                                                      | `src/components/GlobalShortcuts.tsx`, `src/components/KeyboardShortcutsDialog.tsx`                                                                                     |
 | **Thème clair/sombre**    | Color mode menu (Ark UI)                                                                                                                              | `src/routes/__root.tsx`, `src/components/ui/color-mode.tsx`                                                                                                            |
+
+### Recherche avancée des posts
+
+La recherche accepte des qualificatifs numériques de style Sakugabooru dans le champ de recherche. Les opérateurs autorisés sont strictement `>`, `<` et `=` ; les opérateurs inclusifs `>=` et `<=` ne sont pas supportés.
+
+| Qualificatif | Cible | Exemple |
+| --- | --- | --- |
+| `width` / `height` | Dimensions des images attachées, en pixels | `width:>1000 height:<800` |
+| `likes` / `score` | Nombre de votes positifs (`score` est un alias) | `likes:>10` |
+| `video_width` / `video_height` | Dimensions de la piste vidéo, en pixels | `video_width:=1920` |
+
+Les qualificatifs peuvent être combinés avec du texte libre (`action width:>1000`) et entre eux. Ils sont extraits côté serveur puis traduits en prédicats SQL avant le comptage et la pagination. Les dimensions d'image sont capturées au moment de l'upload et stockées dans `post_images`; les anciens posts sans dimensions ne correspondent pas aux filtres `width`/`height`.
+
+Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.service.ts`, `src/components/SearchBox.tsx`, `src/lib/upload/upload.processor.ts`, migration Drizzle `drizzle/20260906190600_brown_caretaker/migration.sql`.
 
 ## Upload & création de contenu
 

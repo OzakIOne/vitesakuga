@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Exit, Layer, Option, Schema } from "effect";
-import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
+import {
+  sql,
+  type Expression,
+  type ExpressionBuilder,
+  type SqlBool,
+} from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 
 import { ensureOwnedOrStaff } from "../auth/ownership";
@@ -46,9 +51,28 @@ import {
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
+import { parseSearchQuery, type NumericSearchFilter } from "./search-filters";
 import { escapeLikePattern } from "./search-pattern";
 
 const PAGE_SIZE = 30;
+
+const numericFilterExpression = (filter: NumericSearchFilter) => {
+  const comparison = sql.raw(filter.operator);
+  const value = filter.value;
+  switch (filter.field) {
+    case "width":
+      return sql<boolean>`exists (select 1 from post_images pi where pi.post_id = posts.id and pi.width ${comparison} ${value})`;
+    case "height":
+      return sql<boolean>`exists (select 1 from post_images pi where pi.post_id = posts.id and pi.height ${comparison} ${value})`;
+    case "video_width":
+      return sql<boolean>`(posts.video_metadata->>'Width')::numeric ${comparison} ${value}`;
+    case "video_height":
+      return sql<boolean>`(posts.video_metadata->>'Height')::numeric ${comparison} ${value}`;
+    case "likes":
+    case "score":
+      return sql<boolean>`(select count(*) from post_votes pv where pv.post_id = posts.id and pv.vote = 'like') ${comparison} ${value}`;
+  }
+};
 
 // oxlint-disable effecttsgo/global-date -- calendar-day boundaries use the server's local timezone so "today"/"this week" match user expectations; Effect DateTime has no local-midnight equivalent
 const computeStartDate = (dateRange: "today" | "week" | "month") => {
@@ -158,7 +182,9 @@ export class PostsService extends Context.Service<
     const search = Effect.fn("PostsService.search")(function* (
       data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
     ) {
-      const { q, tags, page, sortBy, dateRange } = data;
+      const { tags, page, sortBy, dateRange } = data;
+      const parsedSearch = parseSearchQuery(data.q);
+      const { text: q } = parsedSearch;
 
       let query = db.selectFrom("posts").selectAll("posts");
 
@@ -189,6 +215,10 @@ export class PostsService extends Context.Service<
           ">=",
           computeStartDate(dateRange),
         );
+      }
+
+      for (const filter of parsedSearch.filters) {
+        query = query.where(numericFilterExpression(filter));
       }
 
       const countQuery = query
@@ -510,9 +540,11 @@ export class PostsService extends Context.Service<
           yield* db.execute(
             db.insertInto("post_images").values(
               imageKeys.map((storageKey, index) => ({
+                height: data.imageHeight ?? null,
                 postId,
                 position: index,
                 storageKey,
+                width: data.imageWidth ?? null,
               })),
             ),
           );

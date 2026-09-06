@@ -9,6 +9,20 @@ export type GeneratedThumbnail = {
   file: File;
 };
 
+export const getImageDimensions = async (
+  file: File,
+): Promise<{ width: number; height: number }> => {
+  const image = new Image();
+  const url = URL.createObjectURL(file);
+  try {
+    image.src = url;
+    await image.decode();
+    return { width: image.naturalWidth, height: image.naturalHeight };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
 export function makeReadChunk(file: File): ReadChunkFunc {
   return async (chunkSize: number, offset: number) =>
     new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());

@@ -71,6 +71,8 @@ export const postImages = pgTable(
       .notNull(),
     position: integer().notNull().default(0),
     storageKey: text().notNull(),
+    width: integer(),
+    height: integer(),
   },
   (t) => [index("post_images_post_id_position_idx").on(t.postId, t.position)],
 );

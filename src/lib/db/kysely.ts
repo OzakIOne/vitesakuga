@@ -126,6 +126,8 @@ type PostImagesTable = {
   postId: number;
   position: number;
   storageKey: string;
+  width: number | null;
+  height: number | null;
 };
 
 type PlaylistsTable = {

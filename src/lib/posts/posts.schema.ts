@@ -156,6 +156,8 @@ const SharedUploadFields = {
 export const FormFileUploadSchema = Schema.Struct({
   ...SharedUploadFields,
   images: Schema.optionalKey(Schema.Array(ImageFile)),
+  imageHeight: Schema.optionalKey(CoerceNumber),
+  imageWidth: Schema.optionalKey(CoerceNumber),
   thumbnail: Schema.optionalKey(ThumbnailFile),
   videoKey: Schema.optionalKey(VideoKey),
   videoMetadata: VideoMetadataSchema,

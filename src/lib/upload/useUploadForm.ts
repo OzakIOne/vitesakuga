@@ -24,7 +24,7 @@ import {
 } from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
 import { createVideoUploadUrl, uploadPost } from "../posts/posts.service";
-import { buildFormData } from "./upload.processor";
+import { buildFormData, getImageDimensions } from "./upload.processor";
 import type { UploadDraftData } from "./useUploadDraft";
 
 export type UploadMediaKind = "image" | "video";
@@ -44,6 +44,8 @@ type UploadFormValues = {
   description: string;
   episodeNumber: number | undefined;
   images: File[] | undefined;
+  imageWidth: number | undefined;
+  imageHeight: number | undefined;
   relatedPostId: number | undefined;
   seasonNumber: number | undefined;
   source: string | undefined;
@@ -159,6 +161,8 @@ export function useUploadForm(
     description: "",
     episodeNumber: undefined,
     images: undefined,
+    imageWidth: undefined,
+    imageHeight: undefined,
     relatedPostId: undefined,
     seasonNumber: undefined,
     source: undefined,
@@ -225,7 +229,7 @@ export function useUploadForm(
     },
   });
 
-  const submitImagePost = () => {
+  const submitImagePost = async () => {
     if (!imageFile) {
       return false;
     }
@@ -242,6 +246,9 @@ export function useUploadForm(
     // The image transits the Worker like thumbnails do and doubles as the
     // post thumbnail server-side — no presigned flow or capture needed.
     form.setFieldValue("images", [imageFile]);
+    const dimensions = await getImageDimensions(imageFile);
+    form.setFieldValue("imageWidth", dimensions.width);
+    form.setFieldValue("imageHeight", dimensions.height);
     return true;
   };
 
@@ -298,7 +305,7 @@ export function useUploadForm(
 
   const submit = async () => {
     const ready =
-      mediaKind === "image" ? submitImagePost() : await submitVideoPost();
+      mediaKind === "image" ? await submitImagePost() : await submitVideoPost();
     if (!ready) {
       return;
     }

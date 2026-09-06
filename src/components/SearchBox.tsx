@@ -12,7 +12,7 @@ import { Badge } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import { Box, Group, Wrap } from "src/components/ui/layout";
 import { Combobox } from "src/components/ui/overlay";
-import { Heading } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 type SearchBoxProps = {
@@ -102,6 +102,11 @@ export function SearchBox({
           Search
         </Button>
       </Group>
+      <Text color="fg.muted" fontSize="xs" mb={3}>
+        Advanced filters: <code>width:&gt;1000</code>, <code>height:=800</code>,{" "}
+        <code>height:&lt;800</code>, <code>likes:&gt;=10</code>,{" "}
+        <code>video_width:1920</code>
+      </Text>
       <Field.Root>
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
         <Box w="full">

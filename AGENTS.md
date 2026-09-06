@@ -68,6 +68,14 @@ The project uses `vitest` for testing.
 
 ## Detailed Guidelines
 
+### Repository documentation
+
+- Before implementing, debugging, or reviewing application changes, inspect the relevant documents under `/docs` for existing product behavior, architecture decisions, domain context, conventions, and known constraints. Treat the documentation as part of the repository’s source of truth and update it when the change makes it stale.
+
+### Documentation synchronization
+
+- When adding a feature or substantially modifying backend code, update the relevant documentation under `/docs` in the same change. Keep `docs/features.md` current for user-visible behavior and update the relevant domain or architecture document when implementation details change.
+
 For more specific guidelines, refer to the following documents:
 
 - [TypeScript & React Conventions](./docs/typescript-react-conventions.md)
