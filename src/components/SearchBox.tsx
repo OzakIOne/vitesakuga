@@ -104,8 +104,8 @@ export function SearchBox({
       </Group>
       <Text color="fg.muted" fontSize="xs" mb={3}>
         Advanced filters: <code>width:&gt;1000</code>, <code>height:=800</code>,{" "}
-        <code>height:&lt;800</code>, <code>likes:&gt;=10</code>,{" "}
-        <code>video_width:1920</code>
+        <code>height:&lt;800</code>, <code>likes:&gt;10</code>,{" "}
+        <code>video_width:=1920</code>, <code>-movies</code>
       </Text>
       <Field.Root>
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
