@@ -19,9 +19,8 @@ export const postsKeys = {
     sortBy,
     dateRange,
     randomSeed,
-    view,
-  }: PostsSearchParams) =>
-  }: PostsSearchParams) =>
+  view,
+}: PostsSearchParams) =>
     [
       ...postsKeys.all,
       "searchInfinite",
