@@ -220,9 +220,24 @@ export const updatePostInputSchema = Schema.Struct({
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
 
+export const discoveryViewSchema = Schema.Literals([
+  "chronological",
+  "trending",
+  "most-liked",
+  "followed-tags",
+  "under-seen",
+  "random-study",
+]);
+
+export type DiscoveryView = Schema.Schema.Type<typeof discoveryViewSchema>;
+
 export const searchPostsBaseSchema = Schema.Struct({
   dateRange: Schema.Literals(["all", "today", "week", "month"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("all")),
+  ),
+  randomSeed: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+    Schema.withDecodingDefault(Effect.succeed(0)),
   ),
   page: Schema.Number.pipe(
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
@@ -239,6 +254,9 @@ export const searchPostsBaseSchema = Schema.Struct({
       }),
     ),
     Schema.withDecodingDefault(Effect.succeed("")),
+  ),
+  view: discoveryViewSchema.pipe(
+    Schema.withDecodingDefault(Effect.succeed("chronological")),
   ),
   sortBy: Schema.Literals(["newest", "oldest"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("newest")),
@@ -264,6 +282,13 @@ export const searchPostsBaseSchema = Schema.Struct({
 export type PostsSearchParams = Schema.Schema.Type<
   typeof searchPostsBaseSchema
 >;
+
+/**
+ * Service callers may omit newly introduced opt-in controls; the validated
+ * server-function boundary still supplies their defaults before execution.
+ */
+export type PostsSearchInput = Omit<PostsSearchParams, "randomSeed" | "view"> &
+  Partial<Pick<PostsSearchParams, "randomSeed" | "view">>;
 
 export const postByTagSchema = Schema.Struct({
   page: Schema.Number.pipe(

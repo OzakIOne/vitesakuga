@@ -28,7 +28,7 @@ export const Route = createFileRoute("/posts/$postId")({
 
 function PostComponent() {
   const { postId } = Route.useParams();
-  const { dateRange, q, sortBy, tags } = Route.useSearch();
+  const { dateRange, q, sortBy, tags, view } = Route.useSearch();
   const context = useRouteContext({ from: "/posts/$postId" });
 
   const {
@@ -40,6 +40,7 @@ function PostComponent() {
   return (
     <PostsPageLayout
       dateRange={dateRange}
+      discoveryView={view}
       fromRoute="/posts/$postId"
       popularTags={[]}
       searchQuery={q}

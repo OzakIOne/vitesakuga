@@ -48,6 +48,7 @@ import {
   postByTagSchema,
   RESERVED_TAG_NAMES,
   searchPostsBaseSchema,
+  type PostsSearchInput,
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
@@ -55,6 +56,10 @@ import { parseSearchQuery, type NumericSearchFilter } from "./search-filters";
 import { escapeLikePattern } from "./search-pattern";
 
 const PAGE_SIZE = 30;
+const DAY_MS = 86_400_000;
+const FOLLOWED_TAGS_WINDOW_DAYS = 14;
+const UNDER_SEEN_WINDOW_DAYS = 30;
+const UNDER_SEEN_MAX_LIKES = 5;
 
 const numericFilterExpression = (filter: NumericSearchFilter) => {
   const comparison = sql.raw(filter.operator);
@@ -86,6 +91,20 @@ const computeStartDate = (dateRange: "today" | "week" | "month") => {
   return new Date(now.setMonth(now.getMonth() - 1));
 };
 // oxlint-enable effecttsgo/global-date
+
+// These windows are deliberately explicit and are mirrored in
+// `posts/discovery.ts`, so every experiment can explain its ranking inputs to
+// the user. Points are intentionally not part of any quality or rank score.
+// oxlint-disable-next-line effecttsgo/global-date -- discovery windows are server-local calendar-relative instants, matching the existing feed date filters
+const computeDaysAgo = (days: number) => new Date(Date.now() - days * DAY_MS);
+
+const voteCountExpression = (vote: "like" | "dislike", createdAfter?: Date) =>
+  createdAfter === undefined
+    ? sql<number>`(select count(*) from post_votes pv where pv."postId" = posts.id and pv.vote = ${vote})`
+    : sql<number>`(select count(*) from post_votes pv where pv."postId" = posts.id and pv.vote = ${vote} and pv."createdAt" >= ${createdAfter})`;
+
+const randomOrderExpression = (seed: number) =>
+  sql<string>`md5(concat(posts.id, cast(${seed} as text)))`;
 
 type PostsSearchResult = {
   readonly data: readonly PostWithVotes[];
@@ -127,8 +146,12 @@ export class PostsService extends Context.Service<
   PostsService,
   {
     readonly search: (
-      data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
-    ) => Effect.Effect<PostsSearchResult, SqlError | RowParseError>;
+      data: PostsSearchInput,
+    ) => Effect.Effect<
+      PostsSearchResult,
+      SqlError | RowParseError | SessionFetchError,
+      SessionService
+    >;
     readonly fetchDetail: (
       postId: PostId,
     ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
@@ -180,13 +203,42 @@ export class PostsService extends Context.Service<
     const points = yield* PointsService;
 
     const search = Effect.fn("PostsService.search")(function* (
-      data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
+      data: PostsSearchInput,
     ) {
-      const { tags, page, sortBy, dateRange } = data;
+      const {
+        dateRange,
+        page,
+        randomSeed = 0,
+        sortBy,
+        tags,
+        view = "chronological",
+      } = data;
       const parsedSearch = parseSearchQuery(data.q);
       const { text: q } = parsedSearch;
+      const sessions = yield* SessionService;
 
       let query = db.selectFrom("posts").selectAll("posts");
+
+      if (view === "followed-tags") {
+        const user = yield* sessions.getUser();
+        if (user === null) {
+          // Discovery views are opt-in and public by default. An anonymous
+          // visitor sees an empty personal feed instead of a server error.
+          query = query.where(sql<boolean>`false`);
+        } else {
+          query = query.where("posts.id", "in", (eb) =>
+            eb
+              .selectFrom("post_tags")
+              .where("post_tags.tagId", "in", (eb2) =>
+                eb2
+                  .selectFrom("tag_follows")
+                  .where("tag_follows.userId", "=", user.id)
+                  .select("tag_follows.tagId"),
+              )
+              .select("post_tags.postId"),
+          );
+        }
+      }
 
       if (q) {
         const pattern = `%${escapeLikePattern(q)}%`;
@@ -209,7 +261,7 @@ export class PostsService extends Context.Service<
         );
       }
 
-      if (dateRange !== "all") {
+      if (view === "chronological" && dateRange !== "all") {
         query = query.where(
           "posts.createdAt",
           ">=",
@@ -219,6 +271,42 @@ export class PostsService extends Context.Service<
 
       for (const filter of parsedSearch.filters) {
         query = query.where(numericFilterExpression(filter));
+      }
+
+      const recentVotingStart = computeDaysAgo(7);
+      const recentLikes = voteCountExpression("like", recentVotingStart);
+      const recentDislikes = voteCountExpression("dislike", recentVotingStart);
+      const allTimeLikes = voteCountExpression("like");
+
+      switch (view) {
+        case "followed-tags":
+          query = query.where(
+            "posts.createdAt",
+            ">=",
+            computeDaysAgo(FOLLOWED_TAGS_WINDOW_DAYS),
+          );
+          break;
+        case "most-liked":
+          query = query.where(sql<boolean>`${recentLikes} > 0`);
+          break;
+        case "random-study":
+          break;
+        case "trending":
+          query = query.where(
+            sql<boolean>`${recentLikes} - ${recentDislikes} > 0`,
+          );
+          break;
+        case "under-seen":
+          query = query
+            .where(
+              "posts.createdAt",
+              ">=",
+              computeDaysAgo(UNDER_SEEN_WINDOW_DAYS),
+            )
+            .where(sql<boolean>`${allTimeLikes} <= ${UNDER_SEEN_MAX_LIKES}`);
+          break;
+        case "chronological":
+          break;
       }
 
       const countQuery = query
@@ -232,10 +320,42 @@ export class PostsService extends Context.Service<
         pageSize: PAGE_SIZE,
       });
 
-      query = query.orderBy(
-        "posts.createdAt",
-        sortBy === "oldest" ? "asc" : "desc",
-      );
+      switch (view) {
+        case "most-liked":
+          query = query
+            .orderBy(recentLikes, "desc")
+            .orderBy("posts.createdAt", "desc")
+            .orderBy("posts.id", "desc");
+          break;
+        case "random-study":
+          query = query
+            .orderBy(randomOrderExpression(randomSeed), "asc")
+            .orderBy("posts.id", "asc");
+          break;
+        case "trending":
+          query = query
+            .orderBy(sql<number>`${recentLikes} - ${recentDislikes}`, "desc")
+            .orderBy(recentLikes, "desc")
+            .orderBy("posts.createdAt", "desc")
+            .orderBy("posts.id", "desc");
+          break;
+        case "under-seen":
+          query = query
+            .orderBy(allTimeLikes, "asc")
+            .orderBy("posts.createdAt", "desc")
+            .orderBy("posts.id", "desc");
+          break;
+        case "followed-tags":
+          query = query
+            .orderBy("posts.createdAt", "desc")
+            .orderBy("posts.id", "desc");
+          break;
+        case "chronological":
+          query = query
+            .orderBy("posts.createdAt", sortBy === "oldest" ? "asc" : "desc")
+            .orderBy("posts.id", sortBy === "oldest" ? "asc" : "desc");
+          break;
+      }
 
       const items = yield* db.execute(
         query.offset(pagination.offset).limit(PAGE_SIZE),
@@ -270,10 +390,10 @@ export class PostsService extends Context.Service<
         );
       }
 
-      const popularTags = yield* fetchPopularTagsForPosts(
-        db,
-        popularTagsPredicates,
-      );
+      const popularTags =
+        view === "chronological"
+          ? yield* fetchPopularTagsForPosts(db, popularTagsPredicates)
+          : [];
 
       return {
         data: parsedWithVotes,
@@ -766,7 +886,7 @@ export class PostsService extends Context.Service<
   }),
 }) {
   static readonly search = Effect.fn("PostsService.search")(function* (
-    data: Schema.Schema.Type<typeof searchPostsBaseSchema>,
+    data: PostsSearchInput,
   ) {
     const svc = yield* PostsService;
     return yield* svc.search(data);
@@ -847,7 +967,10 @@ export const PostsServiceLive = Layer.effect(
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator(parseStrict(searchPostsBaseSchema))
   .handler(
-    createHandler(PostsServiceLive, baseLayerFactories.db)(PostsService.search),
+    createHandler(
+      PostsServiceLive,
+      baseLayerFactories.auth,
+    )(PostsService.search),
   );
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })

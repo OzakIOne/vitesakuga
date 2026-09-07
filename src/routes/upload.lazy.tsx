@@ -160,14 +160,24 @@ function RouteComponent() {
     enabled: relatedPostSearch.length > 2 && !isNumericSearch,
     queryFn: async () =>
       searchPosts({
-        data: { page: 0, q: relatedPostSearch, tags: [] },
+        data: {
+          dateRange: "all",
+          page: 0,
+          q: relatedPostSearch,
+          randomSeed: 0,
+          sortBy: "newest",
+          tags: [],
+          view: "chronological",
+        },
       }),
     queryKey: postsKeys.search({
       dateRange: "all",
       page: 0,
       q: relatedPostSearch,
+      randomSeed: 0,
       sortBy: "newest",
       tags: [],
+      view: "chronological",
     }),
   });
 

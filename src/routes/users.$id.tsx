@@ -28,6 +28,11 @@ function UserContent() {
   const { id } = Route.useParams();
   const searchParams = Route.useSearch();
   const { sortBy, dateRange, tags, q } = searchParams;
+  const chronologicalSearchParams = {
+    ...searchParams,
+    randomSeed: 0,
+    view: "chronological" as const,
+  };
 
   const {
     allPosts,
@@ -58,10 +63,12 @@ function UserContent() {
     <Box p={4}>
       <PostsPageLayout
         dateRange={dateRange}
+        discoveryView="chronological"
         fromRoute="/users/$id"
         popularTags={popularTags}
         searchQuery={q}
         selectedTags={tags}
+        showDiscoveryViews={false}
         sortBy={sortBy}
       >
         {firstPage?.user && (
@@ -84,7 +91,7 @@ function UserContent() {
           isFetchingPreviousPage={isFetchingPreviousPage}
           pageParams={pageParams}
           pageSize={pageSize}
-          searchParams={searchParams}
+          searchParams={chronologicalSearchParams}
           syncPageToUrl={syncPageToUrl}
         />
       </PostsPageLayout>

@@ -10,11 +10,18 @@ export const postsKeys = {
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
   search: (params: PostsSearchParams) =>
     [...postsKeys.all, "search", params] as const,
-  searchInfinite: ({ q, tags, sortBy, dateRange }: PostsSearchParams) =>
+  searchInfinite: ({
+    q,
+    tags,
+    sortBy,
+    dateRange,
+    randomSeed,
+    view,
+  }: PostsSearchParams) =>
     [
       ...postsKeys.all,
       "searchInfinite",
-      { q, tags, sortBy, dateRange },
+      { dateRange, q, randomSeed, sortBy, tags, view },
     ] as const,
 } as const;
 
