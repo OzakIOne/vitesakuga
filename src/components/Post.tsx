@@ -53,7 +53,17 @@ export function Post({
             </Heading>
             {episodeInfo && (
               <Text color="gray.500" fontSize="sm">
-                {episodeInfo}
+                {post.animeTitle ? (
+                  <Link
+                    className="hover:underline"
+                    params={{ seriesTitle: post.animeTitle }}
+                    to="/series/$seriesTitle"
+                  >
+                    {episodeInfo}
+                  </Link>
+                ) : (
+                  episodeInfo
+                )}
               </Text>
             )}
           </VStack>

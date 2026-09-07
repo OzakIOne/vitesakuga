@@ -6,6 +6,10 @@ import { Post } from "src/components/Post";
 import { PostEditHistory } from "src/components/PostDetail/PostEditHistory";
 import { PostEditSuggestionDialog } from "src/components/PostDetail/PostEditSuggestionDialog";
 import { ReportDialog } from "src/components/ReportDialog";
+import {
+  MoreFromSeriesPanel,
+  SeriesNavigationPanel,
+} from "src/components/SeriesHub";
 import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
@@ -16,13 +20,17 @@ import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import type { Tag } from "src/lib/posts/posts.schema";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
+import type { fetchSeriesHub } from "src/lib/posts/posts.service";
 import { updatePost } from "src/lib/posts/posts.service";
+import type { SeriesNavigation } from "src/lib/posts/series-hubs";
 
 type PostDetailDisplayProps = {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   initialTags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
+  seriesNavigation: SeriesNavigation | null;
+  seriesPosts: Awaited<ReturnType<typeof fetchSeriesHub>>["posts"] | undefined;
   images?: string[] | undefined;
   currentUserId?: string | undefined;
   currentUserRole?: string | undefined;
@@ -80,6 +88,8 @@ export function PostDetailDisplay({
   user,
   initialTags,
   relatedPost,
+  seriesNavigation,
+  seriesPosts,
   images,
   currentUserId,
   currentUserRole,
@@ -276,14 +286,21 @@ export function PostDetailDisplay({
         />
       )}
 
-      {showReportDialog && currentUserId && (
-        <ReportDialog
-          onCancel={() => {
-            setShowReportDialog(false);
-          }}
-          postId={post.id}
-        />
-      )}
+     {showReportDialog && currentUserId && (
+       <ReportDialog
+         onCancel={() => {
+           setShowReportDialog(false);
+         }}
+         postId={post.id}
+       />
+     )}
+
+      <SeriesNavigationPanel navigation={seriesNavigation} />
+      <MoreFromSeriesPanel
+        currentPostId={post.id}
+        posts={seriesPosts}
+        title={post.animeTitle}
+      />
 
       {showSuggestionDialog && (
         <PostEditSuggestionDialog
@@ -292,7 +309,7 @@ export function PostDetailDisplay({
         />
       )}
 
-      <Comments currentUserId={currentUserId} postId={post.id} />
+     <Comments currentUserId={currentUserId} postId={post.id} />
     </VStack>
   );
 }

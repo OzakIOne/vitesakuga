@@ -46,10 +46,11 @@ import {
   FormFileUploadSchema,
   MAX_VIDEO_SIZE_BYTES,
   postByTagSchema,
-  RESERVED_TAG_NAMES,
-  searchPostsBaseSchema,
+ RESERVED_TAG_NAMES,
+ searchPostsBaseSchema,
+  seriesHubSchema,
   type PostsSearchInput,
-  updatePostInputSchema,
+ updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
 import { parseSearchQuery, type NumericSearchFilter } from "./search-filters";
@@ -114,6 +115,11 @@ type PostsSearchResult = {
   };
 };
 
+type SeriesHubResult = {
+  readonly posts: readonly PostWithVotes[];
+  readonly title: string;
+};
+
 type PostDetailResult = {
   post: {
     animeTitle: string | null;
@@ -152,6 +158,9 @@ export class PostsService extends Context.Service<
       SqlError | RowParseError | SessionFetchError,
       SessionService
     >;
+    readonly fetchSeriesHub: (
+      data: Schema.Schema.Type<typeof seriesHubSchema>,
+    ) => Effect.Effect<SeriesHubResult, SqlError | RowParseError>;
     readonly fetchDetail: (
       postId: PostId,
     ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
@@ -209,6 +218,7 @@ export class PostsService extends Context.Service<
         dateRange,
         page,
         randomSeed = 0,
+        seriesTitle,
         sortBy,
         tags,
         view = "chronological",
@@ -248,6 +258,12 @@ export class PostsService extends Context.Service<
             "ilike",
             pattern,
           ),
+        );
+      }
+
+      if (seriesTitle) {
+        query = query.where(
+          sql<boolean>`lower("animeTitle") = lower(${seriesTitle})`,
         );
       }
 
@@ -394,6 +410,12 @@ export class PostsService extends Context.Service<
         );
       }
 
+      if (seriesTitle) {
+        popularTagsPredicates.push(
+          () => sql<boolean>`lower("animeTitle") = lower(${seriesTitle})`,
+        );
+      }
+
       if (dateRange !== "all") {
         popularTagsPredicates.push((eb) =>
           eb("posts.createdAt", ">=", computeStartDate(dateRange)),
@@ -423,6 +445,36 @@ export class PostsService extends Context.Service<
           pagination,
           popularTags,
         },
+      };
+    });
+
+    const fetchSeriesHub = Effect.fn("PostsService.fetchSeriesHub")(function* (
+      data: Schema.Schema.Type<typeof seriesHubSchema>,
+    ) {
+      const seriesTitle = data.seriesTitle.trim();
+      const items = yield* db.execute(
+        db
+          .selectFrom("posts")
+          .selectAll("posts")
+          // The title from a post link is normally an exact match, while the
+          // case-insensitive comparison keeps manually shared URLs useful.
+          .where(sql<boolean>`lower("animeTitle") = lower(${seriesTitle})`)
+          .orderBy("posts.createdAt", "asc")
+          .orderBy("posts.id", "asc"),
+      );
+
+      const parsed = yield* Effect.try({
+        try: () => parse(Schema.Array(postsSelectSchema))(items),
+        catch: (error) =>
+          new RowParseError({
+            message: `Error processing series results: ${String(error)}`,
+          }),
+      });
+      const posts = yield* mergeVoteCounts(db, parsed);
+
+      return {
+        posts,
+        title: parsed[0]?.animeTitle ?? seriesTitle,
       };
     });
 
@@ -902,6 +954,7 @@ export class PostsService extends Context.Service<
 
     return {
       search,
+      fetchSeriesHub,
       fetchDetail,
       upload,
       createVideoUploadUrl,
@@ -921,6 +974,13 @@ export class PostsService extends Context.Service<
     function* (postId: PostId) {
       const svc = yield* PostsService;
       return yield* svc.fetchDetail(postId);
+    },
+  );
+
+  static readonly fetchSeriesHub = Effect.fn("PostsService.fetchSeriesHub")(
+    function* (data: Schema.Schema.Type<typeof seriesHubSchema>) {
+      const svc = yield* PostsService;
+      return yield* svc.fetchSeriesHub(data);
     },
   );
 
@@ -996,6 +1056,15 @@ export const searchPosts = createServerFn({ strict: { output: false } })
       PostsServiceLive,
       baseLayerFactories.auth,
     )(PostsService.search),
+  );
+
+export const fetchSeriesHub = createServerFn({ strict: { output: false } })
+  .validator(parseStrict(seriesHubSchema))
+  .handler(
+    createHandler(
+      PostsServiceLive,
+      baseLayerFactories.db,
+    )(PostsService.fetchSeriesHub),
   );
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })

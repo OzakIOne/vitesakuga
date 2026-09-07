@@ -28,6 +28,7 @@ import { Route as AdminSuggestionsRouteImport } from './routes/admin.suggestions
 import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
 import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
+import { Route as SeriesSeriesTitleRouteImport } from './routes/series.$seriesTitle'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as UsersIdRouteImport } from './routes/users.$id'
 import { Route as AccountPlaylistsIndexRouteImport } from './routes/account_.playlists.index'
@@ -132,6 +133,11 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
   path: '/posts/$postId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SeriesSeriesTitleRoute = SeriesSeriesTitleRouteImport.update({
+  id: '/series/$seriesTitle',
+  path: '/series/$seriesTitle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersIndexRoute = UsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/posts/$postId': typeof PostsPostIdRoute
+  '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/posts/$postId': typeof PostsPostIdRoute
+  '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/posts/$postId': typeof PostsPostIdRoute
+  '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/admin/storage'
     | '/admin/suggestions'
     | '/posts/$postId'
+    | '/series/$seriesTitle'
     | '/users/$id'
     | '/admin/'
     | '/playlists/'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/admin/storage'
     | '/admin/suggestions'
     | '/posts/$postId'
+    | '/series/$seriesTitle'
     | '/users/$id'
     | '/admin'
     | '/playlists'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/admin/storage'
     | '/admin/suggestions'
     | '/posts/$postId'
+    | '/series/$seriesTitle'
     | '/users/$id'
     | '/admin/'
     | '/playlists/'
@@ -368,6 +380,7 @@ export interface RootRouteChildren {
   TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
+  SeriesSeriesTitleRoute: typeof SeriesSeriesTitleRoute
   UsersIdRoute: typeof UsersIdRouteWithChildren
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
@@ -514,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsPostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/series/$seriesTitle': {
+      id: '/series/$seriesTitle'
+      path: '/series/$seriesTitle'
+      fullPath: '/series/$seriesTitle'
+      preLoaderRoute: typeof SeriesSeriesTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users/': {
       id: '/users/'
       path: '/users'
@@ -637,6 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
   PostsPostIdRoute: PostsPostIdRoute,
+  SeriesSeriesTitleRoute: SeriesSeriesTitleRoute,
   UsersIdRoute: UsersIdRouteWithChildren,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
   PostsIndexRoute: PostsIndexRoute,
