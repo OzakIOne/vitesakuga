@@ -9,6 +9,7 @@ import type { PostsPageLayoutProps } from "./PostsPageLayout";
 type PostFiltersProps = {
   sortBy: PostsPageLayoutProps["sortBy"];
   dateRange: PostsPageLayoutProps["dateRange"];
+  discoveryView: PostsPageLayoutProps["discoveryView"];
   fromRoute: PostsPageLayoutProps["fromRoute"];
 };
 
@@ -64,9 +65,19 @@ function FilterButton({
 export function PostFilters({
   sortBy,
   dateRange,
+  discoveryView,
   fromRoute,
 }: PostFiltersProps) {
   const navigate = useNavigate({ from: fromRoute });
+
+  if (discoveryView !== "chronological") {
+    return (
+      <Text color="fg.muted" fontSize="xs">
+        This view controls its own time window and ordering. Search and tag
+        filters still apply.
+      </Text>
+    );
+  }
 
   return (
     <VStack align="stretch" gap={3}>

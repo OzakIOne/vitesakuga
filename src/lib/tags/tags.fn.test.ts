@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
 import {
   makeServiceTestLayer,
@@ -10,12 +11,14 @@ import { TagsService, TagsServiceLive } from "./tags.service";
 
 let db: Kysely<DB>;
 let runEffect: ServiceTestContext<TagsService>["runEffect"];
+let mockGetSession: ServiceTestContext<TagsService>["mockGetSession"];
 let closeCtx: () => Promise<void>;
 
 beforeEach(async () => {
   const ctx = await makeServiceTestLayer(TagsServiceLive);
   db = ctx.db;
   runEffect = ctx.runEffect;
+  mockGetSession = ctx.mockGetSession;
   closeCtx = ctx.close;
 });
 
@@ -103,5 +106,39 @@ describe("TagsService.popular", () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.name).toBe("anime");
     expect(result[0]!.postCount).toBe(1);
+  });
+});
+
+describe("TagsService tag follows", () => {
+  it("reads and updates the signed-in user's follow state", async () => {
+    await db
+      .insertInto("user")
+      .values({
+        email: "follow@test.com",
+        id: "follow-user",
+        name: "Follow User",
+        username: "follow-user",
+      })
+      .execute();
+    await db.insertInto("tags").values({ name: "sakuga" }).execute();
+    mockGetSession.mockResolvedValue(makeAuthSession({ id: "follow-user" }));
+
+    expect(
+      await runEffect(TagsService.getFollowState({ tagName: "sakuga" })),
+    ).toEqual({ followed: false, tagName: "sakuga" });
+
+    await runEffect(
+      TagsService.setFollowed({ followed: true, tagName: "sakuga" }),
+    );
+    expect(
+      await runEffect(TagsService.getFollowState({ tagName: "sakuga" })),
+    ).toEqual({ followed: true, tagName: "sakuga" });
+
+    await runEffect(
+      TagsService.setFollowed({ followed: false, tagName: "sakuga" }),
+    );
+    expect(
+      await runEffect(TagsService.getFollowState({ tagName: "sakuga" })),
+    ).toEqual({ followed: false, tagName: "sakuga" });
   });
 });

@@ -190,6 +190,11 @@ export type DbSchemaSelect = {
   };
   comments: CommentsSelect;
   tags: TagsSelect;
+  tagFollows: {
+    createdAt: Date;
+    tagId: number;
+    userId: string;
+  };
   playlists: Schema.Schema.Type<typeof playlistsSelectSchema>;
   playlistPosts: Schema.Schema.Type<typeof playlistPostsSelectSchema>;
 };
@@ -212,6 +217,11 @@ export type DbSchemaInsert = {
   };
   comments: CommentsInsert;
   tags: TagsInsert;
+  tagFollows: {
+    createdAt?: Date | undefined;
+    tagId: number;
+    userId: string;
+  };
   playlists: Schema.Schema.Type<typeof playlistsInsertSchema>;
   playlistPosts: Schema.Schema.Type<typeof playlistPostsInsertSchema>;
 };

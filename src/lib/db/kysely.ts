@@ -102,6 +102,12 @@ type PostTagsTable = {
   tagId: number;
 };
 
+type TagFollowsTable = {
+  createdAt: Generated<Date>;
+  tagId: number;
+  userId: string;
+};
+
 type PostsTable = {
   id: Generated<number>;
   animeTitle: string | null;
@@ -138,6 +144,17 @@ type PlaylistsTable = {
   title: string;
   updated_at: Generated<Date>;
   user_id: string;
+};
+
+type SavedSearchesTable = {
+  id: Generated<number>;
+  user_id: string;
+  name: string;
+  q: string;
+  tags: string[];
+  sort_by: "newest" | "oldest";
+  date_range: "all" | "today" | "week" | "month";
+  created_at: Generated<Date>;
 };
 
 type PlaylistPostsTable = {
@@ -242,6 +259,8 @@ type NotificationsTable = {
   type:
     | "comment-mention"
     | "edit-suggestion-applied"
+    | "edit-suggestion-approved"
+    | "edit-suggestion-rejected"
     | "promotion-approved"
     | "promotion-rejected";
   // Post the notification links to; null when there is no deep link.
@@ -263,6 +282,7 @@ export type DB = {
   post_reports: PostReportsTable;
   post_images: PostImagesTable;
   post_tags: PostTagsTable;
+  tag_follows: TagFollowsTable;
   points_ledger: PointsLedgerTable;
   posts: PostsTable;
   post_edits: PostEditsTable;
@@ -272,6 +292,7 @@ export type DB = {
   notifications: NotificationsTable;
   tags: TagsTable;
   playlists: PlaylistsTable;
+  saved_searches: SavedSearchesTable;
   playlist_posts: PlaylistPostsTable;
 };
 

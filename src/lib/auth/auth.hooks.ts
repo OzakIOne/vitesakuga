@@ -12,7 +12,7 @@ import {
   TwoFactorRedirectSchema,
 } from "./two-factor.hooks";
 
-export const passkeysKeys = {
+const passkeysKeys = {
   all: ["auth", "passkeys"] as const,
 };
 
@@ -91,14 +91,7 @@ export function useSignUp(redirectUrl: string) {
     }: SignUpInput) => {
       const options: NonNullable<
         Parameters<typeof authClient.signUp.email>[1]
-      > = {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: usersKeys.userInfo,
-          });
-          await navigate({ to: redirectUrl });
-        },
-      };
+      > = {};
       if (captchaToken) {
         options.headers = { "x-captcha-response": captchaToken };
       }
@@ -112,6 +105,55 @@ export function useSignUp(redirectUrl: string) {
         throw new Error(error.message || "Failed to sign up");
       }
       return data;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: usersKeys.userInfo,
+      });
+      if (data?.user?.emailVerified) {
+        await navigate({ to: redirectUrl });
+      }
+    },
+  });
+}
+
+export function useVerifyEmail(redirectUrl: string) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const authClient = useContext(AuthClientContext);
+
+  return useMutation({
+    mutationFn: async ({ email, otp }: { email: string; otp: string }) => {
+      const { data, error } = await authClient.emailOtp.verifyEmail({
+        email,
+        otp,
+      });
+      if (error) {
+        throw new Error(error.message || "Failed to verify email");
+      }
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: usersKeys.userInfo,
+      });
+      await navigate({ to: redirectUrl });
+    },
+  });
+}
+
+export function useResendEmailVerification() {
+  const authClient = useContext(AuthClientContext);
+
+  return useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      const { error } = await authClient.emailOtp.sendVerificationOtp({
+        email,
+        type: "email-verification",
+      });
+      if (error) {
+        throw new Error(error.message || "Failed to resend verification code");
+      }
     },
   });
 }

@@ -18,11 +18,14 @@ export const postsKeys = {
     tags,
     sortBy,
     dateRange,
+    randomSeed,
+    view,
+  }: PostsSearchParams) =>
   }: PostsSearchParams) =>
     [
       ...postsKeys.all,
       "searchInfinite",
-      { q, seriesTitle, tags, sortBy, dateRange },
+      { dateRange, q, randomSeed, seriesTitle, sortBy, tags, view },
     ] as const,
 } as const;
 
