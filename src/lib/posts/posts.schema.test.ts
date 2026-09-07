@@ -53,8 +53,10 @@ describe("searchPostsBaseSchema", () => {
       dateRange: "all",
       page: 0,
       q: "",
+      randomSeed: 0,
       sortBy: "newest",
       tags: [],
+      view: "chronological",
     });
   });
 
@@ -63,8 +65,10 @@ describe("searchPostsBaseSchema", () => {
       dateRange: "month",
       page: 2,
       q: "qwe",
+      randomSeed: 123,
       sortBy: "oldest",
       tags: ["anime", "action"],
+      view: "trending",
     };
     const result = parseStrict(searchPostsBaseSchema)(input);
     expect(result).toStrictEqual(input);
@@ -77,6 +81,12 @@ describe("searchPostsBaseSchema", () => {
   it("should throw on invalid sortBy option", () => {
     expect(() =>
       parseStrict(searchPostsBaseSchema)({ sortBy: "random" }),
+    ).toThrow();
+  });
+
+  it("should throw on invalid discovery view", () => {
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({ view: "popular" }),
     ).toThrow();
   });
 

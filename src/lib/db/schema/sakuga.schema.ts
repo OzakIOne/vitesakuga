@@ -38,6 +38,26 @@ export const postTags = pgTable(
   (t) => [primaryKey({ columns: [t.postId, t.tagId] })],
 );
 
+// Explicit opt-in preferences for the "new from followed tags" discovery
+// view. The feed remains chronological unless a user chooses a discovery
+// view; following a tag never changes the default feed.
+export const tagFollows = pgTable(
+  "tag_follows",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    tagId: integer()
+      .references(() => tags.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.tagId] }),
+    index("tag_follows_user_idx").on(t.userId, t.createdAt),
+  ],
+);
+
 export const posts = pgTable("posts", {
   animeTitle: text(),
   chapterNumber: integer(),

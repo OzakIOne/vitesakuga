@@ -21,7 +21,7 @@ Inventaire des fonctionnalités visibles de ViteSakuga (clone de Sakugabooru), v
 | Fonctionnalité              | Description                                                                                                                                                            | Fichiers clés                                                                                                                                                          |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Accueil**                 | Recherche globale et tags populaires                                                                                                                                   | `src/routes/index.tsx`, `src/components/SearchBox.tsx`, `src/components/PopularTagsSection.tsx`                                                                        |
-| **Fil de posts**            | Grille virtualisée avec scroll infini bidirectionnel, tri, filtres de date, tags, recherche plein texte et filtres numériques avancés, pagination synchronisée à l'URL | `src/routes/posts/index.tsx`, `src/components/VirtualPostsGrid.tsx`, `src/components/PostFilters.tsx`, `src/components/Pagination.tsx`, `src/lib/posts/posts.hooks.ts` |
+| **Fil de posts**            | Grille virtualisée avec scroll infini bidirectionnel, fil chronologique stable par défaut, vues de découverte opt-in, tri, filtres de date, tags, recherche plein texte et filtres numériques avancés, pagination synchronisée à l'URL | `src/routes/posts/index.tsx`, `src/components/VirtualPostsGrid.tsx`, `src/components/PostFilters.tsx`, `src/components/DiscoveryViewSelector.tsx`, `src/lib/posts/posts.hooks.ts` |
 | **Recherches sauvegardées** | Les membres connectés peuvent nommer la recherche courante (texte, tags, tri et période), la réappliquer depuis le champ de recherche ou la supprimer                  | `src/components/SavedSearchDialogs.tsx`, `src/lib/saved-searches/*`, migration `drizzle/20260907194313_curious_wild_pack/migration.sql`                                |
 | **Page de tag**             | Posts d'un tag avec les filtres du feed                                                                                                                                | `src/routes/posts/tags/$tag.tsx`                                                                                                                                       |
 | **Détail d'un post**        | Lecteur vidéo ou galerie d'images avec vignettes, navigation clavier et lightbox, métadonnées, post lié, tags, votes, commentaires, édition propriétaire et signalement | `src/routes/posts/$postId.tsx`, `src/components/PostImageGallery.tsx`, `src/components/PostDetail/PostDetailDisplay.tsx` |
@@ -48,6 +48,12 @@ Les qualificatifs peuvent être combinés avec du texte libre (`action width:>10
 
 Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.service.ts`, `src/components/SearchBox.tsx`, `src/lib/upload/useUploadForm.ts`, migration `drizzle/20260906190600_brown_caretaker/migration.sql`.
 
+### Vues de découverte opt-in
+
+Le fil chronologique reste le défaut stable. Depuis le panneau « Browse intentionally », l'utilisateur peut choisir `Trending`, `Most liked this week`, `New from followed tags`, `Under-seen gems` ou `Random study queue`. Chaque vue affiche sa fenêtre temporelle et les signaux de classement : les expérimentations utilisent l'activité de votes ou un ordre aléatoire reproductible, jamais les points comme proxy de qualité. Elles ne constituent pas une décision de modération.
+
+Les tags peuvent être suivis depuis leur page. `New from followed tags` montre alors les posts des 14 derniers jours portant au moins un tag suivi. Le choix est authentifié et n'altère pas le fil chronologique.
+
 ## Upload & création de contenu
 
 ### Upload de post (`/upload`, authentification requise)
@@ -70,6 +76,8 @@ Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.se
 ## Interaction communautaire
 
 - **Votes** : like/dislike sur les posts, un vote par utilisateur ; playlist « Liked posts » dérivée des likes — `src/lib/votes/*`, `src/routes/account_.playlists.liked.tsx`.
+- **Découverte intentionnelle** : vues opt-in `Trending`, `Most liked this week`, `New from followed tags`, `Under-seen gems` et `Random study queue`, avec fenêtre et signaux affichés — `src/lib/posts/discovery.ts`, `src/lib/posts/posts.service.ts`, `src/components/DiscoverySummary.tsx`.
+- **Tags suivis** : suivi/désabonnement authentifié depuis une page de tag, utilisé uniquement par la vue « New from followed tags » — `src/lib/tags/tags.service.ts`, `src/components/TagFollowButton.tsx`.
 - **Commentaires** : ajout/édition/suppression (propriétaire ou staff), sanitization serveur et mentions `@pseudo` avec autocomplétion — `src/lib/comments/*`, `src/lib/mentions/*`, `src/lib/sanitize.server.ts`.
 - **Playlists** : CRUD, visibilité publique/privée, ajout/retrait unitaire et en masse, réordonnancement souris/clavier — `src/lib/playlists/*`, `src/components/PlaylistPostsTable.tsx`.
 - **Recherches sauvegardées** : snapshots privés des paramètres de recherche pour les utilisateurs connectés ; application et suppression depuis le champ de recherche — `src/lib/saved-searches/*`, `src/components/SavedSearchDialogs.tsx`.
@@ -123,7 +131,7 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 - **Comments** : fetch, ajout, édition, suppression — `src/lib/comments/comments.service.ts`
 - **Votes** : fetch, set/remove, posts aimés — `src/lib/votes/votes.service.ts`
 - **Playlists** : CRUD, ajout/retrait unitaire et en masse, détail, liste publique, réordonnancement — `src/lib/playlists/playlists.service.ts`
-- **Tags / Users** : tags, utilisateurs, posts d'un utilisateur, utilisateurs mentionnables — `src/lib/tags/*`, `src/lib/users/*`
+- **Tags / Users** : tags, suivi authentifié des tags, utilisateurs, posts d'un utilisateur, utilisateurs mentionnables — `src/lib/tags/*`, `src/lib/users/*`
 - **Reports / Post-edits** : signaler, proposer, approuver, rejeter, lister les suggestions — `src/lib/reports/*`, `src/lib/post-edits/*`
 - **Promotions / Modération** : file de promotion, décisions, aperçu modération, attribution de rôle — `src/lib/promotions/*`, `src/lib/moderation/*`
 - **Notifications** : lister et marquer comme lu — `src/lib/notifications/notifications.service.ts`
@@ -152,4 +160,4 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 `src/lib/db/schema/auth.schema.ts` : `user` (rôle, username unique, twoFactorEnabled, deletedAt), `session`, `account`, `verification`, `passkey`, `twoFactor`, `rateLimit`. Les codes email temporaires sont stockés dans `verification` par Better Auth.
 
-`src/lib/db/schema/sakuga.schema.ts` : `tags`, `post_tags`, `posts`, `post_images`, `post_votes`, `post_reports`, `playlists`, `playlist_posts`, `saved_searches`, `comments`, `comment_mentions`, `points_ledger`, `promotion_reviews`, `notifications`, `post_edits`, `post_edit_approvals`, `video_revisions`.
+`src/lib/db/schema/sakuga.schema.ts` : `tags`, `post_tags`, `tag_follows`, `posts`, `post_images`, `post_votes`, `post_reports`, `playlists`, `playlist_posts`, `saved_searches`, `comments`, `comment_mentions`, `points_ledger`, `promotion_reviews`, `notifications`, `post_edits`, `post_edit_approvals`, `video_revisions`.

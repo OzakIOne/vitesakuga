@@ -23,7 +23,7 @@ This document outlines the conventions and best practices for database interacti
 - Barrel re-export from `src/lib/db/schema/index.ts`
 - Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
-- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, and `videoRevisions`
+- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `tagFollows`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, and `videoRevisions`
 
 ## Effect Layer Pattern
 
