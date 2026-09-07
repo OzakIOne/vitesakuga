@@ -26,7 +26,7 @@ Vitesakuga has not launched and has no production users or production data. Revi
 ### General Commands
 
 - build: `APP_ENV=production NODE_ENV=production vite build --mode production` (prod stage)
-- build:dev: `APP_ENV=development NODE_ENV=production vite build --mode development` (dev stage; `APP_ENV` picks `.env` for nub, `NODE_ENV` keeps React's production runtime; `build:staging` is a deprecated alias)
+- build:dev: `APP_ENV=development NODE_ENV=production vite build --mode development` (dev stage; `APP_ENV` picks `.env` for nub, `NODE_ENV` keeps React's production runtime)
 - db: drizzle-kit
 - db:dev / db:local / db:prod: drizzle-kit pinned to the stage (`STAGE=dev|local|prod`)
 - dev: `APP_ENV=development NODE_ENV=development vite dev --mode development --host` (dev stage)

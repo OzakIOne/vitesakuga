@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import { Data, Duration, Effect, Schedule } from "effect";
 
+import { ensureTestBucket } from "./test-bucket";
+
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RUSTFS_ENDPOINT = "http://localhost:9000";
 const RUSTFS_ACCESS_KEY = "rustfsadmin";
@@ -70,11 +72,9 @@ const startRustFS = Effect.gen(function* () {
 });
 
 const createBucket = Effect.gen(function* () {
-  const { S3Client, CreateBucketCommand } = yield* Effect.tryPromise({
-    try: () => import("@aws-sdk/client-s3"),
-    catch: () => new Error("Failed to import AWS SDK"),
-  });
-
+  const { S3Client } = yield* Effect.promise(
+    () => import("@aws-sdk/client-s3"),
+  );
   const client = new S3Client({
     endpoint: RUSTFS_ENDPOINT,
     region: "us-east-1",
@@ -84,12 +84,9 @@ const createBucket = Effect.gen(function* () {
     },
     forcePathStyle: true,
   });
-
-  yield* Effect.tryPromise({
-    try: () => client.send(new CreateBucketCommand({ Bucket: BUCKET })),
-    catch: () => new Error("Bucket creation failed"),
-  }).pipe(Effect.catch(() => Effect.log("Bucket already exists or created")));
-
+  yield* ensureTestBucket(client, BUCKET).pipe(
+    Effect.ensuring(Effect.sync(() => client.destroy())),
+  );
   yield* Effect.log(`Bucket "${BUCKET}" ready`);
 });
 

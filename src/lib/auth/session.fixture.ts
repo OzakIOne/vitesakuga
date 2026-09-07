@@ -1,6 +1,4 @@
 // oxlint-disable effecttsgo/global-date -- test fixtures must mirror Better Auth's Date-typed session/user rows
-import type { Session } from "better-auth";
-
 import type { AuthSession, AuthenticatedUser } from "./session.effect";
 
 /**
@@ -52,7 +50,7 @@ export const makeSessionUser = (
  */
 export const makeAuthSession = (
   userOverrides: Partial<SessionUserFixture> = {},
-  sessionOverrides: Partial<Session> = {},
+  sessionOverrides: Partial<AuthSession["session"]> = {},
 ): AuthSession => {
   const user = makeSessionUser(userOverrides);
   return {

@@ -1,9 +1,13 @@
-import type { Session } from "better-auth";
-import type { UserWithTwoFactor } from "better-auth/plugins";
 import { Config, Context, DateTime, Effect, Layer, Schema } from "effect";
 
 import { UnauthorizedError } from "../errors";
-import { AuthService, RequestHeadersService } from "./context";
+import {
+  AuthProviderError,
+  AuthService,
+  RequestHeadersService,
+} from "./context";
+import type { AuthSession, AuthenticatedUser } from "./types";
+export type { AuthSession, AuthenticatedUser } from "./types";
 
 /** Reads the e2e bypass cookie value out of a raw `Cookie` header. */
 const E2E_BYPASS_COOKIE_PATTERN = /(?:^|;\s*)e2e-test-auth=([^;\s]+)/;
@@ -44,13 +48,6 @@ export class SessionFetchError extends Schema.TaggedError<SessionFetchError>()(
  * account by the username generator; the stock `UserWithTwoFactor` shape
  * does not surface the plugin field, hence the explicit intersection).
  */
-export type AuthenticatedUser = UserWithTwoFactor & { username: string };
-
-export type AuthSession = {
-  session: Session;
-  user: AuthenticatedUser;
-};
-
 export type SessionUser = AuthenticatedUser | null;
 
 /**
@@ -157,18 +154,21 @@ export class SessionService extends Context.Service<
       // SAFETY: the cast only widens Better Auth's inferred session user
       // with `username`, which the DB guarantees (NOT NULL, written at
       // sign-up by the username plugin/generator hook).
-      const session = (yield* Effect.tryPromise({
-        try: () =>
-          authSvc.api.getSession({
-            headers,
-            query: { disableCookieCache: true },
-          }),
-        catch: (error) =>
-          new SessionFetchError({
-            message: "Failed to get session",
-            cause: error,
-          }),
-      })) as AuthSession | null;
+      const session = yield* authSvc
+        .getSession({
+          headers,
+          query: { disableCookieCache: true },
+        })
+        .pipe(
+          Effect.catchTag("AuthProviderError", (error: AuthProviderError) =>
+            Effect.fail(
+              new SessionFetchError({
+                message: "Failed to get session",
+                cause: error.cause,
+              }),
+            ),
+          ),
+        );
 
       if (session?.user) {
         yield* Effect.logInfo("Session retrieved").pipe(

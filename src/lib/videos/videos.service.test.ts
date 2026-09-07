@@ -481,12 +481,23 @@ describe("VideosService.gc", () => {
       replacedBy: "author-7",
       videoKey: purgeTargetKey,
     });
+    const keptKey = await ctx.runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        const { key } = yield* storage.uploadVideo(
+          "gc-kept",
+          new File(["retained bytes"], "kept.mp4", { type: "video/mp4" }),
+        );
+        return key;
+      }),
+    );
+    ownedKeys.push(keptKey);
     const reportedId = await insertVideoPost(db, "author-7", "videos/x/r.mp4");
     await seedRevision(db, {
       ageDays: REVISION_RETENTION_DAYS + 2,
       postId: reportedId,
       replacedBy: "author-7",
-      videoKey: "videos/kept/reported.mp4",
+      videoKey: keptKey,
     });
     await db
       .insertInto("post_reports")
@@ -536,12 +547,17 @@ describe("VideosService.gc", () => {
       expect(head.operation).toBe("head");
     }
 
+    const kept = await ctx.runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        return yield* storage.headFile(keptKey);
+      }),
+    );
+    expect(kept.contentLength).toBe("retained bytes".length);
     const remaining = await db
       .selectFrom("video_revisions")
       .selectAll()
       .execute();
-    expect(remaining.map((r) => r.videoKey)).toEqual([
-      "videos/kept/reported.mp4",
-    ]);
+    expect(remaining.map((r) => r.videoKey)).toEqual([keptKey]);
   });
 });

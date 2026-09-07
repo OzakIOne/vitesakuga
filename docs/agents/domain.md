@@ -1,13 +1,15 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+How engineering skills consume this repository's domain documentation when exploring the codebase.
+
+This repository currently uses `CONTEXT.md` as its glossary and has no checked-in `docs/adr/` directory.
 
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root.
-- **`docs/adr/`** — read ADRs that touch the area you're about to work in.
+- **`docs/adr/`** — read ADRs that touch the area you're about to work in, when this directory exists.
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The producer skill (`/grill-with-docs`) creates them lazily when terms or decisions actually get resolved.
+If a referenced document does not exist, proceed silently. Do not suggest creating it upfront; add domain documentation only when a real decision or glossary gap requires it.
 
 ## File structure
 
@@ -16,9 +18,6 @@ Single-context repo:
 ```
 /
 ├── CONTEXT.md
-├── docs/adr/
-│   ├── 0001-event-sourced-orders.md
-│   └── 0002-postgres-for-write-model.md
 └── src/
 ```
 

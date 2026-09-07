@@ -9,7 +9,7 @@ import {
 import { UsersService, UsersServiceLive } from "./users.service";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
+let runEffect: ServiceTestContext<UsersService>["runEffect"];
 let closeCtx: () => Promise<void>;
 
 beforeEach(async () => {

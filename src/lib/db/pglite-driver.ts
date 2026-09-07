@@ -41,6 +41,8 @@ class PGliteConnection implements DatabaseConnection {
 class PGliteDriver implements Driver {
   #pg: PGlite;
   #connection: PGliteConnection | null = null;
+  #available: Promise<void> = Promise.resolve();
+  #release: (() => void) | undefined;
 
   constructor(pg: PGlite) {
     this.#pg = pg;
@@ -49,6 +51,13 @@ class PGliteDriver implements Driver {
   async init(): Promise<void> {}
 
   async acquireConnection(): Promise<DatabaseConnection> {
+    // A transaction owns the single connection until commit/rollback. Other
+    // queries must wait rather than accidentally joining its transaction.
+    const previous = this.#available;
+    const next = Promise.withResolvers<void>();
+    this.#available = next.promise;
+    await previous;
+    this.#release = next.resolve;
     if (!this.#connection) {
       this.#connection = new PGliteConnection(this.#pg);
     }
@@ -72,7 +81,8 @@ class PGliteDriver implements Driver {
   }
 
   async releaseConnection(_connection: DatabaseConnection): Promise<void> {
-    // PGlite is single-connection; no-op
+    this.#release?.();
+    this.#release = undefined;
   }
 
   async destroy(): Promise<void> {

@@ -14,7 +14,7 @@ import {
 import { makeAuthSession } from "./session.fixture";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
+let runEffect: ServiceTestContext<DeleteAccountService>["runEffect"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 

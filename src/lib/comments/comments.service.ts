@@ -391,24 +391,26 @@ export class CommentsService extends Context.Service<
           .where("id", "=", data.commentId),
       );
 
-      const previousMentionedUserIds = yield* db.execute(
-        db
-          .selectFrom("comment_mentions")
-          .select("userId")
-          .where("commentId", "=", data.commentId),
-      );
-      yield* db.execute(
-        db
-          .deleteFrom("comment_mentions")
-          .where("commentId", "=", data.commentId),
-      );
-      yield* applyMentions({
-        commentId: data.commentId,
-        postId: asPostId(comment.postId),
-        userIds: canonical.mentionUserIds.slice(0, MAX_MENTIONS_PER_COMMENT),
-        previousMentionedUserIds: previousMentionedUserIds.map(
-          (row) => row.userId,
-        ),
+      yield* Effect.gen(function* () {
+        const previousMentionedUserIds = yield* db.execute(
+          db
+            .selectFrom("comment_mentions")
+            .select("userId")
+            .where("commentId", "=", data.commentId),
+        );
+        yield* db.execute(
+          db
+            .deleteFrom("comment_mentions")
+            .where("commentId", "=", data.commentId),
+        );
+        yield* applyMentions({
+          commentId: data.commentId,
+          postId: asPostId(comment.postId),
+          userIds: canonical.mentionUserIds.slice(0, MAX_MENTIONS_PER_COMMENT),
+          previousMentionedUserIds: previousMentionedUserIds.map(
+            (row) => row.userId,
+          ),
+        });
       }).pipe(
         Effect.catchTag("SqlError", (error) =>
           Effect.logError("Failed to apply comment mentions").pipe(

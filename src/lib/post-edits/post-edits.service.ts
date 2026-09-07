@@ -4,9 +4,15 @@ import { Context, DateTime, Effect, Layer, Option } from "effect";
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { isStaffRole } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
+import type { AuthenticatedUser } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import type { DB } from "../db/kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
+import {
+  type EffectTransition,
+  SqlError,
+  SqlNoFirstResult,
+} from "../effect/effect.utils";
 import { parseStrict } from "../effect/schema.utils";
 import {
   EditAlreadyResolvedError,
@@ -135,17 +141,23 @@ export class PostEditsService extends Context.Service<
         ),
       );
 
-    const loadPostOwner = (postId: number) =>
-      db.executeTakeFirstOption(
-        db
+    const loadPostOwner = (
+      postId: number,
+      executor: Pick<
+        EffectTransition<DB>,
+        "executeTakeFirstOption" | "selectFrom"
+      > = db,
+    ) =>
+      executor.executeTakeFirstOption(
+        executor
           .selectFrom("posts")
           .select(["id", "userId"])
           .where("id", "=", postId),
       );
 
-    const loadEdit = (editId: number) =>
-      db.executeTakeFirstOption(
-        db
+    const loadEdit = (editId: number, trx: EffectTransition<DB>) =>
+      trx.executeTakeFirstOption(
+        trx
           .selectFrom("post_edits")
           .select([
             "createdAt",
@@ -155,12 +167,16 @@ export class PostEditsService extends Context.Service<
             "status",
             "suggestedBy",
           ])
-          .where("id", "=", editId),
+          .where("id", "=", editId)
+          .forUpdate(),
       );
 
-    const approvalsFor = (editId: number) =>
-      db.execute(
-        db
+    const approvalsFor = (
+      editId: number,
+      executor: Pick<EffectTransition<DB>, "execute" | "selectFrom"> = db,
+    ) =>
+      executor.execute(
+        executor
           .selectFrom("post_edit_approvals")
           .select("userId")
           .where("editId", "=", editId)
@@ -173,12 +189,15 @@ export class PostEditsService extends Context.Service<
      * Suggesters never may — resolving your own suggestion would bypass
      * peer review entirely.
      */
-    const resolveDecisionContext = (editId: number) =>
+    const resolveDecisionContext = (
+      editId: number,
+      user: AuthenticatedUser,
+      trx: EffectTransition<DB>,
+    ) =>
       Effect.gen(function* () {
-        const user = yield* requireSignedIn();
         const role = getUserRole(user);
 
-        const editOption = yield* loadEdit(editId);
+        const editOption = yield* loadEdit(editId, trx);
         if (Option.isNone(editOption)) {
           return yield* new EditNotFoundError({
             editId,
@@ -193,7 +212,7 @@ export class PostEditsService extends Context.Service<
           });
         }
 
-        const postOption = yield* loadPostOwner(edit.postId);
+        const postOption = yield* loadPostOwner(edit.postId, trx);
         if (Option.isNone(postOption)) {
           return yield* new PostNotFoundError({
             message: `Post ${edit.postId} not found`,
@@ -284,75 +303,90 @@ export class PostEditsService extends Context.Service<
     const approve = Effect.fn("PostEditsService.approve")(function* (
       editId: number,
     ) {
-      const context = yield* resolveDecisionContext(editId);
+      const user = yield* requireSignedIn();
+      // Lock before reading status or votes; approve and reject serialize on
+      // the same suggestion. Content and decision commit together.
+      const decision = yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          const context = yield* resolveDecisionContext(editId, user, trx);
 
-      let stillNeeded = 0;
-      if (!context.isInstantDecider) {
-        const existing = yield* approvalsFor(editId);
-        const otherVotes = existing.filter(
-          (row) =>
-            row.userId !== context.userId &&
-            row.userId !== context.edit.suggestedBy,
-        ).length;
-        stillNeeded = Math.max(0, REQUIRED_VOTES - 1 - otherVotes);
-      }
+          let stillNeeded = 0;
+          if (!context.isInstantDecider) {
+            const existing = yield* approvalsFor(editId, trx);
+            const otherVotes = existing.filter(
+              (row) =>
+                row.userId !== context.userId &&
+                row.userId !== context.edit.suggestedBy,
+            ).length;
+            stillNeeded = Math.max(0, REQUIRED_VOTES - 1 - otherVotes);
+          }
 
-      // Record this vote; repeat clicks are no-ops via the composite PK.
-      yield* db.execute(
-        db
-          .insertInto("post_edit_approvals")
-          .values({ editId, userId: context.userId })
-          .onConflict((oc) => oc.columns(["editId", "userId"]).doNothing()),
+          // Record this vote; repeat clicks are no-ops via the composite PK.
+          yield* trx.execute(
+            trx
+              .insertInto("post_edit_approvals")
+              .values({ editId, userId: context.userId })
+              .onConflict((oc) => oc.columns(["editId", "userId"]).doNothing()),
+          );
+
+          if (stillNeeded > 0) {
+            yield* Effect.logInfo("Edit suggestion vote recorded").pipe(
+              Effect.annotateLogs({
+                approvedBy: context.userId,
+                editId: String(editId),
+                votesStillNeeded: String(stillNeeded),
+              }),
+            );
+            return { applied: false as const, context };
+          }
+
+          // Apply the patch built strictly from the defined payload fields.
+          const decoded = decodePostEditPayload(context.edit.payload);
+          const patch: {
+            -readonly [K in keyof PostEditPayload]+?: PostEditPayload[K];
+          } = {};
+          // The generic keeps key and value correlated, so each write is checked
+          // against its own field type instead of the whole value union.
+          const copyIfDefined = <K extends keyof PostEditPayload>(
+            key: K,
+            source: PostEditPayload,
+            target: {
+              -readonly [L in keyof PostEditPayload]+?: PostEditPayload[L];
+            },
+          ): void => {
+            const value = source[key];
+            if (value !== undefined) {
+              target[key] = value;
+            }
+          };
+          for (const key of PAYLOAD_KEYS) {
+            copyIfDefined(key, decoded, patch);
+          }
+          const now = yield* DateTime.now;
+          const resolvedAt = DateTime.toDate(now);
+          yield* trx.execute(
+            trx
+              .updateTable("posts")
+              .set(patch)
+              .where("id", "=", context.edit.postId),
+          );
+          yield* trx.execute(
+            trx
+              .updateTable("post_edits")
+              .set({
+                resolvedAt,
+                resolvedBy: context.userId,
+                status: "approved",
+              })
+              .where("id", "=", editId)
+              .where("status", "=", "pending"),
+          );
+
+          return { applied: true as const, context };
+        }),
       );
-
-      if (stillNeeded > 0) {
-        yield* Effect.logInfo("Edit suggestion vote recorded").pipe(
-          Effect.annotateLogs({
-            approvedBy: context.userId,
-            editId: String(editId),
-            votesStillNeeded: String(stillNeeded),
-          }),
-        );
-        return { applied: false as const };
-      }
-
-      // Apply the patch built strictly from the defined payload fields.
-      const decoded = decodePostEditPayload(context.edit.payload);
-      const patch: {
-        -readonly [K in keyof PostEditPayload]+?: PostEditPayload[K];
-      } = {};
-      // The generic keeps key and value correlated, so each write is checked
-      // against its own field type instead of the whole value union.
-      const copyIfDefined = <K extends keyof PostEditPayload>(
-        key: K,
-        source: PostEditPayload,
-        target: {
-          -readonly [L in keyof PostEditPayload]+?: PostEditPayload[L];
-        },
-      ): void => {
-        const value = source[key];
-        if (value !== undefined) {
-          target[key] = value;
-        }
-      };
-      for (const key of PAYLOAD_KEYS) {
-        copyIfDefined(key, decoded, patch);
-      }
-      const now = yield* DateTime.now;
-      const resolvedAt = DateTime.toDate(now);
-      yield* db.execute(
-        db
-          .updateTable("posts")
-          .set(patch)
-          .where("id", "=", context.edit.postId),
-      );
-      yield* db.execute(
-        db
-          .updateTable("post_edits")
-          .set({ resolvedAt, resolvedBy: context.userId, status: "approved" })
-          .where("id", "=", editId)
-          .where("status", "=", "pending"),
-      );
+      if (!decision.applied) return { applied: false as const };
+      const { context } = decision;
 
       // The suggester earns their reward exactly once per applied edit
       // (ledger dedupe on suggester × action × editId), daily-capped to
@@ -380,25 +414,30 @@ export class PostEditsService extends Context.Service<
     const reject = Effect.fn("PostEditsService.reject")(function* (
       editId: number,
     ) {
-      const context = yield* resolveDecisionContext(editId);
-      if (!context.isStaffOrOwner) {
-        return yield* new ForbiddenError({
-          message: "Only staff or the post owner can reject a suggestion.",
-        });
-      }
-      const now = yield* DateTime.now;
-      yield* db.execute(
-        db
-          .updateTable("post_edits")
-          .set({
-            resolvedAt: DateTime.toDate(now),
-            resolvedBy: context.userId,
-            status: "rejected",
-          })
-          .where("id", "=", editId)
-          .where("status", "=", "pending"),
+      const user = yield* requireSignedIn();
+      return yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          const context = yield* resolveDecisionContext(editId, user, trx);
+          if (!context.isStaffOrOwner) {
+            return yield* new ForbiddenError({
+              message: "Only staff or the post owner can reject a suggestion.",
+            });
+          }
+          const now = yield* DateTime.now;
+          yield* trx.execute(
+            trx
+              .updateTable("post_edits")
+              .set({
+                resolvedAt: DateTime.toDate(now),
+                resolvedBy: context.userId,
+                status: "rejected",
+              })
+              .where("id", "=", editId)
+              .where("status", "=", "pending"),
+          );
+          return { rejected: true as const };
+        }),
       );
-      return { rejected: true as const };
     });
 
     const listPendingForPost = Effect.fn("PostEditsService.listPendingForPost")(

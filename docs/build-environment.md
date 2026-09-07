@@ -23,6 +23,8 @@ Controls **build-time behavior of Vite itself**.
 | **`import.meta.env.MODE`**  | Baked string literal available in code — `import.meta.env.DEV` / `import.meta.env.PROD` derived from it |
 | **Conditional code blocks** | `if (import.meta.env.MODE !== "production")` — strip or keep based on mode                              |
 
+In this repository, `APP_ENV` is the stage selector used by Nub and Nitro before Vite runs. It maps `development`/`dev` to `.env`, `test`/`local` to `.env.test`, and `production`/`prod` to `.env.production`. `--mode` still controls Vite's own mode and `import.meta.env.MODE`; it is not a replacement for `APP_ENV`.
+
 It does **not** change `NODE_ENV`. They are independent.
 
 ## Relationship
@@ -61,8 +63,8 @@ pins both explicitly:
 
 So `build:dev` no longer needs a wrapper script — the two variables are
 decoupled, and "production React runtime + dev stage's client env" is expressed
-directly on the script line. (`build:staging` is a deprecated alias for
-`build:dev` — the stage is called `dev`, not `staging`.)
+directly on the script line. The supported script name is `build:dev`; the
+stage is called `dev`, not `staging`.
 
 ### Footgun: never set `NODE_ENV=development` for a deployable build
 
@@ -75,7 +77,11 @@ TanStack Start serializes as the generic
 `{"status":500,"unhandled":true,"message":"HTTPError"}` payload.
 
 The pre-deploy guard `scripts/check-prod-build.mjs` scans the built SSR chunks
-for dev-JSX-runtime usage. `infra:deploy` / `infra:deploy:prod` now build the
+for dev-JSX-runtime usage. `infra:deploy` / `infra:deploy:prod` build the
 correct stage first (`build:dev` / `build`) and then run the guard, so an
 out-of-date or poisoned bundle can't reach Cloudflare; the guard remains as
 belt-and-braces for direct `alchemy deploy` invocations.
+
+The e2e bypass is separately gated by `DATABASE_DRIVER=e2e` and non-production
+`NODE_ENV`; it is configured only by `e2e/playwright.config.ts`, not by a
+client-facing `VITE_E2E_MODE` flag.

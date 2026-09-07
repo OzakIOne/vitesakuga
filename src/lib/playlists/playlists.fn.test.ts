@@ -14,8 +14,8 @@ import { bulkAddPostsToPlaylistInputSchema } from "./playlists.schema";
 import { PlaylistsService, PlaylistsServiceLive } from "./playlists.service";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
-let runFailure: ServiceTestContext["runFailure"];
+let runEffect: ServiceTestContext<PlaylistsService>["runEffect"];
+let runFailure: ServiceTestContext<PlaylistsService>["runFailure"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 

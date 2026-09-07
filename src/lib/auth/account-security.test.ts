@@ -13,8 +13,8 @@ import {
 import { makeAuthSession } from "./session.fixture";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
-let runFailure: ServiceTestContext["runFailure"];
+let runEffect: ServiceTestContext<AccountSecurityService>["runEffect"];
+let runFailure: ServiceTestContext<AccountSecurityService>["runFailure"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 

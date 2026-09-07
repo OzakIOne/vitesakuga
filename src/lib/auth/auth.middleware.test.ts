@@ -1,7 +1,11 @@
 import { Effect, Layer } from "effect";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { AuthService, RequestHeadersService } from "../auth/context";
+import {
+  AuthService,
+  makeAuthService,
+  RequestHeadersService,
+} from "../auth/context";
 import type { AuthSessionProvider } from "../auth/context";
 import { SessionService, SessionServiceLive } from "./session.effect";
 import { makeAuthSession, makeSessionUser } from "./session.fixture";
@@ -20,9 +24,9 @@ beforeEach(() => {
   testLayer = SessionServiceLive.pipe(
     Layer.provide(
       Layer.mergeAll(
-        Layer.succeed(AuthService)({
-          api: { getSession: mockGetSession },
-        }),
+        Layer.succeed(AuthService)(
+          makeAuthService({ api: { getSession: mockGetSession } }),
+        ),
         Layer.succeed(RequestHeadersService)(mockGetHeaders),
       ),
     ),

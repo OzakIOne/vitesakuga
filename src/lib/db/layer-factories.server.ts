@@ -1,11 +1,11 @@
 // oxlint-disable effecttsgo/async-function -- this module's whole contract is Promise-returning: `baseLayerFactories`/`resolveMiddlewareLayer` in server-fn.handler.ts consume makeDBLayer/makeAuthLayer/makeMiddlewareLayer via `.then((m) => m.makeX())`, and `toAuthSessionProvider.getSession` implements `AuthSessionProvider`, which returns a Promise; converting any of these to Effect would ripple through the handler contract
-import type { UserWithTwoFactor } from "better-auth/plugins";
 import { Layer } from "effect";
 
+import { makeBetterAuthSessionProvider } from "../auth/better-auth.adapter.server";
 import {
   AuthService,
   RequestHeadersService,
-  type AuthSessionProvider,
+  makeAuthService,
 } from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
 import { makeFromKysely } from "../effect/effect.utils";
@@ -27,7 +27,9 @@ const makeSessionLayer = (
   SessionServiceLive.pipe(
     Layer.provide(
       Layer.mergeAll(
-        Layer.succeed(AuthService)(toAuthSessionProvider(auth)),
+        Layer.succeed(AuthService)(
+          makeAuthService(makeBetterAuthSessionProvider(auth)),
+        ),
         Layer.succeed(RequestHeadersService)(getRequestHeaders),
       ),
     ),
@@ -39,37 +41,6 @@ const makeSessionLayer = (
 const isPglite = envInfra.databaseDriver === "pglite";
 
 type AuthInstance = typeof import("../auth").auth;
-
-/**
- * Adapt the better-auth instance to the Effect `AuthService` contract.
- *
- * The two-factor plugin adds `twoFactorEnabled` to the returned session user
- * at runtime, but better-auth's `getSession` typing in 1.7.0-rc.4 does not
- * carry plugin `additionalFields` on the user model. The explicit
- * `asResponse`/`returnHeaders` flags select the object-returning overload.
- */
-const toAuthSessionProvider = (auth: AuthInstance): AuthSessionProvider => ({
-  api: {
-    getSession: async (args) => {
-      const result = await auth.api.getSession({
-        headers: args.headers,
-        query: args.query,
-        asResponse: false,
-        returnHeaders: false,
-      });
-      if (!result) return null;
-      // SAFETY: plugins add `twoFactorEnabled` and this app adds `role` to
-      // the returned user at runtime, so the runtime session user always
-      // carries them even though the rc.4 types only model the base `User`;
-      // the double cast bridges better-auth's narrower inferred type.
-      return {
-        session: result.session,
-        // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- better-auth rc.4 types omit plugin-augmented fields; the runtime shape is guaranteed by the plugins above
-        user: result.user as unknown as UserWithTwoFactor,
-      };
-    },
-  },
-});
 
 export const makeDBLayer = async () => {
   const dbModule = isPglite

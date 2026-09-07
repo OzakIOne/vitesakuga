@@ -12,8 +12,8 @@ import { asPostId } from "../ids";
 import { PostVotesService, PostVotesServiceLive } from "./votes.service";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
-let runFailure: ServiceTestContext["runFailure"];
+let runEffect: ServiceTestContext<PostVotesService>["runEffect"];
+let runFailure: ServiceTestContext<PostVotesService>["runFailure"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 

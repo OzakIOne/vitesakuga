@@ -9,7 +9,7 @@ import {
 import { TagsService, TagsServiceLive } from "./tags.service";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
+let runEffect: ServiceTestContext<TagsService>["runEffect"];
 let closeCtx: () => Promise<void>;
 
 beforeEach(async () => {

@@ -23,7 +23,7 @@ This document outlines the conventions and best practices for database interacti
 - Barrel re-export from `src/lib/db/schema/index.ts`
 - Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
-- Domain tables: `tags`, `posts`, `postTags`, `postVotes`, `playlists`, `playlistPosts`, and `comments`
+- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, and `videoRevisions`
 
 ## Effect Layer Pattern
 
@@ -32,7 +32,7 @@ This document outlines the conventions and best practices for database interacti
   - `makeDBLayer()` — provides `KyselyDB` + `StorageLive` + logging + tracing (uses PGlite when `DATABASE_DRIVER=pglite`)
   - `makeAuthLayer()` — provides `KyselyDB` + `AuthService` + `RequestHeadersService`
   - `makeMiddlewareLayer()` — resolves headers from request context
-- Test layer via `PGliteDialect` (`src/lib/db/pglite-driver.ts`), `makeServiceTestLayer` in test utils (includes rustfs storage), and `createE2EKysely` in `src/lib/db/e2e-db.ts` — both run Drizzle migrations from root `drizzle/` against in-memory PGlite
+- Test layer via `PGliteDialect` (`src/lib/db/pglite-driver.ts`), `makeServiceTestLayer` in test utils (includes RustFS storage), and `createE2EKysely` in `src/lib/db/e2e-db.ts` — service tests use in-memory PGlite and migrations from root `drizzle/`; e2e uses local Postgres + RustFS through the Playwright web server
 
 ## Migrations
 

@@ -428,6 +428,162 @@ describe("PostEditsService.approve", () => {
     );
   });
 
+  it("applies exactly once when two peers approve concurrently", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    for (const id of ["owner-race", "author-race", "peer-a", "peer-b"]) {
+      await insertUser(ctx.db, { id, role: "uploader" });
+    }
+    const postId = await insertPost(ctx.db, "owner-race");
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "author-race", role: "uploader" }),
+    );
+    const { editId } = await ctx.runEffect(
+      PostEditsService.propose({ payload: PAYLOAD, postId }),
+    );
+    ctx.mockGetSession
+      .mockResolvedValueOnce(
+        makeAuthSession({ id: "peer-a", role: "uploader" }),
+      )
+      .mockResolvedValueOnce(
+        makeAuthSession({ id: "peer-b", role: "uploader" }),
+      );
+    const results = await Promise.all([
+      ctx.runEffect(PostEditsService.approve(editId)),
+      ctx.runEffect(PostEditsService.approve(editId)),
+    ]);
+    expect(results.filter((result) => result.applied)).toHaveLength(1);
+    expect((await editRow(ctx.db, editId)).status).toBe("approved");
+    const votes = await ctx.db
+      .selectFrom("post_edit_approvals")
+      .selectAll()
+      .where("editId", "=", editId)
+      .execute();
+    expect(votes).toHaveLength(2);
+    const notifications = await ctx.db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("userId", "=", "owner-race")
+      .execute();
+    expect(notifications).toHaveLength(1);
+  });
+
+  it("serializes concurrent approval and rejection into one decision", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    await insertUser(ctx.db, { id: "owner-decision", role: "novice" });
+    await insertUser(ctx.db, { id: "author-decision", role: "uploader" });
+    const postId = await insertPost(ctx.db, "owner-decision");
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "author-decision", role: "uploader" }),
+    );
+    const { editId } = await ctx.runEffect(
+      PostEditsService.propose({ payload: PAYLOAD, postId }),
+    );
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "owner-decision", role: "novice" }),
+    );
+    const results = await Promise.all([
+      ctx.runEffect(Effect.exit(PostEditsService.approve(editId))),
+      ctx.runEffect(Effect.exit(PostEditsService.reject(editId))),
+    ]);
+    expect(results.filter((result) => result._tag === "Success")).toHaveLength(
+      1,
+    );
+    const row = await editRow(ctx.db, editId);
+    const post = await ctx.db
+      .selectFrom("posts")
+      .select("title")
+      .where("id", "=", postId)
+      .executeTakeFirstOrThrow();
+    expect(["approved", "rejected"]).toContain(row.status);
+    expect(post.title).toBe(
+      row.status === "approved" ? PAYLOAD.title : "Original title",
+    );
+  });
+
+  it("rolls back the vote and content if resolving the suggestion fails", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    await insertUser(ctx.db, { id: "owner-rollback", role: "novice" });
+    await insertUser(ctx.db, { id: "author-rollback", role: "uploader" });
+    const postId = await insertPost(ctx.db, "owner-rollback");
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "author-rollback", role: "uploader" }),
+    );
+    const { editId } = await ctx.runEffect(
+      PostEditsService.propose({ payload: PAYLOAD, postId }),
+    );
+    await sql`ALTER TABLE post_edits ADD CONSTRAINT deny_approval CHECK (status <> 'approved') NOT VALID`.execute(
+      ctx.db,
+    );
+    try {
+      ctx.mockGetSession.mockResolvedValueOnce(
+        makeAuthSession({ id: "owner-rollback", role: "novice" }),
+      );
+      expect(
+        (await ctx.runFailure(PostEditsService.approve(editId)))._tag,
+      ).toBe("SqlError");
+      expect((await editRow(ctx.db, editId)).status).toBe("pending");
+      const post = await ctx.db
+        .selectFrom("posts")
+        .select("title")
+        .where("id", "=", postId)
+        .executeTakeFirstOrThrow();
+      expect(post.title).toBe("Original title");
+      expect(
+        await ctx.db
+          .selectFrom("post_edit_approvals")
+          .selectAll()
+          .where("editId", "=", editId)
+          .execute(),
+      ).toEqual([]);
+      expect(
+        await ctx.db.selectFrom("notifications").selectAll().execute(),
+      ).toEqual([]);
+    } finally {
+      await sql`ALTER TABLE post_edits DROP CONSTRAINT deny_approval`.execute(
+        ctx.db,
+      );
+    }
+  });
+
+  it("keeps the applied edit when notification persistence fails", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    await insertUser(ctx.db, { id: "owner-notify", role: "novice" });
+    await insertUser(ctx.db, { id: "author-notify", role: "uploader" });
+    const postId = await insertPost(ctx.db, "owner-notify");
+    ctx.mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "author-notify", role: "uploader" }),
+    );
+    const { editId } = await ctx.runEffect(
+      PostEditsService.propose({ payload: PAYLOAD, postId }),
+    );
+    await sql`ALTER TABLE notifications RENAME TO unavailable_notifications`.execute(
+      ctx.db,
+    );
+    try {
+      ctx.mockGetSession.mockResolvedValueOnce(
+        makeAuthSession({ id: "owner-notify", role: "novice" }),
+      );
+      expect(await ctx.runEffect(PostEditsService.approve(editId))).toEqual({
+        applied: true,
+      });
+      expect((await editRow(ctx.db, editId)).status).toBe("approved");
+      const post = await ctx.db
+        .selectFrom("posts")
+        .select("title")
+        .where("id", "=", postId)
+        .executeTakeFirstOrThrow();
+      expect(post.title).toBe(PAYLOAD.title);
+    } finally {
+      await sql`ALTER TABLE unavailable_notifications RENAME TO notifications`.execute(
+        ctx.db,
+      );
+    }
+  });
+
   it("cannot approve twice or resolve a settled suggestion", async () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);
     closeCtx = ctx.close;
@@ -460,6 +616,14 @@ describe("PostEditsService.approve", () => {
 });
 
 describe("PostEditsService.reject", () => {
+  it("fails with UnauthorizedError when rejecting signed out", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    ctx.mockGetSession.mockResolvedValueOnce(null);
+    const error = await ctx.runFailure(PostEditsService.reject(123));
+    expect(error._tag).toBe("UnauthorizedError");
+  });
+
   it("is limited to staff and the post owner", async () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);
     closeCtx = ctx.close;

@@ -16,33 +16,43 @@ src/
 ├── lib/          # Core feature modules, services, and infrastructure
 │   ├── assets/   # Asset URL builder (R2 public URLs)
 │   ├── auth/     # Better Auth configuration, middleware, hooks, schemas
-│   ├── comments/ # Comments: service, hooks, queries, schemas, tests
-│   ├── db/       # Kysely setup, Drizzle schemas, layer factories, pool, test utilities
-│   │   └── schema/ # Drizzle ORM table definitions (auth + sakuga)
-│   ├── effect/   # Effect wrappers (EffectKysely, logger, tracing, schema utils)
-│   ├── env/      # Environment validation (client + server + shared defs)
-│   ├── mutations/ # Shared mutation feedback (toasts, error messages)
-│   ├── pagination/ # Pagination computation utility
-│   ├── playlists/ # Playlists: service, hooks, queries, schemas, tests
-│   ├── posts/    # Posts: service, hooks, queries, schemas, utils, tests
-│   ├── storage/  # R2/S3 + rustfs storage modules (Effect service + impls + tests)
-│   ├── tags/     # Tags: service, queries, utils, tests
-│   ├── upload/   # Client-side upload processing: video analysis, thumbnails, hooks
-│   ├── users/    # Users: service, queries, schemas, tests
-│   └── votes/    # Post votes: service, hooks, queries, schemas, utils, tests
+│   ├── comments/      # Comments, mentions, queries, hooks, and tests
+│   ├── db/            # Kysely, Drizzle schemas, layers, pools, test utilities
+│   │   └── schema/    # Drizzle ORM table definitions (auth + sakuga)
+│   ├── effect/        # Effect wrappers, logging, tracing, schema utilities
+│   ├── env/           # Environment validation (client, server, infra)
+│   ├── mentions/      # Comment mention parsing and resolution
+│   ├── moderation/   # Staff queues and role assignment
+│   ├── mutations/    # Shared mutation feedback (toasts, error messages)
+│   ├── notifications/ # In-app notifications
+│   ├── pagination/   # Pagination computation utility
+│   ├── playlists/    # Playlists: service, hooks, queries, schemas, tests
+│   ├── points/       # Points ledger and promotion thresholds
+│   ├── post-edits/   # Wiki-style edit suggestions and approvals
+│   ├── posts/        # Posts, search, uploads, queries, hooks, and tests
+│   ├── promotions/   # Uploader promotion queue and decisions
+│   ├── reports/      # User post reports
+│   ├── rate-limit/   # Request rate limiting middleware and service
+│   ├── search/       # Shared search limits
+│   ├── storage/      # S3-compatible R2/RustFS adapter and policies
+│   ├── tags/         # Tags: service, queries, utilities, tests
+│   ├── upload/       # Client-side upload processing and draft hooks
+│   ├── users/        # Users: service, queries, schemas, tests
+│   ├── videos/       # Video replacement and storage garbage collection
+│   └── votes/        # Post votes: service, hooks, queries, schemas, tests
 ├── routes/       # TanStack Router file-based routes
 ├── styles/       # Global CSS (Tailwind v4 entry point)
 └── utils/        # Utility functions (SEO meta tags)
 ```
 
-> Drizzle Kit migrations are auto-generated into the repo-root `drizzle/` directory (timestamped folders, per `drizzle.config.ts`). `src/db/drizzle/` is a legacy leftover containing only the original 0000 migration; it is not referenced by code or tooling.
+> Drizzle Kit migrations are generated in the repo-root `drizzle/` directory (timestamped folders, per `drizzle.config.ts`). The old `src/db/` area is not part of the active migration workflow.
 
 **Key files at `src/lib/` root:**
 
 - `errors.ts` — Effect `Schema.TaggedError` domain error classes
 - `mutations/mutation-feedback.ts` — Shared mutation feedback (`useMutationWithFeedback`, `toastError`/`toastSuccess`, `errorMessage`)
 - `query-client.ts` — Singleton TanStack Query client
-- `sanitize.ts` — Regex-based HTML sanitizer
+- `sanitize.ts` / `sanitize.server.ts` — shared sanitizer plus server registration
 - `server-fn.handler.ts` — `createHandler` bridge from Effect services to TanStack server functions
 
 ## File Structure Conventions
@@ -53,12 +63,13 @@ src/
 - `src/lib/<feature>/<feature>.queries.ts` — TanStack Query `queryOptions` factories
 - `src/lib/<feature>/<feature>.hooks.ts` — React hooks (mutations, query wrappers)
 - `src/lib/<feature>/<feature>.utils.ts` — Pure utility functions
+- `src/lib/<feature>/*.test.{ts,tsx}` — Unit/integration tests for the feature service, schema, or hooks
 
 ## Authentication
 
 - Server config in `src/lib/auth/index.ts` (Better Auth with Drizzle adapter)
 - Client config in `src/lib/auth/client.ts` (Better Auth React client)
-- Auth middleware in `src/lib/auth/auth.middleware.ts` (client-safe `getUserSession` server fn) backed by session effects in `src/lib/auth/session.effect.ts` (`getSessionEffect`, `getUserSessionEffect`)
+- Auth middleware in `src/lib/auth/auth.middleware.ts` (client-safe `getUserSession` server fn) backed by `SessionService` in `src/lib/auth/session.effect.ts` (`getSession`, `getUser`, `requireUser`)
 - Auth hooks in `src/lib/auth/auth.hooks.ts` (TanStack Query mutations)
 - Auth schemas in `src/lib/auth/auth.schemas.ts` (Effect Schema)
 
@@ -77,6 +88,7 @@ src/
 - Client-side video analysis in `src/lib/upload/upload.processor.ts` (mediainfo.js + mediabunny)
 - Upload hooks in `src/lib/upload/useVideoProcessing.ts`, `useUploadDraft.ts`, `useUploadForm.ts`
 - Storage service in `src/lib/storage/storage.module.ts` (Effect service interface)
-- S3/R2 implementation in `src/lib/storage/storage.s3.ts`
-- RustFS (S3-compatible) implementation for local dev/tests in `src/lib/storage/storage.rustfs.ts`
-- Storage tests in `src/lib/storage/storage.test.ts` (rustfs layer)
+- S3-compatible implementation for R2 and RustFS in `src/lib/storage/storage.adapter.ts`
+- Storage interface and tagged errors in `src/lib/storage/storage.module.ts`
+- Upload policy, key, and content-type helpers in `src/lib/storage/`
+- Storage tests in `src/lib/storage/storage.test.ts` (RustFS layer)

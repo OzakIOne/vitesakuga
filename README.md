@@ -5,8 +5,8 @@ Cloning a mvp of sakugabooru but with mainly typescript and good libs
 - [ ] better style Video (fix tailwind class not working)
 - [x] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
   - [media chrome keyboard shortcuts](https://www.media-chrome.org/docs/en/keyboard-shortcuts)
-- [ ] filterAndSortPosts check how it worked before and how it works now, should we filter client or server side?
-- [ ] cleanup post schemas and server fn
+- [x] advanced post search filters (server-side numeric filters for dimensions and likes)
+- [x] consolidate post schemas and server functions around Effect services
 - [x] passkey / TOTP
 - [x] github login
   - [x] google login
@@ -36,6 +36,19 @@ nub install
 cp .env.example .env
 # setup infra buckets api tokens etc
 nub run infra:deploy
+```
+
+Nub loads and validates the environment with Varlock before running scripts or
+Node files. The committed `.env.schema` documents the stages and required
+variables; keep actual credentials in the ignored stage files (`.env`,
+`.env.test`, or `.env.production`).
+
+```bash
+# inspect the resolved, redacted environment
+nub exec varlock load --format json
+```
+
+```
 nub run dev
 ```
 
@@ -65,7 +78,7 @@ React/bundle runtime), and Vite `--mode` (bakes `import.meta.env.MODE`).
 | `dev:local`                                         | dev server (Docker Postgres + rustfs)                                                 | local                       | `test` / `test` / `.env.test`                     | `test`            |
 | `dev:prod`                                          | dev server against prod infra                                                         | prod                        | `production` / `production` / `.env.production`   | `production`      |
 | `build`                                             | production build                                                                      | prod                        | `production` / `production` / `.env.production`   | `production`      |
-| `build:dev` (alias `build:staging`)                 | dev-site build (production React runtime + dev-stage `.env`, decoupled via `APP_ENV`) | dev                         | `development` / `production` / `.env`             | `development`     |
+| `build:dev`                                         | dev-site build (production React runtime + dev-stage `.env`, decoupled via `APP_ENV`) | dev                         | `development` / `production` / `.env`             | `development`     |
 | `start`                                             | run built Node server                                                                 | prod                        | —                                                 | —                 |
 | `server`                                            | preview built Worker (wrangler, generates `.dev.vars` from `.env`)                    | dev                         | `production`                                      | —                 |
 | `wrangler:dev` / `wrangler:preview`                 | dev / preview through Wrangler Pages                                                  | dev                         | `development` / `.env`                            | `development` / — |

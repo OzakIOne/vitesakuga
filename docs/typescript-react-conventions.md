@@ -26,7 +26,7 @@ This document outlines the conventions and best practices for writing TypeScript
 
 ## Naming Conventions
 
-- **Files**: `PascalCase` for React components (e.g., `MyComponent.tsx`), `camelCase` for utility files (e.g., `utils.ts`), `kebab-case` for CSS files, `feature.service.ts` for Effect services (server functions embedded at the bottom), `feature.schema.ts` for Effect Schema files, `*.fn.test.ts` for integration tests of server functions.
+- **Files**: `PascalCase` for React components (e.g., `MyComponent.tsx`), `camelCase` for utility files (e.g., `utils.ts`), `kebab-case` for CSS files, `feature.service.ts` for Effect services (server functions embedded at the bottom), `feature.schema.ts` for Effect Schema files, `*.fn.test.ts` for integration tests of server functions, and `*.service.test.ts` for service-level integration tests.
 - **Components**: `PascalCase` (e.g., `UserProfile`, `Button`).
 - **Variables/Functions**: `camelCase` (e.g., `getUserData`, `isLoading`).
 - **Types/Interfaces**: `PascalCase` (e.g., `User`, `ApiResponse`).

@@ -7,7 +7,7 @@ import { Effect, Layer } from "effect";
 import { Kysely } from "kysely";
 import { vi, type Mock } from "vitest";
 
-import { AuthService } from "../auth/context";
+import { AuthService, makeAuthService } from "../auth/context";
 import type { AuthSessionProvider } from "../auth/context";
 import { RequestHeadersService } from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
@@ -39,7 +39,12 @@ const createTestKysely = async () => {
   const drizzleDb = drizzle({ client: pg });
 
   const migrationsFolder = resolve(process.cwd(), "drizzle");
-  await migrate(drizzleDb, { migrationsFolder });
+  try {
+    await migrate(drizzleDb, { migrationsFolder });
+  } catch (error) {
+    await pg.close();
+    throw error;
+  }
 
   const db = new Kysely<DB>({ dialect: new PGliteDialect(pg) });
   return { pg, db } as const;
@@ -101,7 +106,7 @@ const makeTestLayer = (
     Layer.provide(
       Layer.mergeAll(
         Layer.succeed(AuthService)(
-          auth ?? { api: { getSession: async () => null } },
+          makeAuthService(auth ?? { api: { getSession: async () => null } }),
         ),
         Layer.succeed(RequestHeadersService)(headers),
       ),
@@ -140,6 +145,7 @@ const journalStorageService = (
   const recordCreated = (key: string) =>
     Effect.sync(() => {
       journal.created.add(key);
+      journal.deleted.delete(key);
     });
   return {
     ...storage,
@@ -179,21 +185,24 @@ const journalStorageService = (
 /** Layer form: real RustFS behavior with key journaling on top. */
 const makeJournaledStorageLayer = (
   journal: StorageKeyJournal,
+  storageLive: Layer.Layer<StorageModule, StorageError>,
 ): Layer.Layer<StorageModule, StorageError> =>
   Layer.effect(
     StorageModule,
     Effect.gen(function* () {
       const storage = yield* StorageModule;
       return journalStorageService(storage, journal);
-    }).pipe(Effect.provide(makeRustFSStorageLayer())),
+    }).pipe(Effect.provide(storageLive)),
   );
 
 /** A live StorageModule backed by the shared local RustFS bucket. */
-const makeTestStorage = async () =>
+const makeTestStorage = async (
+  storageLive: Layer.Layer<StorageModule, StorageError>,
+) =>
   Effect.runPromise(
     Effect.gen(function* () {
       return yield* StorageModule;
-    }).pipe(Effect.provide(makeRustFSStorageLayer())),
+    }).pipe(Effect.provide(storageLive)),
   );
 
 export type StorageKeyTracker = {
@@ -213,26 +222,24 @@ export type StorageKeyTrackerBundle = {
  * Cleanup replays deletions through an untracked RustFS service, so keys a
  * test deleted itself are not re-charged.
  */
-export const makeStorageKeyTracker = (): StorageKeyTrackerBundle => {
+export const makeStorageKeyTracker = (
+  storageLive = makeRustFSStorageLayer(),
+): StorageKeyTrackerBundle => {
   const journal: StorageKeyJournal = { created: new Set(), deleted: new Set() };
   return {
-    storageLayer: makeJournaledStorageLayer(journal),
+    storageLayer: makeJournaledStorageLayer(journal, storageLive),
     tracker: {
       get createdKeys() {
-        return [...journal.created];
+        return [...journal.created].filter((key) => !journal.deleted.has(key));
       },
       cleanup: async () => {
         if (journal.created.size === 0) {
           return;
         }
-        const storage = await makeTestStorage();
-        // Mark before deleting so a repeated cleanup cannot double-delete.
+        const storage = await makeTestStorage(storageLive);
         const pending = [...journal.created].filter(
           (key) => !journal.deleted.has(key),
         );
-        for (const key of pending) {
-          journal.deleted.add(key);
-        }
         const failures: { readonly error: unknown; readonly key: string }[] =
           [];
         // Bounded concurrency: a big journal (e.g. the 1001-key pagination
@@ -249,6 +256,9 @@ export const makeStorageKeyTracker = (): StorageKeyTrackerBundle => {
           );
           for (const [index, result] of results.entries()) {
             const key = chunk[index];
+            if (key !== undefined && result.status === "fulfilled") {
+              journal.deleted.add(key);
+            }
             if (result.status === "rejected" && key !== undefined) {
               // Keep going: one stuck key must not strand the rest of the
               // journal in the shared bucket.
@@ -271,28 +281,18 @@ export const makeStorageKeyTracker = (): StorageKeyTrackerBundle => {
 // Service test layer
 // ---------------------------------------------------------------------------
 
-/**
- * What one test context exposes. `L` is the merged layer the context runs
- * effects against: the suite's own service layer merged with the harness
- * infrastructure (PGlite Kysely, session mocks, journaled RustFS storage,
- * logging, tracing). The default accepts every layer; per-suite contexts
- * infer their concrete `L`.
- *
- * The runners below take their effect's requirement channel as `any` rather
- * than a generic parameter: a generic signature with a per-suite constraint
- * (e.g. `R extends VideosService | KyselyDB | …`) is not assignable to a
- * generic signature with any other constraint, so a shared declaration like
- * `let runEffect: ServiceTestContext["runEffect"]` could never be assigned
- * a concrete context's runner. With `R = any`, every effect fits — at
- * runtime the context's layer resolves all requirements anyway.
- */
-export type ServiceTestContext<L extends Layer.Any = Layer.Any> = {
+type TestBaseServices = Layer.Success<ReturnType<typeof makeTestLayer>>;
+
+/** Preserve the services supplied by each suite in both runner signatures. */
+export type ServiceTestContext<Services = never> = {
   db: Kysely<DB>;
-  testLayer: L;
-  // oxlint-disable-next-line typescript/no-explicit-any -- see doc comment: the runner must accept any suite's requirement channel
-  runEffect: <A, E>(effect: Effect.Effect<A, E, any>) => Promise<A>;
-  // oxlint-disable-next-line typescript/no-explicit-any -- see doc comment: same runner semantics, flipped to the failure channel
-  runFailure: <A, E>(effect: Effect.Effect<A, E, any>) => Promise<E>;
+  testLayer: Layer.Layer<Services | TestBaseServices, unknown>;
+  runEffect: <A, E>(
+    effect: Effect.Effect<A, E, Services | TestBaseServices>,
+  ) => Promise<A>;
+  runFailure: <A, E>(
+    effect: Effect.Effect<A, E, Services | TestBaseServices>,
+  ) => Promise<E>;
   mockGetSession: Mock<AuthSessionProvider["api"]["getSession"]>;
   storageTracker: StorageKeyTracker;
   close: () => Promise<void>;
@@ -310,8 +310,8 @@ export type MakeServiceTestLayerOptions = {
   ) => StorageModule["Service"];
 };
 
-export const makeServiceTestLayer = async <ROut, E, RIn>(
-  serviceLive: Layer.Layer<ROut, E, RIn>,
+export const makeServiceTestLayer = async <ROut, E>(
+  serviceLive: Layer.Layer<ROut, E, TestBaseServices>,
   options: MakeServiceTestLayerOptions = {},
 ) => {
   const { pg, db } = await getFileDb();
@@ -337,27 +337,12 @@ export const makeServiceTestLayer = async <ROut, E, RIn>(
     storageLayer,
   );
   const testLayer = serviceLive.pipe(Layer.provideMerge(baseLayer));
-  // SAFETY: the harness layer supplies every infrastructure requirement, so
-  // any effect whose requirements sit inside the merged layer's success
-  // channel runs to completion. TypeScript cannot prove `Exclude<R, ROut>`
-  // collapses to `never` for a generic `R`, hence the narrow cast.
-  const runEffect = <A, E2, R extends Layer.Success<typeof testLayer>>(
-    effect: Effect.Effect<A, E2, R>,
-  ): Promise<A> =>
-    Effect.runPromise(
-      effect.pipe(Effect.provide(testLayer)) as Effect.Effect<A, E2>,
-    );
-  const runFailure = <A, E2, R extends Layer.Success<typeof testLayer>>(
-    effect: Effect.Effect<A, E2, R>,
-  ): Promise<E2> =>
-    // SAFETY: same invariant as `runEffect` above — the merged layer resolves
-    // every requirement, so the flipped effect runs to completion.
-    Effect.runPromise(
-      Effect.flip(effect).pipe(Effect.provide(testLayer)) as Effect.Effect<
-        E2,
-        A
-      >,
-    );
+  const runEffect = <A, E2>(
+    effect: Effect.Effect<A, E2, ROut | TestBaseServices>,
+  ): Promise<A> => Effect.runPromise(effect.pipe(Effect.provide(testLayer)));
+  const runFailure = <A, E2>(
+    effect: Effect.Effect<A, E2, ROut | TestBaseServices>,
+  ): Promise<E2> => runEffect(Effect.flip(effect));
   const close = async () => {
     // PGlite is shared per file and reset by the next context's creation, so
     // there is no per-test instance to leak: neither a cleanup failure nor a

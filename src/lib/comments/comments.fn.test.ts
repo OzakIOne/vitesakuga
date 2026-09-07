@@ -13,7 +13,7 @@ import { asPostId } from "../ids";
 import { CommentsService, CommentsServiceLive } from "./comments.service";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
+let runEffect: ServiceTestContext<CommentsService>["runEffect"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 
@@ -432,6 +432,46 @@ describe("CommentsService.mention edge cases", () => {
       .selectAll()
       .execute();
     expect(notifications).toEqual([]);
+  });
+
+  it("keeps an update when mention persistence fails", async () => {
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-2",
+        name: "Bob",
+        email: "bob@test.com",
+        username: "bob",
+      })
+      .execute();
+    mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
+    const created = await runEffect(
+      CommentsService.add({ content: "Before", postId }),
+    );
+    await sql`ALTER TABLE comment_mentions RENAME TO comment_mentions_broken`.execute(
+      db,
+    );
+    try {
+      await runEffect(
+        CommentsService.update({ commentId: created.id, content: "Hey @bob" }),
+      );
+      const comment = await db
+        .selectFrom("comments")
+        .select("content")
+        .where("id", "=", created.id)
+        .executeTakeFirstOrThrow();
+      expect(comment.content).toBe("Hey [@bob](user:user-2)");
+    } finally {
+      await sql`ALTER TABLE comment_mentions_broken RENAME TO comment_mentions`.execute(
+        db,
+      );
+    }
+    expect(
+      await db.selectFrom("comment_mentions").selectAll().execute(),
+    ).toEqual([]);
+    expect(await db.selectFrom("notifications").selectAll().execute()).toEqual(
+      [],
+    );
   });
 
   it("leaves deleted users unmentioned", async () => {

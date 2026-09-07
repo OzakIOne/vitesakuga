@@ -5,10 +5,13 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    // Bound simultaneous PGlite migrations and memory pressure on developer
+    // machines; CPU count alone is a poor worker budget for embedded Postgres.
+    maxWorkers: 4,
     // Ceiling, not a feature: service tests normally finish in well under a
     // second, but the first test in each file pays the one-time shared-PGlite
-    // migration and parallel workers contend for CPU. Timeouts must never be
-    // load-sensitive, so the budget is generous.
+    // migration and parallel workers contend for CPU. The worker cap limits
+    // contention; the timeout remains a finite failure budget.
     testTimeout: 20_000,
     hookTimeout: 20_000,
     env: {

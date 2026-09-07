@@ -15,7 +15,7 @@ import { FormFileUploadSchema, MAX_IMAGE_SIZE_BYTES } from "./posts.schema";
 import { PostsService, PostsServiceLive } from "./posts.service";
 
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext["runEffect"];
+let runEffect: ServiceTestContext<PostsService>["runEffect"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 
