@@ -13,13 +13,18 @@ import { Field, Input } from "src/components/ui/field";
 import { Box, Group, Wrap } from "src/components/ui/layout";
 import { Combobox } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
+import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
+
+import { SaveSearchDialog, SavedSearchesDialog } from "./SavedSearchDialogs";
 
 type SearchBoxProps = {
   defaultValue?: string | undefined;
   defaultTags?: readonly string[] | undefined;
   placeholder?: string | undefined;
   showTitle?: boolean | undefined;
+  dateRange?: PostsSearchParams["dateRange"] | undefined;
+  sortBy?: PostsSearchParams["sortBy"] | undefined;
   title?: string | undefined;
 };
 
@@ -28,6 +33,8 @@ export function SearchBox({
   defaultTags = [],
   placeholder = "Search...",
   showTitle = true,
+  dateRange = "all",
+  sortBy = "newest",
   title = "Search Posts",
 }: SearchBoxProps) {
   const navigate = useNavigate();
@@ -47,7 +54,9 @@ export function SearchBox({
   const handleNavigate = () => {
     void navigate({
       search: {
+        dateRange,
         q: search,
+        sortBy,
         tags,
       },
       to: pathname === "/" ? "/posts" : pathname,
@@ -102,6 +111,24 @@ export function SearchBox({
           Search
         </Button>
       </Group>
+      <Wrap gap={2} mb={4}>
+        <SaveSearchDialog values={{ dateRange, q: search, sortBy, tags }} />
+        <SavedSearchesDialog
+          onApply={(savedSearch) => {
+            setSearch(savedSearch.q);
+            setTags([...savedSearch.tags]);
+            void navigate({
+              search: {
+                dateRange: savedSearch.date_range,
+                q: savedSearch.q,
+                sortBy: savedSearch.sort_by,
+                tags: savedSearch.tags,
+              },
+              to: "/posts",
+            });
+          }}
+        />
+      </Wrap>
       <Text color="fg.muted" fontSize="xs" mb={3}>
         Advanced filters: <code>width:&gt;1000</code>, <code>height:=800</code>,{" "}
         <code>height:&lt;800</code>, <code>likes:&gt;10</code>,{" "}

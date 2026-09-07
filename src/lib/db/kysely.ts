@@ -140,6 +140,17 @@ type PlaylistsTable = {
   user_id: string;
 };
 
+type SavedSearchesTable = {
+  id: Generated<number>;
+  user_id: string;
+  name: string;
+  q: string;
+  tags: string[];
+  sort_by: "newest" | "oldest";
+  date_range: "all" | "today" | "week" | "month";
+  created_at: Generated<Date>;
+};
+
 type PlaylistPostsTable = {
   playlist_id: number;
   post_id: number;
@@ -272,6 +283,7 @@ export type DB = {
   notifications: NotificationsTable;
   tags: TagsTable;
   playlists: PlaylistsTable;
+  saved_searches: SavedSearchesTable;
   playlist_posts: PlaylistPostsTable;
 };
 
