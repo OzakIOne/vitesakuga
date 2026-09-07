@@ -79,9 +79,8 @@ export const posts = pgTable("posts", {
   volumeNumber: integer(),
 });
 
-// One row per attached image; `position` orders them for display. Posts
-// currently expose a single image in the UI, but the table already supports
-// several per post for a future multi-image upload.
+// One row per attached image; `position` orders them for display. Position
+// zero is also copied to posts.thumbnailKey for cards and playlists.
 export const postImages = pgTable(
   "post_images",
   {
@@ -138,6 +137,26 @@ export const playlists = pgTable("playlists", {
     .references(() => user.id, { onDelete: "cascade" })
     .notNull(),
 });
+
+// A private, named snapshot of the post-search parameters owned by one user.
+// Keeping the filters in typed columns makes saved searches easy to query and
+// leaves room for adding fields without exposing arbitrary JSON to the client.
+export const savedSearches = pgTable(
+  "saved_searches",
+  {
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    dateRange: text("date_range").notNull(),
+    id: serial("id").primaryKey(),
+    name: text().notNull(),
+    q: text().notNull(),
+    sortBy: text("sort_by").notNull(),
+    tags: json().$type<string[]>().notNull(),
+    userId: text("user_id")
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [uniqueIndex("saved_searches_user_name_unique").on(t.userId, t.name)],
+);
 
 export const playlistPosts = pgTable(
   "playlist_posts",
@@ -278,6 +297,8 @@ export const notifications = pgTable(
       .$type<
         | "comment-mention"
         | "edit-suggestion-applied"
+        | "edit-suggestion-approved"
+        | "edit-suggestion-rejected"
         | "promotion-approved"
         | "promotion-rejected"
       >()

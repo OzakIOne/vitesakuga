@@ -62,6 +62,7 @@ function PostComponent() {
           initialTags={initialTags}
           post={post}
           relatedPost={relatedPost}
+          currentUserRole={context.user?.role}
           user={user}
         />
       </Suspense>

@@ -14,13 +14,13 @@ describe("signUpSchema", () => {
   it("accepts valid signup data", () => {
     const result = parse(signUpSchema)({
       name: "John Doe",
-      email: "john@example.com",
+      email: "john@gmail.com",
       password: VALID_PASSWORD,
       confirm_password: VALID_PASSWORD,
     });
     expect(result).toEqual({
       name: "John Doe",
-      email: "john@example.com",
+      email: "john@gmail.com",
       password: VALID_PASSWORD,
       confirm_password: VALID_PASSWORD,
     });
@@ -30,7 +30,7 @@ describe("signUpSchema", () => {
     expect(() =>
       parse(signUpSchema)({
         name: "John Doe",
-        email: "john@example.com",
+        email: "john@gmail.com",
         password: VALID_PASSWORD,
         confirm_password: "Differ3nt$Key",
       }),
@@ -52,7 +52,7 @@ describe("signUpSchema", () => {
     expect(() =>
       parse(signUpSchema)({
         name: "ab",
-        email: "john@example.com",
+        email: "john@gmail.com",
         password: VALID_PASSWORD,
         confirm_password: VALID_PASSWORD,
       }),
@@ -63,7 +63,7 @@ describe("signUpSchema", () => {
     expect(() =>
       parse(signUpSchema)({
         name: "John Doe",
-        email: "john@example.com",
+        email: "john@gmail.com",
         password: "Ab1!678901",
         confirm_password: "Ab1!678901",
       }),

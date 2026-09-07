@@ -12,7 +12,12 @@ import {
   PasswordStrengthMeter,
   getPasswordStrength,
 } from "src/components/ui/password-input";
-import { useSignUp, useSocialLogin } from "src/lib/auth/auth.hooks";
+import {
+  useResendEmailVerification,
+  useSignUp,
+  useSocialLogin,
+  useVerifyEmail,
+} from "src/lib/auth/auth.hooks";
 import type { SignUpInput } from "src/lib/auth/auth.hooks";
 import { signUpSchema } from "src/lib/auth/auth.schemas";
 import { useTurnstile } from "src/lib/auth/useTurnstile";
@@ -36,6 +41,10 @@ function SignupForm() {
   );
 
   const [serverError, setServerError] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const verifyEmailMutation = useVerifyEmail(redirectUrl);
+  const resendEmailVerification = useResendEmailVerification();
 
   const form = useForm({
     defaultValues: {
@@ -45,6 +54,7 @@ function SignupForm() {
       password: "",
     },
     onSubmit: async ({ value }) => {
+      setServerError("");
       const captchaToken = (await executeTurnstile()) ?? undefined;
       if (turnstileRequired && !captchaToken) {
         setServerError("Captcha verification failed, please try again.");
@@ -59,6 +69,12 @@ function SignupForm() {
         args.captchaToken = captchaToken;
       }
       signUpMutation.mutate(args, {
+        onSuccess: (data) => {
+          if (!data?.user?.emailVerified) {
+            setVerificationEmail(value.email);
+            setVerificationCode("");
+          }
+        },
         onError: (error) => setServerError(error.message),
       });
     },
@@ -66,6 +82,104 @@ function SignupForm() {
       onChange: toStandardSchemaV1Strict(signUpSchema),
     },
   });
+
+  if (verificationEmail) {
+    return (
+      <div className="with-full flex h-fit flex-col items-center justify-center p-4">
+        <div className="w-80 max-w-full">
+          <div className="flex flex-col gap-5">
+            <div>
+              <h1 className="text-xl font-bold">Check your email</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                We sent a six-digit verification code to {verificationEmail}.
+                Enter it here to finish creating your account.
+              </p>
+            </div>
+
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setServerError("");
+                verifyEmailMutation.mutate(
+                  { email: verificationEmail, otp: verificationCode },
+                  { onError: (error) => setServerError(error.message) },
+                );
+              }}
+            >
+              <Field.Root id="verification-code" required>
+                <Field.Label>
+                  Verification code <Field.RequiredIndicator />
+                </Field.Label>
+                <Input
+                  autoComplete="one-time-code"
+                  autoFocus
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  value={verificationCode}
+                  onChange={(event) =>
+                    setVerificationCode(
+                      event.target.value.replace(/\D/gu, "").slice(0, 6),
+                    )
+                  }
+                />
+              </Field.Root>
+
+              <Button
+                disabled={
+                  verificationCode.length !== 6 || verifyEmailMutation.isPending
+                }
+                type="submit"
+              >
+                {verifyEmailMutation.isPending
+                  ? "Verifying..."
+                  : "Verify email"}
+              </Button>
+            </form>
+
+            {serverError && (
+              <div className="alert alert-error" role="alert">
+                <span>{serverError}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <Button
+                disabled={resendEmailVerification.isPending}
+                onClick={() => {
+                  setServerError("");
+                  resendEmailVerification.mutate(
+                    { email: verificationEmail },
+                    {
+                      onError: (error) => setServerError(error.message),
+                    },
+                  );
+                }}
+                variant="outline"
+                type="button"
+              >
+                {resendEmailVerification.isPending
+                  ? "Sending..."
+                  : "Resend code"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setServerError("");
+                  setVerificationEmail("");
+                  setVerificationCode("");
+                }}
+                variant="ghost"
+                type="button"
+              >
+                Use a different email
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="with-full flex h-fit flex-col items-center justify-center p-4">
@@ -113,7 +227,7 @@ function SignupForm() {
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(value) => field.handleChange(value)}
-                      placeholder="hello@example.com"
+                      placeholder="hello@gmail.com"
                       value={field.state.value}
                     />
                   </Field.Root>

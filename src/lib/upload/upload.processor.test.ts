@@ -31,6 +31,28 @@ describe(buildFormData, () => {
     expect((formData.get("thumbnail") as File).name).toBe("t.jpg");
   });
 
+  it("appends multiple images in their ordered form", () => {
+    const images = [
+      new File(["first"], "first.png", { type: "image/png" }),
+      new File(["second"], "second.jpg", { type: "image/jpeg" }),
+    ];
+    const dimensions = [
+      { height: 720, width: 1280 },
+      { height: 1080, width: 1920 },
+    ];
+
+    const formData = buildFormData({
+      ...baseValues,
+      imageDimensions: dimensions,
+      images,
+    });
+
+    expect(
+      formData.getAll("images").map((file) => (file as File).name),
+    ).toEqual(["first.png", "second.jpg"]);
+    expect(formData.get("imageDimensions")).toBe(JSON.stringify(dimensions));
+  });
+
   it("appends arrays and objects as JSON strings", () => {
     const values = {
       ...baseValues,

@@ -14,7 +14,7 @@ against the current code before relying on them.
 | M1 — Bypassable sanitizer                          | **Fixed**                               | `sanitize-html` is used through `src/lib/sanitize.ts`; `src/lib/sanitize.server.ts` registers the server implementation. Regression coverage is in `src/lib/sanitize.test.ts`.                                                                                                                              |
 | M2 — Account deletion leaks content or credentials | **Fixed by product decision**           | `src/lib/auth/delete-account.ts` anonymizes the user row, removes credentials/sessions and personal playlists, and keeps public posts/comments/votes attributed to `Deleted user`.                                                                                                                          |
 | M3 — Dependency advisories                         | **Recheck when dependencies change**    | Runtime-facing dependency upgrades landed, but the audit's dependency counts are historical. Run the repository's current dependency audit rather than copying the old count.                                                                                                                               |
-| M4 — Email verification not required               | **Open product decision**               | Better Auth email/password signup is enabled, but this repository does not currently require verified email before normal account use. Decide whether verification is required before launch.                                                                                                               |
+| M4 — Email verification not required               | **Fixed**                               | New accounts must use an approved provider domain and complete a Better Auth email OTP before a session is created. OTPs are hashed, expire after 10 minutes, and allow five attempts. Delivery is configured through Cloudflare Email Service. |
 | M5 — Search wildcard / input amplification         | **Fixed**                               | Search wildcards are escaped and shared limits cap query length, tag count, and tag length (`src/lib/search/search-limits.ts`, `src/lib/posts/posts.schema.ts`, `src/lib/users/users.schema.ts`).                                                                                                           |
 | L1 — Spoofable forwarded IP in fallback limiter    | **Accepted with deployment constraint** | Cloudflare's `cf-connecting-ip` takes precedence in deployment; the in-memory fallback is for local/test use and must not be treated as a production distributed limiter.                                                                                                                                   |
 | L2 — Local Docker ports exposed on all interfaces  | **Local hardening follow-up**           | Review `docker-compose.yml` before using the local stack on an untrusted network; default local credentials are not production credentials.                                                                                                                                                                 |
@@ -42,8 +42,9 @@ against the current code before relying on them.
 
 ## Open decisions before launch
 
-1. Decide whether email verification is required for account creation and
-   password recovery.
+1. Provision and verify the Cloudflare Email Service sender domain, API token,
+   and `EMAIL_FROM` before the first production deployment. Confirm SPF, DKIM,
+   DMARC, bounce handling, and the provider allow-list against product policy.
 2. Re-run dependency and infrastructure audits against the versions actually
    installed at release time.
 3. Review local Docker bind addresses and credentials for the intended developer
