@@ -89,10 +89,12 @@ Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.se
 Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/api/auth/$.ts`) :
 
 - **Email/mot de passe** avec longueur minimale de 12 caractères et contrôle de diversité côté serveur.
+- **Inscription protégée** : les nouvelles adresses doivent appartenir à la liste de fournisseurs approuvés (Gmail, Outlook, Yahoo, Apple/Private Relay, Proton, etc.) ; la création d’un compte est suspendue jusqu’à la saisie d’un code envoyé par email.
 - **OAuth social** GitHub et Google, activé uniquement quand les credentials sont configurés.
 - **Passkeys (WebAuthn)** — `src/components/PasskeySignInButton.tsx`, `src/components/PasskeysSection.tsx`.
 - **2FA TOTP** avec codes de secours et option de confiance d'appareil — `src/components/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`.
 - **Captcha Cloudflare Turnstile** en production lorsqu'il est provisionné.
+- **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Cloudflare Email Service ; `CLOUDFLARE_EMAIL_API_TOKEN` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.
 - **Compte** (`/account`) : profil, pseudo, changement de mot de passe et suppression avec anonymisation ; le contenu public reste attribué à « Deleted user ».
 - **Rôles et permissions** : `novice → uploader → moderator → admin`, appliqués par les policies Effect — `src/lib/auth/roles.ts`, `src/lib/auth/policy.ts`, `src/lib/auth/ownership.ts`.

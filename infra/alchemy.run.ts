@@ -176,8 +176,12 @@ export default Alchemy.Stack(
       },
       env: {
         BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
+        CLOUDFLARE_ACCOUNT_ID: Config.string("CLOUDFLARE_ACCOUNT_ID"),
         CLOUDFLARE_ACCESS_KEY: Config.redacted("CLOUDFLARE_ACCESS_KEY"),
         CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
+        CLOUDFLARE_EMAIL_API_TOKEN: Config.redacted(
+          "CLOUDFLARE_EMAIL_API_TOKEN",
+        ).pipe(Config.withDefault("")),
         CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
         VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string(
           "VITE_CLOUDFLARE_R2_PUBLIC_URL",
@@ -191,6 +195,9 @@ export default Alchemy.Stack(
         GITHUB_CLIENT_SECRET: Config.redacted("GITHUB_CLIENT_SECRET"),
         GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
         GOOGLE_CLIENT_SECRET: Config.redacted("GOOGLE_CLIENT_SECRET"),
+        EMAIL_FROM: Config.string("EMAIL_FROM").pipe(
+          Config.withDefault(`noreply@${appDomain}`),
+        ),
         NODE_ENV: Config.string("NODE_ENV").pipe(
           Config.withDefault("production"),
         ),
