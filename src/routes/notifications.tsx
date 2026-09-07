@@ -25,6 +25,10 @@ const notificationLabel = (type: string): string => {
       return "You were mentioned in a comment.";
     case "edit-suggestion-applied":
       return "An edit suggestion on one of your posts was applied.";
+    case "edit-suggestion-approved":
+      return "Your edit suggestion was approved and applied.";
+    case "edit-suggestion-rejected":
+      return "Your edit suggestion was rejected.";
     case "promotion-approved":
       return "Your promotion to uploader was approved! 🎉";
     case "promotion-rejected":

@@ -3,11 +3,15 @@ import { useReducer, useState } from "react";
 import { Comments } from "src/components/Comments";
 import { PlaylistAddModal } from "src/components/PlaylistAddModal";
 import { Post } from "src/components/Post";
+import { PostEditHistory } from "src/components/PostDetail/PostEditHistory";
+import { PostEditSuggestionDialog } from "src/components/PostDetail/PostEditSuggestionDialog";
 import { ReportDialog } from "src/components/ReportDialog";
 import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { TagInput } from "src/components/ui/tag-input";
+import { userHasPermission } from "src/lib/auth/policy";
+import { roleOf } from "src/lib/auth/roles";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import type { Tag } from "src/lib/posts/posts.schema";
@@ -21,6 +25,7 @@ type PostDetailDisplayProps = {
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
   images?: string[] | undefined;
   currentUserId?: string | undefined;
+  currentUserRole?: string | undefined;
 };
 
 type EditState = {
@@ -77,10 +82,12 @@ export function PostDetailDisplay({
   relatedPost,
   images,
   currentUserId,
+  currentUserRole,
 }: PostDetailDisplayProps) {
   const queryClient = useQueryClient();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showSuggestionDialog, setShowSuggestionDialog] = useState(false);
   const [editState, dispatchEdit] = useReducer(editReducer, {
     isEditing: false,
     titleDraft: post.title ?? "",
@@ -92,6 +99,13 @@ export function PostDetailDisplay({
     editState;
 
   const isOwner = currentUserId === user.id;
+  const canSuggestEdit =
+    currentUserId !== undefined &&
+    !isOwner &&
+    userHasPermission(
+      roleOf({ id: currentUserId, role: currentUserRole }),
+      "posts:suggest-edit",
+    );
 
   const updatePostMutation = useMutationWithFeedback({
     errorFallback: "Failed to update post",
@@ -234,6 +248,9 @@ export function PostDetailDisplay({
                   }
                 : undefined
             }
+            onSuggestEditClick={
+              canSuggestEdit ? () => setShowSuggestionDialog(true) : undefined
+            }
             post={post}
             relatedPost={relatedPost}
             tags={initialTags}
@@ -241,6 +258,13 @@ export function PostDetailDisplay({
           />
         )}
       </Box>
+
+      <PostEditHistory
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        isPostOwner={isOwner}
+        postId={post.id}
+      />
 
       {showPlaylistModal && currentUserId && (
         <PlaylistAddModal
@@ -258,6 +282,13 @@ export function PostDetailDisplay({
             setShowReportDialog(false);
           }}
           postId={post.id}
+        />
+      )}
+
+      {showSuggestionDialog && (
+        <PostEditSuggestionDialog
+          onCancel={() => setShowSuggestionDialog(false)}
+          post={post}
         />
       )}
 

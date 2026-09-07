@@ -242,6 +242,8 @@ type NotificationsTable = {
   type:
     | "comment-mention"
     | "edit-suggestion-applied"
+    | "edit-suggestion-approved"
+    | "edit-suggestion-rejected"
     | "promotion-approved"
     | "promotion-rejected";
   // Post the notification links to; null when there is no deep link.

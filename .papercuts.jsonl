@@ -1,0 +1,1 @@
+{"kind":"cut","id":"pc_u4hnmgsmcj9y","ts":"2026-09-07T20:07:39.464Z","agent":"unknown","text":"nub install in a clean JJ workspace links dependencies but the root prepare hook requires deployment secrets, preventing lint/type/test commands from running without manually supplying test-safe environment variables","tags":["config"],"severity":"minor"}

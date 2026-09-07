@@ -71,10 +71,10 @@ Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.se
 - **Commentaires** : ajout/édition/suppression (propriétaire ou staff), sanitization serveur et mentions `@pseudo` avec autocomplétion — `src/lib/comments/*`, `src/lib/mentions/*`, `src/lib/sanitize.server.ts`.
 - **Playlists** : CRUD, visibilité publique/privée, ajout/retrait unitaire et en masse, réordonnancement souris/clavier — `src/lib/playlists/*`, `src/components/PlaylistPostsTable.tsx`.
 - **Signalements** : signaler un post avec un motif — `src/components/ReportDialog.tsx`, `src/lib/reports/*`.
-- **Suggestions d'édition « wiki »** : workflow serveur pour proposer des modifications sur le post d'un autre, avec approbations uploaders ou décision staff et historique. La proposition n'a pas encore de formulaire public dédié — `src/lib/post-edits/*`, `src/lib/moderation/*`.
+- **Suggestions d'édition « wiki »** : depuis le détail d'un post, les uploaders peuvent proposer une modification avec aperçu diff par champ. Les uploaders éligibles, le propriétaire ou le staff peuvent l'approuver/rejeter selon les règles du workflow ; l'historique affiche les suggestions en attente, appliquées ou rejetées, et le suggester reçoit une notification de décision — `src/components/PostDetail/PostEditSuggestionDialog.tsx`, `src/components/PostDetail/PostEditHistory.tsx`, `src/lib/post-edits/*`.
 - **Remplacement de vidéo** : workflow serveur pour remplacer la vidéo en conservant l'identité du post ; révisions conservées 90 jours et restaurables par le staff. Aucun écran public dédié n'est actuellement exposé — `src/lib/videos/*`.
 - **Système de points** : registre append-only `points_ledger` avec caps par action ; utilisé notamment pour la promotion des uploaders — `src/lib/points/*`, `src/lib/promotions/*`.
-- **Notifications in-app** : promotion, suggestion d'édition, mentions de commentaires et autres événements métier — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
+- **Notifications in-app** : promotion, décisions de suggestions d'édition (avec lien vers le post), mentions de commentaires et autres événements métier — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
 
 ### Mentions @pseudo
 
