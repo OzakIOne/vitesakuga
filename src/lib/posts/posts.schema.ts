@@ -93,9 +93,26 @@ export const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp)$/i;
 
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
-// The UI currently exposes a single image per post; the schema/storage layer
-// already accepts several so raising this constant is enough to lift it.
-export const MAX_IMAGES_PER_POST = 5;
+// Image posts are intentionally capped to keep galleries useful and uploads
+// bounded. The UI exposes this same limit and lets uploaders reorder the files
+// before submission, so position 0 remains the post thumbnail.
+export const MAX_IMAGES_PER_POST = 10;
+
+const IMAGE_EXTENSION_ERROR = "Images must be JPEG, PNG or WebP files";
+const IMAGE_SIZE_ERROR = `Images must not exceed ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)} MB`;
+
+export const isSupportedImageFileName = (fileName: string): boolean =>
+  IMAGE_EXTENSION_PATTERN.test(fileName);
+
+export const getImageFileValidationError = (file: File): string | undefined => {
+  if (!isSupportedImageFileName(file.name)) {
+    return IMAGE_EXTENSION_ERROR;
+  }
+  if (file.size <= 0 || file.size > MAX_IMAGE_SIZE_BYTES) {
+    return IMAGE_SIZE_ERROR;
+  }
+  return undefined;
+};
 
 const VideoKey = Schema.String.pipe(
   Schema.check(
@@ -119,19 +136,21 @@ const ThumbnailFile = Schema.instanceOf(File).pipe(
 );
 
 const ImageFile = Schema.instanceOf(File).pipe(
-  Schema.refine(
-    (file): file is File => IMAGE_EXTENSION_PATTERN.test(file.name),
-    {
-      message: "Images must be JPEG, PNG or WebP files",
-    },
-  ),
+  Schema.refine((file): file is File => isSupportedImageFileName(file.name), {
+    message: IMAGE_EXTENSION_ERROR,
+  }),
   Schema.refine(
     (file): file is File => file.size > 0 && file.size <= MAX_IMAGE_SIZE_BYTES,
     {
-      message: `Images must not exceed ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)} MB`,
+      message: IMAGE_SIZE_ERROR,
     },
   ),
 );
+
+const ImageDimensions = Schema.Struct({
+  height: CoerceNumber.pipe(Schema.check(Schema.isGreaterThan(0))),
+  width: CoerceNumber.pipe(Schema.check(Schema.isGreaterThan(0))),
+});
 
 export const PostSourceUploadSchema = Schema.optional(
   Schema.Literals(["movie", "tv_series"]),
@@ -156,8 +175,7 @@ const SharedUploadFields = {
 export const FormFileUploadSchema = Schema.Struct({
   ...SharedUploadFields,
   images: Schema.optionalKey(Schema.Array(ImageFile)),
-  imageHeight: Schema.optionalKey(CoerceNumber),
-  imageWidth: Schema.optionalKey(CoerceNumber),
+  imageDimensions: Schema.optionalKey(Schema.Array(ImageDimensions)),
   thumbnail: Schema.optionalKey(ThumbnailFile),
   videoKey: Schema.optionalKey(VideoKey),
   videoMetadata: VideoMetadataSchema,

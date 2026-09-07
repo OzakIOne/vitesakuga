@@ -561,13 +561,16 @@ export class PostsService extends Context.Service<
         if (imageKeys.length > 0) {
           yield* db.execute(
             db.insertInto("post_images").values(
-              imageKeys.map((storageKey, index) => ({
-                height: data.imageHeight ?? null,
-                postId,
-                position: index,
-                storageKey,
-                width: data.imageWidth ?? null,
-              })),
+              imageKeys.map((storageKey, index) => {
+                const dimensions = data.imageDimensions?.[index];
+                return {
+                  height: dimensions?.height ?? null,
+                  postId,
+                  position: index,
+                  storageKey,
+                  width: dimensions?.width ?? null,
+                };
+              }),
             ),
           );
         }
@@ -894,6 +897,11 @@ export const uploadPost = createServerFn({ method: "POST" })
     const videoMetadata = raw["videoMetadata"]
       ? JSON.parse(raw["videoMetadata"] as string)
       : undefined;
+    // SAFETY: FormData scalar entries are strings; this field is JSON encoded
+    // by buildFormData and parsed immediately before schema validation.
+    const imageDimensions = raw["imageDimensions"]
+      ? JSON.parse(raw["imageDimensions"] as string)
+      : undefined;
     // Multiple files arrive as repeated "images" entries, which
     // Object.fromEntries collapses to the last one — collect them explicitly.
     const imageFiles = data
@@ -909,6 +917,7 @@ export const uploadPost = createServerFn({ method: "POST" })
     // explicit `undefined` value, which would fail the strict parse below.
     const normalized = {
       ...raw,
+      imageDimensions,
       tags,
       videoMetadata,
       ...(imageFiles.length > 0 && { images: imageFiles }),

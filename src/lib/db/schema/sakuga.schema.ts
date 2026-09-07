@@ -59,9 +59,8 @@ export const posts = pgTable("posts", {
   volumeNumber: integer(),
 });
 
-// One row per attached image; `position` orders them for display. Posts
-// currently expose a single image in the UI, but the table already supports
-// several per post for a future multi-image upload.
+// One row per attached image; `position` orders them for display. Position
+// zero is also copied to posts.thumbnailKey for cards and playlists.
 export const postImages = pgTable(
   "post_images",
   {
