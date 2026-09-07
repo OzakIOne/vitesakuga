@@ -31,6 +31,7 @@ export function Post({
   onEditClick,
   onAddToPlaylist,
   onReportClick,
+  onSuggestEditClick,
 }: {
   post: Awaited<ReturnType<typeof fetchPostDetail>>["post"];
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
@@ -41,6 +42,7 @@ export function Post({
   onEditClick?: (() => void) | undefined;
   onAddToPlaylist?: (() => void) | undefined;
   onReportClick?: (() => void) | undefined;
+  onSuggestEditClick?: (() => void) | undefined;
 }) {
   const isOwner = currentUserId === user.id;
   const episodeInfo = formatEpisodeInfo(post);
@@ -100,6 +102,11 @@ export function Post({
             {isOwner && onEditClick && (
               <Button onClick={onEditClick} size="sm" variant="outline">
                 Edit Post
+              </Button>
+            )}
+            {!isOwner && onSuggestEditClick && (
+              <Button onClick={onSuggestEditClick} size="sm" variant="outline">
+                Suggest an edit
               </Button>
             )}
             <PostVoteButtons currentUserId={currentUserId} postId={post.id} />

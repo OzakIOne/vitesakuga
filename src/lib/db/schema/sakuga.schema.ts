@@ -278,6 +278,8 @@ export const notifications = pgTable(
       .$type<
         | "comment-mention"
         | "edit-suggestion-applied"
+        | "edit-suggestion-approved"
+        | "edit-suggestion-rejected"
         | "promotion-approved"
         | "promotion-rejected"
       >()
