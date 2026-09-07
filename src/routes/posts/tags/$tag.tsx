@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { Box } from "src/components/ui/layout";
+import { TagFollowButton } from "src/components/TagFollowButton";
+import { Box, HStack } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/posts/tags/$tag")({
 function RouteComponent() {
   const { tag } = Route.useParams();
   const searchParams = Route.useSearch();
-  const { sortBy, dateRange } = searchParams;
+  const { dateRange, sortBy, view } = searchParams;
 
   const {
     allPosts,
@@ -42,6 +43,7 @@ function RouteComponent() {
   return (
     <PostsPageLayout
       dateRange={dateRange}
+      discoveryView={view}
       fromRoute="/posts/tags/$tag"
       popularTags={popularTags}
       searchQuery={undefined}
@@ -49,9 +51,10 @@ function RouteComponent() {
       sortBy={sortBy}
     >
       <Box border="1px" borderRadius="md" p={4}>
-        <Heading as="h1" mb={6}>
-          Posts tagged with “{tag}”
-        </Heading>
+        <HStack justifyContent="space-between" mb={6}>
+          <Heading as="h1">Posts tagged with “{tag}”</Heading>
+          <TagFollowButton tagName={tag} />
+        </HStack>
 
         <VirtualPostsGrid
           allPosts={allPosts}

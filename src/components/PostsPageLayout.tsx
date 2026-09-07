@@ -11,10 +11,13 @@ import {
 } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
 import type {
+  DiscoveryView,
   PostsSearchParams,
   VideoMetadata,
 } from "src/lib/posts/posts.schema";
 
+import { DiscoverySummary } from "./DiscoverySummary";
+import { DiscoveryViewSelector } from "./DiscoveryViewSelector";
 import { PopularTagsSection } from "./PopularTagsSection";
 import type { PopularTag } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";
@@ -28,9 +31,12 @@ const EMPTY_SELECTED_TAGS: readonly string[] = [];
 export type PostsPageLayoutProps = {
   searchQuery?: string | undefined;
   selectedTags?: readonly string[] | undefined;
+  seriesTitle?: string | undefined;
   popularTags: PopularTag[];
   sortBy: PostsSearchParams["sortBy"];
   dateRange: PostsSearchParams["dateRange"];
+  discoveryView: DiscoveryView;
+  showDiscoveryViews?: boolean;
   children: ReactNode;
   fromRoute: RegisteredRoutes;
   videoMetadata?: VideoMetadata | undefined;
@@ -54,11 +60,14 @@ function CollapseArrow() {
 export function PostsPageLayout({
   searchQuery,
   selectedTags = EMPTY_SELECTED_TAGS,
+  seriesTitle,
   popularTags,
   sortBy,
   dateRange,
+  discoveryView,
   children,
   fromRoute,
+  showDiscoveryViews = true,
   videoMetadata,
 }: PostsPageLayoutProps) {
   const isPostDetail = fromRoute === "/posts/$postId";
@@ -86,6 +95,12 @@ export function PostsPageLayout({
         </Box>
       )}
 
+      {!isPostDetail && showDiscoveryViews && (
+        <Box border="1px" borderRadius="md" p={4} shadow="md">
+          <DiscoveryViewSelector fromRoute={fromRoute} view={discoveryView} />
+        </Box>
+      )}
+
       {!isPostDetail && (
         <Box border="1px" borderRadius="md" p={4} shadow="md">
           <Heading mb={3} size="sm">
@@ -93,6 +108,7 @@ export function PostsPageLayout({
           </Heading>
           <PostFilters
             dateRange={dateRange}
+            discoveryView={discoveryView}
             fromRoute={fromRoute}
             sortBy={sortBy}
           />
@@ -116,7 +132,14 @@ export function PostsPageLayout({
               <SearchBox
                 defaultTags={selectedTags}
                 defaultValue={searchQuery}
+                dateRange={dateRange}
+                sortBy={sortBy}
               />
+              {seriesTitle && (
+                <Text color="blue.600" fontSize="sm" mt={3}>
+                  Series filter: {seriesTitle}
+                </Text>
+              )}
             </Box>
 
             {hasCollapsibleSidebarCards && (
@@ -207,7 +230,12 @@ export function PostsPageLayout({
           </VStack>
         </GridItem>
 
-        <GridItem>{children}</GridItem>
+        <GridItem>
+          <VStack align="stretch" gap={4}>
+            <DiscoverySummary view={discoveryView} />
+            {children}
+          </VStack>
+        </GridItem>
       </Grid>
     </Box>
   );

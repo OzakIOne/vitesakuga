@@ -45,7 +45,7 @@ export const isStaffRole = (role: Role): boolean =>
  * server-side `getUserRole`.
  */
 export const roleOf = (
-  user: { readonly id?: unknown } | null | undefined,
+  user: { readonly id?: unknown; readonly role?: unknown } | null | undefined,
 ): Role => {
   // SAFETY: every session user carries a `role` key at runtime through the
   // Better Auth additionalFields config (`src/lib/auth/index.ts`); this cast

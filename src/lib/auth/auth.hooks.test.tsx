@@ -6,10 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   useChangePassword,
   useDeleteAccount,
+  useResendEmailVerification,
   useLogin,
   useSignUp,
   useSocialLogin,
   useUpdateProfile,
+  useVerifyEmail,
 } from "./auth.hooks";
 import { AuthClientContext } from "./client-context";
 
@@ -20,6 +22,10 @@ const createMockAuthClient = () => ({
   },
   signUp: {
     email: vi.fn(),
+  },
+  emailOtp: {
+    sendVerificationOtp: vi.fn(),
+    verifyEmail: vi.fn(),
   },
   updateUser: vi.fn(),
   changePassword: vi.fn(),
@@ -112,6 +118,48 @@ describe(useSignUp, () => {
       },
       expect.any(Object),
     );
+  });
+});
+
+describe("email verification hooks", () => {
+  let queryClient: QueryClient;
+  let mockAuth: ReturnType<typeof createMockAuthClient>;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    mockAuth = createMockAuthClient();
+  });
+
+  it("verifies the signup code", async () => {
+    mockAuth.emailOtp.verifyEmail.mockResolvedValueOnce({ data: {} });
+    const { result } = renderHook(() => useVerifyEmail("/welcome"), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({ email: "alice@gmail.com", otp: "123456" });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockAuth.emailOtp.verifyEmail).toHaveBeenCalledWith({
+      email: "alice@gmail.com",
+      otp: "123456",
+    });
+  });
+
+  it("resends the signup code", async () => {
+    mockAuth.emailOtp.sendVerificationOtp.mockResolvedValueOnce({});
+    const { result } = renderHook(() => useResendEmailVerification(), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({ email: "alice@gmail.com" });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockAuth.emailOtp.sendVerificationOtp).toHaveBeenCalledWith({
+      email: "alice@gmail.com",
+      type: "email-verification",
+    });
   });
 });
 

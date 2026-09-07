@@ -1,4 +1,4 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { Schema } from "effect";
 import { Suspense } from "react";
@@ -11,8 +11,9 @@ import { Stack } from "src/components/ui/layout";
 import { Text } from "src/components/ui/typography";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { parse } from "src/lib/effect/schema.utils";
-import { postQueryDetail } from "src/lib/posts/posts.queries";
+import { postQueryDetail, seriesHubQuery } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
+import { getSeriesNavigation } from "src/lib/posts/series-hubs";
 
 export const Route = createFileRoute("/posts/$postId")({
   component: PostComponent,
@@ -28,21 +29,30 @@ export const Route = createFileRoute("/posts/$postId")({
 
 function PostComponent() {
   const { postId } = Route.useParams();
-  const { dateRange, q, sortBy, tags } = Route.useSearch();
+  const { dateRange, q, seriesTitle, sortBy, tags, view } = Route.useSearch();
   const context = useRouteContext({ from: "/posts/$postId" });
 
   const {
     data: { post, user, tags: initialTags, relatedPost, images },
   } = useSuspenseQuery(postQueryDetail(postId));
+  const seriesQuery = useQuery({
+    ...seriesHubQuery(post.animeTitle ?? ""),
+    enabled: Boolean(post.animeTitle),
+  });
+  const seriesNavigation = seriesQuery.data
+    ? getSeriesNavigation(seriesQuery.data.posts, post.id)
+    : null;
 
   const currentUserId = context.user?.id;
 
   return (
     <PostsPageLayout
       dateRange={dateRange}
+      discoveryView={view}
       fromRoute="/posts/$postId"
       popularTags={[]}
       searchQuery={q}
+      seriesTitle={seriesTitle}
       selectedTags={tags}
       sortBy={sortBy}
       videoMetadata={post.videoMetadata}
@@ -59,9 +69,12 @@ function PostComponent() {
           currentUserId={currentUserId}
           images={images}
           initialTags={initialTags}
-          post={post}
-          relatedPost={relatedPost}
-          user={user}
+         post={post}
+         relatedPost={relatedPost}
+         seriesNavigation={seriesNavigation}
+         seriesPosts={seriesQuery.data?.posts}
+          currentUserRole={context.user?.role}
+         user={user}
         />
       </Suspense>
     </PostsPageLayout>

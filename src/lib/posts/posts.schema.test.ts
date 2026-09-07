@@ -9,7 +9,9 @@ import {
 } from "../search/search-limits";
 import {
   FormFileUploadSchema,
+  MAX_IMAGES_PER_POST,
   MAX_THUMBNAIL_SIZE_BYTES,
+  getImageFileValidationError,
   searchPostsBaseSchema,
   updatePostInputSchema,
   VideoMetadataSchema,
@@ -51,8 +53,10 @@ describe("searchPostsBaseSchema", () => {
       dateRange: "all",
       page: 0,
       q: "",
+      randomSeed: 0,
       sortBy: "newest",
       tags: [],
+      view: "chronological",
     });
   });
 
@@ -61,8 +65,10 @@ describe("searchPostsBaseSchema", () => {
       dateRange: "month",
       page: 2,
       q: "qwe",
+      randomSeed: 123,
       sortBy: "oldest",
       tags: ["anime", "action"],
+      view: "trending",
     };
     const result = parseStrict(searchPostsBaseSchema)(input);
     expect(result).toStrictEqual(input);
@@ -75,6 +81,12 @@ describe("searchPostsBaseSchema", () => {
   it("should throw on invalid sortBy option", () => {
     expect(() =>
       parseStrict(searchPostsBaseSchema)({ sortBy: "random" }),
+    ).toThrow();
+  });
+
+  it("should throw on invalid discovery view", () => {
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({ view: "popular" }),
     ).toThrow();
   });
 
@@ -270,5 +282,56 @@ describe("FormFileUploadSchema", () => {
         ),
       }),
     ).toThrow(thumbnailSizeMessage);
+  });
+
+  it("accepts the full multi-image post limit", () => {
+    const images = Array.from(
+      { length: MAX_IMAGES_PER_POST },
+      (_, index) =>
+        new File(["image"], "panel-" + index + ".png", { type: "image/png" }),
+    );
+
+    const result = parseStrict(FormFileUploadSchema)({
+      description: "Manga gallery",
+      images,
+      relatedPostId: undefined,
+      source: undefined,
+      tags: [],
+      title: "Manga panels",
+    });
+
+    expect(result.images).toHaveLength(MAX_IMAGES_PER_POST);
+  });
+
+  it("rejects image posts above the multi-image limit", () => {
+    const images = Array.from(
+      { length: MAX_IMAGES_PER_POST + 1 },
+      (_, index) =>
+        new File(["image"], "panel-" + index + ".png", { type: "image/png" }),
+    );
+
+    expect(() =>
+      parseStrict(FormFileUploadSchema)({
+        description: "Manga gallery",
+        images,
+        relatedPostId: undefined,
+        source: undefined,
+        tags: [],
+        title: "Manga panels",
+      }),
+    ).toThrow("At most " + MAX_IMAGES_PER_POST + " images per post");
+  });
+
+  it("reports per-image client validation errors", () => {
+    expect(
+      getImageFileValidationError(
+        new File(["image"], "panel.gif", { type: "image/gif" }),
+      ),
+    ).toBe("Images must be JPEG, PNG or WebP files");
+    expect(
+      getImageFileValidationError(
+        new File([], "empty.png", { type: "image/png" }),
+      ),
+    ).toContain("Images must not exceed");
   });
 });

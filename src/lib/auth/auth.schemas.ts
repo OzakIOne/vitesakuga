@@ -1,6 +1,10 @@
 import { Schema } from "effect";
 
 import { USERNAME_PATTERN } from "../mentions/mentions";
+import {
+  EMAIL_DOMAIN_POLICY_MESSAGE,
+  isAllowedSignupEmail,
+} from "./email-policy";
 import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
 
 const Email = Schema.String.pipe(
@@ -8,6 +12,14 @@ const Email = Schema.String.pipe(
     Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
       message: "Please enter a valid email address",
     }),
+  ),
+);
+
+const SignupEmail = Email.pipe(
+  Schema.check(
+    Schema.makeFilter((email: string): string | undefined =>
+      isAllowedSignupEmail(email) ? undefined : EMAIL_DOMAIN_POLICY_MESSAGE,
+    ),
   ),
 );
 
@@ -57,7 +69,7 @@ export const signUpSchema = Schema.Struct({
       }),
     ),
   ),
-  email: Email,
+  email: SignupEmail,
   password: StrongPassword,
   confirm_password: Schema.String,
 }).pipe(Schema.check(PasswordMatch));
