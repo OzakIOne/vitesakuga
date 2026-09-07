@@ -28,6 +28,7 @@ const EMPTY_SELECTED_TAGS: readonly string[] = [];
 export type PostsPageLayoutProps = {
   searchQuery?: string | undefined;
   selectedTags?: readonly string[] | undefined;
+  seriesTitle?: string | undefined;
   popularTags: PopularTag[];
   sortBy: PostsSearchParams["sortBy"];
   dateRange: PostsSearchParams["dateRange"];
@@ -54,6 +55,7 @@ function CollapseArrow() {
 export function PostsPageLayout({
   searchQuery,
   selectedTags = EMPTY_SELECTED_TAGS,
+  seriesTitle,
   popularTags,
   sortBy,
   dateRange,
@@ -117,6 +119,11 @@ export function PostsPageLayout({
                 defaultTags={selectedTags}
                 defaultValue={searchQuery}
               />
+              {seriesTitle && (
+                <Text color="blue.600" fontSize="sm" mt={3}>
+                  Series filter: {seriesTitle}
+                </Text>
+              )}
             </Box>
 
             {hasCollapsibleSidebarCards && (

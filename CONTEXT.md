@@ -42,6 +42,10 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **Related Post** — An optional reference from one Post to another. Stored as `relatedPostId` integer on the posts table.
 
+**Series Hub** — A read-only archive for posts sharing the same `animeTitle`. Episode posts are grouped by season and episode; manga posts are grouped by volume and chapter. Posts with missing or conflicting sequence metadata remain visible in a metadata-review section instead of being silently excluded.
+
+**Series Metadata Status** — `complete` posts can participate in episode/chapter grouping and sequence navigation; `incomplete` posts are missing sequence fields; `conflicting` posts contain incompatible episode/chapter/movie fields. Classification lives in `src/lib/posts/series-hubs.ts`.
+
 ## Auth
 
 **Session** — Better Auth session with user info, accessed through `SessionService` (an Effect `Context.Service` in `src/lib/auth/session.effect.ts`, provided by `SessionServiceLive`). Interface: `getSession()` (full session or null), `getUser()` (user or null), and `requireUser(message)` (fails with `UnauthorizedError` when signed out). All mutating services read auth state through this service so the dependency appears in their Effect requirement channel; tests swap in a mocked `AuthService` under the real `SessionServiceLive`.

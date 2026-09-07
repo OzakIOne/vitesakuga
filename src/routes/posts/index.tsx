@@ -15,7 +15,7 @@ export const Route = createFileRoute("/posts/")({
 
 function PostsContent() {
   const searchParams = Route.useSearch();
-  const { q, tags, sortBy, dateRange } = searchParams;
+  const { q, seriesTitle, tags, sortBy, dateRange } = searchParams;
 
   const {
     allPosts,
@@ -43,6 +43,7 @@ function PostsContent() {
         fromRoute="/posts/"
         popularTags={popularTags}
         searchQuery={q}
+        seriesTitle={seriesTitle}
         selectedTags={tags}
         sortBy={sortBy}
       >

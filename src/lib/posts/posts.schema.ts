@@ -220,6 +220,23 @@ export const updatePostInputSchema = Schema.Struct({
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
 
+const SeriesTitleSchema = Schema.String.pipe(
+  Schema.decode({
+    decode: SchemaGetter.transform((value) => value.trim()),
+    encode: SchemaGetter.transform((value) => value),
+  }),
+  Schema.check(
+    Schema.isMinLength(1, {
+      message: "Series title must not be empty",
+    }),
+  ),
+  Schema.check(
+    Schema.isMaxLength(MAX_SEARCH_QUERY_LENGTH, {
+      message: `Series title must not exceed ${MAX_SEARCH_QUERY_LENGTH} characters`,
+    }),
+  ),
+);
+
 export const searchPostsBaseSchema = Schema.Struct({
   dateRange: Schema.Literals(["all", "today", "week", "month"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("all")),
@@ -240,6 +257,7 @@ export const searchPostsBaseSchema = Schema.Struct({
     ),
     Schema.withDecodingDefault(Effect.succeed("")),
   ),
+  seriesTitle: Schema.optional(SeriesTitleSchema),
   sortBy: Schema.Literals(["newest", "oldest"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("newest")),
   ),
@@ -264,6 +282,12 @@ export const searchPostsBaseSchema = Schema.Struct({
 export type PostsSearchParams = Schema.Schema.Type<
   typeof searchPostsBaseSchema
 >;
+
+export const seriesHubSchema = Schema.Struct({
+  seriesTitle: SeriesTitleSchema,
+});
+
+export type SeriesHubParams = Schema.Schema.Type<typeof seriesHubSchema>;
 
 export const postByTagSchema = Schema.Struct({
   page: Schema.Number.pipe(

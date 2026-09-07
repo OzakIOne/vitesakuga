@@ -59,6 +59,9 @@ const defaultVideoMetadata = JSON.stringify({
 
 const insertPost = async (
   overrides: Partial<{
+    animeTitle: string | null;
+    chapterNumber: number | null;
+    episodeNumber: number | null;
     id: number;
     title: string;
     description: string;
@@ -67,19 +70,28 @@ const insertPost = async (
     thumbnailKey: string;
     source: string | null;
     relatedPostId: number | null;
+    seasonNumber: number | null;
+    sourceType: "movie" | "tv_series" | null;
     videoMetadata: string;
+    volumeNumber: number | null;
     createdAt: Date;
   }> = {},
 ) => {
   const defaults = {
+    animeTitle: null as string | null,
+    chapterNumber: null as number | null,
     title: "Test Post",
     description: "<p>Test description</p>",
+    episodeNumber: null as number | null,
     userId: "user-1",
     videoKey: "videos/user-1/abc.mp4",
     thumbnailKey: "thumbnails/user-1/abc.jpg",
     source: null as string | null,
     relatedPostId: null as number | null,
+    seasonNumber: null as number | null,
+    sourceType: null as "movie" | "tv_series" | null,
     videoMetadata: defaultVideoMetadata,
+    volumeNumber: null as number | null,
     createdAt: new Date("2024-01-01"),
   };
   const row = { ...defaults, ...overrides };
@@ -171,6 +183,25 @@ describe("PostsService.search", () => {
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0]!.title).toBe("Anime Sakuga");
+  });
+
+  it("filters by series title", async () => {
+    await insertPost({ animeTitle: "Mob Psycho 100", title: "Mob clip" });
+    await insertPost({ animeTitle: "One Piece", title: "Pirate clip" });
+
+    const result = await runEffect(
+      PostsService.search({
+        q: "",
+        seriesTitle: "mob psycho 100",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual(["Mob clip"]);
+    expect(result.meta.pagination.total).toBe(1);
   });
 
   it("treats search wildcards as literals", async () => {
@@ -444,6 +475,45 @@ describe("PostsService.fetchDetail", () => {
     }
     expect(error.postId).toBe(999);
     expect(error.message).toBe("Post 999 not found");
+  });
+});
+
+describe("PostsService.fetchSeriesHub", () => {
+  it("returns posts for a series case-insensitively with vote counts", async () => {
+    await insertPost({
+      animeTitle: "Mob Psycho 100",
+      episodeNumber: 2,
+      seasonNumber: 1,
+      sourceType: "tv_series",
+      title: "Episode two",
+    });
+    const firstPost = await insertPost({
+      animeTitle: "mob psycho 100",
+      episodeNumber: 1,
+      seasonNumber: 1,
+      sourceType: "tv_series",
+      title: "Episode one",
+    });
+    await db
+      .insertInto("post_votes")
+      .values({
+        postId: firstPost,
+        userId: "user-1",
+        vote: "like",
+      })
+      .execute();
+    await insertPost({ animeTitle: "Other series", title: "Ignored" });
+
+    const result = await runEffect(
+      PostsService.fetchSeriesHub({ seriesTitle: "MOB PSYCHO 100" }),
+    );
+
+    expect(result.title).toBe("Mob Psycho 100");
+    expect(result.posts.map((post) => post.title)).toEqual([
+      "Episode two",
+      "Episode one",
+    ]);
+    expect(result.posts.find((post) => post.id === firstPost)?.likes).toBe(1);
   });
 });
 
