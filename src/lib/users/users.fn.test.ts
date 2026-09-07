@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -205,5 +206,151 @@ describe("UsersService.userPosts", () => {
     expect(result.meta.pagination.currentPage).toBe(1);
     expect(result.meta.pagination.totalPages).toBe(1);
     expect(result.meta.pagination.hasMore).toBe(false);
+  });
+});
+
+describe("UsersService.contributorProfile", () => {
+  it("aggregates public contributions without exposing private history", async () => {
+    await db
+      .updateTable("user")
+      .set({ role: "uploader" })
+      .where("id", "=", "user-1")
+      .execute();
+
+    const post = await db
+      .insertInto("posts")
+      .values({
+        description: "Content",
+        thumbnailKey: "thumbnails/profile.jpg",
+        title: "Profile post",
+        userId: "user-1",
+        videoKey: "videos/profile.mp4",
+        videoMetadata: "{}",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    await db
+      .insertInto("comments")
+      .values({ content: "A useful note", postId: post.id, userId: "user-1" })
+      .execute();
+    await db
+      .insertInto("post_votes")
+      .values({ postId: post.id, userId: "user-2", vote: "like" })
+      .execute();
+
+    await db
+      .insertInto("points_ledger")
+      .values([
+        {
+          action: "post-upload",
+          points: 100,
+          refId: post.id,
+          userId: "user-1",
+        },
+        {
+          action: "comment-written",
+          points: 2,
+          refId: 1,
+          userId: "user-1",
+        },
+      ])
+      .execute();
+
+    await db
+      .insertInto("post_edits")
+      .values([
+        {
+          payload: { title: "Accepted" },
+          postId: post.id,
+          status: "approved",
+          suggestedBy: "user-1",
+        },
+        {
+          payload: { title: "Pending" },
+          postId: post.id,
+          status: "pending",
+          suggestedBy: "user-1",
+        },
+        {
+          payload: { title: "Rejected" },
+          postId: post.id,
+          status: "rejected",
+          suggestedBy: "user-1",
+        },
+      ])
+      .execute();
+
+    const publicPlaylist = await db
+      .insertInto("playlists")
+      .values({
+        description: "A public collection",
+        is_public: true,
+        title: "Best cuts",
+        user_id: "user-1",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto("playlist_posts")
+      .values({ playlist_id: publicPlaylist.id, post_id: post.id })
+      .execute();
+    await db
+      .insertInto("playlists")
+      .values({
+        is_public: false,
+        title: "Private collection",
+        user_id: "user-1",
+      })
+      .execute();
+
+    const profile = await runEffect(
+      UsersService.contributorProfile({ userId: "user-1" }),
+    );
+
+    expect(profile).toMatchObject({
+      acceptedEdits: 1,
+      comments: 1,
+      id: "user-1",
+      likesReceived: 1,
+      name: "Alice",
+      points: 102,
+      posts: 1,
+      publicPlaylistCount: 1,
+      role: "uploader",
+      username: "alice",
+    });
+    expect(profile.badges.map((badge) => badge.id)).toEqual([
+      "uploader",
+      "editor",
+      "curator",
+    ]);
+    expect(profile.publicPlaylists).toEqual([
+      {
+        description: "A public collection",
+        id: publicPlaylist.id,
+        postCount: 1,
+        thumbnailKey: "thumbnails/profile.jpg",
+        title: "Best cuts",
+      },
+    ]);
+    expect(profile).not.toHaveProperty("email");
+    expect(profile).not.toHaveProperty("notifications");
+    expect(profile).not.toHaveProperty("pointsLedger");
+    expect(profile).not.toHaveProperty("promotionReviews");
+  });
+
+  it("does not expose anonymized accounts as contributor profiles", async () => {
+    await db
+      .updateTable("user")
+      .set({ deletedAt: new Date() })
+      .where("id", "=", "user-2")
+      .execute();
+
+    const error = await runEffect(
+      Effect.flip(UsersService.contributorProfile({ userId: "user-2" })),
+    );
+
+    expect(error._tag).toBe("UserNotFoundError");
   });
 });

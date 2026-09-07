@@ -1,20 +1,24 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
+import { ContributorProfile } from "src/components/ContributorProfile";
 import { NotFound } from "src/components/NotFound";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { Box } from "src/components/ui/layout";
 import { Tabs } from "src/components/ui/tabs";
-import { User } from "src/components/User";
 import { UserErrorComponent } from "src/components/UserError";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
-import { userPostsInfiniteQueryOptions } from "src/lib/users/users.queries";
+import {
+  contributorProfileQueryOptions,
+  userPostsInfiniteQueryOptions,
+} from "src/lib/users/users.queries";
 
 export const Route = createFileRoute("/users/$id")({
   component: UserLayoutComponent,
@@ -40,7 +44,6 @@ function UserContent() {
     anchorScrollKey,
     fetchNextPage,
     fetchPreviousPage,
-    firstPage,
     hasNextPage,
     hasPreviousPage,
     isFetchingNextPage,
@@ -71,14 +74,6 @@ function UserContent() {
         showDiscoveryViews={false}
         sortBy={sortBy}
       >
-        {firstPage?.user && (
-          <User
-            id={firstPage.user.id}
-            image={firstPage.user.image}
-            name={firstPage.user.name}
-          />
-        )}
-
         <VirtualPostsGrid
           allPosts={allPosts}
           anchorPostIndex={anchorPostIndex}
@@ -101,6 +96,9 @@ function UserContent() {
 
 function UserLayoutComponent() {
   const { id } = Route.useParams();
+  const { data: profile } = useSuspenseQuery(
+    contributorProfileQueryOptions(id),
+  );
   const { activeTab, hasChildRoute } = useRouterState({
     select: (state) => ({
       activeTab: state.matches.some((match) =>
@@ -119,6 +117,7 @@ function UserLayoutComponent() {
   return (
     <>
       <Box p={4} pb={0}>
+        <ContributorProfile profile={profile} />
         <Tabs.Root
           // The triggers are TanStack Router Links that already perform SPA
           // navigation. Ark's default `navigate` re-dispatches a

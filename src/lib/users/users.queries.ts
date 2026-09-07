@@ -5,7 +5,11 @@ import {
   postsPreviousPageParam,
 } from "../posts/posts.queries";
 import type { FetchUserInput } from "./users.schema";
-import { fetchMentionableUsers, fetchUserPosts } from "./users.service";
+import {
+  fetchContributorProfile,
+  fetchMentionableUsers,
+  fetchUserPosts,
+} from "./users.service";
 
 export const usersKeys = {
   all: ["users"] as const,
@@ -18,6 +22,7 @@ export const usersKeys = {
     [...usersKeys.all, "userPostsInfinite", { userId, q, tags }] as const,
   mentionSearch: (query: string) =>
     [...usersKeys.all, "mentionSearch", query] as const,
+  profile: (userId: string) => [...usersKeys.all, "profile", userId] as const,
 } as const;
 
 /**
@@ -46,4 +51,11 @@ export const userPostsInfiniteQueryOptions = (params: FetchUserInput) =>
       }),
     queryKey: usersKeys.userPostsInfinite(params),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+export const contributorProfileQueryOptions = (userId: string) =>
+  queryOptions({
+    queryFn: () => fetchContributorProfile({ data: { userId } }),
+    queryKey: usersKeys.profile(userId),
+    staleTime: 5 * 60 * 1000,
   });

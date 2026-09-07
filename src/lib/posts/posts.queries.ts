@@ -21,7 +21,6 @@ export const postsKeys = {
     randomSeed,
     view,
   }: PostsSearchParams) =>
-  }: PostsSearchParams) =>
     [
       ...postsKeys.all,
       "searchInfinite",
