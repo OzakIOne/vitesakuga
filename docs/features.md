@@ -18,31 +18,33 @@ Inventaire des fonctionnalités visibles de ViteSakuga (clone de Sakugabooru), v
 
 ## Pages publiques & navigation
 
-| Fonctionnalité            | Description                                                                                                                                                            | Fichiers clés                                                                                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Accueil**               | Recherche globale et tags populaires                                                                                                                                   | `src/routes/index.tsx`, `src/components/SearchBox.tsx`, `src/components/PopularTagsSection.tsx`                                                                        |
-| **Fil de posts**          | Grille virtualisée avec scroll infini bidirectionnel, tri, filtres de date, tags, recherche plein texte et filtres numériques avancés, pagination synchronisée à l'URL | `src/routes/posts/index.tsx`, `src/components/VirtualPostsGrid.tsx`, `src/components/PostFilters.tsx`, `src/components/Pagination.tsx`, `src/lib/posts/posts.hooks.ts` |
-| **Page de tag**           | Posts d'un tag avec les filtres du feed                                                                                                                                | `src/routes/posts/tags/$tag.tsx`                                                                                                                                       |
-| **Détail d'un post**      | Lecteur vidéo ou galerie d'images avec vignettes, navigation clavier et lightbox, métadonnées, post lié, tags, votes, commentaires, édition propriétaire et signalement | `src/routes/posts/$postId.tsx`, `src/components/PostImageGallery.tsx`, `src/components/PostDetail/PostDetailDisplay.tsx` |
-| **Annuaire utilisateurs** | Liste réactive des utilisateurs via TanStack DB                                                                                                                        | `src/routes/users.index.tsx`, `src/lib/db/collections.ts`                                                                                                              |
-| **Profil utilisateur**    | Posts de l'utilisateur et playlists publiques                                                                                                                          | `src/routes/users.$id.tsx`, `src/routes/users.$id.playlists.*.tsx`                                                                                                     |
-| **Playlists publiques**   | Liste paginée et détail des playlists publiques                                                                                                                        | `src/routes/playlists.index.tsx`, `src/routes/users.$id.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`                                                     |
-| **Playlists du compte**   | Playlists personnelles, playlist privée des posts aimés, ajout/retrait unitaire ou en masse, et réordonnancement                                                       | `src/routes/account_.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`                                                                                        |
-| **Notifications**         | Inbox personnelle avec badge non lus et marquage global comme lu                                                                                                       | `src/routes/notifications.tsx`, `src/lib/notifications/notifications.hooks.ts`                                                                                         |
-| **Raccourcis clavier**    | `?` (aide), `Mod+K` (recherche), séquences `G P` / `G U` / `G S`, navigation vidéo image par image                                                                     | `src/components/GlobalShortcuts.tsx`, `src/components/KeyboardShortcutsDialog.tsx`                                                                                     |
-| **Thème clair/sombre**    | Sélecteur de mode de couleur                                                                                                                                           | `src/routes/__root.tsx`, `src/components/ui/color-mode.tsx`                                                                                                            |
+| Fonctionnalité              | Description                                                                                                                                                            | Fichiers clés                                                                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Accueil**                 | Recherche globale et tags populaires                                                                                                                                   | `src/routes/index.tsx`, `src/components/SearchBox.tsx`, `src/components/PopularTagsSection.tsx`                                                                        |
+| **Fil de posts**            | Grille virtualisée avec scroll infini bidirectionnel, tri, filtres de date, tags, recherche plein texte et filtres numériques avancés, pagination synchronisée à l'URL | `src/routes/posts/index.tsx`, `src/components/VirtualPostsGrid.tsx`, `src/components/PostFilters.tsx`, `src/components/Pagination.tsx`, `src/lib/posts/posts.hooks.ts` |
+| **Recherches sauvegardées** | Les membres connectés peuvent nommer la recherche courante (texte, tags, tri et période), la réappliquer depuis le champ de recherche ou la supprimer                  | `src/components/SavedSearchDialogs.tsx`, `src/lib/saved-searches/*`, migration `drizzle/20260907194313_curious_wild_pack/migration.sql`                                |
+| **Page de tag**             | Posts d'un tag avec les filtres du feed                                                                                                                                | `src/routes/posts/tags/$tag.tsx`                                                                                                                                       |
+| **Détail d'un post**        | Lecteur vidéo ou galerie d'images avec vignettes, navigation clavier et lightbox, métadonnées, post lié, tags, votes, commentaires, édition propriétaire et signalement | `src/routes/posts/$postId.tsx`, `src/components/PostImageGallery.tsx`, `src/components/PostDetail/PostDetailDisplay.tsx` |
+| **Annuaire utilisateurs**   | Liste réactive des utilisateurs via TanStack DB                                                                                                                        | `src/routes/users.index.tsx`, `src/lib/db/collections.ts`                                                                                                              |
+| **Profil utilisateur**      | Posts de l'utilisateur et playlists publiques                                                                                                                          | `src/routes/users.$id.tsx`, `src/routes/users.$id.playlists.*.tsx`                                                                                                     |
+| **Playlists publiques**     | Liste paginée et détail des playlists publiques                                                                                                                        | `src/routes/playlists.index.tsx`, `src/routes/users.$id.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`                                                     |
+| **Playlists du compte**     | Playlists personnelles, playlist privée des posts aimés, ajout/retrait unitaire ou en masse, et réordonnancement                                                       | `src/routes/account_.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`                                                                                        |
+| **Notifications**           | Inbox personnelle avec badge non lus et marquage global comme lu                                                                                                       | `src/routes/notifications.tsx`, `src/lib/notifications/notifications.hooks.ts`                                                                                         |
+| **Raccourcis clavier**      | `?` (aide), `Mod+K` (recherche), séquences `G P` / `G U` / `G S`, navigation vidéo image par image                                                                     | `src/components/GlobalShortcuts.tsx`, `src/components/KeyboardShortcutsDialog.tsx`                                                                                     |
+| **Thème clair/sombre**      | Sélecteur de mode de couleur                                                                                                                                           | `src/routes/__root.tsx`, `src/components/ui/color-mode.tsx`                                                                                                            |
 
 ### Recherche avancée des posts
 
-La recherche accepte des qualificatifs numériques de style Sakugabooru dans le champ de recherche. Les opérateurs autorisés sont strictement `>`, `<` et `=` ; `>=` et `<=` ne sont pas supportés.
+La recherche accepte des qualificatifs numériques de style Sakugabooru et l'exclusion de tags dans le champ de recherche. Les opérateurs autorisés sont strictement `>`, `<` et `=` ; `>=` et `<=` ne sont pas supportés.
 
 | Qualificatif                   | Cible                                           | Exemple                   |
 | ------------------------------ | ----------------------------------------------- | ------------------------- |
 | `width` / `height`             | Dimensions des images attachées, en pixels      | `width:>1000 height:<800` |
 | `likes` / `score`              | Nombre de votes positifs (`score` est un alias) | `likes:>10`               |
 | `video_width` / `video_height` | Dimensions de la piste vidéo, en pixels         | `video_width:=1920`       |
+| `-tag`                         | Exclut les posts portant le tag indiqué         | `-movies`                 |
 
-Les qualificatifs peuvent être combinés avec du texte libre (`action width:>1000`) et entre eux. Ils sont extraits côté serveur puis traduits en prédicats SQL avant le comptage et la pagination. Les dimensions d'image sont capturées au moment de l'upload et stockées dans `post_images`; les anciens posts sans dimensions ne correspondent pas aux filtres `width`/`height`.
+Les qualificatifs peuvent être combinés avec du texte libre (`action width:>1000`) et entre eux. Un token `-tag` exclut tout post qui possède ce tag (`action -movies`). Ils sont extraits côté serveur puis traduits en prédicats SQL avant le comptage et la pagination. Les dimensions d'image sont capturées au moment de l'upload et stockées dans `post_images`; les anciens posts sans dimensions ne correspondent pas aux filtres `width`/`height`.
 
 Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.service.ts`, `src/components/SearchBox.tsx`, `src/lib/upload/useUploadForm.ts`, migration `drizzle/20260906190600_brown_caretaker/migration.sql`.
 
@@ -50,7 +52,7 @@ Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.se
 
 ### Upload de post (`/upload`, authentification requise)
 
-- Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB par image, jusqu'à 10 images par post). L'interface affiche les aperçus, valide chaque fichier, permet de retirer et réordonner les images, et avertit que tout abus sera sanctionné. La première image reste la vignette par défaut.
+- Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB, une image par post dans l'interface actuelle). Le schéma serveur accepte jusqu'à 5 images, mais cette capacité n'est pas exposée par l'UI actuelle.
 - Génération locale de vignettes vidéo, sélection de thumbnail et métadonnées via mediainfo.js. Les images enregistrent leurs dimensions et utilisent la première image comme thumbnail.
 - Métadonnées : titre, description, URL source, saison/épisode (vidéo) ou volume/chapitre (image), type de source, tags, post lié.
 - Brouillon persistant côté client (`useUploadDraft`).
@@ -70,11 +72,12 @@ Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.se
 - **Votes** : like/dislike sur les posts, un vote par utilisateur ; playlist « Liked posts » dérivée des likes — `src/lib/votes/*`, `src/routes/account_.playlists.liked.tsx`.
 - **Commentaires** : ajout/édition/suppression (propriétaire ou staff), sanitization serveur et mentions `@pseudo` avec autocomplétion — `src/lib/comments/*`, `src/lib/mentions/*`, `src/lib/sanitize.server.ts`.
 - **Playlists** : CRUD, visibilité publique/privée, ajout/retrait unitaire et en masse, réordonnancement souris/clavier — `src/lib/playlists/*`, `src/components/PlaylistPostsTable.tsx`.
+- **Recherches sauvegardées** : snapshots privés des paramètres de recherche pour les utilisateurs connectés ; application et suppression depuis le champ de recherche — `src/lib/saved-searches/*`, `src/components/SavedSearchDialogs.tsx`.
 - **Signalements** : signaler un post avec un motif — `src/components/ReportDialog.tsx`, `src/lib/reports/*`.
-- **Suggestions d'édition « wiki »** : workflow serveur pour proposer des modifications sur le post d'un autre, avec approbations uploaders ou décision staff et historique. La proposition n'a pas encore de formulaire public dédié — `src/lib/post-edits/*`, `src/lib/moderation/*`.
+- **Suggestions d'édition « wiki »** : depuis le détail d'un post, les uploaders peuvent proposer une modification avec aperçu diff par champ. Les uploaders éligibles, le propriétaire ou le staff peuvent l'approuver/rejeter selon les règles du workflow ; l'historique affiche les suggestions en attente, appliquées ou rejetées, et le suggester reçoit une notification de décision — `src/components/PostDetail/PostEditSuggestionDialog.tsx`, `src/components/PostDetail/PostEditHistory.tsx`, `src/lib/post-edits/*`.
 - **Remplacement de vidéo** : workflow serveur pour remplacer la vidéo en conservant l'identité du post ; révisions conservées 90 jours et restaurables par le staff. Aucun écran public dédié n'est actuellement exposé — `src/lib/videos/*`.
 - **Système de points** : registre append-only `points_ledger` avec caps par action ; utilisé notamment pour la promotion des uploaders — `src/lib/points/*`, `src/lib/promotions/*`.
-- **Notifications in-app** : promotion, suggestion d'édition, mentions de commentaires et autres événements métier — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
+- **Notifications in-app** : promotion, décisions de suggestions d'édition (avec lien vers le post), mentions de commentaires et autres événements métier — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
 
 ### Mentions @pseudo
 
@@ -88,10 +91,12 @@ Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.se
 Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/api/auth/$.ts`) :
 
 - **Email/mot de passe** avec longueur minimale de 12 caractères et contrôle de diversité côté serveur.
+- **Inscription protégée** : les nouvelles adresses doivent appartenir à la liste de fournisseurs approuvés (Gmail, Outlook, Yahoo, Apple/Private Relay, Proton, etc.) ; la création d’un compte est suspendue jusqu’à la saisie d’un code envoyé par email.
 - **OAuth social** GitHub et Google, activé uniquement quand les credentials sont configurés.
 - **Passkeys (WebAuthn)** — `src/components/PasskeySignInButton.tsx`, `src/components/PasskeysSection.tsx`.
 - **2FA TOTP** avec codes de secours et option de confiance d'appareil — `src/components/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`.
 - **Captcha Cloudflare Turnstile** en production lorsqu'il est provisionné.
+- **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Cloudflare Email Service ; `CLOUDFLARE_EMAIL_API_TOKEN` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.
 - **Compte** (`/account`) : profil, pseudo, changement de mot de passe et suppression avec anonymisation ; le contenu public reste attribué à « Deleted user ».
 - **Rôles et permissions** : `novice → uploader → moderator → admin`, appliqués par les policies Effect — `src/lib/auth/roles.ts`, `src/lib/auth/policy.ts`, `src/lib/auth/ownership.ts`.
@@ -113,6 +118,7 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passent par des server functions TanStack Start et le bridge Effect `src/lib/server-fn.handler.ts` :
 
 - **Posts** : recherche, détail, upload, URL vidéo présignée, mise à jour — `src/lib/posts/posts.service.ts`
+- **Recherches sauvegardées** : sauvegarder, lister et supprimer les recherches personnelles — `src/lib/saved-searches/saved-searches.service.ts`
 - **Videos** : remplacement, révisions, restauration, aperçu GC, GC — `src/lib/videos/videos.service.ts`
 - **Comments** : fetch, ajout, édition, suppression — `src/lib/comments/comments.service.ts`
 - **Votes** : fetch, set/remove, posts aimés — `src/lib/votes/votes.service.ts`
@@ -125,9 +131,9 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 ## Tests
 
-État vérifié le **2026-09-06**.
+État vérifié le **2026-09-07**.
 
-- **Vitest** : `nub exec vitest run --maxWorkers=1` — **566/566 tests passés dans 53 fichiers**, dont 52 sous `src/` et `nitro-config.test.ts` à la racine. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
+- **Vitest** : `nub exec vitest run --maxWorkers=1` — **580/580 tests passés dans 55 fichiers**, dont 54 sous `src/` et `nitro-config.test.ts` à la racine. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
 - **Playwright** : `nub run test:ee` avec Postgres local + RustFS. L'inventaire actuel contient 14 fichiers `e2e/*.spec.ts` et 50 tests découverts ; leur exécution n'a pas été vérifiée dans cet audit.
 - **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts et raccourcis clavier.
 - **Couverture unitaire/service** : recherche et filtres numériques, pagination, posts, tags, utilisateurs, commentaires, mentions, playlists, votes, rapports, notifications, modération, suggestions, révisions vidéo/GC, points, rate limiting, stockage, auth et server-function boundary.
@@ -144,6 +150,6 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 ## Schéma de base de données
 
-`src/lib/db/schema/auth.schema.ts` : `user` (rôle, username unique, twoFactorEnabled, deletedAt), `session`, `account`, `verification`, `passkey`, `twoFactor`, `rateLimit`.
+`src/lib/db/schema/auth.schema.ts` : `user` (rôle, username unique, twoFactorEnabled, deletedAt), `session`, `account`, `verification`, `passkey`, `twoFactor`, `rateLimit`. Les codes email temporaires sont stockés dans `verification` par Better Auth.
 
-`src/lib/db/schema/sakuga.schema.ts` : `tags`, `post_tags`, `posts`, `post_images`, `post_votes`, `post_reports`, `playlists`, `playlist_posts`, `comments`, `comment_mentions`, `points_ledger`, `promotion_reviews`, `notifications`, `post_edits`, `post_edit_approvals`, `video_revisions`.
+`src/lib/db/schema/sakuga.schema.ts` : `tags`, `post_tags`, `posts`, `post_images`, `post_votes`, `post_reports`, `playlists`, `playlist_posts`, `saved_searches`, `comments`, `comment_mentions`, `points_ledger`, `promotion_reviews`, `notifications`, `post_edits`, `post_edit_approvals`, `video_revisions`.

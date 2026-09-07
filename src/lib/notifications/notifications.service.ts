@@ -10,6 +10,8 @@ import { baseLayerFactories, createHandler } from "../server-fn.handler";
 export type NotificationType =
   | "comment-mention"
   | "edit-suggestion-applied"
+  | "edit-suggestion-approved"
+  | "edit-suggestion-rejected"
   | "promotion-approved"
   | "promotion-rejected";
 

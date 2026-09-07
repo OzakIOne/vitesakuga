@@ -2,7 +2,7 @@ import { getAuthenticatorName, passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { captcha, twoFactor, username } from "better-auth/plugins";
+import { captcha, emailOTP, twoFactor, username } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Option, Redacted, Schema } from "effect";
 import { envServer } from "src/lib/env/server";
@@ -10,6 +10,11 @@ import { envServer } from "src/lib/env/server";
 import { db } from "../db/pool";
 import * as schema from "../db/schema";
 import { USERNAME_MAX_LENGTH } from "../mentions/mentions";
+import { sendVerificationOTP } from "./email-delivery";
+import {
+  EMAIL_DOMAIN_POLICY_MESSAGE,
+  isAllowedSignupEmail,
+} from "./email-policy";
 import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
 import { generateUsername } from "./username.server";
 
@@ -56,6 +61,11 @@ const NewPasswordBody = Schema.Union([
   Schema.Struct({ newPassword: Schema.String }),
 ]);
 
+// E2E creates disposable local accounts directly against the test database;
+// production and development signup paths always enforce the provider policy.
+const enforceEmailDomainPolicy = envServer.NODE_ENV !== "test";
+const requireEmailVerification = envServer.NODE_ENV !== "test";
+
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,
   secret: Redacted.value(envServer.BETTER_AUTH_SECRET),
@@ -72,9 +82,18 @@ export const auth = betterAuth({
   // https://www.better-auth.com/docs/authentication/email-password
   emailAndPassword: {
     enabled: true,
+    // Do not create a usable session until the signup email code is entered.
+    requireEmailVerification,
     // Server-side floor for sign-up, password change and password reset.
     // Strength (character-class) rules live in hooks.before below.
     minPasswordLength: MIN_PASSWORD_LENGTH,
+  },
+
+  // The email-OTP plugin replaces Better Auth's default verification link with
+  // a short code. Verification auto-signs the user in after the code is
+  // accepted, so the client never handles an unverified session.
+  emailVerification: {
+    autoSignInAfterVerification: true,
   },
 
   // https://www.better-auth.com/docs/concepts/database
@@ -85,6 +104,14 @@ export const auth = betterAuth({
       create: {
         // oxlint-disable-next-line effecttsgo/async-function -- Better Auth's databaseHooks.user.create.before contract requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
         before: async (createdUser) => {
+          if (
+            enforceEmailDomainPolicy &&
+            !isAllowedSignupEmail(createdUser.email)
+          ) {
+            throw new APIError("BAD_REQUEST", {
+              message: EMAIL_DOMAIN_POLICY_MESSAGE,
+            });
+          }
           if (createdUser["username"]) {
             return;
           }
@@ -155,6 +182,16 @@ export const auth = betterAuth({
   // client renders the widget (sitekey) and forwards the token in the
   // `x-captcha-response` header; the server verifies it with the secret.
   plugins: [
+    emailOTP({
+      allowedAttempts: 5,
+      disableSignUp: true,
+      expiresIn: 10 * 60,
+      overrideDefaultEmailVerification: true,
+      resendStrategy: "rotate",
+      sendVerificationOnSignUp: true,
+      sendVerificationOTP,
+      storeOTP: "hashed",
+    }),
     // Gated to production WITH a configured secret: Turnstile siteverify can't
     // pass against a localhost origin, so enabling it in dev would block every
     // sign-in, and enabling it without a secret would break production auth.

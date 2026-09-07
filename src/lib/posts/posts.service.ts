@@ -184,7 +184,7 @@ export class PostsService extends Context.Service<
     ) {
       const { tags, page, sortBy, dateRange } = data;
       const parsedSearch = parseSearchQuery(data.q);
-      const { text: q } = parsedSearch;
+      const { excludedTags, text: q } = parsedSearch;
 
       let query = db.selectFrom("posts").selectAll("posts");
 
@@ -205,6 +205,16 @@ export class PostsService extends Context.Service<
             .selectFrom("post_tags")
             .innerJoin("tags", "tags.id", "post_tags.tagId")
             .where("tags.name", "in", tags)
+            .select("post_tags.postId"),
+        );
+      }
+
+      if (excludedTags.length > 0) {
+        query = query.where("posts.id", "not in", (eb) =>
+          eb
+            .selectFrom("post_tags")
+            .innerJoin("tags", "tags.id", "post_tags.tagId")
+            .where("tags.name", "in", excludedTags)
             .select("post_tags.postId"),
         );
       }
@@ -267,6 +277,18 @@ export class PostsService extends Context.Service<
       if (dateRange !== "all") {
         popularTagsPredicates.push((eb) =>
           eb("posts.createdAt", ">=", computeStartDate(dateRange)),
+        );
+      }
+
+      if (excludedTags.length > 0) {
+        popularTagsPredicates.push((eb) =>
+          eb("posts.id", "not in", (nestedEb) =>
+            nestedEb
+              .selectFrom("post_tags")
+              .innerJoin("tags", "tags.id", "post_tags.tagId")
+              .where("tags.name", "in", excludedTags)
+              .select("post_tags.postId"),
+          ),
         );
       }
 

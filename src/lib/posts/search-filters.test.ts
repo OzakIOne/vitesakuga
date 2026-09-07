@@ -5,6 +5,7 @@ import { parseSearchQuery } from "./search-filters";
 describe("parseSearchQuery", () => {
   it("extracts booru-style numeric filters and keeps text search", () => {
     expect(parseSearchQuery("character width:>1000 likes:>10")).toEqual({
+      excludedTags: [],
       filters: [
         { field: "width", operator: ">", value: 1000 },
         { field: "likes", operator: ">", value: 10 },
@@ -15,6 +16,7 @@ describe("parseSearchQuery", () => {
 
   it("supports video dimensions", () => {
     expect(parseSearchQuery("video_width:=1920 video_height:<1080")).toEqual({
+      excludedTags: [],
       filters: [
         { field: "video_width", operator: "=", value: 1920 },
         { field: "video_height", operator: "<", value: 1080 },
@@ -25,8 +27,25 @@ describe("parseSearchQuery", () => {
 
   it("leaves unsupported qualifiers in text search", () => {
     expect(parseSearchQuery("artist:foo width:nope width:>=200")).toEqual({
+      excludedTags: [],
       filters: [],
       text: "artist:foo width:nope width:>=200",
+    });
+  });
+
+  it("extracts excluded tags and keeps ordinary text search", () => {
+    expect(parseSearchQuery("action -movies -live_action")).toEqual({
+      excludedTags: ["movies", "live_action"],
+      filters: [],
+      text: "action",
+    });
+  });
+
+  it("keeps a bare dash in the text search", () => {
+    expect(parseSearchQuery("action -")).toEqual({
+      excludedTags: [],
+      filters: [],
+      text: "action -",
     });
   });
 });

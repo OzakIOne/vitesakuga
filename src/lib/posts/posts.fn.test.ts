@@ -227,6 +227,32 @@ describe("PostsService.search", () => {
     expect(result.data[0]!.title).toBe("Tagged Post");
   });
 
+  it("excludes posts with tags written using dash syntax", async () => {
+    const moviePostId = await insertPost({ title: "Movie Post" });
+    const animePostId = await insertPost({ title: "Anime Post" });
+    await insertPost({ title: "Untagged Post" });
+    const moviesTagId = await insertTag("movies");
+    const animeTagId = await insertTag("anime");
+    await linkTags(moviePostId, [moviesTagId]);
+    await linkTags(animePostId, [animeTagId]);
+
+    const result = await runEffect(
+      PostsService.search({
+        q: "-movies",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title).sort()).toEqual([
+      "Anime Post",
+      "Untagged Post",
+    ]);
+    expect(result.meta.pagination.total).toBe(2);
+  });
+
   it("provides correct pagination for multiple pages", async () => {
     for (let i = 0; i < 35; i++) {
       await insertPost({ title: `Post ${i}`, videoKey: `videos/k-${i}.mp4` });

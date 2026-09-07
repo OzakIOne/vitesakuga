@@ -116,6 +116,8 @@ export function PostsPageLayout({
               <SearchBox
                 defaultTags={selectedTags}
                 defaultValue={searchQuery}
+                dateRange={dateRange}
+                sortBy={sortBy}
               />
             </Box>
 
