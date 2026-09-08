@@ -1,4 +1,4 @@
-// oxlint-disable effecttsgo/async-function -- this module's whole contract is Promise-returning: `baseLayerFactories`/`resolveMiddlewareLayer` in server-fn.handler.ts consume makeDBLayer/makeAuthLayer/makeMiddlewareLayer via `.then((m) => m.makeX())`, and `toAuthSessionProvider.getSession` implements `AuthSessionProvider`, which returns a Promise; converting any of these to Effect would ripple through the handler contract
+// oxlint-disable effecttsgo/async-function -- the exported layer factories return Promises because `baseLayerFactories`/`resolveMiddlewareLayer` in server-fn.handler.ts consume them through the server-function boundary; keeping dynamic imports and layer construction in native async functions avoids changing that contract
 import { Layer } from "effect";
 
 import { makeBetterAuthSessionProvider } from "../auth/better-auth.adapter.server";

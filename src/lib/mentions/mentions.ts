@@ -82,6 +82,10 @@ export function splitContentByMentions(content: string): MentionToken[] {
  */
 const MENTION_TOKEN_REGEX = /\[@([a-z0-9_]+)\]\(user:([A-Za-z0-9_-]{1,64})\)/g;
 
+/** Stored tokens and plain mentions are processed in one pass. */
+const MENTION_OR_STORED_TOKEN_REGEX =
+  /(?:\[@([a-z0-9_]+)\]\(user:([A-Za-z0-9_-]{1,64})\))|(?<![a-zA-Z0-9_])@([a-zA-Z0-9_]{3,30})(?![a-zA-Z0-9_])/g;
+
 export type StoredMention = {
   readonly handle: string;
   readonly userId: string;
@@ -168,15 +172,8 @@ export function canonicalizeMentionContent(
   content: string,
   resolveHandle: (handle: string) => string | null,
 ): CanonicalizedMentions {
-  // Stash existing tokens behind placeholders so their (possibly stale)
-  // handles are never re-resolved as freshly typed mentions.
-  const stashed: StoredMention[] = [];
-  let working = replaceMentionTokens(content, (token) => {
-    stashed.push(token);
-    return `\u0000${stashed.length - 1}\u0000`;
-  });
-
   const mentionUserIds: string[] = [];
+  const storedMentionUserIds: string[] = [];
   const pushId = (userId: string) => {
     if (!mentionUserIds.includes(userId)) {
       mentionUserIds.push(userId);
@@ -185,47 +182,40 @@ export function canonicalizeMentionContent(
 
   let canonicalized = "";
   let lastIndex = 0;
-  for (const match of working.matchAll(MENTION_REGEX)) {
-    const raw = match[1];
+  for (const match of content.matchAll(MENTION_OR_STORED_TOKEN_REGEX)) {
+    const storedHandle = match[1];
+    const storedUserId = match[2];
+    const raw = match[3];
     const start = match.index;
-    if (raw === undefined || start === undefined) {
+    if (start === undefined) {
       continue;
     }
-    canonicalized += working.slice(lastIndex, start);
-    const handle = raw.toLowerCase();
-    const userId = resolveHandle(handle);
-    if (userId === null) {
-      canonicalized += match[0];
+    canonicalized += content.slice(lastIndex, start);
+
+    if (storedHandle !== undefined && storedUserId !== undefined) {
+      storedMentionUserIds.push(storedUserId);
+      canonicalized += buildMentionToken(storedHandle, storedUserId);
     } else {
-      pushId(userId);
-      canonicalized += buildMentionToken(handle, userId);
+      if (raw === undefined) {
+        continue;
+      }
+      const handle = raw.toLowerCase();
+      const userId = resolveHandle(handle);
+      canonicalized +=
+        userId === null ? match[0] : buildMentionToken(handle, userId);
+      if (userId !== null) {
+        pushId(userId);
+      }
     }
     lastIndex = start + match[0].length;
   }
-  working = canonicalized + working.slice(lastIndex);
-
-  const restored: string[] = [];
-  let restoreIndex = 0;
-  // oxlint-disable-next-line eslint/no-control-regex -- NUL is the intentional stash delimiter for stored mention tokens (see replaceMentionTokens); real comment content never contains NUL, so it is an unambiguous placeholder
-  for (const match of working.matchAll(/\u0000(\d+)\u0000/g)) {
-    const rawIndex = match[1];
-    const start = match.index;
-    if (rawIndex === undefined || start === undefined) {
-      continue;
-    }
-    restored.push(working.slice(restoreIndex, start));
-    const token = stashed[Number(rawIndex)];
-    if (token) {
-      pushId(token.userId);
-      restored.push(buildMentionToken(token.handle, token.userId));
-    } else {
-      restored.push(match[0]);
-    }
-    restoreIndex = start + match[0].length;
+  for (const userId of storedMentionUserIds) {
+    pushId(userId);
   }
-  working = restored.join("") + working.slice(restoreIndex);
-
-  return { content: working, mentionUserIds };
+  return {
+    content: canonicalized + content.slice(lastIndex),
+    mentionUserIds,
+  };
 }
 
 /**

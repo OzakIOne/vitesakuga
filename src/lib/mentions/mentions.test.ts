@@ -173,6 +173,14 @@ describe(canonicalizeMentionContent, () => {
     expect(twice.content).toBe(once);
     expect(twice.mentionUserIds).toEqual(["u1"]);
   });
+
+  it("preserves NUL content while keeping stored tokens opaque", () => {
+    const content = "raw\u00000\u0000 and [@janet](user:u9)";
+    const result = canonicalizeMentionContent(content, () => null);
+
+    expect(result.content).toBe(content);
+    expect(result.mentionUserIds).toEqual(["u9"]);
+  });
 });
 
 describe(deTokenizeForEditing, () => {

@@ -1,4 +1,3 @@
-// oxlint-disable effecttsgo/missing-effect-context, effecttsgo/missing-layer-context -- compile-time regression cases deliberately require missing services; @ts-expect-error ensures TypeScript rejects each case
 import { Context, Effect, Layer } from "effect";
 
 import { makeServiceTestLayer, type ServiceTestContext } from "./test-utils";

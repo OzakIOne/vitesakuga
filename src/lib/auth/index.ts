@@ -234,8 +234,7 @@ export const auth = betterAuth({
       rpName: "ViteSakuga",
       origin: envServer.VITE_BASE_URL,
       registration: {
-        // oxlint-disable-next-line effecttsgo/async-function -- the passkey plugin's afterVerification hook requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
-        afterVerification: async ({ verification }) => {
+        afterVerification: ({ verification }) => {
           const name = getAuthenticatorName(
             verification.registrationInfo?.aaguid,
           );
