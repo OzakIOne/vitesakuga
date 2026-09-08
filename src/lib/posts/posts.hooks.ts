@@ -33,6 +33,7 @@ export type PostsInfiniteState<
 > = {
   allPosts: readonly PostWithVotes[];
   anchorPostIndex: number | null;
+  error: Error | null;
   anchorScrollKey: number;
   fetchNextPage: () => void;
   fetchPreviousPage: () => void;
@@ -46,6 +47,7 @@ export type PostsInfiniteState<
   pageParams: readonly number[];
   pageSize: number;
   popularTags: PopularTag[];
+  retry: () => void;
   syncPageToUrl: (page: number) => void;
 };
 
@@ -68,6 +70,7 @@ export function usePostsInfiniteScroll<
 
   const {
     data,
+    error,
     fetchNextPage,
     fetchPreviousPage,
     hasNextPage,
@@ -76,6 +79,7 @@ export function usePostsInfiniteScroll<
     isFetchingNextPage,
     isFetchingPreviousPage,
     isPending,
+    refetch,
   } = useInfiniteQuery(infiniteOptions);
 
   // The last page we wrote to the URL ourselves during scroll. Used to tell
@@ -179,10 +183,15 @@ export function usePostsInfiniteScroll<
     [data],
   );
 
+  const retry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
   return {
     allPosts,
     anchorPostIndex,
     anchorScrollKey,
+    error: error ?? null,
     fetchNextPage,
     fetchPreviousPage,
     firstPage: data?.pages[0],
@@ -195,6 +204,7 @@ export function usePostsInfiniteScroll<
     pageParams,
     pageSize: pageSize ?? 30,
     popularTags,
+    retry,
     syncPageToUrl,
   };
 }

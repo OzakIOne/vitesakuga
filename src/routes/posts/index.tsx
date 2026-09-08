@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { PostsResultsState } from "src/components/PostsResultsState";
 import { Box } from "src/components/ui/layout";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/posts/")({
 function PostsContent() {
   const searchParams = Route.useSearch();
   const { dateRange, q, seriesTitle, sortBy, tags, view } = searchParams;
+  const navigate = Route.useNavigate();
 
   const {
     allPosts,
@@ -30,11 +32,42 @@ function PostsContent() {
     pageParams,
     pageSize,
     popularTags,
+    retry,
     syncPageToUrl,
+    error,
+    isPending,
+    firstPage,
   } = usePostsInfiniteScroll(
     "/posts/",
     postsInfiniteQueryOptions(searchParams),
   );
+
+  const activeFilters = [
+    ...(q ? [`Search: ${q}`] : []),
+    ...tags.map((tag) => `Tag: ${tag}`),
+    ...(dateRange !== "all" ? [`Date: ${dateRange}`] : []),
+    ...(sortBy !== "newest" ? [`Sort: ${sortBy}`] : []),
+    ...(view !== "chronological" ? [`View: ${view}`] : []),
+    ...(seriesTitle ? [`Series: ${seriesTitle}`] : []),
+  ];
+
+  const clearFilters = () => {
+    void navigate({
+      search: (previous) => ({
+        ...previous,
+        dateRange: "all",
+        page: 0,
+        q: "",
+        randomSeed: 0,
+        seriesTitle: undefined,
+        sortBy: "newest",
+        tags: [],
+        view: "chronological",
+      }),
+    });
+  };
+
+  const resultCount = firstPage?.meta.pagination.total ?? 0;
 
   return (
     <Box p={4} w="full">
@@ -48,21 +81,31 @@ function PostsContent() {
         selectedTags={tags}
         sortBy={sortBy}
       >
-        <VirtualPostsGrid
-          allPosts={allPosts}
-          anchorPostIndex={anchorPostIndex}
-          anchorScrollKey={anchorScrollKey}
-          fetchNextPage={fetchNextPage}
-          fetchPreviousPage={fetchPreviousPage}
-          hasNextPage={hasNextPage}
-          hasPreviousPage={hasPreviousPage}
-          isFetchingNextPage={isFetchingNextPage}
-          isFetchingPreviousPage={isFetchingPreviousPage}
-          pageParams={pageParams}
-          pageSize={pageSize}
-          searchParams={searchParams}
-          syncPageToUrl={syncPageToUrl}
-        />
+        <PostsResultsState
+          activeFilters={activeFilters}
+          error={error}
+          hasLoadedPosts={allPosts.length > 0}
+          isPending={isPending}
+          onClearFilters={clearFilters}
+          onRetry={retry}
+          resultCount={resultCount}
+        >
+          <VirtualPostsGrid
+            allPosts={allPosts}
+            anchorPostIndex={anchorPostIndex}
+            anchorScrollKey={anchorScrollKey}
+            fetchNextPage={fetchNextPage}
+            fetchPreviousPage={fetchPreviousPage}
+            hasNextPage={hasNextPage}
+            hasPreviousPage={hasPreviousPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isFetchingPreviousPage={isFetchingPreviousPage}
+            pageParams={pageParams}
+            pageSize={pageSize}
+            searchParams={searchParams}
+            syncPageToUrl={syncPageToUrl}
+          />
+        </PostsResultsState>
       </PostsPageLayout>
     </Box>
   );
