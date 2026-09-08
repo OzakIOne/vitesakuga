@@ -91,7 +91,7 @@ describe(SearchBox, () => {
     expect(getRemoveTagButton("action")).toBeDefined();
   });
 
-  it("snaps the field back to the applied query on Back/Forward navigation", () => {
+  it("B1: snaps the field back to the applied query on Back/Forward navigation", () => {
     const { rerender } = renderSearchBox({ appliedQuery: "Debug" });
     expect(getInput().value).toBe("Debug");
 
@@ -143,7 +143,7 @@ describe(SearchBox, () => {
     expect(getInput().value).toBe("abcde");
   });
 
-  it("navigates from post detail to global results on Search click", () => {
+  it("B2: navigates from post detail to global results on Search click", () => {
     renderSearchBox({
       appliedQuery: "Debug",
       appliedTags: ["action"],
@@ -177,7 +177,7 @@ describe(SearchBox, () => {
     });
   });
 
-  it("auto-applies a pasted query from an empty field", () => {
+  it("B3: auto-applies a pasted query from an empty field", () => {
     renderSearchBox({ appliedQuery: "" });
 
     fireEvent.change(getInput(), { target: { value: "Debug" } });
@@ -192,7 +192,7 @@ describe(SearchBox, () => {
     );
   });
 
-  it("auto-applies clearing the active query", () => {
+  it("B3: auto-applies clearing the active query", () => {
     renderSearchBox({ appliedQuery: "Debug" });
 
     fireEvent.change(getInput(), { target: { value: "" } });
@@ -219,7 +219,7 @@ describe(SearchBox, () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it("does not navigate twice when Search flushes a pending query", () => {
+  it("B3: does not navigate twice when Search flushes a pending query", () => {
     renderSearchBox({ appliedQuery: "" });
 
     typeQuery("Debug");
@@ -228,7 +228,7 @@ describe(SearchBox, () => {
     expect(navigateMock).toHaveBeenCalledTimes(1);
   });
 
-  it("does not navigate twice when Enter applies a pending query", () => {
+  it("B3: does not navigate twice when Enter applies a pending query", () => {
     renderSearchBox({ appliedQuery: "" });
 
     typeQuery("Debug");

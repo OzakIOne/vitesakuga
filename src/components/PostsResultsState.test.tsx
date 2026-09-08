@@ -26,11 +26,13 @@ describe(PostsResultsState, () => {
     cleanup();
   });
 
-  it("explains an empty result and offers to clear filters", () => {
+  it("B4: explains an empty result and offers to clear filters", () => {
     const onClearFilters = vi.fn();
     renderResultsState({ onClearFilters });
 
-    expect(screen.getByRole("heading", { name: "No posts found" })).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: "No posts found" }),
+    ).toBeDefined();
     expect(screen.getByText("0 results")).toBeDefined();
     expect(screen.getByText("Search: zzzauditnomatch")).toBeDefined();
 
@@ -39,14 +41,16 @@ describe(PostsResultsState, () => {
     expect(onClearFilters).toHaveBeenCalledTimes(1);
   });
 
-  it("distinguishes initial loading from an empty result", () => {
+  it("B4: distinguishes initial loading from an empty result", () => {
     renderResultsState({ activeFilters: [], isPending: true });
 
     expect(screen.getByText("Loading posts...")).toBeDefined();
-    expect(screen.queryByRole("heading", { name: "No posts found" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "No posts found" }),
+    ).toBeNull();
   });
 
-  it("shows a retry action for a failed initial request", () => {
+  it("B4: shows a retry action for a failed initial request", () => {
     const onRetry = vi.fn();
     renderResultsState({ error: new Error("network unavailable"), onRetry });
 

@@ -26,7 +26,7 @@ test.describe("Convert page", () => {
     await expect(page.getByRole("button", { name: "Convert" })).toBeVisible();
   });
 
-  test("does not warn about a controlled output format input", async ({
+  test("B8: does not warn about a controlled output format input", async ({
     page,
   }) => {
     const warnings: string[] = [];
@@ -115,7 +115,7 @@ test.describe("Convert page", () => {
     });
   });
 
-  test("selects passthrough format and downloads the converted file", async ({
+  test("B8: selects passthrough format and downloads the converted file", async ({
     page,
   }) => {
     await page.locator('input[type="file"]').setInputFiles(TEST_VIDEO);

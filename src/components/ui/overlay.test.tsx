@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("Combobox wrapper", () => {
-  it("does not pass conflicting value props to its input", () => {
+  it("B8: does not pass conflicting value props to its input", () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);

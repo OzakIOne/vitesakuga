@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { SkipToContentLink } from "./SkipToContentLink";
 
 describe(SkipToContentLink, () => {
-  it("focuses the current page main content when activated", () => {
+  it("B5: focuses the current page main content when activated", () => {
     const main = document.createElement("main");
     main.id = "main-content";
     main.tabIndex = -1;
