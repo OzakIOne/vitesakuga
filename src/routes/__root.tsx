@@ -20,6 +20,7 @@ import { LuCheck, LuMenu } from "react-icons/lu";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { GlobalShortcuts } from "src/components/GlobalShortcuts";
 import { NotFound } from "src/components/NotFound";
+import { SkipToContentLink } from "src/components/SkipToContentLink";
 import { Button, IconButton } from "src/components/ui/button";
 import {
   COLOR_MODE_OPTIONS,
@@ -205,12 +206,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Provider>
-          <Link
-            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-md dark:focus:bg-gray-900 dark:focus:text-gray-100"
-            to="/"
-          >
-            Skip to content
-          </Link>
+          <SkipToContentLink />
           <Center
             className="[&>a]:hidden md:[&>a]:inline-flex [&>a:first-child]:inline-flex"
             gap={2}
@@ -496,7 +492,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               </Menu.Root>
             </Box>
           </Center>
-          <main className="pt-16">{children}</main>
+          <main className="pt-16" id="main-content" tabIndex={-1}>
+            {children}
+          </main>
           <ClientOnly fallback={null}>
             <Toaster />
             <TanStackDevtools
