@@ -65,8 +65,8 @@ const getRemoveTagButton = (tag: string): HTMLButtonElement =>
     name: `Remove tag ${tag}`,
   }) as HTMLButtonElement;
 
-// The debouncer's enabled check reads the previous render's draft, so typing
-// must be simulated keystroke by keystroke like a real user.
+// Simulate progressive typing so every latest input value reaches the
+// debouncer like it would from a real user.
 const typeQuery = (query: string): void => {
   for (let index = 1; index <= query.length; index++) {
     fireEvent.change(getInput(), { target: { value: query.slice(0, index) } });
@@ -175,5 +175,65 @@ describe(SearchBox, () => {
       search: { dateRange: "all", q: "ab", sortBy: "newest", tags: [] },
       to: "/posts",
     });
+  });
+
+  it("auto-applies a pasted query from an empty field", () => {
+    renderSearchBox({ appliedQuery: "" });
+
+    fireEvent.change(getInput(), { target: { value: "Debug" } });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search: expect.objectContaining({ q: "Debug" }),
+      }),
+    );
+  });
+
+  it("auto-applies clearing the active query", () => {
+    renderSearchBox({ appliedQuery: "Debug" });
+
+    fireEvent.change(getInput(), { target: { value: "" } });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search: expect.objectContaining({ q: "" }),
+      }),
+    );
+  });
+
+  it("cancels an automatic search when the draft falls below the threshold", () => {
+    renderSearchBox({ appliedQuery: "" });
+
+    typeQuery("Debug");
+    fireEvent.change(getInput(), { target: { value: "D" } });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("does not navigate twice when Search flushes a pending query", () => {
+    renderSearchBox({ appliedQuery: "" });
+
+    typeQuery("Debug");
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(navigateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not navigate twice when Enter applies a pending query", () => {
+    renderSearchBox({ appliedQuery: "" });
+
+    typeQuery("Debug");
+    fireEvent.keyDown(getInput(), { key: "Enter" });
+
+    expect(navigateMock).toHaveBeenCalledTimes(1);
   });
 });

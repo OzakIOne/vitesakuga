@@ -105,13 +105,13 @@ export function SearchBox({
     setDraftTags(draftTags.filter((tag) => tag !== tagToRemove));
   };
 
-  const applyDraftToUrl = () => {
-    markQueryDraftApplied(draftQuery);
+  const applyDraftToUrl = (query: string) => {
+    markQueryDraftApplied(query);
     markTagsDraftApplied(draftTags);
     void navigate({
       search: {
         dateRange,
-        q: draftQuery,
+        q: query,
         sortBy,
         tags: draftTags,
       },
@@ -119,10 +119,29 @@ export function SearchBox({
     });
   };
 
-  const setDebouncedQuery = useDebouncer(applyDraftToUrl, {
-    enabled: () => draftQuery.length > 2,
-    wait: 500,
-  });
+  const setDebouncedQuery = useDebouncer(
+    (query: string) => applyDraftToUrl(query),
+    {
+      // Keep the existing three-character threshold for non-empty queries,
+      // while allowing an empty query to clear the applied URL filter.
+      wait: 500,
+    },
+  );
+
+  const applyImmediately = () => {
+    setDebouncedQuery.cancel();
+    applyDraftToUrl(draftQuery);
+  };
+
+  const handleQueryChange = (newValue: string) => {
+    setDraftQuery(newValue);
+    const shouldAutoApply = newValue.length > 2 || newValue.length === 0;
+    if (shouldAutoApply) {
+      setDebouncedQuery.maybeExecute(newValue);
+    } else {
+      setDebouncedQuery.cancel();
+    }
+  };
 
   return (
     <Box w="auto">
@@ -137,14 +156,11 @@ export function SearchBox({
           id="search-input"
           name="q"
           onChange={(e) => {
-            const newValue = e.target.value;
-            setDraftQuery(newValue);
-            setDebouncedQuery.maybeExecute();
+            handleQueryChange(e.target.value);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              setDebouncedQuery.flush();
-              applyDraftToUrl();
+              applyImmediately();
             }
           }}
           placeholder={placeholder}
@@ -154,8 +170,7 @@ export function SearchBox({
         />
         <Button
           onClick={() => {
-            setDebouncedQuery.flush();
-            applyDraftToUrl();
+            applyImmediately();
           }}
           size="sm"
         >
@@ -168,6 +183,7 @@ export function SearchBox({
         />
         <SavedSearchesDialog
           onApply={(savedSearch) => {
+            setDebouncedQuery.cancel();
             setDraftQuery(savedSearch.q);
             setDraftTags([...savedSearch.tags]);
             void navigate({
