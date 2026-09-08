@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Exit, Layer, Option, Schema } from "effect";
+import { Context, Effect, Exit, Layer, Option } from "effect";
 
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { roleAtLeast } from "../auth/roles";
@@ -8,7 +8,6 @@ import { SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
-import { parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
   PostNotFoundError,
@@ -21,11 +20,7 @@ import { videoContentType } from "../storage/content-type";
 import { pendingVideoPrefix } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { isUploadedVideoValid } from "../storage/upload-policy";
-import {
-  DAY_MS,
-  REVISION_RETENTION_DAYS,
-  replaceVideoSchema,
-} from "./videos.config";
+import { DAY_MS, REVISION_RETENTION_DAYS } from "./videos.config";
 
 /** A restorable previous version of a post's video. */
 export type VideoRevision = {
@@ -521,35 +516,6 @@ export const VideosServiceLive = Layer.effect(
   VideosService,
   VideosService.make,
 );
-
-export const replaceVideo = createServerFn({ method: "POST" })
-  .validator(parseStrict(replaceVideoSchema))
-  .handler(
-    createHandler(
-      VideosServiceLive,
-      baseLayerFactories.auth,
-    )((input) => VideosService.replace(input)),
-  );
-
-export const fetchVideoRevisions = createServerFn({ strict: { output: false } })
-  .validator(parseStrict(Schema.Struct({ postId: Schema.Number })))
-  .handler(
-    createHandler(
-      VideosServiceLive,
-      baseLayerFactories.auth,
-    )((input: { postId: number }) => VideosService.listRevisions(input.postId)),
-  );
-
-export const restoreVideoRevision = createServerFn({ method: "POST" })
-  .validator(parseStrict(Schema.Struct({ revisionId: Schema.Number })))
-  .handler(
-    createHandler(
-      VideosServiceLive,
-      baseLayerFactories.auth,
-    )((input: { revisionId: number }) =>
-      VideosService.restore(input.revisionId),
-    ),
-  );
 
 export const previewGc = createServerFn().handler(
   createHandler(

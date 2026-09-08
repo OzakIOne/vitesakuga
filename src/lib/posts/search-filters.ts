@@ -1,4 +1,4 @@
-export type NumericSearchField =
+type NumericSearchField =
   | "height"
   | "likes"
   | "score"

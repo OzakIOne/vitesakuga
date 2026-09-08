@@ -18,7 +18,7 @@ export type OutputFormat = {
  * Lowest CRF/quantizer users may select (lower = higher quality). Keeps near-lossless
  * settings like CRF 0 or 1 out of reach, since they produce impractically large files.
  */
-export const VIDEO_QUALITY_MIN = 2;
+const VIDEO_QUALITY_MIN = 2;
 
 /** Highest CRF/quantizer users may select, per video codec. */
 const VIDEO_QUALITY_MAX = {

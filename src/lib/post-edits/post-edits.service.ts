@@ -22,7 +22,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors";
-import { asPostId, type PostId } from "../ids";
+import { type PostId } from "../ids";
 import {
   NotificationsService,
   NotificationsServiceLive,
@@ -33,8 +33,6 @@ import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   decodePostEditPayload,
   editIdSchema,
-  fetchPostEditsSchema,
-  proposeEditSchema,
   type PostEditPayload,
 } from "./post-edits.schema";
 
@@ -507,15 +505,6 @@ export const PostEditsServiceLive = Layer.effect(
   Layer.provideMerge(NotificationsServiceLive),
 );
 
-export const proposeEdit = createServerFn({ method: "POST" })
-  .validator(parseStrict(proposeEditSchema))
-  .handler(
-    createHandler(
-      PostEditsServiceLive,
-      baseLayerFactories.auth,
-    )((input) => PostEditsService.propose(input)),
-  );
-
 export const approveEdit = createServerFn({ method: "POST" })
   .validator(parseStrict(editIdSchema))
   .handler(
@@ -532,15 +521,4 @@ export const rejectEdit = createServerFn({ method: "POST" })
       PostEditsServiceLive,
       baseLayerFactories.auth,
     )((input: { editId: number }) => PostEditsService.reject(input.editId)),
-  );
-
-export const fetchPostEdits = createServerFn({ strict: { output: false } })
-  .validator(parseStrict(fetchPostEditsSchema))
-  .handler(
-    createHandler(
-      PostEditsServiceLive,
-      baseLayerFactories.auth,
-    )((input: { postId: number }) =>
-      PostEditsService.listPendingForPost(asPostId(input.postId)),
-    ),
   );

@@ -6,9 +6,7 @@ import type { EffectKysely } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
 import { RowParseError } from "../errors";
 
-export type VoteCountsMap = Map<number, { dislikes: number; likes: number }>;
-
-export const fetchPostVoteCounts = Effect.fn("fetchPostVoteCounts")(function* (
+const fetchPostVoteCounts = Effect.fn("fetchPostVoteCounts")(function* (
   db: EffectKysely<DB>,
   postIds: readonly number[],
 ) {

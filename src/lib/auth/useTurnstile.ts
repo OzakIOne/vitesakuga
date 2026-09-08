@@ -22,7 +22,7 @@ const TURNSTILE_SCRIPT_SRC =
 const EXECUTE_TIMEOUT_MS = 15_000;
 
 /** Minimal client-side Turnstile JS API surface. */
-export type TurnstileClient = {
+type TurnstileClient = {
   render: (
     container: HTMLElement,
     params: {

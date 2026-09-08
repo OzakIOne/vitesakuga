@@ -7,12 +7,7 @@ import { usersKeys } from "src/lib/users/users.queries";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { AuthClientContext } from "./client-context";
 
-export const TWO_FACTOR_REDIRECT_KEY = "vitesakuga:two-factor:redirect";
-
-export type TwoFactorRedirectData = {
-  twoFactorRedirect: true;
-  twoFactorMethods?: string[] | undefined;
-};
+const TWO_FACTOR_REDIRECT_KEY = "vitesakuga:two-factor:redirect";
 
 export const TwoFactorRedirectSchema = Schema.Struct({
   twoFactorRedirect: Schema.Literal(true),

@@ -84,7 +84,7 @@ export type ButtonProps = {
 } & React.ButtonHTMLAttributes<HTMLButtonElement> &
   ChakraStyleProps;
 
-export function buttonClasses({
+function buttonClasses({
   variant = "solid",
   colorScheme,
   colorPalette,

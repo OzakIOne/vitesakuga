@@ -35,7 +35,7 @@ const LIKED_PLAYLIST_TITLE = "Liked posts";
 
 // A liked post row mirrors the playlist detail row shape so the same grid UI
 // can render regular playlists and the virtual "Liked posts" playlist.
-export type LikedPostRow = {
+type LikedPostRow = {
   post_id: number;
   position: number;
   /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
@@ -51,7 +51,7 @@ export type LikedPostRow = {
   video_key: string | null;
 };
 
-export type LikedPlaylistMeta = {
+type LikedPlaylistMeta = {
   title: string;
   description: string | null;
   is_public: boolean;

@@ -304,16 +304,6 @@ export function asDivProps(
   return rest as React.HTMLAttributes<HTMLDivElement>;
 }
 
-/** Re-type the loose rest bag as HTML span attributes for spreading. */
-export function asSpanProps(
-  rest: ChakraPropsResult["rest"],
-): React.HTMLAttributes<HTMLSpanElement> {
-  // SAFETY: rest holds the leftover props after Chakra-style props are
-  // extracted from an HTMLAttributes<HTMLSpanElement> bag, so every remaining
-  // key is a valid span attribute.
-  return rest as React.HTMLAttributes<HTMLSpanElement>;
-}
-
 export function useChakraProps<P extends ChakraStyleProps>(
   props: P,
 ): ChakraPropsResult {

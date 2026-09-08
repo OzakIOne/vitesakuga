@@ -14,7 +14,7 @@ import { baseLayerFactories, createHandler } from "../server-fn.handler";
 const MOD_QUEUE_LIMIT = 50;
 
 /** A recent post report, joined with its post title and reporter name. */
-export type ModerationReportRow = {
+type ModerationReportRow = {
   /** ISO timestamp string — `Date` instances do not survive the JSON server-function transport. */
   readonly createdAt: string;
   readonly postId: number;

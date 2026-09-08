@@ -4,7 +4,7 @@ import { Schema } from "effect";
  * Every event that can earn points. Adding an action here widens the union;
  * the ledger rows store this tag so history stays auditable.
  */
-export const pointActionSchema = Schema.Literals([
+const pointActionSchema = Schema.Literals([
   "comment-written",
   "edit-suggestion-approved",
   "post-like-received",

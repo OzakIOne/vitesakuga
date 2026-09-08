@@ -9,7 +9,7 @@ import { PASSWORD_STRENGTH_OPTIONS } from "src/lib/auth/password-policy";
 import { INPUT_BASE, INPUT_SIZES } from "./field";
 import { cn } from "./ui-utils";
 
-export type PasswordVisibilityProps = {
+type PasswordVisibilityProps = {
   defaultVisible?: boolean;
   visible?: boolean;
   onVisibleChange?: (visible: boolean) => void;

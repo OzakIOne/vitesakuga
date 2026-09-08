@@ -1,14 +1,10 @@
-import { execSync } from "node:child_process";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 function getWslHostIp() {
   try {
-    const out = execSync(
-      "cat /etc/resolv.conf 2>/dev/null | grep -m1 nameserver | awk '{print $2}'",
-      {
-        encoding: "utf-8",
-      },
-    ).trim();
+    const resolvConf = readFileSync("/etc/resolv.conf", "utf-8");
+    const out = resolvConf.match(/^nameserver\s+(\S+)/m)?.[1] ?? "";
     if (out && out !== "127.0.0.1") return out;
   } catch {
     /* fall through */

@@ -205,7 +205,7 @@ const makeTestStorage = async (
     }).pipe(Effect.provide(storageLive)),
   );
 
-export type StorageKeyTracker = {
+type StorageKeyTracker = {
   /** Keys this context created and has not deleted itself. */
   readonly createdKeys: ReadonlyArray<string>;
   /** Deletes exactly the keys this context created and has not removed. */

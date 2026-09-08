@@ -69,7 +69,7 @@ const MODERATOR_PERMISSIONS: ReadonlyArray<Permission> = [
  * with `RoleSchema`: authorization code checks these permissions, never the
  * role labels themselves.
  */
-export const PERMISSIONS_BY_ROLE = {
+const PERMISSIONS_BY_ROLE = {
   admin: new Set(MODERATOR_PERMISSIONS),
   moderator: new Set(MODERATOR_PERMISSIONS),
   novice: new Set(NOVICE_PERMISSIONS),

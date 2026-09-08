@@ -2,7 +2,6 @@ import * as React from "react";
 
 import {
   asDivProps,
-  asSpanProps,
   cn,
   useChakraProps,
   type ChakraStyleProps,
@@ -191,14 +190,5 @@ export function Group({
       style={style}
       {...asDivProps(rest)}
     />
-  );
-}
-
-export function Span(
-  props: React.HTMLAttributes<HTMLSpanElement> & ChakraStyleProps,
-) {
-  const { className, style, rest } = useChakraProps(props);
-  return (
-    <span className={cn(className)} style={style} {...asSpanProps(rest)} />
   );
 }

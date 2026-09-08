@@ -11,7 +11,7 @@ import {
 } from "../promotions/promotions.service";
 import { assignUserRole, fetchModerationOverview } from "./moderation.service";
 
-export const moderationKeys = {
+const moderationKeys = {
   overview: ["moderation", "overview"] as const,
 };
 

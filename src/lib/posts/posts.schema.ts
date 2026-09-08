@@ -36,7 +36,7 @@ export const VideoMetadataSchema = Schema.optional(
 
 export type VideoMetadata = Schema.Schema.Type<typeof VideoMetadataSchema>;
 
-export const TagSchema = Schema.Struct({
+const TagSchema = Schema.Struct({
   id: Schema.optionalKey(Schema.Number),
   name: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
 });
@@ -80,22 +80,15 @@ const RelatedPostId = PostId.pipe(
   Schema.check(Schema.isGreaterThanOrEqualTo(0)),
 );
 
-export const FormFileUploadTextSchema = Schema.Struct({
-  description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-  relatedPostId: Schema.optional(RelatedPostId),
-  source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
-  tags: Schema.Array(TagSchema),
-  title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-});
-export const VIDEO_EXTENSION_PATTERN = /\.(mp4|avi|mov|wmv|flv|mkv)$/i;
+const VIDEO_EXTENSION_PATTERN = /\.(mp4|avi|mov|wmv|flv|mkv)$/i;
 
-export const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp)$/i;
+const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp)$/i;
 
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 // The UI currently exposes a single image per post; the schema/storage layer
 // already accepts several so raising this constant is enough to lift it.
-export const MAX_IMAGES_PER_POST = 5;
+const MAX_IMAGES_PER_POST = 5;
 
 const VideoKey = Schema.String.pipe(
   Schema.check(
@@ -133,7 +126,7 @@ const ImageFile = Schema.instanceOf(File).pipe(
   ),
 );
 
-export const PostSourceUploadSchema = Schema.optional(
+const PostSourceUploadSchema = Schema.optional(
   Schema.Literals(["movie", "tv_series"]),
 );
 
@@ -206,10 +199,6 @@ export const createVideoUploadUrlSchema = Schema.Struct({
     ),
   ),
 });
-
-export type CreateVideoUploadUrlInput = Schema.Schema.Type<
-  typeof createVideoUploadUrlSchema
->;
 
 export const updatePostInputSchema = Schema.Struct({
   description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),

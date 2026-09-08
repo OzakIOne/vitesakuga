@@ -1,12 +1,12 @@
 // Magic-byte checks run server-side: the media bucket is publicly served, so
 // they stop attackers from storing arbitrary HTML/JS under an image or video
 // key even when they control the Content-Type header of their upload.
-export const JPEG_MAGIC_BYTES = [0xff, 0xd8, 0xff] as const;
+const JPEG_MAGIC_BYTES = [0xff, 0xd8, 0xff] as const;
 // PNG: 8-byte signature `\x89PNG\r\n\x1a\n`; first four suffice as a guard.
-export const PNG_MAGIC_BYTES = [0x89, 0x50, 0x4e, 0x47] as const;
+const PNG_MAGIC_BYTES = [0x89, 0x50, 0x4e, 0x47] as const;
 // WebP: RIFF container with a WEBP FourCC at offset 8.
-export const WEBP_MAGIC_PREFIX = "RIFF";
-export const WEBP_MAGIC_FOURCC = "WEBP";
+const WEBP_MAGIC_PREFIX = "RIFF";
+const WEBP_MAGIC_FOURCC = "WEBP";
 
 const matchesMagicBytes = (head: Uint8Array, magic: readonly number[]) =>
   magic.every((byte, index) => head[index] === byte);

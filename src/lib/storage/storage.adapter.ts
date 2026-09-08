@@ -314,7 +314,7 @@ const makeS3StorageService = (connection: S3Connection) =>
   });
 
 /** Layer form of {@link makeS3StorageService} for any S3-compatible store. */
-export const makeS3StorageLayer = (
+const makeS3StorageLayer = (
   connection: S3Connection,
 ): Layer.Layer<StorageModule, StorageError> =>
   Layer.effect(StorageModule, makeS3StorageService(connection));

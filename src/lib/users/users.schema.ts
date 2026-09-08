@@ -22,8 +22,6 @@ export const mentionableUserSchema = Schema.Struct({
   username: Schema.String,
 });
 
-export type MentionableUser = Schema.Schema.Type<typeof mentionableUserSchema>;
-
 export const mentionSearchInputSchema = Schema.Struct({
   query: Schema.String.pipe(
     Schema.check(

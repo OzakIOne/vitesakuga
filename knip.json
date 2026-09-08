@@ -1,6 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/router.tsx"],
-  "ignore": ["**/*.d.ts"],
-  "project": ["src/**/*.{js,ts,tsx}"]
+  "entry": [
+    "src/lib/db/schema/seed.ts",
+    "src/lib/rate-limit/rate-limit.middleware.ts!",
+    "src/styles/safelist.ts!"
+  ],
+  "project": [
+    "src/**/*.{js,ts,tsx,css}!",
+    "!src/lib/auth/session.fixture.ts!",
+    "!src/lib/db/test-utils.ts!"
+  ],
+  "ignoreBinaries": ["opencode"],
+  "ignoreDependencies": ["@opencode-ai/browser-control", "varlock"],
+  "treatConfigHintsAsErrors": true
 }
