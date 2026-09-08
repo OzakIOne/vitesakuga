@@ -61,7 +61,7 @@ function NewsArticle() {
           {post.summary}
         </p>
       </header>
-      <div className="news-prose">
+      <div className="markdown-prose">
         <Markdown skipHtml>{post.body}</Markdown>
       </div>
     </article>

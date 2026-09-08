@@ -14,6 +14,7 @@ import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as UploadRouteImport } from './routes/upload'
@@ -33,6 +34,8 @@ import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
 import { Route as SeriesSeriesTitleRouteImport } from './routes/series.$seriesTitle'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as UsersIdRouteImport } from './routes/users.$id'
+import { Route as WikiIndexRouteImport } from './routes/wiki.index'
+import { Route as WikiSlugRouteImport } from './routes/wiki.$slug'
 import { Route as AccountPlaylistsIndexRouteImport } from './routes/account_.playlists.index'
 import { Route as AccountPlaylistsPlaylistIdRouteImport } from './routes/account_.playlists.$playlistId'
 import { Route as AccountPlaylistsLikedRouteImport } from './routes/account_.playlists.liked'
@@ -65,6 +68,11 @@ const ConvertRoute = ConvertRouteImport.update({
   path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/convert.lazy').then((d) => d.Route))
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -160,6 +168,16 @@ const UsersIdRoute = UsersIdRouteImport.update({
   path: '/users/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WikiIndexRoute = WikiIndexRouteImport.update({
+  id: '/wiki/',
+  path: '/wiki/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WikiSlugRoute = WikiSlugRouteImport.update({
+  id: '/wiki/$slug',
+  path: '/wiki/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountPlaylistsIndexRoute = AccountPlaylistsIndexRouteImport.update({
   id: '/account_/playlists/',
   path: '/account/playlists/',
@@ -203,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/convert': typeof ConvertRoute
+  '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
@@ -217,11 +236,13 @@ export interface FileRoutesByFullPath {
   '/posts/$postId': typeof PostsPostIdRoute
   '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
+  '/wiki/$slug': typeof WikiSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/news/': typeof NewsIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
+  '/wiki/': typeof WikiIndexRoute
   '/account/playlists/$playlistId': typeof AccountPlaylistsPlaylistIdRoute
   '/account/playlists/liked': typeof AccountPlaylistsLikedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -234,6 +255,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/convert': typeof ConvertRoute
+  '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
@@ -248,11 +270,13 @@ export interface FileRoutesByTo {
   '/posts/$postId': typeof PostsPostIdRoute
   '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
+  '/wiki/$slug': typeof WikiSlugRoute
   '/admin': typeof AdminIndexRoute
   '/news': typeof NewsIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
+  '/wiki': typeof WikiIndexRoute
   '/account/playlists/$playlistId': typeof AccountPlaylistsPlaylistIdRoute
   '/account/playlists/liked': typeof AccountPlaylistsLikedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -268,6 +292,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/convert': typeof ConvertRoute
+  '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
@@ -282,11 +307,13 @@ export interface FileRoutesById {
   '/posts/$postId': typeof PostsPostIdRoute
   '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
+  '/wiki/$slug': typeof WikiSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/news/': typeof NewsIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
+  '/wiki/': typeof WikiIndexRoute
   '/account_/playlists/$playlistId': typeof AccountPlaylistsPlaylistIdRoute
   '/account_/playlists/liked': typeof AccountPlaylistsLikedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -302,6 +329,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/convert'
+    | '/help'
     | '/notifications'
     | '/two-factor'
     | '/upload'
@@ -316,11 +344,13 @@ export interface FileRouteTypes {
     | '/posts/$postId'
     | '/series/$seriesTitle'
     | '/users/$id'
+    | '/wiki/$slug'
     | '/admin/'
     | '/news/'
     | '/playlists/'
     | '/posts/'
     | '/users/'
+    | '/wiki/'
     | '/account/playlists/$playlistId'
     | '/account/playlists/liked'
     | '/api/auth/$'
@@ -333,6 +363,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/convert'
+    | '/help'
     | '/notifications'
     | '/two-factor'
     | '/upload'
@@ -347,11 +378,13 @@ export interface FileRouteTypes {
     | '/posts/$postId'
     | '/series/$seriesTitle'
     | '/users/$id'
+    | '/wiki/$slug'
     | '/admin'
     | '/news'
     | '/playlists'
     | '/posts'
     | '/users'
+    | '/wiki'
     | '/account/playlists/$playlistId'
     | '/account/playlists/liked'
     | '/api/auth/$'
@@ -366,6 +399,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/convert'
+    | '/help'
     | '/notifications'
     | '/two-factor'
     | '/upload'
@@ -380,11 +414,13 @@ export interface FileRouteTypes {
     | '/posts/$postId'
     | '/series/$seriesTitle'
     | '/users/$id'
+    | '/wiki/$slug'
     | '/admin/'
     | '/news/'
     | '/playlists/'
     | '/posts/'
     | '/users/'
+    | '/wiki/'
     | '/account_/playlists/$playlistId'
     | '/account_/playlists/liked'
     | '/api/auth/$'
@@ -400,6 +436,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
   ConvertRoute: typeof ConvertRoute
+  HelpRoute: typeof HelpRoute
   NotificationsRoute: typeof NotificationsRoute
   TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
@@ -407,10 +444,12 @@ export interface RootRouteChildren {
   PostsPostIdRoute: typeof PostsPostIdRoute
   SeriesSeriesTitleRoute: typeof SeriesSeriesTitleRoute
   UsersIdRoute: typeof UsersIdRouteWithChildren
+  WikiSlugRoute: typeof WikiSlugRoute
   NewsIndexRoute: typeof NewsIndexRoute
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
+  WikiIndexRoute: typeof WikiIndexRoute
   AccountPlaylistsPlaylistIdRoute: typeof AccountPlaylistsPlaylistIdRoute
   AccountPlaylistsLikedRoute: typeof AccountPlaylistsLikedRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -453,6 +492,13 @@ declare module '@tanstack/react-router' {
       path: '/convert'
       fullPath: '/convert'
       preLoaderRoute: typeof ConvertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -588,6 +634,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wiki/': {
+      id: '/wiki/'
+      path: '/wiki'
+      fullPath: '/wiki/'
+      preLoaderRoute: typeof WikiIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wiki/$slug': {
+      id: '/wiki/$slug'
+      path: '/wiki/$slug'
+      fullPath: '/wiki/$slug'
+      preLoaderRoute: typeof WikiSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account_/playlists/': {
       id: '/account_/playlists/'
       path: '/account/playlists'
@@ -693,6 +753,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
   ConvertRoute: ConvertRoute,
+  HelpRoute: HelpRoute,
   NotificationsRoute: NotificationsRoute,
   TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
@@ -700,10 +761,12 @@ const rootRouteChildren: RootRouteChildren = {
   PostsPostIdRoute: PostsPostIdRoute,
   SeriesSeriesTitleRoute: SeriesSeriesTitleRoute,
   UsersIdRoute: UsersIdRouteWithChildren,
+  WikiSlugRoute: WikiSlugRoute,
   NewsIndexRoute: NewsIndexRoute,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
   PostsIndexRoute: PostsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,
+  WikiIndexRoute: WikiIndexRoute,
   AccountPlaylistsPlaylistIdRoute: AccountPlaylistsPlaylistIdRoute,
   AccountPlaylistsLikedRoute: AccountPlaylistsLikedRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

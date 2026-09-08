@@ -15,8 +15,8 @@ export const newsPosts: readonly NewsPost[] = [
     summary:
       "Follow new features, improvements, and fixes as ViteSakuga takes shape.",
     date: "2026-09-07",
-    loadBody: async () =>
-      (await import("src/content/news/welcome.md?raw")).default,
+    loadBody: () =>
+      import("src/content/news/welcome.md?raw").then((m) => m.default),
   },
 ].sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug));
 

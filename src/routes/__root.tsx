@@ -306,6 +306,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             >
               News
             </Link>{" "}
+            <Link
+              activeProps={{ className: "link" }}
+              className="hidden whitespace-nowrap md:inline"
+              to="/wiki"
+            >
+              Wiki
+            </Link>{" "}
+            <Link
+              activeProps={{ className: "link" }}
+              className="hidden whitespace-nowrap md:inline"
+              to="/help"
+            >
+              Help
+            </Link>{" "}
             <Box display={{ base: "none", md: "block" }}>
               <Menu.Root>
                 <Menu.Trigger asChild>
@@ -405,6 +419,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                     </Menu.Item>
                     <Menu.Item asChild value="news">
                       <Link to="/news">News</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="wiki">
+                      <Link to="/wiki">Wiki</Link>
+                    </Menu.Item>
+                    <Menu.Item asChild value="help">
+                      <Link to="/help">Help</Link>
                     </Menu.Item>
                     <Menu.Separator />
                     {ctx.user ? (

@@ -22,6 +22,14 @@ Inventaire des fonctionnalités visibles de ViteSakuga (clone de Sakugabooru), v
 
 Le fil public `/news` présente les annonces de ViteSakuga de la plus récente à la plus ancienne. Chaque article possède sa page `/news/<slug>`, un titre, un résumé, une date et un corps Markdown. Liens depuis l’accueil, la navigation desktop et le menu mobile. Les articles sont conservés dans `src/content/news/`, enregistrés dans `src/lib/news/news.ts` et publiés avec les déploiements ; pas d’éditeur admin ni de base de données. Voir [Publication des actualités](./news.md).
 
+### Wiki communautaire
+
+Le wiki `/wiki` rassemble la documentation permanente de ViteSakuga. Chaque article possède sa page `/wiki/<slug>` avec un titre, un résumé, une catégorie et un corps Markdown ; l’index regroupe les articles par catégorie dans l’ordre du registre. Liens depuis la navigation desktop et le menu mobile. Les articles sont conservés dans `src/content/wiki/`, enregistrés dans `src/lib/wiki/wiki.ts` et publiés avec les déploiements ; pas d’éditeur admin ni de base de données. Voir [Publication du wiki](./wiki.md).
+
+### Page d’aide
+
+La page `/help` répond aux questions fréquentes (compte, upload, votes, suggestions d’édition, signalements, sécurité, raccourcis clavier) dans un corps Markdown unique conservé dans `src/content/help/help.md`, rendu avec les mêmes styles que le wiki et les actualités. Liens depuis la navigation desktop et le menu mobile ; la page renvoie vers le wiki et les actualités. Pas d’éditeur admin ni de base de données. Voir [Page d’aide](./help.md).
+
 | Fonctionnalité              | Description                                                                                                                                                                                                                            | Fichiers clés                                                                                                                                                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Accueil**                 | Recherche globale et tags populaires                                                                                                                                                                                                   | `src/routes/index.tsx`, `src/components/SearchBox.tsx`, `src/components/PopularTagsSection.tsx`                                                                                   |
@@ -63,7 +71,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 
 ### Upload de post (`/upload`, authentification requise)
 
-- Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB, une image par post dans l'interface actuelle). Le schéma serveur accepte jusqu'à 5 images, mais cette capacité n'est pas exposée par l'UI actuelle.
+- Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB par fichier, jusqu'à 10 images par post). Les images forment une galerie réordonnable sur la page de détail, la première image servant de thumbnail.
 - Génération locale de vignettes vidéo, sélection de thumbnail et métadonnées via mediainfo.js. Les images enregistrent leurs dimensions et utilisent la première image comme thumbnail.
 - Métadonnées : titre, description, URL source, saison/épisode (vidéo) ou volume/chapitre (image), type de source, tags, post lié.
 - Brouillon persistant côté client (`useUploadDraft`).
