@@ -18,6 +18,10 @@ Inventaire des fonctionnalités visibles de ViteSakuga (clone de Sakugabooru), v
 
 ## Pages publiques & navigation
 
+### Actualités du produit
+
+Le fil public `/news` présente les annonces de ViteSakuga de la plus récente à la plus ancienne. Chaque article possède sa page `/news/<slug>`, un titre, un résumé, une date et un corps Markdown. Liens depuis l’accueil, la navigation desktop et le menu mobile. Les articles sont conservés dans `src/content/news/`, enregistrés dans `src/lib/news/news.ts` et publiés avec les déploiements ; pas d’éditeur admin ni de base de données. Voir [Publication des actualités](./news.md).
+
 | Fonctionnalité              | Description                                                                                                                                                            | Fichiers clés                                                                                                                                                          |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Accueil**                 | Recherche globale et tags populaires                                                                                                                                   | `src/routes/index.tsx`, `src/components/SearchBox.tsx`, `src/components/PopularTagsSection.tsx`                                                                        |

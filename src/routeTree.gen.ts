@@ -25,6 +25,8 @@ import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminStorageRouteImport } from './routes/admin.storage'
 import { Route as AdminSuggestionsRouteImport } from './routes/admin.suggestions'
+import { Route as NewsIndexRouteImport } from './routes/news.index'
+import { Route as NewsSlugRouteImport } from './routes/news.$slug'
 import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
 import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
@@ -117,6 +119,16 @@ const AdminSuggestionsRoute = AdminSuggestionsRouteImport.update({
   path: '/suggestions',
   getParentRoute: () => AdminRoute,
 } as any)
+const NewsIndexRoute = NewsIndexRouteImport.update({
+  id: '/news/',
+  path: '/news/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsSlugRoute = NewsSlugRouteImport.update({
+  id: '/news/$slug',
+  path: '/news/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlaylistsIndexRoute = PlaylistsIndexRouteImport.update({
   id: '/playlists/',
   path: '/playlists/',
@@ -195,9 +207,11 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
+  '/news/': typeof NewsIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
@@ -223,9 +237,11 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin': typeof AdminIndexRoute
+  '/news': typeof NewsIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
   '/posts': typeof PostsIndexRoute
   '/users': typeof UsersIndexRoute
@@ -254,9 +270,11 @@ export interface FileRoutesById {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
+  '/news/': typeof NewsIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/users/': typeof UsersIndexRoute
@@ -285,9 +303,11 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/storage'
     | '/admin/suggestions'
+    | '/news/$slug'
     | '/posts/$postId'
     | '/users/$id'
     | '/admin/'
+    | '/news/'
     | '/playlists/'
     | '/posts/'
     | '/users/'
@@ -313,9 +333,11 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/storage'
     | '/admin/suggestions'
+    | '/news/$slug'
     | '/posts/$postId'
     | '/users/$id'
     | '/admin'
+    | '/news'
     | '/playlists'
     | '/posts'
     | '/users'
@@ -343,9 +365,11 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/storage'
     | '/admin/suggestions'
+    | '/news/$slug'
     | '/posts/$postId'
     | '/users/$id'
     | '/admin/'
+    | '/news/'
     | '/playlists/'
     | '/posts/'
     | '/users/'
@@ -367,8 +391,10 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
+  NewsSlugRoute: typeof NewsSlugRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   UsersIdRoute: typeof UsersIdRouteWithChildren
+  NewsIndexRoute: typeof NewsIndexRoute
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
@@ -492,6 +518,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/suggestions'
       preLoaderRoute: typeof AdminSuggestionsRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/news/': {
+      id: '/news/'
+      path: '/news'
+      fullPath: '/news/'
+      preLoaderRoute: typeof NewsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news/$slug': {
+      id: '/news/$slug'
+      path: '/news/$slug'
+      fullPath: '/news/$slug'
+      preLoaderRoute: typeof NewsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/playlists/': {
       id: '/playlists/'
@@ -636,8 +676,10 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
+  NewsSlugRoute: NewsSlugRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   UsersIdRoute: UsersIdRouteWithChildren,
+  NewsIndexRoute: NewsIndexRoute,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
   PostsIndexRoute: PostsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,

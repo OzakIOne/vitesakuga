@@ -212,6 +212,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Skip to content
           </Link>
           <Center
+            className="[&>a]:hidden md:[&>a]:inline-flex [&>a:first-child]:inline-flex"
             gap={2}
             left={0}
             position="absolute"
@@ -297,6 +298,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               to="/convert"
             >
               Convert video
+            </Link>{" "}
+            <Link
+              activeProps={{ className: "link" }}
+              className="hidden whitespace-nowrap md:inline"
+              to="/news"
+            >
+              News
             </Link>{" "}
             <Box display={{ base: "none", md: "block" }}>
               <Menu.Root>
@@ -395,6 +403,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                     <Menu.Item asChild value="convert">
                       <Link to="/convert">Convert video</Link>
                     </Menu.Item>
+                    <Menu.Item asChild value="news">
+                      <Link to="/news">News</Link>
+                    </Menu.Item>
                     <Menu.Separator />
                     {ctx.user ? (
                       <>
@@ -404,6 +415,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                         <Menu.Item asChild value="my-playlists">
                           <Link to="/account/playlists">My Playlists</Link>
                         </Menu.Item>
+                        <Menu.Item asChild value="notifications">
+                          <Link to="/notifications">Inbox</Link>
+                        </Menu.Item>
+                        {isStaff && (
+                          <Menu.Item asChild value="admin">
+                            <Link to="/admin">Admin</Link>
+                          </Menu.Item>
+                        )}
                         <Menu.Item onClick={handleSignOut} value="signout">
                           Sign Out
                         </Menu.Item>

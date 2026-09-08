@@ -28,6 +28,53 @@ body {
   @apply bg-gray-950 text-gray-100;
 }
 
+.news-prose {
+  @apply text-base leading-8 break-words text-gray-700 dark:text-gray-300;
+
+  & > * + * {
+    @apply mt-5;
+  }
+  & h2 {
+    @apply mt-10 text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100;
+  }
+  & h3,
+  & h4,
+  & h5,
+  & h6 {
+    @apply mt-8 text-xl font-semibold text-gray-900 dark:text-gray-100;
+  }
+  & a {
+    @apply text-blue-600 underline underline-offset-4 dark:text-blue-400;
+  }
+  & a:focus-visible {
+    @apply rounded-sm outline-2 outline-offset-4;
+  }
+  & ul {
+    @apply list-disc space-y-2 pl-6;
+  }
+  & ol {
+    @apply list-decimal space-y-2 pl-6;
+  }
+  & blockquote {
+    @apply border-l-2 border-gray-300 pl-5 italic dark:border-gray-700;
+  }
+  & pre {
+    @apply overflow-x-auto rounded-lg bg-gray-100 p-4 text-sm dark:bg-gray-900;
+  }
+  & code {
+    @apply rounded bg-gray-100 px-1 py-0.5 text-sm dark:bg-gray-900;
+  }
+  & pre code {
+    @apply bg-transparent p-0;
+  }
+  & img {
+    @apply h-auto max-w-full rounded-lg;
+  }
+  & hr {
+    @apply my-8 border-gray-200 dark:border-gray-800;
+  }
+}
+
 /* Ark toast group: Zag positions it fixed at the bottom-end but leaves its
    width unset, which collapses w-full toasts to their min-content size. */
 [data-scope="toast"][data-part="group"] {

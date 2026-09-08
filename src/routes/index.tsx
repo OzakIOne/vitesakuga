@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { SearchBox } from "src/components/SearchBox";
@@ -29,6 +29,12 @@ function Home() {
           <PopularTagsSection tags={popularTags.data} />
         </Box>
       </Suspense>
+      <Link
+        className="mt-8 text-sm text-blue-600 hover:underline dark:text-blue-400"
+        to="/news"
+      >
+        What’s new on ViteSakuga <span aria-hidden="true">→</span>
+      </Link>
     </Flex>
   );
 }
