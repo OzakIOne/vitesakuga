@@ -4,7 +4,7 @@ import {
   type ComboboxValueChangeDetails,
 } from "@ark-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LuX } from "react-icons/lu";
@@ -83,7 +83,6 @@ export function SearchBox({
   title = "Search Posts",
 }: SearchBoxProps) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
 
   // The field and the tag combobox edit *drafts*; the applied filters live in
   // the URL and drive the results (see useSyncedDraft).
@@ -116,7 +115,7 @@ export function SearchBox({
         sortBy,
         tags: draftTags,
       },
-      to: pathname === "/" ? "/posts" : pathname,
+      to: "/posts",
     });
   };
 

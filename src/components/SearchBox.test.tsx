@@ -28,7 +28,9 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
-  useLocation: () => ({ pathname: "/posts/" }),
+  // The search box is rendered in the post-detail sidebar for this test;
+  // searches must still leave the detail route for the global results page.
+  useLocation: () => ({ pathname: "/posts/148" }),
   useNavigate: () => navigateMock,
   useRouteContext: () => ({ user: null }),
 }));
@@ -141,7 +143,7 @@ describe(SearchBox, () => {
     expect(getInput().value).toBe("abcde");
   });
 
-  it("applies the drafts to the URL on Search click", () => {
+  it("navigates from post detail to global results on Search click", () => {
     renderSearchBox({
       appliedQuery: "Debug",
       appliedTags: ["action"],
@@ -159,7 +161,7 @@ describe(SearchBox, () => {
         sortBy: "oldest",
         tags: ["action"],
       },
-      to: "/posts/",
+      to: "/posts",
     });
   });
 
@@ -171,7 +173,7 @@ describe(SearchBox, () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       search: { dateRange: "all", q: "ab", sortBy: "newest", tags: [] },
-      to: "/posts/",
+      to: "/posts",
     });
   });
 });
