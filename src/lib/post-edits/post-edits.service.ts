@@ -22,7 +22,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors";
-import { type PostId } from "../ids";
+import { type PostId, asPostId } from "../ids";
 import {
   NotificationsService,
   NotificationsServiceLive,
@@ -33,6 +33,8 @@ import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   decodePostEditPayload,
   editIdSchema,
+  fetchPostEditsSchema,
+  proposeEditSchema,
   type PostEditPayload,
 } from "./post-edits.schema";
 
@@ -50,14 +52,19 @@ const PAYLOAD_KEYS: ReadonlyArray<keyof PostEditPayload> = [
   "volumeNumber",
 ];
 
-export type PendingEdit = {
+export type PostEditHistoryEntry = {
   readonly approvals: ReadonlyArray<string>;
   /** ISO timestamp string — `Date` does not survive the JSON server-function transport. */
   readonly createdAt: string;
   readonly id: number;
   readonly payload: PostEditPayload;
   readonly postId: number;
+  readonly resolvedAt: string | null;
+  readonly resolvedBy: string | null;
+  readonly resolvedByName: string | null;
+  readonly status: "approved" | "pending" | "rejected";
   readonly suggestedBy: string;
+  readonly suggestedByName: string;
 };
 
 export class PostEditsService extends Context.Service<
@@ -115,14 +122,10 @@ export class PostEditsService extends Context.Service<
       SessionService
     >;
 
-    /** Pending suggestions for one post, with their current approvals. */
-    readonly listPendingForPost: (
+    /** Full suggestion history for one post, with current approvals. */
+    readonly listForPost: (
       postId: PostId,
-    ) => Effect.Effect<
-      ReadonlyArray<PendingEdit>,
-      SessionFetchError | SqlError | UnauthorizedError,
-      SessionService
-    >;
+    ) => Effect.Effect<ReadonlyArray<PostEditHistoryEntry>, SqlError>;
   }
 >()("PostEditsService", {
   make: Effect.gen(function* () {
@@ -397,6 +400,12 @@ export class PostEditsService extends Context.Service<
       yield* notifications.notifyOrLog({
         type: "edit-suggestion-applied",
         userId: context.postOwnerId,
+        postId: context.edit.postId,
+      });
+      yield* notifications.notifyOrLog({
+        type: "edit-suggestion-approved",
+        userId: context.edit.suggestedBy,
+        postId: context.edit.postId,
       });
 
       yield* Effect.logInfo("Edit suggestion applied").pipe(
@@ -413,7 +422,7 @@ export class PostEditsService extends Context.Service<
       editId: number,
     ) {
       const user = yield* requireSignedIn();
-      return yield* db.transaction().execute((trx) =>
+      const context = yield* db.transaction().execute((trx) =>
         Effect.gen(function* () {
           const context = yield* resolveDecisionContext(editId, user, trx);
           if (!context.isStaffOrOwner) {
@@ -433,39 +442,71 @@ export class PostEditsService extends Context.Service<
               .where("id", "=", editId)
               .where("status", "=", "pending"),
           );
-          return { rejected: true as const };
+          return context;
+        }),
+      );
+      yield* notifications.notifyOrLog({
+        type: "edit-suggestion-rejected",
+        userId: context.edit.suggestedBy,
+        postId: context.edit.postId,
+      });
+      return { rejected: true as const };
+    });
+
+    const listForPost = Effect.fn("PostEditsService.listForPost")(function* (
+      postId: PostId,
+    ) {
+      const rows = yield* db.execute(
+        db
+          .selectFrom("post_edits")
+          .leftJoin(
+            "user as suggestedByUser",
+            "suggestedByUser.id",
+            "post_edits.suggestedBy",
+          )
+          .leftJoin(
+            "user as resolvedByUser",
+            "resolvedByUser.id",
+            "post_edits.resolvedBy",
+          )
+          .select([
+            "post_edits.createdAt",
+            "post_edits.id",
+            "post_edits.payload",
+            "post_edits.postId",
+            "post_edits.resolvedAt",
+            "post_edits.resolvedBy",
+            "post_edits.status",
+            "post_edits.suggestedBy",
+            "suggestedByUser.name as suggestedByName",
+            "resolvedByUser.name as resolvedByName",
+          ])
+          .where("post_edits.postId", "=", postId)
+          .orderBy("post_edits.createdAt", "desc")
+          .orderBy("post_edits.id", "desc")
+          .limit(100),
+      );
+      return yield* Effect.forEach(rows, (row) =>
+        Effect.gen(function* () {
+          const approvals = yield* approvalsFor(row.id);
+          return {
+            approvals: approvals.map((approval) => approval.userId),
+            createdAt: toIsoTimestamp(row.createdAt),
+            id: row.id,
+            payload: decodePostEditPayload(row.payload),
+            postId: row.postId,
+            resolvedAt: row.resolvedAt ? toIsoTimestamp(row.resolvedAt) : null,
+            resolvedBy: row.resolvedBy,
+            resolvedByName: row.resolvedByName,
+            status: row.status,
+            suggestedBy: row.suggestedBy,
+            suggestedByName: row.suggestedByName ?? "Deleted user",
+          } as const satisfies PostEditHistoryEntry;
         }),
       );
     });
 
-    const listPendingForPost = Effect.fn("PostEditsService.listPendingForPost")(
-      function* (postId: PostId) {
-        yield* requireSignedIn();
-        const rows = yield* db.execute(
-          db
-            .selectFrom("post_edits")
-            .select(["createdAt", "id", "payload", "postId", "suggestedBy"])
-            .where("postId", "=", postId)
-            .where("status", "=", "pending")
-            .orderBy("createdAt", "desc"),
-        );
-        return yield* Effect.forEach(rows, (row) =>
-          Effect.gen(function* () {
-            const approvals = yield* approvalsFor(row.id);
-            return {
-              approvals: approvals.map((approval) => approval.userId),
-              createdAt: toIsoTimestamp(row.createdAt),
-              id: row.id,
-              payload: decodePostEditPayload(row.payload),
-              postId: row.postId,
-              suggestedBy: row.suggestedBy,
-            } as const satisfies PendingEdit;
-          }),
-        );
-      },
-    );
-
-    return { approve, listPendingForPost, propose, reject };
+    return { approve, listForPost, propose, reject };
   }),
 }) {
   static readonly propose = Effect.fn("PostEditsService.propose")(
@@ -489,12 +530,12 @@ export class PostEditsService extends Context.Service<
     return yield* svc.reject(editId);
   });
 
-  static readonly listPendingForPost = Effect.fn(
-    "PostEditsService.listPendingForPost",
-  )(function* (postId: PostId) {
-    const svc = yield* PostEditsService;
-    return yield* svc.listPendingForPost(postId);
-  });
+  static readonly listForPost = Effect.fn("PostEditsService.listForPost")(
+    function* (postId: PostId) {
+      const svc = yield* PostEditsService;
+      return yield* svc.listForPost(postId);
+    },
+  );
 }
 
 export const PostEditsServiceLive = Layer.effect(
@@ -504,6 +545,15 @@ export const PostEditsServiceLive = Layer.effect(
   Layer.provideMerge(PointsServiceLive),
   Layer.provideMerge(NotificationsServiceLive),
 );
+
+export const proposeEdit = createServerFn({ method: "POST" })
+  .validator(parseStrict(proposeEditSchema))
+  .handler(
+    createHandler(
+      PostEditsServiceLive,
+      baseLayerFactories.auth,
+    )((input) => PostEditsService.propose(input)),
+  );
 
 export const approveEdit = createServerFn({ method: "POST" })
   .validator(parseStrict(editIdSchema))
@@ -521,4 +571,15 @@ export const rejectEdit = createServerFn({ method: "POST" })
       PostEditsServiceLive,
       baseLayerFactories.auth,
     )((input: { editId: number }) => PostEditsService.reject(input.editId)),
+  );
+
+export const fetchPostEdits = createServerFn({ strict: { output: false } })
+  .validator(parseStrict(fetchPostEditsSchema))
+  .handler(
+    createHandler(
+      PostEditsServiceLive,
+      baseLayerFactories.db,
+    )((input: { postId: number }) =>
+      PostEditsService.listForPost(asPostId(input.postId)),
+    ),
   );

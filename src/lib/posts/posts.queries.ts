@@ -3,18 +3,28 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import type { PostWithVotes } from "../db/schema";
 import type { PaginationMeta } from "../pagination/pagination";
 import type { PostsSearchParams } from "./posts.schema";
-import { fetchPostDetail, searchPosts } from "./posts.service";
+import { fetchPostDetail, fetchSeriesHub, searchPosts } from "./posts.service";
 
 export const postsKeys = {
   all: ["posts"] as const,
   detail: (postId: number) => [...postsKeys.all, "detail", postId] as const,
   search: (params: PostsSearchParams) =>
     [...postsKeys.all, "search", params] as const,
-  searchInfinite: ({ q, tags, sortBy, dateRange }: PostsSearchParams) =>
+  series: (seriesTitle: string) =>
+    [...postsKeys.all, "series", seriesTitle] as const,
+  searchInfinite: ({
+    q,
+    seriesTitle,
+    tags,
+    sortBy,
+    dateRange,
+    randomSeed,
+    view,
+  }: PostsSearchParams) =>
     [
       ...postsKeys.all,
       "searchInfinite",
-      { q, tags, sortBy, dateRange },
+      { dateRange, q, randomSeed, seriesTitle, sortBy, tags, view },
     ] as const,
 } as const;
 
@@ -64,6 +74,16 @@ const postsQueries = {
       queryKey: postsKeys.detail(postId),
       staleTime: 60 * 1000, // 1 minute
     }),
+  series: (seriesTitle: string) =>
+    queryOptions({
+      gcTime: 5 * 60 * 1000,
+      queryFn: async () =>
+        fetchSeriesHub({
+          data: { seriesTitle },
+        }),
+      queryKey: postsKeys.series(seriesTitle),
+      staleTime: 60 * 1000,
+    }),
 };
 
 export const postsInfiniteQueryOptions = (params: PostsSearchParams) =>
@@ -81,3 +101,6 @@ export const postsInfiniteQueryOptions = (params: PostsSearchParams) =>
   });
 
 export const postQueryDetail = (postId: number) => postsQueries.detail(postId);
+
+export const seriesHubQuery = (seriesTitle: string) =>
+  postsQueries.series(seriesTitle);

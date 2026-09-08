@@ -102,6 +102,12 @@ type PostTagsTable = {
   tagId: number;
 };
 
+type TagFollowsTable = {
+  createdAt: Generated<Date>;
+  tagId: number;
+  userId: string;
+};
+
 type PostsTable = {
   id: Generated<number>;
   animeTitle: string | null;
@@ -253,6 +259,8 @@ type NotificationsTable = {
   type:
     | "comment-mention"
     | "edit-suggestion-applied"
+    | "edit-suggestion-approved"
+    | "edit-suggestion-rejected"
     | "promotion-approved"
     | "promotion-rejected";
   // Post the notification links to; null when there is no deep link.
@@ -274,6 +282,7 @@ export type DB = {
   post_reports: PostReportsTable;
   post_images: PostImagesTable;
   post_tags: PostTagsTable;
+  tag_follows: TagFollowsTable;
   points_ledger: PointsLedgerTable;
   posts: PostsTable;
   post_edits: PostEditsTable;

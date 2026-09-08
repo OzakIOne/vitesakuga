@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 
+import { PostId } from "../ids";
 // Edit suggestions end up on the post exactly like a direct edit, so the
 // payload must pass through the same sanitization and URL invariants
 // (security audit M1 — approval used to bypass them).
@@ -34,7 +35,7 @@ const PostEditPayloadFields = Schema.Struct({
 // can reference the type without a circular definition.
 export type PostEditPayload = Schema.Schema.Type<typeof PostEditPayloadFields>;
 
-const postEditPayloadSchema = PostEditPayloadFields.pipe(
+export const postEditPayloadSchema = PostEditPayloadFields.pipe(
   Schema.check(
     Schema.makeFilter((payload: PostEditPayload): string | undefined =>
       Object.keys(payload).length > 0
@@ -60,4 +61,13 @@ export const decodePostEditPayload = (raw: {
   readonly volumeNumber?: number | null;
 }): PostEditPayload => Schema.decodeUnknownSync(postEditPayloadSchema)(raw);
 
+export const proposeEditSchema = Schema.Struct({
+  payload: postEditPayloadSchema,
+  postId: PostId,
+});
+
 export const editIdSchema = Schema.Struct({ editId: Schema.Number });
+
+export const fetchPostEditsSchema = Schema.Struct({
+  postId: PostId,
+});

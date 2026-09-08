@@ -19,8 +19,8 @@ import {
 import { postsKeys } from "../posts/posts.queries";
 import {
   FormFileUploadSchema,
-  MAX_IMAGE_SIZE_BYTES,
   MAX_VIDEO_SIZE_BYTES,
+  getImageFileValidationError,
 } from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
 import { createVideoUploadUrl, uploadPost } from "../posts/posts.service";
@@ -33,7 +33,7 @@ type UseUploadFormParams = {
   draft: UploadDraftData | null;
   mediaKind: UploadMediaKind;
   videoFile: File | null;
-  imageFile: File | null;
+  imageFiles: File[];
   thumbnail: File | undefined;
   videoMetadata: VideoMetadata | undefined;
   onDraftClear: () => void;
@@ -44,8 +44,7 @@ type UploadFormValues = {
   description: string;
   episodeNumber: number | undefined;
   images: File[] | undefined;
-  imageWidth: number | undefined;
-  imageHeight: number | undefined;
+  imageDimensions: { height: number; width: number }[] | undefined;
   relatedPostId: number | undefined;
   seasonNumber: number | undefined;
   source: string | undefined;
@@ -126,7 +125,7 @@ export function useUploadForm(
     draft,
     mediaKind,
     videoFile,
-    imageFile,
+    imageFiles,
     thumbnail,
     videoMetadata,
     onDraftClear,
@@ -161,8 +160,7 @@ export function useUploadForm(
     description: "",
     episodeNumber: undefined,
     images: undefined,
-    imageWidth: undefined,
-    imageHeight: undefined,
+    imageDimensions: undefined,
     relatedPostId: undefined,
     seasonNumber: undefined,
     source: undefined,
@@ -230,25 +228,50 @@ export function useUploadForm(
   });
 
   const submitImagePost = async () => {
-    if (!imageFile) {
+    if (imageFiles.length === 0) {
       return false;
     }
-    if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
+
+    const invalidImage = imageFiles
+      .map((file) => ({
+        file,
+        error: getImageFileValidationError(file),
+      }))
+      .find(({ error }) => error !== undefined);
+    if (invalidImage) {
       toastError(
         "Upload failed",
-        new Error(
-          `Image files must not exceed ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)} MB`,
-        ),
+        new Error(`${invalidImage.file.name}: ${invalidImage.error}`),
         "There was an error uploading your post.",
       );
       return false;
     }
+
+    let imageDimensions: { height: number; width: number }[];
+    try {
+      imageDimensions = await Promise.all(
+        imageFiles.map(async (file) => {
+          try {
+            return await getImageDimensions(file);
+          } catch {
+            throw new Error(`${file.name} could not be read as an image`);
+          }
+        }),
+      );
+    } catch (error) {
+      toastError(
+        "Upload failed",
+        error,
+        "There was an error uploading your post.",
+      );
+      return false;
+    }
+
     // The image transits the Worker like thumbnails do and doubles as the
-    // post thumbnail server-side — no presigned flow or capture needed.
-    form.setFieldValue("images", [imageFile]);
-    const dimensions = await getImageDimensions(imageFile);
-    form.setFieldValue("imageWidth", dimensions.width);
-    form.setFieldValue("imageHeight", dimensions.height);
+    // post thumbnail server-side — no presigned flow or capture needed. The
+    // array order is preserved so the first image remains the thumbnail.
+    form.setFieldValue("images", imageFiles);
+    form.setFieldValue("imageDimensions", imageDimensions);
     return true;
   };
 

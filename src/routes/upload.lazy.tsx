@@ -8,7 +8,14 @@ import type { AnyFieldApi } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LuCamera, LuImage, LuUpload } from "react-icons/lu";
+import {
+  LuCamera,
+  LuChevronDown,
+  LuChevronUp,
+  LuImage,
+  LuTrash2,
+  LuUpload,
+} from "react-icons/lu";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { FormTextWrapper } from "src/components/form/FieldText";
 import { Button } from "src/components/ui/button";
@@ -24,7 +31,12 @@ import { Text } from "src/components/ui/typography";
 import { Video, type VideoRef } from "src/components/Video";
 import { VideoMetadataDialog } from "src/components/VideoMetadataDialog";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
-import { MIN_TEXT_LENGTH } from "src/lib/posts/posts.schema";
+import {
+  getImageFileValidationError,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGES_PER_POST,
+  MIN_TEXT_LENGTH,
+} from "src/lib/posts/posts.schema";
 import { searchPosts } from "src/lib/posts/posts.service";
 import { useUploadDraft } from "src/lib/upload/useUploadDraft";
 import {
@@ -81,26 +93,34 @@ function MetaNumberField({ field, label, inputLabel }: MetaNumberFieldProps) {
 
 function RouteComponent() {
   const [mediaKind, setMediaKind] = useState<UploadMediaKind>("video");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-
-  // Object URLs are created in FileUpload's onFileChange handler and must be
-  // revoked whenever the preview changes or the component unmounts.
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imageValidationErrors, setImageValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<
+    Record<string, string>
+  >({});
+  const imagePreviewUrlsRef = useRef(imagePreviewUrls);
   useEffect(() => {
-    if (!imagePreviewUrl) {
-      return;
-    }
+    imagePreviewUrlsRef.current = imagePreviewUrls;
+  }, [imagePreviewUrls]);
+
+  // Object URLs are revoked when the component unmounts. Individual URLs are
+  // revoked by syncImagePreviews/removeImage when files leave the selection.
+  useEffect(() => {
     return () => {
-      URL.revokeObjectURL(imagePreviewUrl);
+      for (const url of Object.values(imagePreviewUrlsRef.current)) {
+        URL.revokeObjectURL(url);
+      }
     };
-  }, [imagePreviewUrl]);
+  }, []);
 
   const video = useVideoProcessing();
   const draft = useUploadDraft();
 
   const form = useUploadForm({
     draft: draft.draft,
-    imageFile,
+    imageFiles,
     mediaKind,
     onDraftClear: draft.clear,
     thumbnail: video.thumbnails[video.selectedThumbnailIndex]?.file,
@@ -148,6 +168,81 @@ function RouteComponent() {
     }
   };
 
+  const imageFileKey = (file: File): string =>
+    `${file.name}:${file.size}:${file.lastModified}`;
+
+  const syncImagePreviews = (files: File[]) => {
+    setImageFiles(files);
+    setImagePreviewUrls((current) => {
+      const next: Record<string, string> = {};
+      const activeKeys = new Set<string>();
+      for (const file of files) {
+        const key = imageFileKey(file);
+        activeKeys.add(key);
+        next[key] = current[key] ?? URL.createObjectURL(file);
+      }
+      for (const [key, url] of Object.entries(current)) {
+        if (!activeKeys.has(key)) {
+          URL.revokeObjectURL(url);
+        }
+      }
+      return next;
+    });
+  };
+
+  const moveImage = (from: number, to: number) => {
+    if (to < 0 || to >= imageFiles.length) {
+      return;
+    }
+    setImageFiles((current) => {
+      const next = [...current];
+      const [file] = next.splice(from, 1);
+      if (file) {
+        next.splice(to, 0, file);
+      }
+      return next;
+    });
+  };
+
+  const removeImage = (index: number) => {
+    const file = imageFiles[index];
+    if (!file) {
+      return;
+    }
+    setImageFiles((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index),
+    );
+    setImageValidationErrors((current) => {
+      const next = { ...current };
+      delete next[imageFileKey(file)];
+      return next;
+    });
+    setImagePreviewUrls((current) => {
+      const key = imageFileKey(file);
+      const url = current[key];
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const formatImageRejection = (
+    file: File,
+    errors: readonly string[],
+  ): string => {
+    const validationError = getImageFileValidationError(file);
+    if (validationError) {
+      return validationError;
+    }
+    if (errors.includes("TOO_MANY_FILES")) {
+      return `You can select up to ${MAX_IMAGES_PER_POST} images per post`;
+    }
+    return "This image could not be selected";
+  };
+
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
   const [selectedPost, setSelectedPost] = useState<{
     id: number;
@@ -160,14 +255,24 @@ function RouteComponent() {
     enabled: relatedPostSearch.length > 2 && !isNumericSearch,
     queryFn: async () =>
       searchPosts({
-        data: { page: 0, q: relatedPostSearch, tags: [] },
+        data: {
+          dateRange: "all",
+          page: 0,
+          q: relatedPostSearch,
+          randomSeed: 0,
+          sortBy: "newest",
+          tags: [],
+          view: "chronological",
+        },
       }),
     queryKey: postsKeys.search({
       dateRange: "all",
       page: 0,
       q: relatedPostSearch,
+      randomSeed: 0,
       sortBy: "newest",
       tags: [],
+      view: "chronological",
     }),
   });
 
@@ -609,48 +714,167 @@ function RouteComponent() {
         ) : (
           <Box mb={6}>
             <form.form.Field name="images">
-              {(_field) => (
+              {(field) => (
                 <Field.Root required>
                   <Field.Label>
-                    Image <Field.RequiredIndicator />
+                    Images <Field.RequiredIndicator />
                   </Field.Label>
+                  <Field.HelperText>
+                    Select up to {MAX_IMAGES_PER_POST} images. The first image
+                    is the default post thumbnail.
+                  </Field.HelperText>
+                  <Text color="red.600" fontSize="sm" mt={1}>
+                    Please do not abuse multi-image uploads. Abuse will be
+                    sanctioned.
+                  </Text>
                   <FileUpload.Root
-                    accept={["image/jpeg", "image/png", "image/webp"]}
+                    accept={["image/*"]}
                     alignItems="stretch"
-                    maxFiles={1}
+                    acceptedFiles={imageFiles}
+                    maxFileSize={MAX_IMAGE_SIZE_BYTES}
+                    maxFiles={MAX_IMAGES_PER_POST}
                     maxW="xl"
                     onFileChange={(details) => {
-                      const file = details.acceptedFiles[0] || null;
-                      setImageFile(file);
-                      setImagePreviewUrl(
-                        file ? URL.createObjectURL(file) : null,
+                      syncImagePreviews(details.acceptedFiles);
+                      field.handleChange(
+                        details.acceptedFiles.length > 0
+                          ? details.acceptedFiles
+                          : undefined,
                       );
+                      setImageValidationErrors((current) => {
+                        const next = { ...current };
+                        for (const file of details.acceptedFiles) {
+                          delete next[imageFileKey(file)];
+                        }
+                        for (const rejection of details.rejectedFiles) {
+                          next[imageFileKey(rejection.file)] =
+                            formatImageRejection(
+                              rejection.file,
+                              rejection.errors,
+                            );
+                        }
+                        return next;
+                      });
                     }}
+                    validate={(file) =>
+                      getImageFileValidationError(file)
+                        ? ["INVALID_IMAGE"]
+                        : null
+                    }
                   >
                     <FileUpload.HiddenInput />
-                    {!imageFile && (
+                    {imageFiles.length < MAX_IMAGES_PER_POST && (
                       <FileUpload.Dropzone minHeight="32">
                         <LuImage className="h-5 w-5 text-neutral-400" />
                         <FileUpload.DropzoneContent>
-                          <Box>Drag and drop an image here</Box>
+                          <Box>Drag and drop images here</Box>
                           <Box color="fg.muted">
-                            .jpg, .png, .webp (10 MB max)
+                            {".jpg, .png, .webp (10 MB each, " +
+                              MAX_IMAGES_PER_POST +
+                              " max)"}
                           </Box>
                         </FileUpload.DropzoneContent>
                       </FileUpload.Dropzone>
                     )}
-                    <FileUpload.List clearable showSize />
                   </FileUpload.Root>
-                  {imagePreviewUrl && (
-                    <Box mt={3}>
-                      <Image
-                        alt="Selected image preview"
-                        maxH="sm"
-                        objectFit="contain"
-                        src={imagePreviewUrl}
-                      />
+                  {imageFiles.length > 0 && (
+                    <Grid className="grid-cols-2 md:grid-cols-3" gap={3} mt={3}>
+                      {imageFiles.map((file, index) => {
+                        const isDefaultThumbnail = index === 0;
+                        const previewUrl = imagePreviewUrls[imageFileKey(file)];
+                        return (
+                          <Box
+                            border="1px"
+                            borderColor={
+                              isDefaultThumbnail ? "blue.500" : "gray.200"
+                            }
+                            borderRadius="md"
+                            key={imageFileKey(file)}
+                            overflow="hidden"
+                            p={2}
+                          >
+                            {previewUrl && (
+                              <Image
+                                alt={"Preview of " + file.name}
+                                className="aspect-square w-full object-contain"
+                                src={previewUrl}
+                              />
+                            )}
+                            <Text
+                              className="truncate"
+                              fontSize="sm"
+                              mt={2}
+                              title={file.name}
+                            >
+                              {file.name}
+                            </Text>
+                            <Text
+                              color={
+                                isDefaultThumbnail ? "blue.600" : "gray.500"
+                              }
+                              fontSize="xs"
+                              mt={1}
+                            >
+                              {isDefaultThumbnail
+                                ? "Default thumbnail"
+                                : "Image " + (index + 1)}
+                            </Text>
+                            <HStack gap={1} mt={2}>
+                              <Button
+                                aria-label={"Move " + file.name + " earlier"}
+                                disabled={index === 0}
+                                onClick={() => moveImage(index, index - 1)}
+                                size="xs"
+                                variant="outline"
+                              >
+                                <LuChevronUp />
+                              </Button>
+                              <Button
+                                aria-label={"Move " + file.name + " later"}
+                                disabled={index === imageFiles.length - 1}
+                                onClick={() => moveImage(index, index + 1)}
+                                size="xs"
+                                variant="outline"
+                              >
+                                <LuChevronDown />
+                              </Button>
+                              <Button
+                                aria-label={"Remove " + file.name}
+                                colorPalette="red"
+                                onClick={() => removeImage(index)}
+                                size="xs"
+                                variant="ghost"
+                              >
+                                <LuTrash2 />
+                              </Button>
+                            </HStack>
+                          </Box>
+                        );
+                      })}
+                    </Grid>
+                  )}
+                  {Object.entries(imageValidationErrors).length > 0 && (
+                    <Box
+                      aria-live="polite"
+                      bg="red.50"
+                      borderRadius="md"
+                      className="dark:bg-red-950/30"
+                      mt={3}
+                      p={3}
+                    >
+                      <Text color="red.700" fontSize="sm" fontWeight="medium">
+                        Some images were not added:
+                      </Text>
+                      <ul className="mt-1 list-disc pl-5 text-sm text-red-700">
+                        {Object.entries(imageValidationErrors).map(
+                          ([fileKey, message]) => (
+                            <li key={fileKey}>{message}</li>
+                          ),
+                        )}
+                      </ul>
                     </Box>
                   )}
+                  <FieldInfo field={field} />
                 </Field.Root>
               )}
             </form.form.Field>
@@ -694,7 +918,9 @@ function RouteComponent() {
                 // The presign + direct-to-R2 PUT run before form submission,
                 // so the hook's pending state must disable the button too.
                 form.isSubmitting === true ||
-                (mediaKind === "video" ? !video.videoFile : !imageFile)
+                (mediaKind === "video"
+                  ? !video.videoFile
+                  : imageFiles.length === 0)
               }
               loading={isFormSubmitting === true || form.isSubmitting === true}
               style={{ width: "100%" }}

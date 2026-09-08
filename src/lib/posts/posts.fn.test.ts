@@ -59,6 +59,9 @@ const defaultVideoMetadata = JSON.stringify({
 
 const insertPost = async (
   overrides: Partial<{
+    animeTitle: string | null;
+    chapterNumber: number | null;
+    episodeNumber: number | null;
     id: number;
     title: string;
     description: string;
@@ -67,19 +70,28 @@ const insertPost = async (
     thumbnailKey: string;
     source: string | null;
     relatedPostId: number | null;
+    seasonNumber: number | null;
+    sourceType: "movie" | "tv_series" | null;
     videoMetadata: string;
+    volumeNumber: number | null;
     createdAt: Date;
   }> = {},
 ) => {
   const defaults = {
+    animeTitle: null as string | null,
+    chapterNumber: null as number | null,
     title: "Test Post",
     description: "<p>Test description</p>",
+    episodeNumber: null as number | null,
     userId: "user-1",
     videoKey: "videos/user-1/abc.mp4",
     thumbnailKey: "thumbnails/user-1/abc.jpg",
     source: null as string | null,
     relatedPostId: null as number | null,
+    seasonNumber: null as number | null,
+    sourceType: null as "movie" | "tv_series" | null,
     videoMetadata: defaultVideoMetadata,
+    volumeNumber: null as number | null,
     createdAt: new Date("2024-01-01"),
   };
   const row = { ...defaults, ...overrides };
@@ -171,6 +183,25 @@ describe("PostsService.search", () => {
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0]!.title).toBe("Anime Sakuga");
+  });
+
+  it("filters by series title", async () => {
+    await insertPost({ animeTitle: "Mob Psycho 100", title: "Mob clip" });
+    await insertPost({ animeTitle: "One Piece", title: "Pirate clip" });
+
+    const result = await runEffect(
+      PostsService.search({
+        q: "",
+        seriesTitle: "mob psycho 100",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual(["Mob clip"]);
+    expect(result.meta.pagination.total).toBe(1);
   });
 
   it("treats search wildcards as literals", async () => {
@@ -355,6 +386,217 @@ describe("PostsService.search", () => {
     expect(await search("oldest")).toEqual(["Oldest", "Middle", "Newest"]);
   });
 
+  it("ranks most-liked by likes received during the current week", async () => {
+    const now = Date.now();
+    const lessLiked = await insertPost({
+      createdAt: new Date(now - 90 * 86_400_000),
+      title: "One recent like",
+    });
+    const mostLiked = await insertPost({ title: "Two recent likes" });
+    for (const voter of ["voter-most-1", "voter-most-2"]) {
+      await db
+        .insertInto("user")
+        .values({
+          email: `${voter}@test.com`,
+          id: voter,
+          name: voter,
+          username: voter,
+        })
+        .execute();
+    }
+    await db
+      .insertInto("post_votes")
+      .values([
+        {
+          createdAt: new Date(now),
+          postId: lessLiked,
+          userId: "voter-most-1",
+          vote: "like",
+        },
+        {
+          createdAt: new Date(now),
+          postId: mostLiked,
+          userId: "voter-most-2",
+          vote: "like",
+        },
+        {
+          createdAt: new Date(now - 60_000),
+          postId: mostLiked,
+          userId: "user-1",
+          vote: "like",
+        },
+      ])
+      .execute();
+
+    const result = await runEffect(
+      PostsService.search({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+        view: "most-liked",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual([
+      "Two recent likes",
+      "One recent like",
+    ]);
+  });
+
+  it("keeps trending positive and excludes dislike-only momentum", async () => {
+    const now = Date.now();
+    const trending = await insertPost({ title: "Trending" });
+    const disliked = await insertPost({ title: "Disliked" });
+    await db
+      .insertInto("user")
+      .values({
+        email: "voter-trending@test.com",
+        id: "voter-trending",
+        name: "Trending voter",
+        username: "voter-trending",
+      })
+      .execute();
+    await db
+      .insertInto("post_votes")
+      .values([
+        {
+          createdAt: new Date(now),
+          postId: trending,
+          userId: "voter-trending",
+          vote: "like",
+        },
+        {
+          createdAt: new Date(now),
+          postId: disliked,
+          userId: "voter-trending",
+          vote: "dislike",
+        },
+      ])
+      .execute();
+
+    const result = await runEffect(
+      PostsService.search({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+        view: "trending",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual(["Trending"]);
+  });
+
+  it("returns recent under-seen posts without using points", async () => {
+    const now = Date.now();
+    await insertPost({
+      createdAt: new Date(now - 2 * 86_400_000),
+      title: "Under-seen",
+    });
+    await insertPost({
+      createdAt: new Date(now - 45 * 86_400_000),
+      title: "Too old",
+    });
+    const seen = await insertPost({ createdAt: new Date(now), title: "Seen" });
+    await db
+      .insertInto("user")
+      .values({
+        email: "voter-seen@test.com",
+        id: "voter-seen",
+        name: "Seen voter",
+        username: "voter-seen",
+      })
+      .execute();
+    await db
+      .insertInto("post_votes")
+      .values({
+        postId: seen,
+        userId: "voter-seen",
+        vote: "like",
+      })
+      .execute();
+
+    const result = await runEffect(
+      PostsService.search({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+        view: "under-seen",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual([
+      "Under-seen",
+      "Seen",
+    ]);
+  });
+
+  it("limits new-from-followed-tags to the signed-in user's followed tags", async () => {
+    const now = Date.now();
+    const followedPost = await insertPost({
+      createdAt: new Date(now - 2 * 86_400_000),
+      title: "Followed tag post",
+    });
+    const ignoredPost = await insertPost({
+      createdAt: new Date(now - 2 * 86_400_000),
+      title: "Ignored tag post",
+    });
+    const followedTag = await insertTag("followed");
+    const ignoredTag = await insertTag("ignored");
+    await linkTags(followedPost, [followedTag]);
+    await linkTags(ignoredPost, [ignoredTag]);
+    await db
+      .insertInto("tag_follows")
+      .values({ tagId: followedTag, userId: "user-1" })
+      .execute();
+    mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
+
+    const result = await runEffect(
+      PostsService.search({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+        view: "followed-tags",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual([
+      "Followed tag post",
+    ]);
+  });
+
+  it("keeps a random study queue repeatable for the same seed", async () => {
+    for (let index = 0; index < 4; index += 1) {
+      await insertPost({ title: `Study post ${index}` });
+    }
+
+    const search = () =>
+      runEffect(
+        PostsService.search({
+          dateRange: "all",
+          page: 0,
+          q: "",
+          randomSeed: 42,
+          sortBy: "newest",
+          tags: [],
+          view: "random-study",
+        }),
+      ).then((result) => result.data.map((post) => post.id));
+
+    const first = await search();
+    const second = await search();
+    expect(first).toHaveLength(4);
+    expect(new Set(first).size).toBe(4);
+    expect(second).toEqual(first);
+  });
+
   it("reports per-post like and dislike counts", async () => {
     const likedPost = await insertPost({ title: "Well liked" });
     const dislikedPost = await insertPost({ title: "Controversial" });
@@ -470,6 +712,45 @@ describe("PostsService.fetchDetail", () => {
     }
     expect(error.postId).toBe(999);
     expect(error.message).toBe("Post 999 not found");
+  });
+});
+
+describe("PostsService.fetchSeriesHub", () => {
+  it("returns posts for a series case-insensitively with vote counts", async () => {
+    await insertPost({
+      animeTitle: "Mob Psycho 100",
+      episodeNumber: 2,
+      seasonNumber: 1,
+      sourceType: "tv_series",
+      title: "Episode two",
+    });
+    const firstPost = await insertPost({
+      animeTitle: "mob psycho 100",
+      episodeNumber: 1,
+      seasonNumber: 1,
+      sourceType: "tv_series",
+      title: "Episode one",
+    });
+    await db
+      .insertInto("post_votes")
+      .values({
+        postId: firstPost,
+        userId: "user-1",
+        vote: "like",
+      })
+      .execute();
+    await insertPost({ animeTitle: "Other series", title: "Ignored" });
+
+    const result = await runEffect(
+      PostsService.fetchSeriesHub({ seriesTitle: "MOB PSYCHO 100" }),
+    );
+
+    expect(result.title).toBe("Mob Psycho 100");
+    expect(result.posts.map((post) => post.title)).toEqual([
+      "Episode two",
+      "Episode one",
+    ]);
+    expect(result.posts.find((post) => post.id === firstPost)?.likes).toBe(1);
   });
 });
 

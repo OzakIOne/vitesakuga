@@ -201,6 +201,15 @@ describe("PostEditsService.approve", () => {
       .where("userId", "=", "owner-1")
       .execute();
     expect(ownerInbox.map((n) => n.type)).toContain("edit-suggestion-applied");
+
+    const suggesterInbox = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("userId", "=", "uploader-1")
+      .execute();
+    expect(suggesterInbox.map((n) => n.type)).toContain(
+      "edit-suggestion-approved",
+    );
   });
 
   it("needs two distinct uploader votes otherwise — and blocks self-resolution", async () => {
@@ -663,6 +672,15 @@ describe("PostEditsService.reject", () => {
     const row = await editRow(db, editId);
     expect(row.status).toBe("rejected");
 
+    const suggesterInbox = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("userId", "=", "propose-4")
+      .execute();
+    expect(suggesterInbox.map((n) => n.type)).toContain(
+      "edit-suggestion-rejected",
+    );
+
     // Content untouched by a rejection.
     const post = await db
       .selectFrom("posts")
@@ -673,8 +691,8 @@ describe("PostEditsService.reject", () => {
   });
 });
 
-describe("PostEditsService.listPendingForPost", () => {
-  it("returns pending suggestions with their approvals", async () => {
+describe("PostEditsService.listForPost", () => {
+  it("returns suggestion history with its approvals and names", async () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);
     closeCtx = ctx.close;
     const { db } = ctx;
@@ -698,11 +716,11 @@ describe("PostEditsService.listPendingForPost", () => {
       makeAuthSession({ id: "third-voter", role: "uploader" }),
     );
     await insertUser(db, { id: "third-voter", role: "uploader" });
-    const pending = await ctx.runEffect(
-      PostEditsService.listPendingForPost(postId),
-    );
+    const pending = await ctx.runEffect(PostEditsService.listForPost(postId));
 
     expect(pending).toHaveLength(1);
     expect(pending[0]!.approvals).toEqual(["second-voter"]);
+    expect(pending[0]!.status).toBe("pending");
+    expect(pending[0]!.suggestedByName).toBe("voter-5");
   });
 });

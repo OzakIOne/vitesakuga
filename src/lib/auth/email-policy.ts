@@ -6,7 +6,7 @@
  * a Gmail address. Provider aliases and relay domains are listed explicitly
  * so privacy-preserving addresses such as Apple Private Relay remain usable.
  */
-export const TRUSTED_EMAIL_DOMAINS = [
+const TRUSTED_EMAIL_DOMAINS = [
   // Google
   "gmail.com",
   "googlemail.com",

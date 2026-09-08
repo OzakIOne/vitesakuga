@@ -23,12 +23,12 @@ describe("toFormValidationErrors", () => {
 
   it("turns nested paths and form-level checks into form errors", () => {
     const result = toFormValidationErrors([
-      { message: "At most 5 images per post", path: [] },
+      { message: "At most 10 images per post", path: [] },
       { message: "Invalid file", path: ["images", "0"] },
     ]);
     expect(result.fields).toEqual({});
     expect(result.form).toBe(
-      'At most 5 images per post; Invalid file at ["images", "0"]',
+      'At most 10 images per post; Invalid file at ["images", "0"]',
     );
   });
 });

@@ -30,6 +30,7 @@ import { Route as NewsSlugRouteImport } from './routes/news.$slug'
 import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
 import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts/$postId'
+import { Route as SeriesSeriesTitleRouteImport } from './routes/series.$seriesTitle'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as UsersIdRouteImport } from './routes/users.$id'
 import { Route as AccountPlaylistsIndexRouteImport } from './routes/account_.playlists.index'
@@ -144,6 +145,11 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
   path: '/posts/$postId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SeriesSeriesTitleRoute = SeriesSeriesTitleRouteImport.update({
+  id: '/series/$seriesTitle',
+  path: '/series/$seriesTitle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersIndexRoute = UsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
+  '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/news/': typeof NewsIndexRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
+  '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/news': typeof NewsIndexRoute
@@ -272,6 +280,7 @@ export interface FileRoutesById {
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
+  '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/news/': typeof NewsIndexRoute
@@ -305,6 +314,7 @@ export interface FileRouteTypes {
     | '/admin/suggestions'
     | '/news/$slug'
     | '/posts/$postId'
+    | '/series/$seriesTitle'
     | '/users/$id'
     | '/admin/'
     | '/news/'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/admin/suggestions'
     | '/news/$slug'
     | '/posts/$postId'
+    | '/series/$seriesTitle'
     | '/users/$id'
     | '/admin'
     | '/news'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/admin/suggestions'
     | '/news/$slug'
     | '/posts/$postId'
+    | '/series/$seriesTitle'
     | '/users/$id'
     | '/admin/'
     | '/news/'
@@ -393,6 +405,7 @@ export interface RootRouteChildren {
   UploadRoute: typeof UploadRoute
   NewsSlugRoute: typeof NewsSlugRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
+  SeriesSeriesTitleRoute: typeof SeriesSeriesTitleRoute
   UsersIdRoute: typeof UsersIdRouteWithChildren
   NewsIndexRoute: typeof NewsIndexRoute
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
@@ -554,6 +567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsPostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/series/$seriesTitle': {
+      id: '/series/$seriesTitle'
+      path: '/series/$seriesTitle'
+      fullPath: '/series/$seriesTitle'
+      preLoaderRoute: typeof SeriesSeriesTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users/': {
       id: '/users/'
       path: '/users'
@@ -678,6 +698,7 @@ const rootRouteChildren: RootRouteChildren = {
   UploadRoute: UploadRoute,
   NewsSlugRoute: NewsSlugRoute,
   PostsPostIdRoute: PostsPostIdRoute,
+  SeriesSeriesTitleRoute: SeriesSeriesTitleRoute,
   UsersIdRoute: UsersIdRouteWithChildren,
   NewsIndexRoute: NewsIndexRoute,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
