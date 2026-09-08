@@ -6,6 +6,7 @@ import {
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { LuX } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
@@ -18,9 +19,53 @@ import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 import { SaveSearchDialog, SavedSearchesDialog } from "./SavedSearchDialogs";
 
+// Tags are compared as a whole (order included) when deciding whether the
+// applied filters moved; the separator cannot appear in a tag name.
+const TAGS_KEY_SEPARATOR = "\u0000";
+
+const tagsKey = (tags: readonly string[]): string =>
+  tags.join(TAGS_KEY_SEPARATOR);
+
+/**
+ * The URL owns the applied filters; this hook manages the draft the user
+ * edits. The draft is discarded whenever the applied value changes outside
+ * the component (Back/Forward, direct URL edits, applying a saved search) so
+ * the field, the URL and the results move together. `markDraftApplied`
+ * optimistically records the values being navigated to, so the component's
+ * own (debounced) navigation landing never snaps the field away while the
+ * user keeps typing.
+ */
+function useSyncedDraft<T>(
+  applied: T,
+  appliedKey: string,
+  draftKey: (draft: T) => string,
+): [T, Dispatch<SetStateAction<T>>, (draft: T) => void] {
+  const [draft, setDraft] = useState(applied);
+  const [lastAppliedKey, setLastAppliedKey] = useState(appliedKey);
+  const [draftSyncedKey, setDraftSyncedKey] = useState(appliedKey);
+
+  if (appliedKey !== lastAppliedKey) {
+    setLastAppliedKey(appliedKey);
+    // A landing of this component's own navigation matches the key the draft
+    // already mirrors; anything else changed outside and wins over the draft.
+    if (appliedKey !== draftSyncedKey) {
+      setDraftSyncedKey(appliedKey);
+      setDraft(applied);
+    }
+  }
+
+  const markDraftApplied = (value: T) => {
+    setDraftSyncedKey(draftKey(value));
+  };
+
+  return [draft, setDraft, markDraftApplied];
+}
+
 type SearchBoxProps = {
-  defaultValue?: string | undefined;
-  defaultTags?: readonly string[] | undefined;
+  /** Active search query from the URL; the URL owns the applied filters. */
+  appliedQuery?: string | undefined;
+  /** Active tag filters from the URL. */
+  appliedTags?: readonly string[] | undefined;
   placeholder?: string | undefined;
   showTitle?: boolean | undefined;
   dateRange?: PostsSearchParams["dateRange"] | undefined;
@@ -29,8 +74,8 @@ type SearchBoxProps = {
 };
 
 export function SearchBox({
-  defaultValue = "",
-  defaultTags = [],
+  appliedQuery = "",
+  appliedTags = [],
   placeholder = "Search...",
   showTitle = true,
   dateRange = "all",
@@ -39,39 +84,46 @@ export function SearchBox({
 }: SearchBoxProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [search, setSearch] = useState(defaultValue);
-  const [tags, setTags] = useState<string[]>(() => [...defaultTags]);
+
+  // The field and the tag combobox edit *drafts*; the applied filters live in
+  // the URL and drive the results (see useSyncedDraft).
+  const [draftQuery, setDraftQuery, markQueryDraftApplied] = useSyncedDraft(
+    appliedQuery,
+    appliedQuery,
+    (draft) => draft,
+  );
+  const [draftTags, setDraftTags, markTagsDraftApplied] = useSyncedDraft(
+    appliedTags,
+    tagsKey(appliedTags),
+    tagsKey,
+  );
 
   const handleTagChange = (details: ComboboxValueChangeDetails) => {
-    setTags([...details.value]);
+    setDraftTags([...details.value]);
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    const newTags = tags.filter((t) => t !== tagToRemove);
-    setTags(newTags);
+    setDraftTags(draftTags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleNavigate = () => {
+  const applyDraftToUrl = () => {
+    markQueryDraftApplied(draftQuery);
+    markTagsDraftApplied(draftTags);
     void navigate({
       search: {
         dateRange,
-        q: search,
+        q: draftQuery,
         sortBy,
-        tags,
+        tags: draftTags,
       },
       to: pathname === "/" ? "/posts" : pathname,
     });
   };
 
-  const setDebouncedQuery = useDebouncer(
-    () => {
-      handleNavigate();
-    },
-    {
-      enabled: () => search.length > 2,
-      wait: 500,
-    },
-  );
+  const setDebouncedQuery = useDebouncer(applyDraftToUrl, {
+    enabled: () => draftQuery.length > 2,
+    wait: 500,
+  });
 
   return (
     <Box w="auto">
@@ -87,24 +139,24 @@ export function SearchBox({
           name="q"
           onChange={(e) => {
             const newValue = e.target.value;
-            setSearch(newValue);
+            setDraftQuery(newValue);
             setDebouncedQuery.maybeExecute();
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               setDebouncedQuery.flush();
-              handleNavigate();
+              applyDraftToUrl();
             }
           }}
           placeholder={placeholder}
           size="sm"
           type="search"
-          value={search}
+          value={draftQuery}
         />
         <Button
           onClick={() => {
             setDebouncedQuery.flush();
-            handleNavigate();
+            applyDraftToUrl();
           }}
           size="sm"
         >
@@ -112,11 +164,13 @@ export function SearchBox({
         </Button>
       </Group>
       <Wrap gap={2} mb={4}>
-        <SaveSearchDialog values={{ dateRange, q: search, sortBy, tags }} />
+        <SaveSearchDialog
+          values={{ dateRange, q: draftQuery, sortBy, tags: draftTags }}
+        />
         <SavedSearchesDialog
           onApply={(savedSearch) => {
-            setSearch(savedSearch.q);
-            setTags([...savedSearch.tags]);
+            setDraftQuery(savedSearch.q);
+            setDraftTags([...savedSearch.tags]);
             void navigate({
               search: {
                 dateRange: savedSearch.date_range,
@@ -138,11 +192,14 @@ export function SearchBox({
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
         <Box w="full">
           <ClientOnly fallback={null}>
-            <SearchBoxTagCombobox onValueChange={handleTagChange} tags={tags} />
+            <SearchBoxTagCombobox
+              onValueChange={handleTagChange}
+              tags={draftTags}
+            />
           </ClientOnly>
-          {tags.length > 0 && (
+          {draftTags.length > 0 && (
             <Wrap gap="2" mt={2}>
-              {tags.map((tag) => (
+              {draftTags.map((tag) => (
                 <Badge
                   alignItems="center"
                   display="flex"
@@ -174,7 +231,7 @@ export function SearchBox({
 
 type SearchBoxTagComboboxProps = {
   onValueChange: (details: ComboboxValueChangeDetails) => void;
-  tags: string[];
+  tags: readonly string[];
 };
 
 function SearchBoxTagCombobox({
@@ -203,7 +260,7 @@ function SearchBoxTagCombobox({
       }}
       onValueChange={handleValueChange}
       openOnClick
-      value={tags}
+      value={[...tags]}
     >
       <Combobox.Control>
         <Combobox.Input placeholder="Select tags to filter..." />

@@ -130,8 +130,8 @@ export function PostsPageLayout({
           <VStack align="stretch" className="lg:gap-4" gap={3}>
             <Box border="1px" borderRadius="md" p={4} shadow="md">
               <SearchBox
-                defaultTags={selectedTags}
-                defaultValue={searchQuery}
+                appliedTags={selectedTags}
+                appliedQuery={searchQuery}
                 dateRange={dateRange}
                 sortBy={sortBy}
               />

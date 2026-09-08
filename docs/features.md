@@ -61,6 +61,8 @@ Les qualificatifs peuvent être combinés avec du texte libre (`action width:>10
 
 Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.service.ts`, `src/components/SearchBox.tsx`, `src/lib/upload/useUploadForm.ts`, migration `drizzle/20260906190600_brown_caretaker/migration.sql`.
 
+L'URL est la source de vérité des filtres appliqués (`q`, `tags`, tri, période) : les résultats viennent des paramètres de route validés, et le champ de recherche n'est qu'un brouillon jusqu'à la navigation (automatique après 500 ms de pause au-delà de 2 caractères, ou immédiate via Entrée et le bouton). Toute modification externe des filtres — retour/avant du navigateur, édition directe de l'URL, application d'une recherche sauvegardée — réaligne le champ et les tags sur l'URL, si bien que champ, URL et résultats restent cohérents. — `src/components/SearchBox.tsx`, `src/components/SearchBox.test.tsx`.
+
 ### Vues de découverte opt-in
 
 Le fil chronologique reste le défaut stable. Depuis le panneau « Browse intentionally », l'utilisateur peut choisir `Trending`, `Most liked this week`, `New from followed tags`, `Under-seen gems` ou `Random study queue`. Chaque vue affiche sa fenêtre temporelle et les signaux de classement : les expérimentations utilisent l'activité de votes ou un ordre aléatoire reproductible, jamais les points comme proxy de qualité. Elles ne constituent pas une décision de modération.

@@ -14,7 +14,7 @@ import {
 
 export function useTagCollection(options: {
   search: string;
-  exclude?: string[];
+  exclude?: readonly string[];
 }) {
   const { search, exclude = [] } = options;
 
