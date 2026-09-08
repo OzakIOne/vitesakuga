@@ -200,6 +200,12 @@ To drive the user's browser (Brave) via Playwright, use the `bc` wrapper and fol
 `docs/agents/browser-control.md`. Do not install browser-control into the project or
 nub's global store (both break silently).
 
+### Commit signing
+
+All commits must show as Verified on GitHub. Never merge PRs or update PR branches
+via `gh`/API (server-side commits are unsigned by design) and never let agent
+sandboxes push directly. See `docs/agents/commit-signing.md`.
+
 ### Triage labels
 
 Canonical label names: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
