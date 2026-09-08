@@ -191,10 +191,7 @@ function RouteComponent() {
               >
                 <Combobox.Label>Output Format</Combobox.Label>
                 <Combobox.Control>
-                  <Combobox.Input
-                    placeholder="Select format"
-                    value={formatInputValue}
-                  />
+                  <Combobox.Input placeholder="Select format" />
                   <Combobox.IndicatorGroup>
                     <Combobox.Trigger />
                   </Combobox.IndicatorGroup>

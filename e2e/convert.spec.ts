@@ -26,6 +26,28 @@ test.describe("Convert page", () => {
     await expect(page.getByRole("button", { name: "Convert" })).toBeVisible();
   });
 
+  test("does not warn about a controlled output format input", async ({
+    page,
+  }) => {
+    const warnings: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error" || message.type() === "warning") {
+        warnings.push(message.text());
+      }
+    });
+
+    await page.reload({ waitUntil: "load" });
+    await expect(
+      page.getByRole("heading", { name: "Video/Audio Converter" }),
+    ).toBeVisible();
+
+    expect(
+      warnings.filter((message) =>
+        message.includes("both value and defaultValue"),
+      ),
+    ).toEqual([]);
+  });
+
   test("convert button is disabled without file and format", async ({
     page,
   }) => {
@@ -91,6 +113,32 @@ test.describe("Convert page", () => {
     await expect(page.getByRole("button", { name: "Convert" })).toBeDisabled({
       timeout: 5000,
     });
+  });
+
+  test("selects passthrough format and downloads the converted file", async ({
+    page,
+  }) => {
+    await page.locator('input[type="file"]').setInputFiles(TEST_VIDEO);
+    await expect(page.getByText("test.mp4")).toBeVisible({ timeout: 10000 });
+
+    const formatSelect = page.getByRole("combobox", {
+      name: "Output Format",
+    });
+    await formatSelect.click();
+    await page.getByRole("option", { name: /MP4.*Passthrough\/Copy/ }).click();
+
+    await expect(page.getByRole("button", { name: "Convert" })).toBeEnabled();
+    await page.getByRole("button", { name: "Convert" }).click();
+
+    await expect(page.getByText("Conversion complete!")).toBeVisible({
+      timeout: 30000,
+    });
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Download" }).click();
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toBe("test-converted.mp4");
   });
 
   test("shows converter description text at bottom", async ({ page }) => {
