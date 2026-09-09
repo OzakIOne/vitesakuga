@@ -1,4 +1,8 @@
-import type { ConversionCopyOptions, ConversionOptions } from "mediabunny";
+import type {
+  ConversionCopyOptions,
+  ConversionOptions,
+  Input,
+} from "mediabunny";
 import {
   createAsyncLogic,
   createCallbackLogic,
@@ -354,7 +358,7 @@ export const convertMachine = createMachine({
     >(({ sendBack, input }) => {
       // oxlint-disable-next-line effecttsgo/async-function -- createCallbackLogic callbacks must return void; conversion progress is streamed via sendBack from this fire-and-forget promise chain
       void (async () => {
-        let mediabunnyInput: { dispose: () => void } | null = null;
+        let mediabunnyInput: Input | null = null;
         try {
           const {
             ALL_FORMATS,

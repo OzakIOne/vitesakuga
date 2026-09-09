@@ -5,7 +5,7 @@ import {
 } from "@ark-ui/react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LuScissors, LuUpload } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { Alert, Progress } from "src/components/ui/feedback";
@@ -42,6 +42,14 @@ function formatTimestamp(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainder = seconds - minutes * 60;
   return `${minutes}:${remainder.toFixed(1).padStart(4, "0")}`;
+}
+
+function isCopyMode(value: string): value is CopyMode {
+  return value === "forced" || value === "preferred";
+}
+
+function isBoundaryPolicy(value: string): value is BoundaryPolicy {
+  return value === "expand" || value === "shrink";
 }
 
 function ConversionProgress({ actor }: { actor: ActorLike }) {
@@ -95,21 +103,38 @@ function RouteComponent() {
     output?.videoCodec !== undefined || output?.audioCodec !== undefined;
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    },
+    [],
+  );
+
+  const replacePreviewUrl = (nextFile: File | null) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
     }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    const nextUrl = nextFile ? URL.createObjectURL(nextFile) : null;
+    previewUrlRef.current = nextUrl;
+    setPreviewUrl(nextUrl);
+  };
 
   const handleFileChange = (file: File | null) => {
+    replacePreviewUrl(file);
     if (file) {
       actorRef.send({ type: "file.selected", file });
+    } else {
+      actorRef.send({ type: "reset" });
     }
+  };
+
+  const handleReset = () => {
+    replacePreviewUrl(null);
+    actorRef.send({ type: "reset" });
   };
 
   const [formatInputValue, setFormatInputValue] = useState("");
@@ -302,9 +327,10 @@ function RouteComponent() {
                       className={SELECT_CLASS}
                       disabled={isConverting || isTranscodingOutput}
                       onChange={(event) =>
+                        isCopyMode(event.target.value) &&
                         actorRef.send({
                           type: "copy.mode.selected",
-                          mode: event.target.value as CopyMode,
+                          mode: event.target.value,
                         })
                       }
                       value={copyMode}
@@ -326,9 +352,10 @@ function RouteComponent() {
                       className={SELECT_CLASS}
                       disabled={isConverting || isTranscodingOutput}
                       onChange={(event) =>
+                        isBoundaryPolicy(event.target.value) &&
                         actorRef.send({
                           type: "copy.boundary.selected",
-                          boundaryPolicy: event.target.value as BoundaryPolicy,
+                          boundaryPolicy: event.target.value,
                         })
                       }
                       value={boundaryPolicy}
@@ -495,7 +522,7 @@ function RouteComponent() {
                   <Button
                     colorScheme="gray"
                     mt={2}
-                    onClick={() => actorRef.send({ type: "reset" })}
+                    onClick={handleReset}
                     size="sm"
                     variant="outline"
                   >
@@ -522,7 +549,7 @@ function RouteComponent() {
                     colorScheme="gray"
                     ml={2}
                     mt={2}
-                    onClick={() => actorRef.send({ type: "reset" })}
+                    onClick={handleReset}
                     size="sm"
                     variant="outline"
                   >
