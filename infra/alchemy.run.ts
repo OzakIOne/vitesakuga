@@ -179,9 +179,6 @@ export default Alchemy.Stack(
         CLOUDFLARE_ACCOUNT_ID: Config.string("CLOUDFLARE_ACCOUNT_ID"),
         CLOUDFLARE_ACCESS_KEY: Config.redacted("CLOUDFLARE_ACCESS_KEY"),
         CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
-        CLOUDFLARE_EMAIL_API_TOKEN: Config.redacted(
-          "CLOUDFLARE_EMAIL_API_TOKEN",
-        ).pipe(Config.withDefault("")),
         CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
         VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string(
           "VITE_CLOUDFLARE_R2_PUBLIC_URL",
@@ -198,6 +195,7 @@ export default Alchemy.Stack(
         EMAIL_FROM: Config.string("EMAIL_FROM").pipe(
           Config.withDefault(`noreply@${appDomain}`),
         ),
+        RESEND_API_KEY: Config.redacted("RESEND_API_KEY"),
         NODE_ENV: Config.string("NODE_ENV").pipe(
           Config.withDefault("production"),
         ),

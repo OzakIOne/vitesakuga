@@ -23,4 +23,21 @@ describe("auth server config", () => {
     );
     expect(twoFactorPlugin?.options).toMatchObject({ allowPasswordless: true });
   });
+
+  it("requires a Resend-backed OTP before credential signup can create a session", () => {
+    expect(auth.options.emailAndPassword).toMatchObject({
+      requireEmailVerification: true,
+    });
+    const emailOtpPlugin = auth.options.plugins?.find(
+      (plugin) => plugin.id === "email-otp",
+    );
+    expect(emailOtpPlugin?.options).toMatchObject({
+      allowedAttempts: 5,
+      expiresIn: 10 * 60,
+      overrideDefaultEmailVerification: true,
+      sendVerificationOnSignUp: true,
+      storeOTP: "hashed",
+    });
+    expect(emailOtpPlugin?.options?.sendVerificationOTP).toBeTypeOf("function");
+  });
 });

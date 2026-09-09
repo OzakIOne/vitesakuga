@@ -121,7 +121,7 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 - **Passkeys (WebAuthn)** — `src/components/PasskeySignInButton.tsx`, `src/components/PasskeysSection.tsx`.
 - **2FA TOTP** avec codes de secours et option de confiance d'appareil — `src/components/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`.
 - **Captcha Cloudflare Turnstile** en production lorsqu'il est provisionné.
-- **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Cloudflare Email Service ; `CLOUDFLARE_EMAIL_API_TOKEN` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
+- **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Resend ; `RESEND_API_KEY` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.
 - **Compte** (`/account`) : profil, pseudo, changement de mot de passe et suppression avec anonymisation ; le contenu public reste attribué à « Deleted user ».
 - **Rôles et permissions** : `novice → uploader → moderator → admin`, appliqués par les policies Effect — `src/lib/auth/roles.ts`, `src/lib/auth/policy.ts`, `src/lib/auth/ownership.ts`.

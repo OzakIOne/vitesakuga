@@ -140,7 +140,10 @@ Also test broken thumbnails, slow storage, unsupported codecs, partially complet
 
 ### 17. Account trust and notification controls — P0 before launch
 
-The security audit records email verification as an open product decision. Decide whether verification is required for normal account use and password recovery before launch.
+Email verification is now required for password signups: Better Auth sends a
+short-lived OTP through Resend before creating a usable session. Keep password
+recovery and other account-security messages covered by the same deliverability
+and notification policy before launch.
 
 Alongside that decision, add notification preferences for mentions, edit suggestions, moderation outcomes, and followed searches. Users should be able to mute a noisy category without losing security-critical account messages.
 

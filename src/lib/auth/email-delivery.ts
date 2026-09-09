@@ -8,17 +8,23 @@ type VerificationEmailType =
   | "forget-password"
   | "change-email";
 
-type CloudflareEmailResponse = {
-  readonly success?: unknown;
+type ResendEmailResponse = {
+  readonly id?: unknown;
 };
 
-const CLOUDFLARE_EMAIL_API = "https://api.cloudflare.com/client/v4/accounts";
+const RESEND_EMAIL_API = "https://api.resend.com/emails";
 
-function isCloudflareEmailResponse(
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Cloudflare's REST response is an untrusted boundary; this guard narrows it before use.
+function isResendEmailResponse(
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Resend's REST response is an untrusted boundary; this guard narrows it before use.
   value: unknown,
-): value is CloudflareEmailResponse {
-  return typeof value === "object" && value !== null && "success" in value;
+): value is ResendEmailResponse {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    value.id.length > 0
+  );
 }
 
 function escapeHtml(value: string): string {
@@ -44,9 +50,9 @@ function subjectFor(type: VerificationEmailType): string {
 }
 
 /**
- * Better Auth's email-OTP adapter. Cloudflare Email Service is called over
- * its REST API so the same implementation works in a Cloudflare Worker and
- * in local Node-based previews without requiring an extra mail SDK.
+ * Better Auth's email-OTP adapter. Resend is called over its REST API so the
+ * same implementation works in a Cloudflare Worker and in local Node-based
+ * previews without requiring an extra mail SDK.
  */
 // oxlint-disable-next-line effecttsgo/async-function -- Better Auth owns this Promise-returning email transport callback.
 export async function sendVerificationOTP({
@@ -58,47 +64,39 @@ export async function sendVerificationOTP({
   otp: string;
   type: VerificationEmailType;
 }): Promise<void> {
-  const accountId = envServer.CLOUDFLARE_ACCOUNT_ID;
-  const apiToken = Redacted.value(envServer.CLOUDFLARE_EMAIL_API_TOKEN);
+  const apiKey = Redacted.value(envServer.RESEND_API_KEY);
   const from = envServer.EMAIL_FROM;
 
-  if (!accountId || !apiToken || !from) {
+  if (!apiKey || !from) {
     throw new Error(
-      "Cloudflare Email Service is not configured. Set CLOUDFLARE_EMAIL_API_TOKEN and EMAIL_FROM.",
+      "Resend is not configured. Set RESEND_API_KEY and EMAIL_FROM.",
     );
   }
 
   const escapedOtp = escapeHtml(otp);
   const subject = subjectFor(type);
-  // oxlint-disable-next-line effecttsgo/global-fetch -- Cloudflare Email Service is the external transport boundary.
-  const response = await fetch(
-    `${CLOUDFLARE_EMAIL_API}/${encodeURIComponent(accountId)}/email/sending/send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        html: `<p>Your ViteSakuga verification code is <strong>${escapedOtp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
-        subject,
-        text: `Your ViteSakuga verification code is ${otp}. This code expires in 10 minutes.`,
-        to: email,
-      }),
+  // oxlint-disable-next-line effecttsgo/global-fetch -- Resend is the external transport boundary.
+  const response = await fetch(RESEND_EMAIL_API, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      from,
+      html: `<p>Your ViteSakuga verification code is <strong>${escapedOtp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
+      subject,
+      text: `Your ViteSakuga verification code is ${otp}. This code expires in 10 minutes.`,
+      to: email,
+    }),
+  });
 
   if (!response.ok) {
-    throw new Error(
-      "Cloudflare Email Service rejected the verification email.",
-    );
+    throw new Error("Resend rejected the verification email.");
   }
 
   const result: unknown = await response.json();
-  if (!isCloudflareEmailResponse(result) || result.success !== true) {
-    throw new Error(
-      "Cloudflare Email Service rejected the verification email.",
-    );
+  if (!isResendEmailResponse(result)) {
+    throw new Error("Resend rejected the verification email.");
   }
 }

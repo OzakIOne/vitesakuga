@@ -62,22 +62,17 @@ const decodeWith = <S extends Schema.ConstraintDecoder<unknown>>(
 
 const serverEnvConfig = Config.all({
   BETTER_AUTH_SECRET: Config.string("BETTER_AUTH_SECRET"),
-  CLOUDFLARE_ACCOUNT_ID: Config.string("CLOUDFLARE_ACCOUNT_ID").pipe(
-    Config.withDefault(""),
-  ),
   CLOUDFLARE_ACCESS_KEY: Config.string("CLOUDFLARE_ACCESS_KEY"),
   CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
-  CLOUDFLARE_EMAIL_API_TOKEN: Config.string("CLOUDFLARE_EMAIL_API_TOKEN").pipe(
-    Config.withDefault(""),
-  ),
   CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
-  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   CLOUDFLARE_SECRET_KEY: Config.string("CLOUDFLARE_SECRET_KEY"),
   DATABASE_URL: Config.string("DATABASE_URL"),
   GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
   GITHUB_CLIENT_SECRET: Config.string("GITHUB_CLIENT_SECRET"),
   GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
   GOOGLE_CLIENT_SECRET: Config.string("GOOGLE_CLIENT_SECRET"),
+  RESEND_API_KEY: Config.string("RESEND_API_KEY").pipe(Config.withDefault("")),
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   EMAIL_FROM: Config.string("EMAIL_FROM").pipe(Config.withDefault("")),
   NODE_ENV: Config.string("NODE_ENV"),
   TURNSTILE_SECRET: Config.string("TURNSTILE_SECRET").pipe(
@@ -89,12 +84,9 @@ const serverEnvConfig = Config.all({
 const serverEnvSchema = (requireOAuth: boolean) =>
   Schema.Struct({
     BETTER_AUTH_SECRET: secret("BETTER_AUTH_SECRET", 32),
-    CLOUDFLARE_ACCOUNT_ID: Schema.String,
     CLOUDFLARE_ACCESS_KEY: secret("CLOUDFLARE_ACCESS_KEY", 1),
     CLOUDFLARE_BUCKET: nonEmpty("CLOUDFLARE_BUCKET"),
-    CLOUDFLARE_EMAIL_API_TOKEN: Schema.RedactedFromValue(Schema.String),
     CLOUDFLARE_R2: nonEmpty("CLOUDFLARE_R2"),
-    VITE_CLOUDFLARE_R2_PUBLIC_URL: nonEmpty("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
     CLOUDFLARE_SECRET_KEY: secret("CLOUDFLARE_SECRET_KEY", 1),
     DATABASE_URL: nonEmpty("DATABASE_URL"),
     GITHUB_CLIENT_ID: requireOAuth
@@ -111,19 +103,19 @@ const serverEnvSchema = (requireOAuth: boolean) =>
       : Schema.RedactedFromValue(Schema.String),
     EMAIL_FROM: Schema.String,
     NODE_ENV: Schema.Literals(["development", "production", "test"]),
+    RESEND_API_KEY: Schema.RedactedFromValue(Schema.String),
     // Optional in every stage: the captcha plugin is only enabled when the
     // secret is actually configured (see auth/index.ts). Kept as a Redacted
     // secret so it is never logged.
     TURNSTILE_SECRET: Schema.RedactedFromValue(Schema.String),
     VITE_BASE_URL: nonEmpty("VITE_BASE_URL"),
+    VITE_CLOUDFLARE_R2_PUBLIC_URL: nonEmpty("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   });
 
 export type ServerEnv = {
   readonly BETTER_AUTH_SECRET: Redacted.Redacted<string>;
-  readonly CLOUDFLARE_ACCOUNT_ID: string;
   readonly CLOUDFLARE_ACCESS_KEY: Redacted.Redacted<string>;
   readonly CLOUDFLARE_BUCKET: string;
-  readonly CLOUDFLARE_EMAIL_API_TOKEN: Redacted.Redacted<string>;
   readonly CLOUDFLARE_R2: string;
   readonly VITE_CLOUDFLARE_R2_PUBLIC_URL: string;
   readonly CLOUDFLARE_SECRET_KEY: Redacted.Redacted<string>;
@@ -134,6 +126,7 @@ export type ServerEnv = {
   readonly GOOGLE_CLIENT_SECRET: Redacted.Redacted<string>;
   readonly EMAIL_FROM: string;
   readonly NODE_ENV: "development" | "production" | "test";
+  readonly RESEND_API_KEY: Redacted.Redacted<string>;
   readonly TURNSTILE_SECRET: Redacted.Redacted<string>;
   readonly VITE_BASE_URL: string;
 };
