@@ -78,6 +78,10 @@ describe("searchPostsBaseSchema", () => {
     expect(() => parseStrict(searchPostsBaseSchema)({ page: -1 })).toThrow();
   });
 
+  it("should throw on fractional page numbers", () => {
+    expect(() => parseStrict(searchPostsBaseSchema)({ page: 1.5 })).toThrow();
+  });
+
   it("should throw on invalid sortBy option", () => {
     expect(() =>
       parseStrict(searchPostsBaseSchema)({ sortBy: "random" }),

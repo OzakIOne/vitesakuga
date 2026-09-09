@@ -669,6 +669,30 @@ describe("PostsService.search", () => {
     expect(result.data.map((post) => post.title)).toEqual(["Mecha Ramble"]);
     expect(result.meta.popularTags.map((tag) => tag.name)).toEqual(["mecha"]);
   });
+
+  it("scopes popular tags to selected tag filters", async () => {
+    const selectedPost = await insertPost({ title: "Selected post" });
+    const unrelatedPost = await insertPost({ title: "Unrelated post" });
+    const selectedTag = await insertTag("selected");
+    const unrelatedTag = await insertTag("unrelated");
+    await linkTags(selectedPost, [selectedTag]);
+    await linkTags(unrelatedPost, [unrelatedTag]);
+
+    const result = await runEffect(
+      PostsService.search({
+        q: "",
+        tags: ["selected"],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual(["Selected post"]);
+    expect(result.meta.popularTags.map((tag) => tag.name)).toEqual([
+      "selected",
+    ]);
+  });
 });
 
 describe("PostsService.fetchDetail", () => {
@@ -886,6 +910,23 @@ describe("PostsService.upload", () => {
     expect(error._tag).toBe("ValidationError");
     expect(error.message).toContain("Video upload could not be verified");
   });
+
+  it("does not leave a post behind when tag linking fails", async () => {
+    const { key: pendingKey } = await uploadVideoToStorage();
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const error = await runEffect(
+      Effect.flip(
+        PostsService.upload({
+          ...makeUploadInput(pendingKey),
+          tags: [{ id: 999999, name: "missing" }],
+        }),
+      ),
+    );
+
+    expect(error._tag).toBe("SqlError");
+    expect(await db.selectFrom("posts").selectAll().execute()).toEqual([]);
+  });
 });
 
 describe("PostsService.createVideoUploadUrl", () => {
@@ -1007,6 +1048,67 @@ describe("PostsService.update", () => {
       "new-tag",
       "video",
     ]);
+  });
+
+  it("deduplicates repeated tag inputs", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+    const postId = await insertPost();
+
+    await runEffect(
+      PostsService.update({
+        postId,
+        title: "Repeated tags",
+        description: "Content",
+        source: "",
+        relatedPostId: undefined,
+        tags: [{ name: "repeat" }, { name: "repeat" }],
+      }),
+    );
+
+    const tags = await db
+      .selectFrom("post_tags")
+      .innerJoin("tags", "tags.id", "post_tags.tagId")
+      .select("tags.name")
+      .where("post_tags.postId", "=", postId)
+      .execute();
+    expect(tags.map((tag) => tag.name).sort()).toEqual(["repeat", "video"]);
+  });
+
+  it("rolls back post fields and tags when tag relinking fails", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+    const postId = await insertPost({ title: "Original" });
+    const existingTag = await insertTag("keep-me");
+    await linkTags(postId, [existingTag]);
+
+    const error = await runEffect(
+      Effect.flip(
+        PostsService.update({
+          postId,
+          title: "Should roll back",
+          description: "Updated description",
+          source: "",
+          relatedPostId: undefined,
+          tags: [{ id: 999999, name: "missing" }],
+        }),
+      ),
+    );
+
+    expect(error._tag).toBe("SqlError");
+    const post = await db
+      .selectFrom("posts")
+      .select(["title", "description"])
+      .where("id", "=", postId)
+      .executeTakeFirstOrThrow();
+    expect(post).toEqual({
+      description: "<p>Test description</p>",
+      title: "Original",
+    });
+    const tags = await db
+      .selectFrom("post_tags")
+      .select("tagId")
+      .where("postId", "=", postId)
+      .execute();
+    expect(tags).toEqual([{ tagId: existingTag }]);
   });
 });
 

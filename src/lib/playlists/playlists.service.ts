@@ -848,8 +848,6 @@ export class PlaylistsService extends Context.Service<
           .limit(PAGE_SIZE),
       );
 
-      let thumbnailKey: string | null = null;
-
       const data_ = playlistPosts.map((pp): PlaylistPostRow | PostOrphan => {
         if (pp.id === null) {
           return {
@@ -858,10 +856,6 @@ export class PlaylistsService extends Context.Service<
             position: pp.position,
             added_at: toIsoTimestamp(pp.added_at),
           };
-        }
-
-        if (thumbnailKey === null && pp.thumbnail_key !== null) {
-          thumbnailKey = pp.thumbnail_key;
         }
 
         return {
@@ -878,6 +872,21 @@ export class PlaylistsService extends Context.Service<
           user_name: pp.user_name,
           video_key: pp.video_key,
         };
+      });
+
+      const thumbnail = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("playlist_posts")
+          .innerJoin("posts", "posts.id", "playlist_posts.post_id")
+          .select("posts.thumbnailKey")
+          .where("playlist_posts.playlist_id", "=", playlistId)
+          .where("posts.thumbnailKey", "is not", null)
+          .orderBy("playlist_posts.position", "asc")
+          .limit(1),
+      );
+      const thumbnailKey = Option.match(thumbnail, {
+        onNone: () => null,
+        onSome: (row) => row.thumbnailKey,
       });
 
       const playlistMeta: PlaylistWithMeta = {

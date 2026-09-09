@@ -8,7 +8,8 @@ import {
   makeServiceTestLayer,
   type ServiceTestContext,
 } from "../db/test-utils";
-import { StorageModule } from "../storage/storage.module";
+import { PENDING_VIDEOS_PREFIX } from "../storage/keys";
+import { StorageError, StorageModule } from "../storage/storage.module";
 import { REVISION_RETENTION_DAYS, DAY_MS } from "./videos.config";
 import { VideosService, VideosServiceLive } from "./videos.service";
 
@@ -262,11 +263,18 @@ describe("VideosService.restore", () => {
     const { db, mockGetSession } = ctx;
     await insertUser(db, { id: "author-5", role: "novice" });
     await insertUser(db, { id: "mod-5", role: "moderator" });
-    const postId = await insertVideoPost(
-      db,
-      "author-5",
-      "videos/author-5/orig.mp4",
+    const originalVideoKey = await ctx.runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        return yield* storage.uploadVideo(
+          "author-5",
+          new File(["original video bytes"], "original.mp4", {
+            type: "video/mp4",
+          }),
+        );
+      }),
     );
+    const postId = await insertVideoPost(db, "author-5", originalVideoKey.key);
 
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-5", role: "moderator" }),
@@ -295,7 +303,7 @@ describe("VideosService.restore", () => {
       .select("videoKey")
       .where("id", "=", postId)
       .executeTakeFirstOrThrow();
-    expect(post.videoKey).toBe("videos/author-5/orig.mp4");
+    expect(post.videoKey).toBe(originalVideoKey.key);
 
     // The upgraded video got archived in turn → still 2 revisions.
     const revisions = await db
@@ -304,6 +312,44 @@ describe("VideosService.restore", () => {
       .where("postId", "=", postId)
       .execute();
     expect(revisions.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("refuses to restore a revision whose object is missing", async () => {
+    const ctx = await makeServiceTestLayer(VideosServiceLive);
+    closeCtx = ctx.close;
+    const { db, mockGetSession } = ctx;
+    await insertUser(db, { id: "author-6", role: "novice" });
+    await insertUser(db, { id: "mod-6", role: "moderator" });
+    const postId = await insertVideoPost(
+      db,
+      "author-6",
+      "videos/author-6/current.mp4",
+    );
+    const revision = await db
+      .insertInto("video_revisions")
+      .values({
+        postId,
+        replacedBy: "mod-6",
+        videoKey: "videos/author-6/missing.mp4",
+        videoMetadata: "{}",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-6", role: "moderator" }),
+    );
+    const error = await ctx.runEffect(
+      Effect.flip(VideosService.restore(revision.id)),
+    );
+
+    expect(error._tag).toBe("StorageError");
+    const post = await db
+      .selectFrom("posts")
+      .select("videoKey")
+      .where("id", "=", postId)
+      .executeTakeFirstOrThrow();
+    expect(post.videoKey).toBe("videos/author-6/current.mp4");
   });
 });
 
@@ -559,5 +605,127 @@ describe("VideosService.gc", () => {
       .selectAll()
       .execute();
     expect(remaining.map((r) => r.videoKey)).toEqual([keptKey]);
+  });
+
+  it("does not purge a revision when deleting its object fails", async () => {
+    const failedKey = "videos/old/delete-failed.mp4";
+    const ctx = await makeServiceTestLayer(VideosServiceLive, {
+      wrapStorage: (storage) => ({
+        ...storage,
+        listKeys: (prefix) =>
+          prefix === "videos/" ? Effect.succeed([]) : storage.listKeys(prefix),
+        deleteFile: (key) =>
+          key === failedKey
+            ? Effect.fail(
+                new StorageError({
+                  cause: "simulated delete outage",
+                  key,
+                  message: "Simulated delete failure",
+                  operation: "delete",
+                }),
+              )
+            : storage.deleteFile(key),
+      }),
+    });
+    closeCtx = ctx.close;
+    const { db, mockGetSession } = ctx;
+    await insertUser(db, { id: "admin-delete-failure", role: "admin" });
+    const postId = await insertVideoPost(
+      db,
+      "admin-delete-failure",
+      "videos/live.mp4",
+    );
+    await seedRevision(db, {
+      ageDays: REVISION_RETENTION_DAYS + 1,
+      postId,
+      replacedBy: "admin-delete-failure",
+      videoKey: failedKey,
+    });
+    mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-delete-failure", role: "admin" }),
+    );
+
+    const result = await ctx.runEffect(VideosService.gcRun());
+
+    expect(result.deletedKeys).toBe(0);
+    expect(result.purgedRevisions).toBe(0);
+    expect(
+      await db.selectFrom("video_revisions").select("videoKey").execute(),
+    ).toEqual([{ videoKey: failedKey }]);
+  });
+
+  it("keeps a live object when purging a duplicate revision key", async () => {
+    const ownedKeys: string[] = [];
+    const ctx = await makeServiceTestLayer(VideosServiceLive, {
+      wrapStorage: (storage) => ({
+        ...storage,
+        listKeys: (prefix) =>
+          prefix === "videos/"
+            ? Effect.succeed([...ownedKeys])
+            : storage.listKeys(prefix),
+      }),
+    });
+    closeCtx = ctx.close;
+    const { db, mockGetSession } = ctx;
+    await insertUser(db, { id: "admin-live-key", role: "admin" });
+    const liveKey = await ctx.runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        const { key } = yield* storage.uploadVideo(
+          "gc-live-key",
+          new File(["live bytes"], "live.mp4", { type: "video/mp4" }),
+        );
+        return key;
+      }),
+    );
+    ownedKeys.push(liveKey);
+    const postId = await insertVideoPost(db, "admin-live-key", liveKey);
+    await seedRevision(db, {
+      ageDays: REVISION_RETENTION_DAYS + 1,
+      postId,
+      replacedBy: "admin-live-key",
+      videoKey: liveKey,
+    });
+    mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-live-key", role: "admin" }),
+    );
+
+    const result = await ctx.runEffect(VideosService.gcRun());
+
+    expect(result.deletedKeys).toBe(0);
+    expect(result.purgedRevisions).toBe(1);
+    const post = await ctx.runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        return yield* storage.headFile(liveKey);
+      }),
+    );
+    expect(post.contentLength).toBe("live bytes".length);
+    expect(
+      await db.selectFrom("video_revisions").selectAll().execute(),
+    ).toEqual([]);
+  });
+
+  it("does not report staged uploads as final-video orphans", async () => {
+    const pendingKey = `${PENDING_VIDEOS_PREFIX}user-pending/orphan.mp4`;
+    const ctx = await makeServiceTestLayer(VideosServiceLive, {
+      wrapStorage: (storage) => ({
+        ...storage,
+        listKeys: (prefix) =>
+          prefix === "videos/"
+            ? Effect.succeed([pendingKey])
+            : storage.listKeys(prefix),
+      }),
+    });
+    closeCtx = ctx.close;
+    const { db, mockGetSession } = ctx;
+    await insertUser(db, { id: "admin-pending", role: "admin" });
+    mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-pending", role: "admin" }),
+    );
+
+    const result = await ctx.runEffect(VideosService.gcPreview());
+
+    expect(result.orphanKeys).toEqual([]);
   });
 });

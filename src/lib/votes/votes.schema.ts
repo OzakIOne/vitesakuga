@@ -13,7 +13,10 @@ export const removePostVoteSchema = Schema.Struct({
 });
 
 export const fetchLikedPostsSchema = Schema.Struct({
-  page: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  page: Schema.Number.pipe(
+    Schema.check(Schema.isInt()),
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+  ),
 });
 
 export type SetPostVoteInput = Schema.Schema.Type<typeof setPostVoteSchema>;

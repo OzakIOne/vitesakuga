@@ -17,7 +17,7 @@ import {
 import { MAX_VIDEO_SIZE_BYTES } from "../posts/posts.schema";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { videoContentType } from "../storage/content-type";
-import { pendingVideoPrefix } from "../storage/keys";
+import { PENDING_VIDEOS_PREFIX, pendingVideoPrefix } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { isUploadedVideoValid } from "../storage/upload-policy";
 import { DAY_MS, REVISION_RETENTION_DAYS } from "./videos.config";
@@ -215,7 +215,7 @@ export class VideosService extends Context.Service<
 
       const bucketKeys = yield* storage.listKeys("videos/");
       const mediaBucketKeys = bucketKeys.filter(
-        (key) => !key.startsWith(pendingVideoPrefix("")),
+        (key) => !key.startsWith(PENDING_VIDEOS_PREFIX),
       );
       const orphanKeys = mediaBucketKeys.filter(
         (key) => !referencedKeys.has(key),
@@ -394,6 +394,7 @@ export class VideosService extends Context.Service<
 
       // Guard against a just-purged object being restored onto the post.
       const post = postOption.value;
+      yield* storage.headFile(revisionOption.value.videoKey);
       if (post.videoKey !== null) {
         // Keep the currently-live video undoable too.
         yield* archiveRevision({
@@ -438,25 +439,57 @@ export class VideosService extends Context.Service<
 
       const { orphanKeys, purgeableRevisions } = yield* analyzeGc();
 
-      // Unique deletion targets: a key may appear in both lists.
-      const keysToDelete = new Set<string>(orphanKeys);
+      const liveVideos = yield* db.execute(
+        db
+          .selectFrom("posts")
+          .select("videoKey")
+          .where("videoKey", "is not", null),
+      );
+      const allRevisions = yield* db.execute(
+        db.selectFrom("video_revisions").select(["id", "videoKey"]),
+      );
+      const purgeableRevisionIds = new Set(
+        purgeableRevisions.map((revision) => revision.id),
+      );
+      const protectedVideoKeys = new Set<string>(
+        liveVideos.flatMap((row) =>
+          row.videoKey === null ? [] : [row.videoKey],
+        ),
+      );
+      for (const revision of allRevisions) {
+        if (!purgeableRevisionIds.has(revision.id)) {
+          protectedVideoKeys.add(revision.videoKey);
+        }
+      }
+
+      // Unique deletion targets: a key may appear in both lists. Never delete
+      // a key still referenced by a live post or a retained revision.
+      const keysToDelete = new Set<string>(
+        orphanKeys.filter((key) => !protectedVideoKeys.has(key)),
+      );
       for (const revision of purgeableRevisions) {
-        keysToDelete.add(revision.videoKey);
+        if (!protectedVideoKeys.has(revision.videoKey)) {
+          keysToDelete.add(revision.videoKey);
+        }
       }
 
       let deletedKeys = 0;
+      const successfullyDeletedKeys = new Set<string>();
       for (const key of keysToDelete) {
         const result = yield* storage.deleteFile(key).pipe(Effect.exit);
         if (Exit.isFailure(result)) continue;
         deletedKeys += 1;
+        successfullyDeletedKeys.add(key);
       }
 
-      // Rows go last: only revisions whose object was actually confirmed
-      // deleted — otherwise the bookkeeping needed for a later sweep would
-      // be lost while the file is still in the bucket.
+      // Rows go last: purge only revisions whose object was actually confirmed
+      // deleted, or whose key is protected by another live/retained reference.
       let purgedRevisions = 0;
       for (const revision of purgeableRevisions) {
-        if (!keysToDelete.has(revision.videoKey)) {
+        if (
+          !protectedVideoKeys.has(revision.videoKey) &&
+          !successfullyDeletedKeys.has(revision.videoKey)
+        ) {
           continue;
         }
         yield* db.execute(

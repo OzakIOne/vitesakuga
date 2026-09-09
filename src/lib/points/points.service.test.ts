@@ -151,6 +151,33 @@ describe("PointsService.award", () => {
     const earned = rows.reduce((sum, row) => sum + row.points, 0);
     expect(earned).toBe(rule.dailyCap * rule.points);
   });
+
+  it("enforces the daily cap when awards arrive concurrently", async () => {
+    const ctx = await makeServiceTestLayer(PointsServiceLive);
+    closeCtx = ctx.close;
+    const { db, runEffect } = ctx;
+    await insertUser(db, "user-1");
+    const action: PointAction = "post-upload";
+    const rule = POINTS_RULES[action];
+
+    const outcomes = await Promise.all(
+      Array.from({ length: rule.dailyCap + 1 }, (_, refId) =>
+        runEffect(
+          PointsService.award({
+            userId: "user-1",
+            action,
+            refId,
+            actorId: "user-1",
+          }),
+        ),
+      ),
+    );
+
+    expect(
+      outcomes.filter((outcome) => outcome.kind === "awarded"),
+    ).toHaveLength(rule.dailyCap);
+    expect(await ledgerRows(db, "user-1")).toHaveLength(rule.dailyCap);
+  });
 });
 
 describe("PointsService.award (daily-cap window)", () => {

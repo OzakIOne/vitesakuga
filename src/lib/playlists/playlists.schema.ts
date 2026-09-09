@@ -75,6 +75,7 @@ export const reorderPlaylistPostsInputSchema = Schema.Struct({
 export const fetchPlaylistDetailSchema = Schema.Struct({
   playlistId: PlaylistId,
   page: Schema.Number.pipe(
+    Schema.check(Schema.isInt()),
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),
@@ -82,6 +83,7 @@ export const fetchPlaylistDetailSchema = Schema.Struct({
 
 export const fetchPublicPlaylistsSchema = Schema.Struct({
   page: Schema.Number.pipe(
+    Schema.check(Schema.isInt()),
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),

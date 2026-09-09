@@ -1067,6 +1067,32 @@ describe(PlaylistsService.fetchDetail, () => {
     expect(result.data).toHaveLength(2);
   });
 
+  it("keeps the playlist thumbnail stable across detail pages", async () => {
+    for (let index = 0; index < 29; index++) {
+      const extraPostId = await insertPost({
+        title: `Extra Post ${index}`,
+        thumbnailKey: `thumbnails/extra-${index}.jpg`,
+        videoKey: `videos/extra-${index}.mp4`,
+      });
+      await db
+        .insertInto("playlist_posts")
+        .values({
+          playlist_id: playlistId,
+          post_id: extraPostId,
+          position: index + 2,
+        })
+        .execute();
+    }
+
+    mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
+    const result = await runEffect(
+      PlaylistsService.fetchDetail({ playlistId, page: 1 }),
+    );
+
+    expect(result.data).toHaveLength(1);
+    expect(result.playlist.thumbnail_key).toBe("thumbnails/abc.jpg");
+  });
+
   it("returns not found for private playlist when not owner", async () => {
     const row = await db
       .insertInto("playlists")

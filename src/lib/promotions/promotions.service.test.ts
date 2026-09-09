@@ -197,6 +197,35 @@ describe("PromotionsService.approve", () => {
     );
   });
 
+  it("allows only one concurrent approval", async () => {
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { createdAtDaysAgo: 9, id: "race-candidate" });
+    await earn(db, "race-candidate", PROMOTION_RULES.minPoints);
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    const results = await Promise.allSettled([
+      ctx.runEffect(PromotionsService.approve("race-candidate")),
+      ctx.runEffect(PromotionsService.approve("race-candidate")),
+    ]);
+
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === "rejected"),
+    ).toHaveLength(1);
+    const reviews = await db
+      .selectFrom("promotion_reviews")
+      .selectAll()
+      .where("userId", "=", "race-candidate")
+      .execute();
+    expect(reviews).toHaveLength(1);
+  });
+
   it("re-checks eligibility against the live total", async () => {
     const ctx = await makeServiceTestLayer(PromotionsServiceLive);
     closeCtx = ctx.close;

@@ -207,6 +207,66 @@ describe("UsersService.userPosts", () => {
     expect(result.meta.pagination.totalPages).toBe(1);
     expect(result.meta.pagination.hasMore).toBe(false);
   });
+
+  it("scopes popular tags to the same search filters as the post list", async () => {
+    const selectedTag = await db
+      .insertInto("tags")
+      .values({ name: "selected" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const unrelatedTag = await db
+      .insertInto("tags")
+      .values({ name: "unrelated" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    const selectedPost = await db
+      .insertInto("posts")
+      .values({
+        description: "Selected description",
+        title: "Selected post",
+        userId: "user-1",
+        videoKey: "videos/selected.mp4",
+        thumbnailKey: "thumbnails/selected.jpg",
+        videoMetadata: "{}",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const unrelatedPost = await db
+      .insertInto("posts")
+      .values({
+        description: "Other description",
+        title: "Other post",
+        userId: "user-1",
+        videoKey: "videos/other.mp4",
+        thumbnailKey: "thumbnails/other.jpg",
+        videoMetadata: "{}",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    await db
+      .insertInto("post_tags")
+      .values([
+        { postId: selectedPost.id, tagId: selectedTag.id },
+        { postId: unrelatedPost.id, tagId: unrelatedTag.id },
+      ])
+      .execute();
+
+    const result = await runEffect(
+      UsersService.userPosts({
+        userId: "user-1",
+        tags: ["selected"],
+        q: "Selected",
+        page: 0,
+      }),
+    );
+
+    expect(result.data.map((post) => post.id)).toEqual([selectedPost.id]);
+    expect(result.meta.popularTags).toEqual([
+      { id: selectedTag.id, name: "selected", postCount: 1 },
+    ]);
+  });
 });
 
 describe("UsersService.contributorProfile", () => {

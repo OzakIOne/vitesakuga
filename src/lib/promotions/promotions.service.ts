@@ -233,31 +233,53 @@ export class PromotionsService extends Context.Service<
         "You must be logged in to review promotions",
       );
 
-      yield* requireAwaitingNovice(targetUserId);
+      // Re-check eligibility and consume the novice state atomically: two
+      // moderators may approve the same stale queue entry at the same time.
+      const total = yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          const target = yield* trx.executeTakeFirstOption(
+            trx
+              .selectFrom("user")
+              .select(["id", "role"])
+              .where("id", "=", targetUserId)
+              .forUpdate(),
+          );
+          if (Option.isNone(target) || target.value.role !== "novice") {
+            return yield* new PromotionAlreadyReviewedError({
+              message: `User ${targetUserId} is not awaiting promotion`,
+            });
+          }
 
-      // Re-check eligibility: a stale client view must not promote someone
-      // whose balance changed since the queue was loaded.
-      const total = yield* points.total(targetUserId);
-      if (total < PROMOTION_RULES.minPoints) {
-        return yield* new PromotionNotEligibleError({
-          message: `Candidate has ${total} points but ${PROMOTION_RULES.minPoints} are required`,
-        });
-      }
+          const pointsRow = yield* trx.executeTakeFirstOrUndefined(
+            trx
+              .selectFrom("points_ledger")
+              .select((eb) => eb.fn.sum<number>("points").as("total"))
+              .where("userId", "=", targetUserId),
+          );
+          const total = Number(pointsRow?.total ?? 0);
+          if (total < PROMOTION_RULES.minPoints) {
+            return yield* new PromotionNotEligibleError({
+              message: `Candidate has ${total} points but ${PROMOTION_RULES.minPoints} are required`,
+            });
+          }
 
-      yield* db.execute(
-        db
-          .updateTable("user")
-          .set({ role: "uploader" })
-          .where("id", "=", targetUserId)
-          .where("role", "=", "novice"),
-      );
+          yield* trx.execute(
+            trx
+              .updateTable("user")
+              .set({ role: "uploader" })
+              .where("id", "=", targetUserId)
+              .where("role", "=", "novice"),
+          );
 
-      yield* db.execute(
-        db.insertInto("promotion_reviews").values({
-          pointsAtReview: total,
-          reviewedBy: reviewer.id,
-          status: "approved",
-          userId: targetUserId,
+          yield* trx.execute(
+            trx.insertInto("promotion_reviews").values({
+              pointsAtReview: total,
+              reviewedBy: reviewer.id,
+              status: "approved",
+              userId: targetUserId,
+            }),
+          );
+          return total;
         }),
       );
 

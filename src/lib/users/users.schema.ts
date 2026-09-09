@@ -78,6 +78,7 @@ export const mentionSearchInputSchema = Schema.Struct({
 
 export const fetchUserInputSchema = Schema.Struct({
   page: Schema.Number.pipe(
+    Schema.check(Schema.isInt()),
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),

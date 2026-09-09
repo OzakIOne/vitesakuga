@@ -15,7 +15,11 @@ import { KyselyDB } from "../db/context";
 import type { DB } from "../db/kysely";
 import type { postSourceSchema, PostWithVotes } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
+import {
+  SqlError,
+  SqlNoFirstResult,
+  type EffectTransition,
+} from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
@@ -416,6 +420,18 @@ export class PostsService extends Context.Service<
         );
       }
 
+      if (tags.length > 0) {
+        popularTagsPredicates.push((eb) =>
+          eb("posts.id", "in", (nestedEb) =>
+            nestedEb
+              .selectFrom("post_tags")
+              .innerJoin("tags", "tags.id", "post_tags.tagId")
+              .where("tags.name", "in", tags)
+              .select("post_tags.postId"),
+          ),
+        );
+      }
+
       if (dateRange !== "all") {
         popularTagsPredicates.push((eb) =>
           eb("posts.createdAt", ">=", computeStartDate(dateRange)),
@@ -432,6 +448,10 @@ export class PostsService extends Context.Service<
               .select("post_tags.postId"),
           ),
         );
+      }
+
+      for (const filter of parsedSearch.filters) {
+        popularTagsPredicates.push(() => numericFilterExpression(filter));
       }
 
       const popularTags =
@@ -701,69 +721,78 @@ export class PostsService extends Context.Service<
           uploadedKeys.push(thumbnailKey);
         }
 
-        const newPost = yield* db.executeTakeFirstOrError(
-          db
-            .insertInto("posts")
-            .values({
-              animeTitle: data.animeTitle ? data.animeTitle : null,
-              chapterNumber: data.chapterNumber ?? null,
-              description,
-              episodeNumber: data.episodeNumber ?? null,
-              relatedPostId,
-              seasonNumber: data.seasonNumber ?? null,
-              source,
-              sourceType: data.sourceType ?? null,
-              thumbnailKey,
-              title,
-              userId,
-              videoKey: finalVideoKey,
-              videoMetadata:
-                videoMetadata === undefined
-                  ? "{}"
-                  : Schema.encodeSync(
-                      Schema.fromJsonString(VideoMetadataSchema),
-                    )(videoMetadata),
-              volumeNumber: data.volumeNumber ?? null,
-            })
-            .returningAll(),
-        );
+        const newPost = yield* db.transaction().execute((trx) =>
+          Effect.gen(function* () {
+            const newPost = yield* trx.executeTakeFirstOrError(
+              trx
+                .insertInto("posts")
+                .values({
+                  animeTitle: data.animeTitle ? data.animeTitle : null,
+                  chapterNumber: data.chapterNumber ?? null,
+                  description,
+                  episodeNumber: data.episodeNumber ?? null,
+                  relatedPostId,
+                  seasonNumber: data.seasonNumber ?? null,
+                  source,
+                  sourceType: data.sourceType ?? null,
+                  thumbnailKey,
+                  title,
+                  userId,
+                  videoKey: finalVideoKey,
+                  videoMetadata:
+                    videoMetadata === undefined
+                      ? "{}"
+                      : Schema.encodeSync(
+                          Schema.fromJsonString(VideoMetadataSchema),
+                        )(videoMetadata),
+                  volumeNumber: data.volumeNumber ?? null,
+                })
+                .returningAll(),
+            );
 
-        const postId = asPostId(newPost.id);
+            const postId = asPostId(newPost.id);
 
-        if (imageKeys.length > 0) {
-          yield* db.execute(
-            db.insertInto("post_images").values(
-              imageKeys.map((storageKey, index) => {
-                const dimensions = data.imageDimensions?.[index];
-                return {
-                  height: dimensions?.height ?? null,
-                  postId,
-                  position: index,
-                  storageKey,
-                  width: dimensions?.width ?? null,
-                };
+            if (imageKeys.length > 0) {
+              yield* trx.execute(
+                trx.insertInto("post_images").values(
+                  imageKeys.map((storageKey, index) => {
+                    const dimensions = data.imageDimensions?.[index];
+                    return {
+                      height: dimensions?.height ?? null,
+                      postId,
+                      position: index,
+                      storageKey,
+                      width: dimensions?.width ?? null,
+                    };
+                  }),
+                ),
+              );
+            }
+
+            // Strip reserved tag names from user input, then append the correct
+            // one so every post always carries its implicit media-kind tag.
+            const reservedNames: ReadonlySet<string> = new Set(
+              RESERVED_TAG_NAMES,
+            );
+            const effectiveTags = [
+              ...tags.filter((tag) => !reservedNames.has(tag.name)),
+              { name: finalVideoKey === null ? "image" : "video" },
+            ];
+            yield* resolveAndLinkTags(trx, postId, effectiveTags);
+
+            yield* Effect.logInfo("Tags linked to post").pipe(
+              Effect.annotateLogs({
+                postId: String(postId),
+                tagCount: effectiveTags.length,
               }),
-            ),
-          );
-        }
+            );
 
-        // Strip reserved tag names from user input, then append the correct
-        // one so every post always carries its implicit media-kind tag.
-        const reservedNames: ReadonlySet<string> = new Set(RESERVED_TAG_NAMES);
-        const effectiveTags = [
-          ...tags.filter((tag) => !reservedNames.has(tag.name)),
-          { name: finalVideoKey === null ? "image" : "video" },
-        ];
-        yield* resolveAndLinkTags(db, postId, effectiveTags);
-        yield* Effect.logInfo("Tags linked to post").pipe(
-          Effect.annotateLogs({
-            postId: String(postId),
-            tagCount: effectiveTags.length,
+            return newPost;
           }),
         );
 
         yield* Effect.logInfo("Upload completed").pipe(
-          Effect.annotateLogs("postId", String(postId)),
+          Effect.annotateLogs("postId", String(newPost.id)),
         );
 
         return newPost;
@@ -906,12 +935,42 @@ export class PostsService extends Context.Service<
         }),
       });
 
-      const updatedPost = yield* db.executeTakeFirstOrError(
-        db
-          .updateTable("posts")
-          .set({ description, relatedPostId, source, title })
-          .where("id", "=", postId)
-          .returningAll(),
+      const updatedPost = yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          const updatedPost = yield* trx.executeTakeFirstOrError(
+            trx
+              .updateTable("posts")
+              .set({ description, relatedPostId, source, title })
+              .where("id", "=", postId)
+              .returningAll(),
+          );
+
+          // Tag links are rebuilt wholesale: delete-then-relink. Reserved media
+          // tags ("video"/"image") are stripped from user input and re-applied
+          // server-side so every post keeps its implicit media-kind tag.
+          yield* trx.execute(
+            trx.deleteFrom("post_tags").where("postId", "=", postId),
+          );
+          const imageRow = yield* trx.executeTakeFirstOrUndefined(
+            trx
+              .selectFrom("post_images")
+              .select("postId")
+              .where("postId", "=", postId)
+              .limit(1),
+          );
+          const reservedNames: ReadonlySet<string> = new Set(
+            RESERVED_TAG_NAMES,
+          );
+          const userTags = (tags ?? []).filter(
+            (tag) => !reservedNames.has(tag.name),
+          );
+          yield* resolveAndLinkTags(trx, postId, [
+            ...userTags,
+            { name: imageRow ? "image" : "video" },
+          ]);
+
+          return updatedPost;
+        }),
       );
 
       const updatedPostParsed = yield* Effect.try({
@@ -922,28 +981,6 @@ export class PostsService extends Context.Service<
             cause: error,
           }),
       });
-
-      // Tag links are rebuilt wholesale: delete-then-relink. Reserved media
-      // tags ("video"/"image") are stripped from user input and re-applied
-      // server-side so every post keeps its implicit media-kind tag.
-      yield* db.execute(
-        db.deleteFrom("post_tags").where("postId", "=", postId),
-      );
-      const imageRow = yield* db.executeTakeFirstOrUndefined(
-        db
-          .selectFrom("post_images")
-          .select("postId")
-          .where("postId", "=", postId)
-          .limit(1),
-      );
-      const reservedNames: ReadonlySet<string> = new Set(RESERVED_TAG_NAMES);
-      const userTags = (tags ?? []).filter(
-        (tag) => !reservedNames.has(tag.name),
-      );
-      yield* resolveAndLinkTags(db, postId, [
-        ...userTags,
-        { name: imageRow ? "image" : "video" },
-      ]);
 
       yield* Effect.logInfo("Post updated").pipe(
         Effect.annotateLogs("postId", String(postId)),
@@ -1014,13 +1051,21 @@ export class PostsService extends Context.Service<
 }
 
 const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
-  db: KyselyDB["Service"],
+  db: Pick<
+    EffectTransition<DB>,
+    "execute" | "executeTakeFirstOrError" | "insertInto"
+  >,
   postId: PostId,
   tags: ReadonlyArray<{ id?: number | undefined; name: string }>,
 ) {
   const allTagIds: number[] = [];
 
-  for (const tag of tags) {
+  // Upserts retain row locks until commit. Every request must acquire them
+  // in the same order, even when users submit the same tags in reverse order.
+  const orderedTags = [...tags].sort((left, right) =>
+    left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+  );
+  for (const tag of orderedTags) {
     if (tag.id === undefined) {
       const newTag = yield* db.executeTakeFirstOrError(
         db
@@ -1035,11 +1080,12 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
     }
   }
 
-  if (allTagIds.length > 0) {
+  const uniqueTagIds = [...new Set(allTagIds)];
+  if (uniqueTagIds.length > 0) {
     yield* db.execute(
       db
         .insertInto("post_tags")
-        .values(allTagIds.map((tagId) => ({ postId, tagId }))),
+        .values(uniqueTagIds.map((tagId) => ({ postId, tagId }))),
     );
   }
 });

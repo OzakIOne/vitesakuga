@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
+import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
 import { postsSelectSchema, type PostWithVotes } from "src/lib/db/schema";
 
 import { RoleSchema, roleAtLeast, type Role } from "../auth/roles";
 import { KyselyDB } from "../db/context";
+import type { DB } from "../db/kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
@@ -262,12 +264,13 @@ export class UsersService extends Context.Service<
       }
 
       if (tags.length > 0) {
-        query = query
-          .innerJoin("post_tags", "post_tags.postId", "posts.id")
-          .innerJoin("tags", "tags.id", "post_tags.tagId")
-          .where("tags.name", "in", tags)
-          .selectAll("posts")
-          .distinct();
+        query = query.where("posts.id", "in", (eb) =>
+          eb
+            .selectFrom("post_tags")
+            .innerJoin("tags", "tags.id", "post_tags.tagId")
+            .where("tags.name", "in", tags)
+            .select("post_tags.postId"),
+        );
       }
 
       const countQuery = query
@@ -281,7 +284,7 @@ export class UsersService extends Context.Service<
         pageSize: PAGE_SIZE,
       });
 
-      query = query.orderBy("id", "desc");
+      query = query.orderBy("posts.id", "desc");
 
       const items = yield* db.execute(
         query.offset(pagination.offset).limit(PAGE_SIZE),
@@ -298,9 +301,36 @@ export class UsersService extends Context.Service<
 
       const postsWithVotes = yield* mergeVoteCounts(db, posts);
 
-      const popularTags = yield* fetchPopularTagsForPosts(db, [
-        (eb) => eb("posts.userId", "=", userId),
-      ]);
+      const popularTagsPredicates: Array<
+        (eb: ExpressionBuilder<DB, "posts">) => Expression<SqlBool>
+      > = [(eb) => eb("posts.userId", "=", userId)];
+
+      if (q) {
+        const pattern = `%${escapeLikePattern(q)}%`;
+        popularTagsPredicates.push((eb) =>
+          eb.or([
+            eb("posts.title", "ilike", pattern),
+            eb("posts.description", "ilike", pattern),
+          ]),
+        );
+      }
+
+      if (tags.length > 0) {
+        popularTagsPredicates.push((eb) =>
+          eb("posts.id", "in", (nestedEb) =>
+            nestedEb
+              .selectFrom("post_tags")
+              .innerJoin("tags", "tags.id", "post_tags.tagId")
+              .where("tags.name", "in", tags)
+              .select("post_tags.postId"),
+          ),
+        );
+      }
+
+      const popularTags = yield* fetchPopularTagsForPosts(
+        db,
+        popularTagsPredicates,
+      );
 
       return {
         data: postsWithVotes,

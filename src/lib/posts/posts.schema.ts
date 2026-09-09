@@ -264,6 +264,7 @@ export const searchPostsBaseSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),
   page: Schema.Number.pipe(
+    Schema.check(Schema.isInt()),
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),
@@ -321,6 +322,7 @@ export type PostsSearchInput = Omit<PostsSearchParams, "randomSeed" | "view"> &
 
 export const postByTagSchema = Schema.Struct({
   page: Schema.Number.pipe(
+    Schema.check(Schema.isInt()),
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),

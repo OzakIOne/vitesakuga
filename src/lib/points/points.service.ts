@@ -1,7 +1,8 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
-import { SqlError } from "../effect/effect.utils";
+import type { DB } from "../db/kysely";
+import { SqlError, type EffectTransition } from "../effect/effect.utils";
 import { startOfLocalDay } from "./local-day";
 import { POINTS_RULES, type PointAction } from "./points.config";
 
@@ -21,6 +22,11 @@ export type AwardOutcome =
   | { readonly kind: "awarded"; readonly points: number }
   | { readonly kind: "already-earned" }
   | { readonly kind: "daily-cap-reached" };
+
+type PointsQueryExecutor = Pick<
+  EffectTransition<DB>,
+  "executeTakeFirstOrUndefined" | "selectFrom"
+>;
 
 export class PointsService extends Context.Service<
   PointsService,
@@ -44,30 +50,35 @@ export class PointsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
-    const countTodayEarnings = (userId: string, action: PointAction) =>
-      Effect.gen(function* () {
-        // Daily caps use calendar-day boundaries in the server's local
-        // timezone so "today" matches user expectations. The instant comes
-        // from the clock (so a TestClock controls the window deterministically
-        // in tests); local midnight is resolved through the zone's own rules,
-        // which stays correct across DST transitions.
-        const now = yield* Clock.currentTimeMillis;
-        // oxlint-disable-next-line effecttsgo/global-date-in-effect -- the instant comes from Clock; the Date wrapper only satisfies Kysely's Date-typed `createdAt` column
-        const startOfToday = new Date(startOfLocalDay(now));
+    const countTodayEarnings = (
+      userId: string,
+      action: PointAction,
+      now: number,
+      executor: PointsQueryExecutor = db,
+    ) => {
+      // Daily caps use calendar-day boundaries in the server's local timezone
+      // so "today" matches user expectations. The instant is captured before
+      // entering a transaction because the Kysely transaction adapter runs
+      // its callback in a separate Effect runtime.
+      // oxlint-disable-next-line effecttsgo/global-date-in-effect -- the instant comes from Clock; the Date wrapper only satisfies Kysely's Date-typed `createdAt` column
+      const startOfToday = new Date(startOfLocalDay(now));
 
-        return yield* db.executeTakeFirstOrUndefined(
-          db
-            .selectFrom("points_ledger")
-            .select((eb) => eb.fn.countAll<number>().as("count"))
-            .where("userId", "=", userId)
-            .where("action", "=", action)
-            .where("createdAt", ">=", startOfToday),
-        );
-      });
+      return executor.executeTakeFirstOrUndefined(
+        executor
+          .selectFrom("points_ledger")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("userId", "=", userId)
+          .where("action", "=", action)
+          .where("createdAt", ">=", startOfToday),
+      );
+    };
 
-    const hasAlreadyEarned = (input: AwardInput) =>
-      db.executeTakeFirstOrUndefined(
-        db
+    const hasAlreadyEarned = (
+      input: AwardInput,
+      executor: PointsQueryExecutor = db,
+    ) =>
+      executor.executeTakeFirstOrUndefined(
+        executor
           .selectFrom("points_ledger")
           .select("id")
           .where("userId", "=", input.userId)
@@ -89,31 +100,54 @@ export class PointsService extends Context.Service<
       input: AwardInput,
     ) {
       const rule = POINTS_RULES[input.action];
+      const now = yield* Clock.currentTimeMillis;
 
-      if (yield* hasAlreadyEarned(input)) {
-        return { kind: "already-earned" } as const satisfies AwardOutcome;
-      }
+      const outcome = yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          // Serialize awards for one user so concurrent cap checks cannot all
+          // observe the same pre-insert count.
+          yield* trx.executeTakeFirstOption(
+            trx
+              .selectFrom("user")
+              .select("id")
+              .where("id", "=", input.userId)
+              .forUpdate(),
+          );
 
-      const todayCount = yield* countTodayEarnings(input.userId, input.action);
-      if (Number(todayCount?.count ?? 0) >= rule.dailyCap) {
-        return {
-          kind: "daily-cap-reached",
-        } as const satisfies AwardOutcome;
-      }
+          if (yield* hasAlreadyEarned(input, trx)) {
+            return { kind: "already-earned" } as const satisfies AwardOutcome;
+          }
 
-      yield* db.execute(
-        db.insertInto("points_ledger").values({
-          action: input.action,
-          actorId: input.actorId ?? null,
-          // Stamp the row with the clock instant (the DB default `now()` is
-          // wall-clock), so the daily-cap window and the rows it counts are
-          // always derived from the same time source — deterministic under a
-          // TestClock, identical to `now()` in production.
-          // oxlint-disable-next-line effecttsgo/global-date-in-effect -- the instant comes from Clock; the Date wrapper only satisfies Kysely's Date-typed `createdAt` column
-          createdAt: new Date(yield* Clock.currentTimeMillis),
-          points: rule.points,
-          refId: input.refId ?? null,
-          userId: input.userId,
+          const todayCount = yield* countTodayEarnings(
+            input.userId,
+            input.action,
+            now,
+            trx,
+          );
+          if (Number(todayCount?.count ?? 0) >= rule.dailyCap) {
+            return {
+              kind: "daily-cap-reached",
+            } as const satisfies AwardOutcome;
+          }
+
+          yield* trx.execute(
+            trx.insertInto("points_ledger").values({
+              action: input.action,
+              actorId: input.actorId ?? null,
+              // Stamp the row with the same instant used for the daily-cap
+              // window (the DB default `now()` is wall-clock).
+              // oxlint-disable-next-line effecttsgo/global-date-in-effect -- the instant comes from Clock; the Date wrapper only satisfies Kysely's Date-typed `createdAt` column
+              createdAt: new Date(now),
+              points: rule.points,
+              refId: input.refId ?? null,
+              userId: input.userId,
+            }),
+          );
+
+          return {
+            kind: "awarded",
+            points: rule.points,
+          } as const satisfies AwardOutcome;
         }),
       );
 
@@ -124,10 +158,7 @@ export class PointsService extends Context.Service<
           userId: input.userId,
         }),
       );
-      return {
-        kind: "awarded",
-        points: rule.points,
-      } as const satisfies AwardOutcome;
+      return outcome;
     });
 
     const awardOrLog = Effect.fn("PointsService.awardOrLog")(function* (
