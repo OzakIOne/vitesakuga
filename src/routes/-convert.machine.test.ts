@@ -1,3 +1,4 @@
+import type { ConversionCopyOptions } from "mediabunny";
 import { describe, expect, it } from "vitest";
 import { createActor, createAsyncLogic, createCallbackLogic } from "xstate";
 
@@ -8,10 +9,33 @@ import {
   DEFAULT_VIDEO_QUALITY,
   getCodecFamily,
   getVideoQualityRange,
+  hasTrimmedRange,
   isPassthroughCompatible,
+  normalizeTrimRange,
   type OutputFormat,
   SUPPORTED_OUTPUTS,
 } from "../routes/-convert.machine";
+import type { TrimRange } from "../routes/-convert.machine";
+
+describe(normalizeTrimRange, () => {
+  it("clamps a valid range to the media duration", () => {
+    expect(normalizeTrimRange(-2, 14, 12)).toEqual({ end: 12, start: 0 });
+  });
+
+  it("resets an invalid or reversed range to the full duration", () => {
+    expect(normalizeTrimRange(8, 3, 12)).toEqual({ end: 12, start: 0 });
+    expect(normalizeTrimRange(3, 3, 12)).toEqual({ end: 12, start: 0 });
+  });
+});
+
+describe(hasTrimmedRange, () => {
+  it("reports a trim when either boundary excludes media", () => {
+    expect(hasTrimmedRange(0, 12, 12)).toBe(false);
+    expect(hasTrimmedRange(0, 10, 12)).toBe(true);
+    expect(hasTrimmedRange(2, 12, 12)).toBe(true);
+    expect(hasTrimmedRange(2, 10, 12)).toBe(true);
+  });
+});
 
 describe(getVideoQualityRange, () => {
   it("caps quality so near-lossless CRF 0 and 1 are unreachable", () => {
@@ -141,9 +165,13 @@ describe("convertMachine", () => {
         actors: {
           probeFile: createAsyncLogic({
             run: async (): Promise<{
+              duration: number;
+              inputStartTimestamp: number;
               videoCodec: string | null;
               audioCodec: string | null;
             }> => ({
+              duration: 12,
+              inputStartTimestamp: 0,
               videoCodec: "avc1",
               audioCodec: "aac",
             }),
@@ -214,6 +242,8 @@ describe("convertMachine", () => {
           actors: {
             probeFile: createAsyncLogic({
               run: async (): Promise<{
+                duration: number;
+                inputStartTimestamp: number;
                 videoCodec: string | null;
                 audioCodec: string | null;
               }> => {
@@ -240,11 +270,18 @@ describe("convertMachine", () => {
           actors: {
             probeFile: createAsyncLogic({
               run: async (): Promise<{
+                duration: number;
+                inputStartTimestamp: number;
                 videoCodec: string | null;
                 audioCodec: string | null;
               }> => {
                 callCount++;
-                return { videoCodec: null, audioCodec: null };
+                return {
+                  duration: 12,
+                  inputStartTimestamp: 0,
+                  videoCodec: null,
+                  audioCodec: null,
+                };
               },
             }),
           },
@@ -328,17 +365,26 @@ describe("convertMachine", () => {
           actors: {
             probeFile: createAsyncLogic({
               run: async (): Promise<{
+                duration: number;
+                inputStartTimestamp: number;
                 videoCodec: string | null;
                 audioCodec: string | null;
-              }> => ({ videoCodec: "avc1", audioCodec: "aac" }),
+              }> => ({
+                duration: 12,
+                inputStartTimestamp: 0,
+                videoCodec: "avc1",
+                audioCodec: "aac",
+              }),
             }),
             runConversion: createCallbackLogic(
               ({
                 input,
               }: {
                 input: {
+                  copy: ConversionCopyOptions;
                   file: File;
                   output: OutputFormat;
+                  trim: TrimRange | null;
                   videoQuality: number;
                 };
               }) => {
@@ -356,6 +402,63 @@ describe("convertMachine", () => {
       actor.send({ type: "convert" });
 
       expect(receivedQuality).toBe(24);
+    });
+
+    it("passes absolute trim timestamps and copy settings to conversion", async () => {
+      let receivedTrim: TrimRange | null | undefined;
+      let receivedCopy: ConversionCopyOptions | undefined;
+      const actor = createActorFor(
+        convertMachine.provide({
+          actors: {
+            probeFile: createAsyncLogic({
+              run: async (): Promise<{
+                duration: number;
+                inputStartTimestamp: number;
+                videoCodec: string | null;
+                audioCodec: string | null;
+              }> => ({
+                duration: 12,
+                inputStartTimestamp: -1,
+                videoCodec: "avc1",
+                audioCodec: "aac",
+              }),
+            }),
+            runConversion: createCallbackLogic(
+              ({
+                input,
+              }: {
+                input: {
+                  copy: ConversionCopyOptions;
+                  file: File;
+                  output: OutputFormat;
+                  trim: TrimRange | null;
+                  videoQuality: number;
+                };
+              }) => {
+                receivedTrim = input.trim;
+                receivedCopy = input.copy;
+                return () => {};
+              },
+            ),
+          },
+        }),
+      );
+      actor.start();
+      actor.send({ type: "file.selected", file: dummyFile });
+      await flushActors();
+      actor.send({ type: "output.selected", output: SUPPORTED_OUTPUTS[1]! });
+      actor.send({ type: "trim.selected", end: 10, start: 2 });
+      actor.send({ type: "copy.mode.selected", mode: "forced" });
+      actor.send({ type: "copy.boundary.selected", boundaryPolicy: "shrink" });
+      actor.send({ type: "copy.shiftTolerance.selected", shiftTolerance: 0.5 });
+      actor.send({ type: "convert" });
+
+      expect(receivedTrim).toEqual({ end: 9, start: 1 });
+      expect(receivedCopy).toEqual({
+        boundaryPolicy: "shrink",
+        mode: "forced",
+        shiftTolerance: 0.5,
+      });
     });
   });
 

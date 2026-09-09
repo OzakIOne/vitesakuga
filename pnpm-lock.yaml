@@ -117,8 +117,8 @@ importers:
         specifier: ^4.19.2
         version: 4.19.2(react@19.2.8)
       mediabunny:
-        specifier: ^1.54.0
-        version: 1.55.7
+        specifier: 1.56.0
+        version: 1.56.0
       mediainfo.js:
         specifier: ^0.3.7
         version: 0.3.7
@@ -5841,8 +5841,8 @@ packages:
   media-chrome@4.19.2:
     resolution: {integrity: sha512-4ai1ITN8wBhwugQcRgqe3tN0z6OSKGOXqHLNrS04MgKFfsLqu6Dm8MPq02pI9Y9ZKoXtFjIl85jOryIW9es3BA==}
 
-  mediabunny@1.55.7:
-    resolution: {integrity: sha512-Sb/vI8frRiDPbPUwl3hz0n69NSe9yt4Nydcv5yxi8Rdgk0BgnujEGjZqE+uCTehFbafcqIu6gDAok8ln98dcqg==}
+  mediabunny@1.56.0:
+    resolution: {integrity: sha512-VLVYEVXI4fA2PabQoZs3XOmxDsio4gpG1Npz0iVICRNCQ+XYI3fBOngnwHljafaEjHUbYzrIDoctZbxcVfQpgQ==}
 
   mediainfo.js@0.3.7:
     resolution: {integrity: sha512-mgsmb2GrCTAguVcTohW7KrF+QXNaihrbljj75pLWDQcTTQyqfGoZG4Dy++AZ+FDVCT14LHvVGC9SXxcF5VePag==}
@@ -12634,7 +12634,7 @@ snapshots:
     dependencies:
       ce-la-react: 0.3.2(react@19.2.8)
 
-  mediabunny@1.55.7:
+  mediabunny@1.56.0:
     dependencies:
       '@types/dom-mediacapture-transform': 0.1.12
       '@types/dom-webcodecs': 0.1.13

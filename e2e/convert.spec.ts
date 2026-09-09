@@ -103,6 +103,22 @@ test.describe("Convert page", () => {
     await expect(page.getByText("test.mp4")).toBeVisible({ timeout: 10000 });
   });
 
+  test("shows trim preview and copy controls after probing a file", async ({
+    page,
+  }) => {
+    await page.locator('input[type="file"]').setInputFiles(TEST_VIDEO);
+
+    await expect(page.getByText("Trim range")).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByRole("slider")).toHaveCount(2);
+    await expect(page.getByLabel("Copy mode")).toBeVisible();
+    await expect(page.getByLabel("Trim boundary policy")).toBeVisible();
+    await expect(
+      page.getByLabel("Timestamp shift tolerance (seconds)"),
+    ).toHaveValue("0");
+  });
+
   test("convert button stays disabled after file selection without format", async ({
     page,
   }) => {

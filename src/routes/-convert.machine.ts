@@ -1,4 +1,4 @@
-import type { ConversionOptions } from "mediabunny";
+import type { ConversionCopyOptions, ConversionOptions } from "mediabunny";
 import {
   createAsyncLogic,
   createCallbackLogic,
@@ -13,6 +13,45 @@ export type OutputFormat = {
   videoCodec?: "avc" | "vp9";
   audioCodec?: "aac" | "opus";
 };
+
+export type CopyMode = NonNullable<ConversionCopyOptions["mode"]>;
+export type BoundaryPolicy = NonNullable<
+  ConversionCopyOptions["boundaryPolicy"]
+>;
+export type TrimRange = { start: number; end: number };
+
+export const DEFAULT_COPY_OPTIONS = {
+  boundaryPolicy: "expand",
+  mode: "preferred",
+  shiftTolerance: 0,
+} satisfies Required<ConversionCopyOptions>;
+
+export function normalizeTrimRange(
+  start: number,
+  end: number,
+  duration: number,
+): TrimRange {
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return { end: 0, start: 0 };
+  }
+
+  const clampedStart = Math.min(duration, Math.max(0, start));
+  const clampedEnd = Math.min(duration, Math.max(0, end));
+  if (clampedStart >= clampedEnd) {
+    return { end: duration, start: 0 };
+  }
+  return { end: clampedEnd, start: clampedStart };
+}
+
+export function hasTrimmedRange(
+  start: number,
+  end: number,
+  duration: number,
+): boolean {
+  return (
+    Number.isFinite(duration) && duration > 0 && (start > 0 || end < duration)
+  );
+}
 
 /**
  * Lowest CRF/quantizer users may select (lower = higher quality). Keeps near-lossless
@@ -121,6 +160,13 @@ type ConvertContext = {
   inputVideoCodec: string | null;
   inputAudioCodec: string | null;
   videoQuality: number;
+  duration: number | null;
+  inputStartTimestamp: number | null;
+  trimStart: number;
+  trimEnd: number;
+  copyMode: CopyMode;
+  boundaryPolicy: BoundaryPolicy;
+  shiftTolerance: number;
 };
 
 function resetOnNewFile(file: File): Partial<ConvertContext> {
@@ -134,7 +180,18 @@ function resetOnNewFile(file: File): Partial<ConvertContext> {
     inputVideoCodec: null,
     inputAudioCodec: null,
     videoQuality: DEFAULT_VIDEO_QUALITY,
+    duration: null,
+    inputStartTimestamp: null,
+    trimStart: 0,
+    trimEnd: 0,
+    copyMode: DEFAULT_COPY_OPTIONS.mode,
+    boundaryPolicy: DEFAULT_COPY_OPTIONS.boundaryPolicy,
+    shiftTolerance: DEFAULT_COPY_OPTIONS.shiftTolerance,
   };
+}
+
+function resetConversionResult(): Partial<ConvertContext> {
+  return { downloadUrl: null, convertedName: "", error: null, progress: 0 };
 }
 
 function setOutput(
@@ -143,6 +200,7 @@ function setOutput(
 ): Partial<ConvertContext> {
   return {
     output,
+    ...resetConversionResult(),
     videoQuality:
       output.videoCodec === undefined
         ? context.videoQuality
@@ -159,7 +217,30 @@ function setQuality(
       quality,
       context.output?.videoCodec ?? "avc",
     ),
+    ...resetConversionResult(),
   };
+}
+
+function setTrim(
+  context: ConvertContext,
+  start: number,
+  end: number,
+): Partial<ConvertContext> {
+  if (context.duration === null) return {};
+  const range = normalizeTrimRange(start, end, context.duration);
+  return {
+    ...resetConversionResult(),
+    trimEnd: range.end,
+    trimStart: range.start,
+  };
+}
+
+function setCopyOptions(
+  options: Partial<
+    Pick<ConvertContext, "boundaryPolicy" | "copyMode" | "shiftTolerance">
+  >,
+): Partial<ConvertContext> {
+  return { ...options, ...resetConversionResult() };
 }
 
 function setCodecs(
@@ -195,6 +276,13 @@ function resetAll(): Partial<ConvertContext> {
     inputVideoCodec: null,
     inputAudioCodec: null,
     videoQuality: DEFAULT_VIDEO_QUALITY,
+    duration: null,
+    inputStartTimestamp: null,
+    trimStart: 0,
+    trimEnd: 0,
+    copyMode: DEFAULT_COPY_OPTIONS.mode,
+    boundaryPolicy: DEFAULT_COPY_OPTIONS.boundaryPolicy,
+    shiftTolerance: DEFAULT_COPY_OPTIONS.shiftTolerance,
   };
 }
 
@@ -206,6 +294,10 @@ export const convertMachine = createMachine({
       "file.selected": types<{ file: File }>(),
       "output.selected": types<{ output: OutputFormat }>(),
       "quality.selected": types<{ quality: number }>(),
+      "trim.selected": types<TrimRange>(),
+      "copy.mode.selected": types<{ mode: CopyMode }>(),
+      "copy.boundary.selected": types<{ boundaryPolicy: BoundaryPolicy }>(),
+      "copy.shiftTolerance.selected": types<{ shiftTolerance: number }>(),
       convert: types<Record<string, never>>(),
       progress: types<{ percent: number }>(),
       "conversion.done": types<{
@@ -231,11 +323,17 @@ export const convertMachine = createMachine({
             mediainput.getPrimaryVideoTrack(),
             mediainput.getPrimaryAudioTrack(),
           ]);
+          const [inputStartTimestamp, inputEndTimestamp] = await Promise.all([
+            mediainput.getFirstTimestamp(),
+            mediainput.computeDuration(),
+          ]);
           const [videoConfig, audioConfig] = await Promise.all([
             videoTrack?.getDecoderConfig(),
             audioTrack?.getDecoderConfig(),
           ]);
           return {
+            duration: Math.max(0, inputEndTimestamp - inputStartTimestamp),
+            inputStartTimestamp,
             videoCodec: videoConfig?.codec ?? null,
             audioCodec: audioConfig?.codec ?? null,
           };
@@ -246,10 +344,17 @@ export const convertMachine = createMachine({
     }),
     runConversion: createCallbackLogic<
       ConvertProgressEvent | ConvertDoneEvent | ConvertErrorEvent,
-      { file: File; output: OutputFormat; videoQuality: number }
+      {
+        copy: ConversionCopyOptions;
+        file: File;
+        output: OutputFormat;
+        trim: TrimRange | null;
+        videoQuality: number;
+      }
     >(({ sendBack, input }) => {
       // oxlint-disable-next-line effecttsgo/async-function -- createCallbackLogic callbacks must return void; conversion progress is streamed via sendBack from this fire-and-forget promise chain
       void (async () => {
+        let mediabunnyInput: { dispose: () => void } | null = null;
         try {
           const {
             ALL_FORMATS,
@@ -264,7 +369,7 @@ export const convertMachine = createMachine({
             WebMOutputFormat,
           } = await import("mediabunny");
 
-          const mediabunnyInput = new Input({
+          mediabunnyInput = new Input({
             formats: ALL_FORMATS,
             source: new BlobSource(input.file),
           });
@@ -300,11 +405,16 @@ export const convertMachine = createMachine({
             : undefined;
 
           const initArgs: ConversionOptions = {
+            copy:
+              videoOptions === undefined && audioOptions === undefined
+                ? input.copy
+                : false,
             input: mediabunnyInput,
             output: mediabunnyOutput,
           };
           if (audioOptions !== undefined) initArgs.audio = audioOptions;
           if (videoOptions !== undefined) initArgs.video = videoOptions;
+          if (input.trim !== null) initArgs.trim = input.trim;
           const conversion = await Conversion.init(initArgs);
 
           if (!conversion.isValid) {
@@ -330,10 +440,10 @@ export const convertMachine = createMachine({
           }
 
           const blob = new Blob([buffer], {
-            type: `video/${input.output.container}`,
+            type: outputFormat.mimeType,
           });
           const url = URL.createObjectURL(blob);
-          const ext = input.output.container;
+          const ext = outputFormat.fileExtension.slice(1);
           const base = input.file.name.replace(/\.[^.]+$/, "");
           const convertedName = `${base}-converted.${ext}`;
 
@@ -350,6 +460,8 @@ export const convertMachine = createMachine({
                 ? error.message
                 : "An error occurred during conversion.",
           });
+        } finally {
+          mediabunnyInput?.dispose();
         }
       })();
 
@@ -360,6 +472,13 @@ export const convertMachine = createMachine({
   context: {
     file: null,
     output: null,
+    duration: null,
+    inputStartTimestamp: null,
+    trimStart: 0,
+    trimEnd: 0,
+    copyMode: DEFAULT_COPY_OPTIONS.mode,
+    boundaryPolicy: DEFAULT_COPY_OPTIONS.boundaryPolicy,
+    shiftTolerance: DEFAULT_COPY_OPTIONS.shiftTolerance,
     progress: 0,
     error: null,
     downloadUrl: null,
@@ -397,7 +516,13 @@ export const convertMachine = createMachine({
           return { file: context.file };
         },
         onDone: ({ event }) => ({
-          context: setCodecs(event.output.videoCodec, event.output.audioCodec),
+          context: {
+            ...setCodecs(event.output.videoCodec, event.output.audioCodec),
+            duration: event.output.duration ?? null,
+            inputStartTimestamp: event.output.inputStartTimestamp ?? null,
+            trimEnd: event.output.duration ?? 0,
+            trimStart: 0,
+          },
         }),
         onError: () => ({ context: setCodecs(null, null) }),
       },
@@ -412,6 +537,18 @@ export const convertMachine = createMachine({
         }),
         "quality.selected": ({ context, event }) => ({
           context: setQuality(context, event.quality),
+        }),
+        "trim.selected": ({ context, event }) => ({
+          context: setTrim(context, event.start, event.end),
+        }),
+        "copy.mode.selected": ({ event }) => ({
+          context: setCopyOptions({ copyMode: event.mode }),
+        }),
+        "copy.boundary.selected": ({ event }) => ({
+          context: setCopyOptions({ boundaryPolicy: event.boundaryPolicy }),
+        }),
+        "copy.shiftTolerance.selected": ({ event }) => ({
+          context: setCopyOptions({ shiftTolerance: event.shiftTolerance }),
         }),
         convert: ({ context }) =>
           context.file !== null && context.output !== null
@@ -429,6 +566,23 @@ export const convertMachine = createMachine({
           // oxlint-disable-next-line typescript/no-non-null-assertion -- see file above
           output: context.output!,
           videoQuality: context.videoQuality,
+          trim:
+            context.duration !== null &&
+            hasTrimmedRange(
+              context.trimStart,
+              context.trimEnd,
+              context.duration,
+            )
+              ? {
+                  end: (context.inputStartTimestamp ?? 0) + context.trimEnd,
+                  start: (context.inputStartTimestamp ?? 0) + context.trimStart,
+                }
+              : null,
+          copy: {
+            boundaryPolicy: context.boundaryPolicy,
+            mode: context.copyMode,
+            shiftTolerance: context.shiftTolerance,
+          },
         }),
       },
       on: {
@@ -455,6 +609,22 @@ export const convertMachine = createMachine({
         "quality.selected": ({ context, event }) => ({
           context: setQuality(context, event.quality),
         }),
+        "trim.selected": ({ context, event }) => ({
+          context: setTrim(context, event.start, event.end),
+        }),
+        "copy.mode.selected": ({ event }) => ({
+          context: setCopyOptions({ copyMode: event.mode }),
+        }),
+        "copy.boundary.selected": ({ event }) => ({
+          context: setCopyOptions({ boundaryPolicy: event.boundaryPolicy }),
+        }),
+        "copy.shiftTolerance.selected": ({ event }) => ({
+          context: setCopyOptions({ shiftTolerance: event.shiftTolerance }),
+        }),
+        convert: ({ context }) =>
+          context.file !== null && context.output !== null
+            ? { target: "converting" }
+            : undefined,
         reset: () => ({ target: "idle", context: resetAll() }),
       },
     },
@@ -469,6 +639,18 @@ export const convertMachine = createMachine({
         }),
         "quality.selected": ({ context, event }) => ({
           context: setQuality(context, event.quality),
+        }),
+        "trim.selected": ({ context, event }) => ({
+          context: setTrim(context, event.start, event.end),
+        }),
+        "copy.mode.selected": ({ event }) => ({
+          context: setCopyOptions({ copyMode: event.mode }),
+        }),
+        "copy.boundary.selected": ({ event }) => ({
+          context: setCopyOptions({ boundaryPolicy: event.boundaryPolicy }),
+        }),
+        "copy.shiftTolerance.selected": ({ event }) => ({
+          context: setCopyOptions({ shiftTolerance: event.shiftTolerance }),
         }),
         convert: ({ context }) =>
           context.file !== null && context.output !== null

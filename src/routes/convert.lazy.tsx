@@ -6,7 +6,7 @@ import {
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
 import { useEffect, useMemo, useState } from "react";
-import { LuUpload } from "react-icons/lu";
+import { LuScissors, LuUpload } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { Alert, Progress } from "src/components/ui/feedback";
 import { Box, Container, Flex } from "src/components/ui/layout";
@@ -18,9 +18,11 @@ import {
   SUPPORTED_OUTPUTS,
   convertMachine,
   getVideoQualityRange,
+  hasTrimmedRange,
   isPassthroughCompatible,
 } from "./-convert.machine";
 import type { ConvertMachineLogic } from "./-convert.machine";
+import type { BoundaryPolicy, CopyMode } from "./-convert.machine";
 
 export const Route = createLazyFileRoute("/convert")({
   component: RouteComponent,
@@ -32,6 +34,15 @@ export const Route = createLazyFileRoute("/convert")({
 });
 
 type ActorLike = Pick<AnyActorRef, "getSnapshot" | "subscribe">;
+
+const SELECT_CLASS =
+  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900";
+
+function formatTimestamp(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds - minutes * 60;
+  return `${minutes}:${remainder.toFixed(1).padStart(4, "0")}`;
+}
 
 function ConversionProgress({ actor }: { actor: ActorLike }) {
   const progress = useSelector(actor, (s) => s.context.progress);
@@ -68,8 +79,32 @@ function RouteComponent() {
     (s) => s.context.inputVideoCodec,
   );
   const videoQuality = useSelector(actorRef, (s) => s.context.videoQuality);
+  const duration = useSelector(actorRef, (s) => s.context.duration);
+  const trimStart = useSelector(actorRef, (s) => s.context.trimStart);
+  const trimEnd = useSelector(actorRef, (s) => s.context.trimEnd);
+  const copyMode = useSelector(actorRef, (s) => s.context.copyMode);
+  const boundaryPolicy = useSelector(actorRef, (s) => s.context.boundaryPolicy);
+  const shiftTolerance = useSelector(actorRef, (s) => s.context.shiftTolerance);
   const isConverting = useSelector(actorRef, (s) => s.matches("converting"));
   const isSuccess = useSelector(actorRef, (s) => s.matches("success"));
+  const hasDuration = duration !== null && duration > 0;
+  const isTrimmed =
+    duration !== null && hasTrimmedRange(trimStart, trimEnd, duration);
+  const isAudioFile = file?.type.startsWith("audio/") ?? false;
+  const isTranscodingOutput =
+    output?.videoCodec !== undefined || output?.audioCodec !== undefined;
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const handleFileChange = (file: File | null) => {
     if (file) {
@@ -166,6 +201,178 @@ function RouteComponent() {
               <FileUpload.List clearable showSize />
             </FileUpload.Root>
           </Box>
+
+          {file && hasDuration && duration !== null && (
+            <Box borderRadius="md" mb={4} p={4} shadow="sm">
+              <Flex align="center" gap={2} mb={3}>
+                <LuScissors aria-hidden className="h-5 w-5" />
+                <Heading as="h2" size="sm">
+                  Trim range
+                </Heading>
+              </Flex>
+
+              {previewUrl &&
+                (isAudioFile ? (
+                  <audio
+                    controls
+                    preload="metadata"
+                    src={previewUrl}
+                    style={{
+                      marginBottom: "1rem",
+                      width: "100%",
+                    }}
+                  />
+                ) : (
+                  <video
+                    controls
+                    preload="metadata"
+                    src={previewUrl}
+                    style={{
+                      borderRadius: "0.5rem",
+                      marginBottom: "1rem",
+                      maxHeight: "256px",
+                      width: "100%",
+                    }}
+                  />
+                ))}
+
+              <Slider.Root
+                aria-label={["Trim start", "Trim end"]}
+                disabled={isConverting}
+                max={duration}
+                min={0}
+                onValueChange={(details) => {
+                  const [start, end] = details.value;
+                  if (start !== undefined && end !== undefined) {
+                    actorRef.send({
+                      type: "trim.selected",
+                      start,
+                      end,
+                    });
+                  }
+                }}
+                step={Math.max(duration / 1000, 0.01)}
+                value={[trimStart, trimEnd]}
+                width="full"
+              >
+                <Slider.Control>
+                  <Slider.Track>
+                    <Slider.Range />
+                  </Slider.Track>
+                  <Slider.Thumb index={0}>
+                    <Slider.HiddenInput />
+                  </Slider.Thumb>
+                  <Slider.Thumb index={1}>
+                    <Slider.HiddenInput />
+                  </Slider.Thumb>
+                </Slider.Control>
+              </Slider.Root>
+              <Flex align="center" justify="space-between" mt={1}>
+                <Text fontSize="sm">
+                  {formatTimestamp(trimStart)} → {formatTimestamp(trimEnd)} (of{" "}
+                  {formatTimestamp(duration)})
+                </Text>
+                <Button
+                  disabled={!isTrimmed || isConverting}
+                  onClick={() =>
+                    actorRef.send({
+                      type: "trim.selected",
+                      end: duration,
+                      start: 0,
+                    })
+                  }
+                  size="sm"
+                  variant="outline"
+                >
+                  Reset trim
+                </Button>
+              </Flex>
+
+              <Box borderTop="1px solid" borderColor="gray.200" mt={4} pt={4}>
+                <Text fontWeight="medium" mb={2}>
+                  Copy conversion settings
+                </Text>
+                <Flex direction="column" gap={3}>
+                  <label>
+                    <Text fontSize="sm" mb={1}>
+                      Copy mode
+                    </Text>
+                    <select
+                      aria-label="Copy mode"
+                      className={SELECT_CLASS}
+                      disabled={isConverting || isTranscodingOutput}
+                      onChange={(event) =>
+                        actorRef.send({
+                          type: "copy.mode.selected",
+                          mode: event.target.value as CopyMode,
+                        })
+                      }
+                      value={copyMode}
+                    >
+                      <option value="preferred">
+                        Prefer copy, transcode when needed
+                      </option>
+                      <option value="forced">
+                        Copy only, discard incompatible tracks
+                      </option>
+                    </select>
+                  </label>
+                  <label>
+                    <Text fontSize="sm" mb={1}>
+                      Trim boundary policy
+                    </Text>
+                    <select
+                      aria-label="Trim boundary policy"
+                      className={SELECT_CLASS}
+                      disabled={isConverting || isTranscodingOutput}
+                      onChange={(event) =>
+                        actorRef.send({
+                          type: "copy.boundary.selected",
+                          boundaryPolicy: event.target.value as BoundaryPolicy,
+                        })
+                      }
+                      value={boundaryPolicy}
+                    >
+                      <option value="expand">
+                        Expand to include complete packets
+                      </option>
+                      <option value="shrink">
+                        Shrink to stay inside the range
+                      </option>
+                    </select>
+                  </label>
+                  <label>
+                    <Text fontSize="sm" mb={1}>
+                      Timestamp shift tolerance (seconds)
+                    </Text>
+                    <input
+                      aria-label="Timestamp shift tolerance (seconds)"
+                      className={SELECT_CLASS}
+                      disabled={isConverting || isTranscodingOutput}
+                      min={0}
+                      onChange={(event) => {
+                        const nextTolerance = Number(event.target.value);
+                        if (Number.isFinite(nextTolerance)) {
+                          actorRef.send({
+                            type: "copy.shiftTolerance.selected",
+                            shiftTolerance: Math.max(0, nextTolerance),
+                          });
+                        }
+                      }}
+                      step={0.01}
+                      type="number"
+                      value={shiftTolerance}
+                    />
+                  </label>
+                </Flex>
+                <Text color="fg.subtle" fontSize="sm" mt={2}>
+                  Copy mode preserves the original encoded media when possible.
+                  {isTranscodingOutput &&
+                    " Select a passthrough output to use these settings."}
+                </Text>
+              </Box>
+            </Box>
+          )}
 
           <Box mb={4}>
             <Box>

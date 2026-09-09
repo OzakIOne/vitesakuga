@@ -85,6 +85,8 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 
 - Conversion vidéo/audio 100 % client avec WebCodecs/Mediabunny.
 - Sorties MP4 H.264/AAC, WebM VP9/Opus, et passthrough MP4/WebM/MKV.
+- Découpage par plage début/fin avec aperçu local et remise à zéro du découpage.
+- Pour les sorties passthrough, copie préférée ou forcée, tolérance de décalage des timestamps et politique de bordure (extension ou réduction de la plage) ; le transcodage reste le repli lorsque nécessaire.
 - Qualité CRF, progression et téléchargement.
 - Machine à états XState : `src/routes/-convert.machine.ts`, `src/routes/convert.tsx`, `src/routes/convert.lazy.tsx`.
 
