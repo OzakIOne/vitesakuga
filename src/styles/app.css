@@ -81,6 +81,15 @@ body {
   & img {
     @apply h-auto max-w-full rounded-lg;
   }
+  & table {
+    @apply block w-full overflow-x-auto text-left text-sm leading-6;
+  }
+  & th {
+    @apply border-b border-gray-300 px-3 py-2 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100;
+  }
+  & td {
+    @apply border-b border-gray-200 px-3 py-2 align-top dark:border-gray-800;
+  }
   & hr {
     @apply my-8 border-gray-200 dark:border-gray-800;
   }
