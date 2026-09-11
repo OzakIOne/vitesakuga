@@ -41,5 +41,8 @@ This document outlines the conventions and best practices for database interacti
 ## TanStack DB Collections
 
 - Client-side collections in `src/lib/db/collections.ts` using `@tanstack/react-db` and `@tanstack/query-db-collection`
-- Sync server data into reactive collections: `tagsCollection`, `usersCollection`
+- Sync tag data into a reactive collection: `tagsCollection`
+- Load the public user directory through its server route loader so `/users` is
+  present in the initial SSR response; do not duplicate that list in a browser-only
+  collection.
 - Local storage collections for drafts: `commentDraftsCollection`, `uploadDraftCollection`

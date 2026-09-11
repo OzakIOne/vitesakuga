@@ -46,7 +46,6 @@ export function Heading({
 }: TextProps & { size?: string }) {
   const { className, style, rest } = useChakraProps({
     ...props,
-    fontSize: classToken(HEADING_SIZES, size, "xl"),
     fontWeight: "bold",
   });
   // SAFETY: `as` is an ElementType prop; pretending it is the generic ElementType keeps the cast sound for any caller-supplied tag.
@@ -54,7 +53,11 @@ export function Heading({
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <Component
-      className={cn("text-balance", className)}
+      className={cn(
+        "text-balance",
+        classToken(HEADING_SIZES, size, "xl"),
+        className,
+      )}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLElement>)}
     />

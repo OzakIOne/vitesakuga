@@ -4,7 +4,7 @@ import {
   type ComboboxValueChangeDetails,
 } from "@ark-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LuX } from "react-icons/lu";
@@ -76,7 +76,7 @@ type SearchBoxProps = {
 export function SearchBox({
   appliedQuery = "",
   appliedTags = [],
-  placeholder = "Search...",
+  placeholder = "Search…",
   showTitle = true,
   dateRange = "all",
   sortBy = "newest",
@@ -97,30 +97,41 @@ export function SearchBox({
     tagsKey,
   );
 
-  const handleTagChange = (details: ComboboxValueChangeDetails) => {
-    setDraftTags([...details.value]);
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setDraftTags(draftTags.filter((tag) => tag !== tagToRemove));
-  };
-
-  const applyDraftToUrl = (query: string) => {
+  const applyDraftToUrl = (
+    query: string,
+    tags: ReadonlyArray<string> = draftTags,
+    replace = false,
+  ) => {
     markQueryDraftApplied(query);
-    markTagsDraftApplied(draftTags);
+    markTagsDraftApplied([...tags]);
     void navigate({
+      replace,
       search: {
         dateRange,
         q: query,
         sortBy,
-        tags: draftTags,
+        tags: [...tags],
       },
       to: "/posts",
     });
   };
 
+  const handleTagChange = (details: ComboboxValueChangeDetails) => {
+    const nextTags = [...details.value];
+    setDebouncedQuery.cancel();
+    setDraftTags(nextTags);
+    applyDraftToUrl(draftQuery, nextTags, true);
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    const nextTags = draftTags.filter((tag) => tag !== tagToRemove);
+    setDebouncedQuery.cancel();
+    setDraftTags(nextTags);
+    applyDraftToUrl(draftQuery, nextTags, true);
+  };
+
   const setDebouncedQuery = useDebouncer(
-    (query: string) => applyDraftToUrl(query),
+    (query: string) => applyDraftToUrl(query, draftTags, true),
     {
       // Keep the existing three-character threshold for non-empty queries,
       // while allowing an empty query to clear the applied URL filter.
@@ -199,11 +210,17 @@ export function SearchBox({
         />
       </Wrap>
       <Text color="fg.muted" fontSize="xs" mb={3}>
-        Advanced filters: <code>width:&gt;1000</code>, <code>height:=800</code>,{" "}
-        <code>height:&lt;800</code>, <code>likes:&gt;10</code>,{" "}
-        <code>video_width:=1920</code>, <code>-movies</code>
+        Try <code>likes:&gt;10</code>.{" "}
+        <Link
+          className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          to="/wiki/$slug"
+          params={{ slug: "search-operators" }}
+        >
+          View all advanced filters
+        </Link>
+        .
       </Text>
-      <Field.Root>
+      <Field.Root id="tag-filter">
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
         <Box w="full">
           <ClientOnly fallback={null}>
@@ -278,7 +295,7 @@ function SearchBoxTagCombobox({
       value={[...tags]}
     >
       <Combobox.Control>
-        <Combobox.Input placeholder="Select tags to filter..." />
+        <Combobox.Input id="tag-filter" placeholder="Select tags to filter…" />
         <Combobox.IndicatorGroup>
           <Combobox.Trigger />
         </Combobox.IndicatorGroup>

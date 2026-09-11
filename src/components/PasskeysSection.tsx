@@ -2,10 +2,12 @@ import { Portal } from "@ark-ui/react";
 import { getAuthenticatorName, type Passkey } from "@better-auth/passkey";
 import { useState } from "react";
 import { LuFingerprint, LuPencil, LuTrash2 } from "react-icons/lu";
+import { EmptyState } from "src/components/EmptyState";
 import { Button, CloseButton } from "src/components/ui/button";
+import { Alert } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import { Dialog } from "src/components/ui/overlay";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import {
   useAddPasskey,
   useDeletePasskey,
@@ -18,6 +20,35 @@ function passkeyLabel(passkey: Passkey): string {
   return passkey.name || getAuthenticatorName(passkey.aaguid) || "Passkey";
 }
 
+const passkeyTransportLabel = (transport: string): string => {
+  switch (transport) {
+    case "ble":
+      return "Bluetooth";
+    case "hybrid":
+      return "Nearby device";
+    case "internal":
+      return "This device";
+    case "nfc":
+      return "NFC";
+    case "smart-card":
+      return "Smart card";
+    case "usb":
+      return "USB";
+    default:
+      return transport;
+  }
+};
+
+const passkeyTransportsLabel = (transports: string | undefined): string =>
+  transports
+    ? transports
+        .split(",")
+        .map((transport) => transport.trim())
+        .filter(Boolean)
+        .map(passkeyTransportLabel)
+        .join(", ")
+    : "";
+
 /**
  * Passkey management for the account page: list, add, rename and delete the
  * WebAuthn credentials attached to the signed-in user.
@@ -26,7 +57,8 @@ export function PasskeysSection() {
   const addPasskey = useAddPasskey();
   const deletePasskey = useDeletePasskey();
   const renamePasskey = useRenamePasskey();
-  const { data: passkeys = [], isLoading } = usePasskeys();
+  const passkeysQuery = usePasskeys();
+  const passkeys = passkeysQuery.data ?? [];
   const [renameTarget, setRenameTarget] = useState<Passkey | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Passkey | null>(null);
   const [newName, setNewName] = useState("");
@@ -50,10 +82,12 @@ export function PasskeysSection() {
   };
 
   return (
-    <section className="border-t border-gray-200 pt-12">
+    <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Passkeys</h2>
+          <Heading as="h2" size="md">
+            Passkeys
+          </Heading>
           <Text color="gray.500" fontSize="sm" mt={1}>
             Sign in securely with your device&apos;s biometrics, PIN or security
             key.
@@ -66,22 +100,42 @@ export function PasskeysSection() {
           size="sm"
         >
           <LuFingerprint />
-          {addPasskey.isPending ? "Registering..." : "Add passkey"}
+          {addPasskey.isPending ? "Registering…" : "Add passkey"}
         </Button>
       </div>
 
       <div className="mt-5 space-y-3">
-        {isLoading ? (
+        {passkeysQuery.isLoading ? (
           <Text color="gray.500" fontSize="sm">
-            Loading passkeys...
+            Loading passkeys…
           </Text>
+        ) : passkeysQuery.isError ? (
+          <Alert.Root status="error">
+            <Alert.Content>
+              <Alert.Indicator status="error" />
+              <div>
+                <Alert.Title>Could not load passkeys</Alert.Title>
+                <Alert.Description>
+                  Your saved sign-in methods could not be loaded.
+                </Alert.Description>
+                <Button
+                  className="mt-3"
+                  onClick={() => passkeysQuery.refetch()}
+                  size="sm"
+                  variant="outline"
+                >
+                  Retry
+                </Button>
+              </div>
+            </Alert.Content>
+          </Alert.Root>
         ) : passkeys.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-300 p-5 text-center dark:border-gray-700">
-            <Text color="gray.500" fontSize="sm">
-              You don&apos;t have any passkeys yet. Add one to skip passwords on
-              your next sign-in.
-            </Text>
-          </div>
+          <EmptyState
+            description="Add one to skip passwords on your next sign-in."
+            size="compact"
+            title="No passkeys yet"
+            titleAs="h3"
+          />
         ) : (
           passkeys.map((passkey) => (
             <div
@@ -104,8 +158,8 @@ export function PasskeysSection() {
                   </Text>
                   <Text color="gray.500" fontSize="xs">
                     Added {formatDateUtc(passkey.createdAt)}
-                    {passkey.transports
-                      ? ` \u00b7 ${passkey.transports.replaceAll(",", ", ")}`
+                    {passkeyTransportsLabel(passkey.transports)
+                      ? ` · ${passkeyTransportsLabel(passkey.transports)}`
                       : ""}
                   </Text>
                 </div>
@@ -152,11 +206,11 @@ export function PasskeysSection() {
                 <Dialog.Title>Delete passkey?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <p>
+                <Dialog.Description>
                   {deleteTarget
                     ? `“${passkeyLabel(deleteTarget)}” will no longer be able to sign in to your account. This cannot be undone.`
                     : ""}
-                </p>
+                </Dialog.Description>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.ActionTrigger asChild>
@@ -205,10 +259,12 @@ export function PasskeysSection() {
               </Dialog.Header>
               <Dialog.Body>
                 <form id="rename-passkey" onSubmit={handleRename}>
-                  <Field.Root>
+                  <Field.Root id="passkey-name">
                     <Field.Label>Name</Field.Label>
                     <Input
                       autoFocus
+                      id="passkey-name"
+                      name="name"
                       onChange={(e) => setNewName(e.target.value)}
                       placeholder="e.g. MacBook Touch ID"
                       value={newName}
@@ -226,7 +282,7 @@ export function PasskeysSection() {
                   form="rename-passkey"
                   type="submit"
                 >
-                  {renamePasskey.isPending ? "Saving..." : "Save"}
+                  {renamePasskey.isPending ? "Saving…" : "Save"}
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>

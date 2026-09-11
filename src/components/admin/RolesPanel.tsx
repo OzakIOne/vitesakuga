@@ -1,14 +1,22 @@
 import { useState } from "react";
+import { ListSkeleton } from "src/components/LoadingSkeletons";
 import { Button } from "src/components/ui/button";
-import { Spinner } from "src/components/ui/feedback";
+import { Alert } from "src/components/ui/feedback";
+import { Input } from "src/components/ui/field";
 import { HStack, Stack } from "src/components/ui/layout";
 import { Text } from "src/components/ui/typography";
+import { Heading } from "src/components/ui/typography";
 import {
   useModerationOverview,
   useSetUserRole,
 } from "src/lib/moderation/moderation.hooks";
 
 const ASSIGNABLE_ROLES = ["novice", "uploader", "moderator", "admin"] as const;
+
+type Feedback = {
+  message: string;
+  status: "error" | "success";
+};
 
 /**
  * Admin-only manual rank management: a straight userId → role setter for
@@ -18,17 +26,22 @@ const ASSIGNABLE_ROLES = ["novice", "uploader", "moderator", "admin"] as const;
 export function RolesPanel() {
   const overview = useModerationOverview();
   const setUserRole = useSetUserRole();
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   if (overview.isPending) {
-    return (
-      <Stack align="center" justify="center" minH="200px">
-        <Spinner size="lg" />
-      </Stack>
-    );
+    return <ListSkeleton count={2} />;
   }
   if (overview.isError) {
-    return <Text>Admin access required.</Text>;
+    return (
+      <Alert.Root status="error">
+        <Alert.Content>
+          <Alert.Indicator status="error" />
+          <Alert.Description>
+            Could not load role management. Admin access is required.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
+    );
   }
 
   const handleAssign = (userId: string, role: string) => {
@@ -36,14 +49,25 @@ export function RolesPanel() {
     setUserRole.mutate(
       { role, userId },
       {
-        onError: () => setFeedback(`Could not assign "${role}" to ${userId}.`),
-        onSuccess: () => setFeedback(`${userId} is now a ${role}.`),
+        onError: () =>
+          setFeedback({
+            message: `Could not assign "${role}" to ${userId}.`,
+            status: "error",
+          }),
+        onSuccess: () =>
+          setFeedback({
+            message: `${userId} is now a ${role}.`,
+            status: "success",
+          }),
       },
     );
   };
 
   return (
     <Stack gap={4}>
+      <Heading as="h2" size="lg">
+        Manage roles
+      </Heading>
       <Text>
         Manual rank assignment for special cases. Regular promotions go through
         the points queue above.
@@ -65,17 +89,18 @@ export function RolesPanel() {
         }}
       >
         <HStack gap={2}>
-          <input
+          <Input
             aria-label="User ID"
             name="userId"
             placeholder="user id"
-            style={{
-              border: "1px solid currentColor",
-              borderRadius: 6,
-              padding: "4px 8px",
-            }}
+            size="sm"
           />
-          <select aria-label="Role" defaultValue="uploader" name="role">
+          <select
+            className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+            aria-label="Role"
+            defaultValue="uploader"
+            name="role"
+          >
             {ASSIGNABLE_ROLES.map((role) => (
               <option key={role} value={role}>
                 {role}
@@ -87,7 +112,14 @@ export function RolesPanel() {
           </Button>
         </HStack>
       </form>
-      {feedback && <Text fontSize="sm">{feedback}</Text>}
+      {feedback && (
+        <Alert.Root status={feedback.status}>
+          <Alert.Content>
+            <Alert.Indicator status={feedback.status} />
+            <Alert.Description>{feedback.message}</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
     </Stack>
   );
 }

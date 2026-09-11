@@ -1,19 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { PasskeySignInButton } from "src/components/PasskeySignInButton";
 import { Button } from "src/components/ui/button";
 import { EmailAutocomplete } from "src/components/ui/email-autocomplete";
+import { Alert } from "src/components/ui/feedback";
 import { Field } from "src/components/ui/field";
 import { PasswordInput } from "src/components/ui/password-input";
+import { Heading } from "src/components/ui/typography";
 import { useLogin, useSocialLogin } from "src/lib/auth/auth.hooks";
 import type { LoginInput } from "src/lib/auth/auth.hooks";
 import { useTurnstile } from "src/lib/auth/useTurnstile";
 import { envClient } from "src/lib/env/client";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/(auth)/login")({
   component: LoginForm,
+  head: () => ({
+    meta: seo({
+      description: "Sign in to your ViteSakuga account.",
+      title: "Sign in · ViteSakuga",
+    }),
+  }),
 });
 
 function LoginForm() {
@@ -31,6 +40,11 @@ function LoginForm() {
   const [serverError, setServerError] = useState("");
   const [socialLoading, setSocialLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (serverError) errorRef.current?.focus();
+  }, [serverError]);
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -66,12 +80,17 @@ function LoginForm() {
       await socialLogin(provider);
     } catch (error) {
       setServerError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSocialLoading(false);
     }
   };
 
   return (
-    <div className="with-full flex h-fit flex-col items-center justify-center p-4">
+    <div className="flex min-h-[calc(100dvh-8rem)] w-full flex-col items-center justify-center p-4">
       <form className="w-80 max-w-full" onSubmit={handleSubmit}>
+        <Heading as="h1" className="mb-6" size="xl">
+          Sign In
+        </Heading>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
             <Field.Root id="email" required>
@@ -111,9 +130,15 @@ function LoginForm() {
             <div className="hidden" ref={containerRef} />
           </div>
           {serverError && (
-            <span className="text-destructive text-center text-sm" role="alert">
-              {serverError}
-            </span>
+            <Alert.Root ref={errorRef} status="error" tabIndex={-1}>
+              <Alert.Content>
+                <Alert.Indicator status="error" />
+                <div>
+                  <Alert.Title>Could Not Sign In</Alert.Title>
+                  <Alert.Description>{serverError}</Alert.Description>
+                </div>
+              </Alert.Content>
+            </Alert.Root>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Button

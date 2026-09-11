@@ -5,27 +5,53 @@ import {
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
+import { Schema } from "effect";
 import { ContributorProfile } from "src/components/ContributorProfile";
 import { NotFound } from "src/components/NotFound";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { Box } from "src/components/ui/layout";
-import { Tabs } from "src/components/ui/tabs";
+import {
+  TABS_LIST_BASE,
+  TABS_TRIGGER_BASE,
+  TABS_TRIGGER_SELECTED,
+} from "src/components/ui/tabs";
+import { cn } from "src/components/ui/ui-utils";
 import { UserErrorComponent } from "src/components/UserError";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
-import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
+import { rethrowRouteDataError } from "src/lib/router/not-found";
 import {
   contributorProfileQueryOptions,
   userPostsInfiniteQueryOptions,
 } from "src/lib/users/users.queries";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/users/$id")({
   component: UserLayoutComponent,
   errorComponent: UserErrorComponent,
+  validateSearch: Schema.toStandardSchemaV1(searchPostsBaseSchema),
   notFoundComponent: () => <NotFound>User not found</NotFound>,
-  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
-  ssr: "data-only",
+  loader: async ({ context, params }) => {
+    try {
+      return await context.queryClient.query({
+        ...contributorProfileQueryOptions(params.id),
+        staleTime: "static",
+      });
+    } catch (error) {
+      rethrowRouteDataError(error);
+    }
+  },
+  head: ({ loaderData }) => ({
+    meta: seo({
+      description: loaderData
+        ? `Browse posts, playlists, and contributions from ${loaderData.name} on ViteSakuga.`
+        : "Public contributor profile on ViteSakuga.",
+      title: loaderData
+        ? `${loaderData.name} (@${loaderData.username}) · ViteSakuga`
+        : "Contributor · ViteSakuga",
+    }),
+  }),
 });
 
 function UserContent() {
@@ -99,51 +125,46 @@ function UserLayoutComponent() {
   const { data: profile } = useSuspenseQuery(
     contributorProfileQueryOptions(id),
   );
-  const { activeTab, hasChildRoute } = useRouterState({
-    select: (state) => ({
-      activeTab: state.matches.some((match) =>
-        match.routeId.startsWith(`${Route.id}/playlists`),
-      )
-        ? "playlists"
-        : "posts",
-      hasChildRoute: state.matches.some(
+  const hasChildRoute = useRouterState({
+    select: (state) =>
+      state.matches.some(
         (match) =>
           match.routeId !== Route.id &&
           match.routeId.startsWith(`${Route.id}/`),
       ),
-    }),
   });
 
   return (
     <>
       <Box p={4} pb={0}>
         <ContributorProfile profile={profile} />
-        <Tabs.Root
-          // The triggers are TanStack Router Links that already perform SPA
-          // navigation. Ark's default `navigate` re-dispatches a
-          // non-cancelable click on the anchor, which makes the browser
-          // follow the href and reload the page. Disable it so tab switches
-          // stay client-side.
-          navigate={() => {}}
-          value={activeTab}
-        >
-          <Tabs.List>
-            <Tabs.Trigger asChild value="posts">
-              <Link params={{ id }} resetScroll={false} to="/users/$id">
-                Posts
-              </Link>
-            </Tabs.Trigger>
-            <Tabs.Trigger asChild value="playlists">
-              <Link
-                params={{ id }}
-                resetScroll={false}
-                to="/users/$id/playlists"
-              >
-                Playlists
-              </Link>
-            </Tabs.Trigger>
-          </Tabs.List>
-        </Tabs.Root>
+        <nav aria-label="Profile sections">
+          <div className={TABS_LIST_BASE}>
+            <Link
+              activeOptions={{ exact: true }}
+              activeProps={{
+                className: cn(TABS_TRIGGER_BASE, TABS_TRIGGER_SELECTED),
+              }}
+              className={TABS_TRIGGER_BASE}
+              params={{ id }}
+              resetScroll={false}
+              to="/users/$id"
+            >
+              Posts
+            </Link>
+            <Link
+              activeProps={{
+                className: cn(TABS_TRIGGER_BASE, TABS_TRIGGER_SELECTED),
+              }}
+              className={TABS_TRIGGER_BASE}
+              params={{ id }}
+              resetScroll={false}
+              to="/users/$id/playlists"
+            >
+              Playlists
+            </Link>
+          </div>
+        </nav>
       </Box>
 
       {hasChildRoute ? <Outlet /> : <UserContent />}

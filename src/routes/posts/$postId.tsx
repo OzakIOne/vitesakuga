@@ -1,34 +1,57 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { Schema } from "effect";
-import { Suspense } from "react";
 import { NotFound } from "src/components/NotFound";
 import { PostDetailDisplay } from "src/components/PostDetail/PostDetailDisplay";
 import { PostErrorComponent } from "src/components/PostError";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { Spinner } from "src/components/ui/feedback";
-import { Stack } from "src/components/ui/layout";
-import { Text } from "src/components/ui/typography";
-import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
-import { parse } from "src/lib/effect/schema.utils";
+import { assetUrl } from "src/lib/assets/url";
 import { postQueryDetail, seriesHubQuery } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { getSeriesNavigation } from "src/lib/posts/series-hubs";
+import { rethrowRouteDataError } from "src/lib/router/not-found";
+import { parsePositiveIntegerRouteParam } from "src/lib/router/route-params";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/posts/$postId")({
   component: PostComponent,
   errorComponent: PostErrorComponent,
+  validateSearch: Schema.toStandardSchemaV1(searchPostsBaseSchema),
   notFoundComponent: () => <NotFound>Post not found</NotFound>,
-  params: {
-    parse: (params) => ({
-      postId: parse(Schema.NumberFromString)(params.postId),
-    }),
+  loader: async ({ context, params }) => {
+    const postId = parsePositiveIntegerRouteParam(params.postId);
+    try {
+      return await context.queryClient.query({
+        ...postQueryDetail(postId),
+        staleTime: "static",
+      });
+    } catch (error) {
+      rethrowRouteDataError(error);
+    }
   },
-  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
+  head: ({ loaderData }) => {
+    const metadata: Parameters<typeof seo>[0] = {
+      description:
+        loaderData?.post.description ||
+        "Animation reference post on ViteSakuga.",
+      title: loaderData
+        ? `${loaderData.post.title} · ViteSakuga`
+        : "Post · ViteSakuga",
+    };
+
+    if (loaderData) {
+      metadata.image = assetUrl(loaderData.post.thumbnailKey);
+    }
+
+    return {
+      meta: seo(metadata),
+    };
+  },
 });
 
 function PostComponent() {
-  const { postId } = Route.useParams();
+  const { postId: rawPostId } = Route.useParams();
+  const postId = parsePositiveIntegerRouteParam(rawPostId);
   const { dateRange, q, seriesTitle, sortBy, tags, view } = Route.useSearch();
   const context = useRouteContext({ from: "/posts/$postId" });
 
@@ -57,26 +80,17 @@ function PostComponent() {
       sortBy={sortBy}
       videoMetadata={post.videoMetadata}
     >
-      <Suspense
-        fallback={
-          <Stack align="center" justify="center" minH="600px">
-            <Spinner size="lg" />
-            <Text>Loading post...</Text>
-          </Stack>
-        }
-      >
-        <PostDetailDisplay
-          currentUserId={currentUserId}
-          images={images}
-          initialTags={initialTags}
-          post={post}
-          relatedPost={relatedPost}
-          seriesNavigation={seriesNavigation}
-          seriesPosts={seriesQuery.data?.posts}
-          currentUserRole={context.user?.role}
-          user={user}
-        />
-      </Suspense>
+      <PostDetailDisplay
+        currentUserId={currentUserId}
+        images={images}
+        initialTags={initialTags}
+        post={post}
+        relatedPost={relatedPost}
+        seriesNavigation={seriesNavigation}
+        seriesPosts={seriesQuery.data?.posts}
+        currentUserRole={context.user?.role}
+        user={user}
+      />
     </PostsPageLayout>
   );
 }

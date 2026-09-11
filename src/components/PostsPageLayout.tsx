@@ -1,14 +1,8 @@
-import { Portal } from "@ark-ui/react";
 import type { RegisteredRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Button } from "src/components/ui/button";
-import { Badge, DataList } from "src/components/ui/feedback";
+import { Badge } from "src/components/ui/feedback";
 import { Box, Grid, GridItem, VStack, Wrap } from "src/components/ui/layout";
-import {
-  Collapsible,
-  Popover,
-  useCollapsibleContext,
-} from "src/components/ui/overlay";
+import { Collapsible, useCollapsibleContext } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
 import type {
   DiscoveryView,
@@ -22,6 +16,7 @@ import { PopularTagsSection } from "./PopularTagsSection";
 import type { PopularTag } from "./PopularTagsSection";
 import { PostFilters } from "./PostFilters";
 import { SearchBox } from "./SearchBox";
+import { VideoMetadataList } from "./VideoMetadataList";
 
 type RegisteredRoutes =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
@@ -143,40 +138,32 @@ export function PostsPageLayout({
             </Box>
 
             {hasCollapsibleSidebarCards && (
-              <>
-                <Box className="lg:hidden">
-                  <Collapsible.Root defaultOpen={false}>
-                    <Box border="1px" borderRadius="md" p={3} shadow="md">
-                      <Collapsible.Trigger className="flex w-full cursor-pointer items-center justify-between">
-                        <Text fontSize="sm" fontWeight="bold">
-                          Filters & Popular Tags
-                          {selectedTags.length > 0 && (
-                            <Badge
-                              className="ms-2"
-                              colorScheme="blue"
-                              size="xs"
-                            >
-                              {selectedTags.length} active
-                            </Badge>
-                          )}
-                        </Text>
-                        <CollapseArrow />
-                      </Collapsible.Trigger>
-                    </Box>
-                    <Collapsible.Content>
-                      <VStack align="stretch" gap={3}>
-                        {sidebarCards}
-                      </VStack>
-                    </Collapsible.Content>
-                  </Collapsible.Root>
+              <Collapsible.Root defaultOpen={false}>
+                <Box
+                  border="1px"
+                  borderRadius="md"
+                  className="lg:hidden"
+                  p={3}
+                  shadow="md"
+                >
+                  <Collapsible.Trigger className="flex w-full cursor-pointer items-center justify-between">
+                    <Text fontSize="sm" fontWeight="bold">
+                      Filters & Popular Tags
+                      {selectedTags.length > 0 && (
+                        <Badge className="ms-2" colorScheme="blue" size="xs">
+                          {selectedTags.length} active
+                        </Badge>
+                      )}
+                    </Text>
+                    <CollapseArrow />
+                  </Collapsible.Trigger>
                 </Box>
-
-                <Box className="hidden lg:block">
-                  <VStack align="stretch" gap={4}>
+                <Collapsible.Content className="lg:mt-0 lg:block">
+                  <VStack align="stretch" className="lg:gap-4" gap={3}>
                     {sidebarCards}
                   </VStack>
-                </Box>
-              </>
+                </Collapsible.Content>
+              </Collapsible.Root>
             )}
 
             {videoMetadata && (
@@ -189,40 +176,7 @@ export function PostsPageLayout({
                     </Collapsible.Trigger>
                   </Heading>
                   <Collapsible.Content>
-                    <VStack align="stretch" fontSize="xs" gap={1}>
-                      <DataList.Root orientation="horizontal">
-                        {Object.entries(videoMetadata).map(([key, value]) => (
-                          <DataList.Item key={key}>
-                            <DataList.ItemLabel>{key}</DataList.ItemLabel>
-                            <DataList.ItemValue>
-                              {key === "Encoded_Library_Settings" ? (
-                                <Popover.Root>
-                                  <Popover.Trigger asChild>
-                                    <Button size="xs" variant="outline">
-                                      View Settings
-                                    </Button>
-                                  </Popover.Trigger>
-                                  <Portal>
-                                    <Popover.Positioner>
-                                      <Popover.Content maxW="sm">
-                                        <Popover.Arrow />
-                                        <Popover.Body>
-                                          <Text className="max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
-                                            {value}
-                                          </Text>
-                                        </Popover.Body>
-                                      </Popover.Content>
-                                    </Popover.Positioner>
-                                  </Portal>
-                                </Popover.Root>
-                              ) : (
-                                value
-                              )}
-                            </DataList.ItemValue>
-                          </DataList.Item>
-                        ))}
-                      </DataList.Root>
-                    </VStack>
+                    <VideoMetadataList metadata={videoMetadata} />
                   </Collapsible.Content>
                 </Box>
               </Collapsible.Root>

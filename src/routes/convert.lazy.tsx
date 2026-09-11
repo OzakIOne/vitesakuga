@@ -28,7 +28,7 @@ export const Route = createLazyFileRoute("/convert")({
   component: RouteComponent,
   pendingComponent: () => (
     <Container maxW="xl" py={8}>
-      <Text>Loading converter...</Text>
+      <Text>Loading converter…</Text>
     </Container>
   ),
 });
@@ -36,7 +36,7 @@ export const Route = createLazyFileRoute("/convert")({
 type ActorLike = Pick<AnyActorRef, "getSnapshot" | "subscribe">;
 
 const SELECT_CLASS =
-  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900";
+  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
 
 function formatTimestamp(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -60,9 +60,12 @@ function ConversionProgress({ actor }: { actor: ActorLike }) {
 
   return (
     <Box mb={4}>
-      <Text mb={1}>Progress: {Math.round(progress)}%</Text>
       <Progress.Root striped value={progress}>
-        <Progress.Track>
+        <Flex justify="space-between">
+          <Progress.Label>Conversion progress</Progress.Label>
+          <Progress.ValueText>{Math.round(progress)}%</Progress.ValueText>
+        </Flex>
+        <Progress.Track aria-label="Conversion progress">
           <Progress.Range />
         </Progress.Track>
       </Progress.Root>
@@ -99,6 +102,7 @@ function RouteComponent() {
   const isTrimmed =
     duration !== null && hasTrimmedRange(trimStart, trimEnd, duration);
   const isAudioFile = file?.type.startsWith("audio/") ?? false;
+  const outputHasVideo = inputVideoCodec !== null;
   const isTranscodingOutput =
     output?.videoCodec !== undefined || output?.audioCodec !== undefined;
 
@@ -192,7 +196,7 @@ function RouteComponent() {
     >
       <Container maxW="xl" py={8}>
         <Box borderRadius="lg" p={6} shadow="md">
-          <Heading mb={4} size="lg">
+          <Heading as="h1" mb={4} size="lg">
             Video/Audio Converter
           </Heading>
           <Text mb={4}>
@@ -555,7 +559,12 @@ function RouteComponent() {
                   >
                     Convert Another
                   </Button>
-                  {output?.container === "mp4" ? (
+                  {output?.container === "mkv" ? (
+                    <Text mt={3}>
+                      MKV preview is not available in the browser. Download the
+                      file to check the result.
+                    </Text>
+                  ) : outputHasVideo ? (
                     <video
                       controls
                       src={downloadUrl}

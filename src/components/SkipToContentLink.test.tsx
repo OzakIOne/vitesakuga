@@ -9,7 +9,7 @@ describe(SkipToContentLink, () => {
     const main = document.createElement("main");
     main.id = "main-content";
     main.tabIndex = -1;
-    document.body.append(main);
+    document.body.appendChild(main);
 
     render(<SkipToContentLink />);
 

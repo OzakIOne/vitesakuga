@@ -48,6 +48,15 @@ export default defineConfig({
       env: {
         APP_ENV: "test",
         NODE_ENV: "test",
+        // The app's production preset is Cloudflare Workers, but Nitro's
+        // current env-runner/miniflare combination is incompatible with the
+        // alpha Miniflare version resolved by Wrangler. E2E only needs a
+        // local HTTP server, so use Nitro's Node preset and keep the same test
+        // database/storage bindings below.
+        NITRO_PRESET: "node-server",
+        // The test server does not enable the production Turnstile plugin, so
+        // the client must not block local auth flows waiting for a token.
+        VITE_TURNSTILE_REQUIRED: "0",
         // "e2e" behaves like the local Postgres driver (see src/lib/db/pool.ts)
         // but is distinct so the e2e auth bypass in session.effect.ts stays
         // unreachable from `nub run dev:local`.

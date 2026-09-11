@@ -1,12 +1,9 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
-import {
-  ErrorComponent,
-  Link,
-  rootRouteId,
-  useMatch,
-  useRouter,
-} from "@tanstack/react-router";
+import { Link, rootRouteId, useMatch, useRouter } from "@tanstack/react-router";
 import { Button } from "src/components/ui/button";
+import { Alert } from "src/components/ui/feedback";
+import { Box, Stack } from "src/components/ui/layout";
+import { Heading, Text } from "src/components/ui/typography";
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter();
@@ -20,36 +17,49 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   // `createHandler` in src/lib/server-fn.handler.ts).
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-6 p-4">
-      <ErrorComponent error={error} />
-      <div className="flex flex-wrap items-center gap-2">
+    <Box className="mx-auto max-w-lg" p={8}>
+      <Heading as="h1" mb={3} size="2xl">
+        Something went wrong
+      </Heading>
+      <Text color="fg.muted" mb={6}>
+        The page could not be loaded. Try again, or return to a working page.
+      </Text>
+      {import.meta.env.DEV && (
+        <Alert.Root className="mb-6" status="error">
+          <Alert.Content>
+            <Alert.Indicator status="error" />
+            <div className="min-w-0">
+              <Alert.Title>Development details</Alert.Title>
+              <Alert.Description className="break-words whitespace-pre-wrap">
+                {String(error)}
+              </Alert.Description>
+            </div>
+          </Alert.Content>
+        </Alert.Root>
+      )}
+      <Stack direction="row" flexWrap="wrap" gap={2}>
         <Button
           onClick={async () => {
             await router.invalidate();
           }}
         >
-          Try Again
+          Try again
         </Button>
         {isRoot ? (
-          <Link
-            className="rounded bg-gray-600 px-2 py-1 font-extrabold text-white uppercase dark:bg-gray-700"
-            to="/"
-          >
-            Home
-          </Link>
+          <Button asChild variant="outline">
+            <Link to="/">Go home</Link>
+          </Button>
         ) : (
-          <Link
-            className="rounded bg-gray-600 px-2 py-1 font-extrabold text-white uppercase dark:bg-gray-700"
-            onClick={(e) => {
-              e.preventDefault();
+          <Button
+            onClick={() => {
               window.history.back();
             }}
-            to="/"
+            variant="outline"
           >
-            Go Back
-          </Link>
+            Go back
+          </Button>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }

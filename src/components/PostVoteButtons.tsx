@@ -2,7 +2,6 @@ import { memo } from "react";
 import { LuThumbsDown, LuThumbsUp } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { HStack } from "src/components/ui/layout";
-import { toaster } from "src/components/ui/toaster";
 import type { PostVote } from "src/lib/db/schema";
 import { usePostVotes, useSetVote } from "src/lib/votes/votes.hooks";
 
@@ -19,14 +18,7 @@ function PostVoteButtonsComponent({
   const setVoteMutation = useSetVote(postId);
 
   const handleVote = (vote: PostVote) => {
-    if (!currentUserId) {
-      toaster.create({
-        description: "Log in to vote on posts.",
-        title: "Login required",
-        type: "error",
-      });
-      return;
-    }
+    if (!currentUserId) return;
 
     const nextVote = data?.userVote === vote ? null : vote;
     setVoteMutation.mutate(nextVote);
@@ -35,32 +27,37 @@ function PostVoteButtonsComponent({
   const isLikeActive = data?.userVote === "like";
   const isDislikeActive = data?.userVote === "dislike";
   const isPending = setVoteMutation.isPending;
+  const requiresSignIn = !currentUserId;
 
   return (
     <HStack gap={2}>
       <Button
-        aria-label="Like post"
-        aria-pressed={isLikeActive}
+        aria-label={requiresSignIn ? "Sign in to like this post" : "Like post"}
+        aria-pressed={requiresSignIn ? undefined : isLikeActive}
         colorPalette="blue"
-        disabled={isPending}
+        disabled={isPending || requiresSignIn}
         onClick={() => {
           handleVote("like");
         }}
         size="sm"
+        title={requiresSignIn ? "Sign in to vote" : undefined}
         variant={isLikeActive ? "solid" : "outline"}
       >
         <LuThumbsUp aria-hidden />
         {data?.likes ?? 0}
       </Button>
       <Button
-        aria-label="Dislike post"
-        aria-pressed={isDislikeActive}
+        aria-label={
+          requiresSignIn ? "Sign in to dislike this post" : "Dislike post"
+        }
+        aria-pressed={requiresSignIn ? undefined : isDislikeActive}
         colorPalette="red"
-        disabled={isPending}
+        disabled={isPending || requiresSignIn}
         onClick={() => {
           handleVote("dislike");
         }}
         size="sm"
+        title={requiresSignIn ? "Sign in to vote" : undefined}
         variant={isDislikeActive ? "solid" : "outline"}
       >
         <LuThumbsDown aria-hidden />

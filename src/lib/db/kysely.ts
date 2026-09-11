@@ -242,6 +242,16 @@ type PostEditsTable = {
     readonly title?: string;
     readonly volumeNumber?: number | null;
   };
+  previous_payload: Generated<{
+    readonly animeTitle: string | null;
+    readonly chapterNumber: number | null;
+    readonly description: string;
+    readonly episodeNumber: number | null;
+    readonly seasonNumber: number | null;
+    readonly source: string | null;
+    readonly title: string;
+    readonly volumeNumber: number | null;
+  }>;
   resolvedAt: Date | null;
   resolvedBy: string | null;
   createdAt: Generated<Date>;

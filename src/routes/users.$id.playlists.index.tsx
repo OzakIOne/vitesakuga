@@ -1,31 +1,48 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
+import { EmptyState } from "src/components/EmptyState";
 import { NotFound } from "src/components/NotFound";
 import { Button } from "src/components/ui/button";
-import { Badge, Spinner } from "src/components/ui/feedback";
-import {
-  Box,
-  HStack,
-  SimpleGrid,
-  Stack,
-  VStack,
-} from "src/components/ui/layout";
+import { Badge } from "src/components/ui/feedback";
+import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
+import { rethrowRouteDataError } from "src/lib/router/not-found";
+import { contributorProfileQueryOptions } from "src/lib/users/users.queries";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/users/$id/playlists/")({
   component: PlaylistsContent,
-  ssr: "data-only",
-  notFoundComponent: () => <NotFound>User not found</NotFound>,
-  loader: ({ context, params }) => {
-    // Fire-and-forget prefetch: failures surface when the page actually reads
-    // the query, so they are intentionally swallowed here.
-    void context.queryClient
-      .query(playlistsQueryUserPlaylists(params.id))
-      .catch(() => {});
+  loader: async ({ context, params }) => {
+    try {
+      const [profile] = await Promise.all([
+        context.queryClient.query({
+          ...contributorProfileQueryOptions(params.id),
+          staleTime: "static",
+        }),
+        context.queryClient.query({
+          ...playlistsQueryUserPlaylists(params.id),
+          staleTime: "static",
+        }),
+      ]);
+      return profile;
+    } catch (error) {
+      rethrowRouteDataError(error);
+    }
   },
+  notFoundComponent: () => <NotFound>User not found</NotFound>,
+  head: ({ loaderData }) => ({
+    meta: seo({
+      description: loaderData
+        ? `Browse public playlists curated by ${loaderData.name} on ViteSakuga.`
+        : "Public contributor playlists on ViteSakuga.",
+      title: loaderData
+        ? `${loaderData.name}'s playlists · ViteSakuga`
+        : "Contributor playlists · ViteSakuga",
+    }),
+  }),
 });
 
 function PlaylistsContent() {
@@ -34,7 +51,7 @@ function PlaylistsContent() {
   const currentUserId = context.user?.id;
   const isOwner = currentUserId === userId;
 
-  const { data: playlists, isLoading } = useSuspenseQuery(
+  const { data: playlists } = useSuspenseQuery(
     playlistsQueryUserPlaylists(userId),
   );
 
@@ -51,26 +68,15 @@ function PlaylistsContent() {
         )}
       </HStack>
 
-      {isLoading && (
-        <Stack align="center" justify="center" minH="200px">
-          <Spinner size="lg" />
-        </Stack>
-      )}
-
-      {!isLoading && playlists.length === 0 ? (
-        <Box
-          alignItems="center"
-          border="1px solid"
-          borderColor="gray.200"
-          borderRadius="md"
-          display="flex"
-          h="200px"
-          justifyContent="center"
-        >
-          <Text color="gray.500">
-            {isOwner ? "You have no playlists yet" : "No public playlists"}
-          </Text>
-        </Box>
+      {playlists.length === 0 ? (
+        <EmptyState
+          description={
+            isOwner
+              ? "Create a playlist to organize your favorite posts."
+              : "This contributor has not published any playlists."
+          }
+          title={isOwner ? "You have no playlists yet" : "No public playlists"}
+        />
       ) : (
         <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4}>
           {playlists.map((playlist) => (
@@ -107,9 +113,12 @@ function PlaylistsContent() {
                       justifyContent="center"
                       w="full"
                     >
-                      <Text color="gray.300" fontSize="lg">
-                        No posts
-                      </Text>
+                      <EmptyState
+                        description="Add posts to this playlist to see them here."
+                        size="compact"
+                        title="No posts"
+                        titleAs="p"
+                      />
                     </Box>
                   )}
                 </Box>

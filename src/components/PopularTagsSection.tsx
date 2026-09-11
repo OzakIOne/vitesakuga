@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
+import { EmptyState } from "src/components/EmptyState";
 import { Badge } from "src/components/ui/feedback";
 import { Stack } from "src/components/ui/layout";
-import { Heading, Text } from "src/components/ui/typography";
+import { Heading } from "src/components/ui/typography";
 
 export type PopularTag = {
   id: number;
@@ -30,7 +31,12 @@ export function PopularTagsSection({ tags }: PopularTagsSectionProps) {
           ))}
         </Stack>
       ) : (
-        <Text fontSize="sm">No tags found</Text>
+        <EmptyState
+          description="Tags will appear as posts are added."
+          size="compact"
+          title="No tags found"
+          titleAs="p"
+        />
       )}
     </>
   );

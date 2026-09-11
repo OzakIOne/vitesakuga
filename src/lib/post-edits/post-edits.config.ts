@@ -1,0 +1,1 @@
+export const POST_EDIT_REQUIRED_VOTES = 2;

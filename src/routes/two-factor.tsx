@@ -19,6 +19,7 @@ import {
   useVerifyTotp,
 } from "src/lib/auth/two-factor.hooks";
 import { usersKeys } from "src/lib/users/users.queries";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/two-factor")({
   beforeLoad: ({ context }) => {
@@ -27,6 +28,14 @@ export const Route = createFileRoute("/two-factor")({
     }
   },
   component: TwoFactorVerifyPage,
+  head: () => ({
+    meta: seo({
+      description:
+        "Complete two-factor verification for your ViteSakuga account.",
+      noIndex: true,
+      title: "Two-factor verification · ViteSakuga",
+    }),
+  }),
 });
 
 function TwoFactorVerifyPage() {
@@ -71,7 +80,7 @@ function TwoFactorVerifyPage() {
   };
 
   return (
-    <Box className="flex min-h-dvh flex-col items-center px-4 py-16 sm:px-8">
+    <Box className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-4 py-8 sm:px-8">
       <div className="w-full max-w-md space-y-8 rounded-2xl px-8 py-12 sm:px-12 sm:py-14">
         <div className="text-center">
           <LuShieldCheck
@@ -79,7 +88,9 @@ function TwoFactorVerifyPage() {
             className="mx-auto mb-4 text-blue-600"
             size={36}
           />
-          <Heading size="lg">Two-factor verification</Heading>
+          <Heading as="h1" size="lg">
+            Two-factor verification
+          </Heading>
           <Text color="gray.500" fontSize="sm" mt={2}>
             {mode === "totp"
               ? "Enter the 6-digit code from your authenticator app to finish signing in."
@@ -88,7 +99,7 @@ function TwoFactorVerifyPage() {
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <Field.Root required>
+          <Field.Root id="verification-code" required>
             <Field.Label>
               {mode === "totp" ? "Authenticator code" : "Backup code"}
             </Field.Label>
@@ -97,6 +108,7 @@ function TwoFactorVerifyPage() {
               autoFocus
               inputMode={mode === "totp" ? "numeric" : "text"}
               maxLength={mode === "totp" ? 6 : undefined}
+              name="code"
               onChange={(e) =>
                 setCode(
                   mode === "totp"

@@ -25,17 +25,6 @@ export function DiscoverySummary({ view }: { view: DiscoveryView }) {
         <Text color="fg.muted" fontSize="sm">
           {info.description}
         </Text>
-        <Text fontSize="sm">
-          <Text as="span" fontWeight="bold">
-            Time window:
-          </Text>{" "}
-          {info.timeWindow}
-          <br />
-          <Text as="span" fontWeight="bold">
-            Signals:
-          </Text>{" "}
-          {info.signals}
-        </Text>
         <Text color="fg.muted" fontSize="xs">
           {DISCOVERY_TRANSPARENCY_NOTE}
         </Text>

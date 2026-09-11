@@ -1,5 +1,6 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { Schema } from "effect";
+import { seo } from "src/utils/seo";
 
 const AuthSearchSchema = Schema.Struct({
   redirect: Schema.optionalKey(Schema.String),
@@ -18,6 +19,13 @@ export const Route = createFileRoute("/(auth)")({
       redirectUrl,
     };
   },
+  head: () => ({
+    meta: seo({
+      description: "Authentication pages for your ViteSakuga account.",
+      noIndex: true,
+      title: "Authentication · ViteSakuga",
+    }),
+  }),
   component: RouteComponent,
 });
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import {
@@ -99,7 +99,9 @@ export function useRejectEdit() {
 /** Admin-only direct rank assignment. */
 export function useSetUserRole() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Could not assign this role.",
+    errorTitle: "Role assignment failed",
     mutationFn: async (input: { role: string; userId: string }) =>
       assignUserRole({ data: input }),
     onSuccess: async () => {
@@ -107,5 +109,6 @@ export function useSetUserRole() {
         queryKey: moderationKeys.overview,
       });
     },
+    successTitle: "Role assigned",
   });
 }

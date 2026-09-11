@@ -2,26 +2,24 @@ import { Portal } from "@ark-ui/react";
 import { useState } from "react";
 import { LuInfo } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
-import { DataList } from "src/components/ui/feedback";
-import { Box } from "src/components/ui/layout";
-import { Dialog, Popover } from "src/components/ui/overlay";
-import { Text } from "src/components/ui/typography";
+import { Dialog } from "src/components/ui/overlay";
 import type { VideoMetadata } from "src/lib/posts/posts.schema";
+import { getVideoMetadataRows } from "src/lib/posts/video-metadata";
+
+import { VideoMetadataList } from "./VideoMetadataList";
 
 type VideoMetadataDialogProps = {
   metadata: VideoMetadata | undefined;
 };
 
-const ENCODED_LIBRARY_SETTINGS_KEY = "Encoded_Library_Settings";
-
 export function VideoMetadataDialog({ metadata }: VideoMetadataDialogProps) {
   const [open, setOpen] = useState(false);
-  const entries = Object.entries(metadata ?? {});
+  const rows = getVideoMetadataRows(metadata);
 
   return (
     <Dialog.Root onOpenChange={(details) => setOpen(details.open)} open={open}>
       <Button
-        disabled={entries.length === 0}
+        disabled={rows.length === 0}
         onClick={() => setOpen(true)}
         size="sm"
         variant="outline"
@@ -45,43 +43,7 @@ export function VideoMetadataDialog({ metadata }: VideoMetadataDialogProps) {
               Technical metadata extracted from the selected video.
             </Dialog.Description>
             <Dialog.Body>
-              <DataList.Root orientation="horizontal">
-                {entries.map(([key, value]) => (
-                  <DataList.Item key={key}>
-                    <DataList.ItemLabel>{key}</DataList.ItemLabel>
-                    <DataList.ItemValue>
-                      {key === ENCODED_LIBRARY_SETTINGS_KEY ? (
-                        <Popover.Root>
-                          <Popover.Trigger asChild>
-                            <Button size="xs" variant="outline">
-                              View Settings
-                            </Button>
-                          </Popover.Trigger>
-                          <Portal>
-                            <Popover.Positioner>
-                              <Popover.Content maxW="sm">
-                                <Popover.Arrow />
-                                <Popover.Body>
-                                  <Text className="max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
-                                    {value}
-                                  </Text>
-                                </Popover.Body>
-                              </Popover.Content>
-                            </Popover.Positioner>
-                          </Portal>
-                        </Popover.Root>
-                      ) : (
-                        String(value)
-                      )}
-                    </DataList.ItemValue>
-                  </DataList.Item>
-                ))}
-              </DataList.Root>
-              {entries.length === 0 && (
-                <Box color="gray.500" fontSize="sm">
-                  No metadata available for this file.
-                </Box>
-              )}
+              {metadata && <VideoMetadataList metadata={metadata} />}
             </Dialog.Body>
             <Dialog.Footer>
               <Dialog.ActionTrigger asChild>

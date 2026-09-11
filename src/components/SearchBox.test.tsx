@@ -155,6 +155,7 @@ describe(SearchBox, () => {
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
     expect(navigateMock).toHaveBeenCalledWith({
+      replace: false,
       search: {
         dateRange: "week",
         q: "one piece",
@@ -172,6 +173,7 @@ describe(SearchBox, () => {
     fireEvent.keyDown(getInput(), { key: "Enter" });
 
     expect(navigateMock).toHaveBeenCalledWith({
+      replace: false,
       search: { dateRange: "all", q: "ab", sortBy: "newest", tags: [] },
       to: "/posts",
     });
@@ -187,6 +189,7 @@ describe(SearchBox, () => {
 
     expect(navigateMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        replace: true,
         search: expect.objectContaining({ q: "Debug" }),
       }),
     );
@@ -202,6 +205,7 @@ describe(SearchBox, () => {
 
     expect(navigateMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        replace: true,
         search: expect.objectContaining({ q: "" }),
       }),
     );
@@ -235,5 +239,25 @@ describe(SearchBox, () => {
     fireEvent.keyDown(getInput(), { key: "Enter" });
 
     expect(navigateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies a removed tag immediately with replacement navigation", () => {
+    renderSearchBox({
+      appliedQuery: "Debug",
+      appliedTags: ["action", "naruto"],
+    });
+
+    fireEvent.click(getRemoveTagButton("action"));
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      replace: true,
+      search: {
+        dateRange: "all",
+        q: "Debug",
+        sortBy: "newest",
+        tags: ["naruto"],
+      },
+      to: "/posts",
+    });
   });
 });

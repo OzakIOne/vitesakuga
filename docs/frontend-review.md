@@ -10,13 +10,58 @@ each time.
 primitives in `src/components/ui`, cross-checked against the rendered HTML and
 status codes of the running dev server (`/`, `/posts`, `/login`, `/users`,
 `/news`, `/help`, and browse URLs carrying filters or foreign query
-parameters) and the generated stylesheet. No visual/browser tooling was used;
-contrast ratios are computed from the _oklch()_ tokens in that stylesheet with
-the WCAG relative-luminance formula.
+parameters), the generated stylesheet, and a browser smoke check across the
+responsive navigation, homepage, and editorial pages. Contrast ratios are
+computed from the _oklch()_ tokens in that stylesheet with the WCAG
+relative-luminance formula.
 
 **Scope.** Presentation and interaction only. Product-backlog items live in
 `docs/ideas.md`; behavioural contracts live in `docs/features.md`. See
 [Cross-references](#cross-references) for how the three relate.
+
+## Resolution status — 2026-09-11
+
+The review was re-checked against the implementation rather than applied as a
+blind checklist. The current working tree resolves the concrete correctness,
+accessibility, routing, SSR, feedback, and dark-mode defects in items **1–4,
+6–11, 15–22, 24–29, 31–48, 51–58, 60–78, and 80–86**. Findings **5**, **13**,
+**49**, **50**, and **79** are also resolved by the updates described below.
+
+All findings **1–86** are now resolved in the current working tree. Finding
+**49** remains resolved for destructive actions: reject/discard decisions
+require confirmation, while explicit reversible approve/promote actions remain
+immediate.
+
+**Update (2026-09-11).** Finding **50** is resolved: edit suggestions persist a
+complete `previous_payload` snapshot, and the history view renders a Before
+suggestion / Suggested comparison.
+
+**Update (2026-09-11).** Finding **79** is now resolved for `/users`: the
+contributor directory loads its public user list through the server loader and
+renders the list in SSR. The unused browser-only user collection was removed;
+the TanStack DB tag collection remains for tag autocomplete.
+
+**Update (2026-09-11).** Finding **5** is resolved: every route family now has
+appropriate metadata, private/authenticated surfaces are marked `noindex`, and
+public post, playlist, and contributor pages derive useful titles and
+descriptions from loader data. Finding **13** is resolved by the shared,
+size-aware `EmptyState`, including the final account-playlist detail surface.
+
+**Update (2026-09-11).** Findings **12**, **14**, **23**, **30**, and **59** are
+resolved: route-specific card/list skeletons cover data-heavy pages and admin
+queues; palette variants share one typed token module; the homepage now has
+explicit archive positioning and hero copy; admin panels have a coherent
+dashboard header, headings, retry/error states, controls, and shared approval
+threshold; and news, wiki, and help use the shared editorial shell on index and
+article pages.
+
+Verification for this pass: `nub exec vitest run` (662 tests in 67 files),
+`nub run lint:check`, `nub run build:dev`, public-route SSR/status checks, and the
+Playwright suite (55 passed in the full run; the 7-test auth/passkey subset then
+passed after three stale accessible-name assertions were aligned). A final
+in-app browser pass verified the responsive dark-theme `/users`, `/posts`, and
+filtered empty-search layouts, their accessibility trees, and the absence of
+browser console errors or warnings.
 
 **Priority.** `P0` user-visible correctness bug that undermines a shared
 primitive. `P1` significant UX/SEO/a11y gap that affects many pages. `P2`
@@ -699,6 +744,11 @@ never runs, so `playlists.index.tsx:60` and `account_.playlists.index.tsx:120`
 render nothing. `users.index.tsx:42` (an explicit `<Suspense fallback>`) and
 `notifications.tsx:86` (a plain `useQuery`) are the live ones.
 
+**Resolved (2026-09-11).** `LoadingSkeletons.tsx` now provides card-grid and
+list variants. Route pending components and live query states use the variant
+that matches their content shape, including public/account playlists,
+contributors, notifications, and admin queues.
+
 ### 13. Empty states are inconsistent — `S`
 
 `PostsResultsState.tsx:113` renders a proper empty state (`Heading` + guidance)
@@ -710,11 +760,11 @@ and `users.$id.playlists.$playlistId.tsx:115` use `Text color="gray.500"`.
 **Fix.** Extract one `EmptyState` (title, description, optional action) and use
 it everywhere, so "No posts" also offers the next step.
 
-### 14. Three copies of the color-token class maps — `M`
+### 14. Duplicated color-token class maps — `M`
 
-`src/components/ui/button.tsx`, `src/components/ui/feedback.tsx`, and
-`src/components/ui/overlay.tsx` each define their own `Palette` list and their own
-solid/subtle/outline `Record<Palette, string>` maps. They have already drifted
+`src/components/ui/button.tsx` and `src/components/ui/feedback.tsx` each define
+their own `Palette` list and solid/subtle/outline `Record<Palette, string>` maps.
+They have already drifted
 (`button.tsx` uses `blue-600`/`neutral-900`; `feedback.tsx` uses `gray-900`).
 
 The prop name drifted with them. `Button` accepts both `colorScheme` and
@@ -727,6 +777,10 @@ resolves two ways inside one module. Call sites split the same way: 13 uses of
 
 **Fix.** One shared palette module consumed by all three, matching the intent
 already expressed by `TEXT_DARK_VARIANTS` in `ui-utils.ts`.
+
+**Resolved (2026-09-11).** `src/components/ui/palette.ts` is the single source
+for the typed palette and solid, outline, ghost, and subtle classes used by
+buttons, icon buttons, and badges.
 
 ### 15. Reduced-motion coverage stops at toasts — `S`
 
@@ -905,6 +959,11 @@ interface.
 **Fix.** Delete `ButtonRetry` (implement the action or link to the post); use
 `Heading` plus the shared error/empty states; swap in `Input`/`Select`; and move
 the threshold into one constant the service and both components import.
+
+**Resolved (2026-09-11).** Reports now link directly to the flagged post;
+every admin queue has a heading, skeleton, and structured retry/error state;
+role assignment uses the shared input styling; and the approval threshold is
+exported from `src/lib/post-edits/post-edits.config.ts`.
 
 ### 31. `console.log("Running in", …)` runs on every router creation — `S`
 
@@ -1600,6 +1659,9 @@ classes were the path of least resistance.
 `NotFound` bodies collapse into one component with two string props. Keeping raw
 Tailwind inside those two components is fine — the win is that the scale and
 palette then have one home per pattern.
+
+**Resolved (2026-09-11).** `EditorialShell` now owns the shared page header and
+content frame for news, wiki, help, and both article detail routes.
 
 **Related.** This is the concrete half of open question 3; item 46 is the same
 drift inside the shortcuts dialog.
@@ -2493,6 +2555,9 @@ For a media archive the first screen should demonstrate the content.
 Also, `index.tsx:29-33` wraps `PopularTagsSection` in `<Suspense>` although the
 `useSuspenseQuery` on line 15 has already suspended the whole component — the
 fallback is unreachable.
+
+**Resolved (2026-09-11).** The homepage now presents the archive positioning,
+hero copy, search action, popular tags, and a path to updates above the fold.
 
 ### 24. Thumbnails are letterboxed against near-black in light mode — `S`
 

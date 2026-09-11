@@ -35,6 +35,21 @@ const PostEditPayloadFields = Schema.Struct({
 // can reference the type without a circular definition.
 export type PostEditPayload = Schema.Schema.Type<typeof PostEditPayloadFields>;
 
+export const postEditPreviousPayloadSchema = Schema.Struct({
+  animeTitle: Schema.NullOr(Schema.String),
+  chapterNumber: Schema.NullOr(Schema.Number),
+  description: Schema.String,
+  episodeNumber: Schema.NullOr(Schema.Number),
+  seasonNumber: Schema.NullOr(Schema.Number),
+  source: Schema.NullOr(Schema.String),
+  title: Schema.String,
+  volumeNumber: Schema.NullOr(Schema.Number),
+});
+
+export type PostEditPreviousPayload = Schema.Schema.Type<
+  typeof postEditPreviousPayloadSchema
+>;
+
 export const postEditPayloadSchema = PostEditPayloadFields.pipe(
   Schema.check(
     Schema.makeFilter((payload: PostEditPayload): string | undefined =>

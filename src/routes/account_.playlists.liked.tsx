@@ -8,19 +8,14 @@ import {
 import { Effect, Schema } from "effect";
 import { useCallback } from "react";
 import { Pagination } from "src/components/Pagination";
-import { Badge, Spinner } from "src/components/ui/feedback";
-import {
-  Box,
-  HStack,
-  SimpleGrid,
-  Stack,
-  VStack,
-} from "src/components/ui/layout";
+import { Badge } from "src/components/ui/feedback";
+import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
 import { formatDateUtc } from "src/utils/date-format";
+import { seo } from "src/utils/seo";
 
 const LikedSearchSchema = Schema.Struct({
   page: Schema.Number.pipe(
@@ -42,13 +37,20 @@ export const Route = createFileRoute("/account_/playlists/liked")({
     }
     return { user: context.user };
   },
+  head: () => ({
+    meta: seo({
+      description: "Posts you liked on ViteSakuga.",
+      noIndex: true,
+      title: "Liked posts · ViteSakuga",
+    }),
+  }),
 });
 
 function LikedPostsContent() {
   const { page } = Route.useSearch();
   const navigate = useNavigate();
 
-  const { data, isLoading } = useSuspenseQuery(votesQueryLikedPosts({ page }));
+  const { data } = useSuspenseQuery(votesQueryLikedPosts({ page }));
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -68,116 +70,108 @@ function LikedPostsContent() {
 
   return (
     <Box p={4}>
-      {isLoading && (
-        <Stack align="center" justify="center" minH="600px">
-          <Spinner size="lg" />
-        </Stack>
-      )}
-
-      {data && (
-        <>
-          <VStack align="start" gap={2} mb={6}>
-            <Heading as="h1" size="2xl">
-              Liked posts
-            </Heading>
-            <HStack gap={4}>
-              <Text color="gray.500" fontSize="sm">
-                {data.playlist.post_count} post
-                {data.playlist.post_count !== 1 ? "s" : ""}
+      <>
+        <VStack align="start" gap={2} mb={6}>
+          <Heading as="h1" size="2xl">
+            Liked posts
+          </Heading>
+          <HStack gap={4}>
+            <Text color="gray.500" fontSize="sm">
+              {data.playlist.post_count} post
+              {data.playlist.post_count !== 1 ? "s" : ""}
+            </Text>
+            <Badge borderRadius="full" colorPalette="gray" px={2} size="sm">
+              Private
+            </Badge>
+            <Link to="/account/playlists">
+              <Text color="blue.500" fontSize="sm">
+                Back to my playlists
               </Text>
-              <Badge borderRadius="full" colorPalette="gray" px={2} size="sm">
-                Private
-              </Badge>
-              <Link to="/account/playlists">
-                <Text color="blue.500" fontSize="sm">
-                  Back to my playlists
-                </Text>
-              </Link>
-            </HStack>
-          </VStack>
+            </Link>
+          </HStack>
+        </VStack>
 
-          {data.data.length === 0 ? (
-            <Box
-              alignItems="center"
-              border="1px solid"
-              borderColor="gray.200"
-              borderRadius="md"
-              display="flex"
-              h="200px"
-              justifyContent="center"
+        {data.data.length === 0 ? (
+          <Box
+            alignItems="center"
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="md"
+            display="flex"
+            h="200px"
+            justifyContent="center"
+          >
+            <Text color="gray.500">Posts you like will show up here</Text>
+          </Box>
+        ) : (
+          <>
+            <SimpleGrid
+              columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }}
+              gap={4}
+              mb={8}
             >
-              <Text color="gray.500">Posts you like will show up here</Text>
-            </Box>
-          ) : (
-            <>
-              <SimpleGrid
-                columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }}
-                gap={4}
-                mb={8}
-              >
-                {data.data.map((item) => (
-                  <Link
-                    key={item.id}
-                    params={{ postId: item.id }}
-                    to="/posts/$postId"
-                  >
-                    <VStack cursor="pointer" gap={2} h="full">
-                      <Box
-                        _groupHover={{
-                          filter: "brightness(0.75)",
-                        }}
-                        aspectRatio="16 / 9"
-                        bg="gray.900"
-                        borderRadius="lg"
-                        overflow="hidden"
-                        position="relative"
-                        transitionDuration="200ms"
-                        transitionProperty="filter"
-                        w="full"
+              {data.data.map((item) => (
+                <Link
+                  key={item.id}
+                  params={{ postId: String(item.id) }}
+                  to="/posts/$postId"
+                >
+                  <VStack cursor="pointer" gap={2} h="full">
+                    <Box
+                      _groupHover={{
+                        filter: "brightness(0.75)",
+                      }}
+                      aspectRatio="16 / 9"
+                      bg="gray.900"
+                      borderRadius="lg"
+                      overflow="hidden"
+                      position="relative"
+                      transitionDuration="200ms"
+                      transitionProperty="filter"
+                      w="full"
+                    >
+                      {item.thumbnail_key && (
+                        <Image
+                          alt={item.title}
+                          h="full"
+                          objectFit="contain"
+                          src={assetUrl(item.thumbnail_key)}
+                          w="full"
+                        />
+                      )}
+                    </Box>
+                    <VStack
+                      align="start"
+                      flex={1}
+                      gap={1}
+                      minW={0}
+                      px={1}
+                      w="full"
+                    >
+                      <Text
+                        _groupHover={{ color: "gray.600" }}
+                        fontWeight="medium"
+                        lineClamp={2}
+                        transitionProperty="colors"
                       >
-                        {item.thumbnail_key && (
-                          <Image
-                            alt={item.title}
-                            h="full"
-                            objectFit="contain"
-                            src={assetUrl(item.thumbnail_key)}
-                            w="full"
-                          />
-                        )}
-                      </Box>
-                      <VStack
-                        align="start"
-                        flex={1}
-                        gap={1}
-                        minW={0}
-                        px={1}
-                        w="full"
-                      >
-                        <Text
-                          _groupHover={{ color: "gray.600" }}
-                          fontWeight="medium"
-                          lineClamp={2}
-                          transitionProperty="colors"
-                        >
-                          {item.title}
-                        </Text>
-                        <Text color="gray.500" fontSize="xs">
-                          Liked {formatDateUtc(item.added_at)}
-                        </Text>
-                      </VStack>
+                        {item.title}
+                      </Text>
+                      <Text color="gray.500" fontSize="xs">
+                        Liked {formatDateUtc(item.added_at)}
+                      </Text>
                     </VStack>
-                  </Link>
-                ))}
-              </SimpleGrid>
-              <Pagination
-                currentPage={page}
-                onPageChange={handlePageChange}
-                totalPages={data.meta.pagination.totalPages}
-              />
-            </>
-          )}
-        </>
-      )}
+                  </VStack>
+                </Link>
+              ))}
+            </SimpleGrid>
+            <Pagination
+              currentPage={page}
+              onPageChange={handlePageChange}
+              totalPages={data.meta.pagination.totalPages}
+            />
+          </>
+        )}
+      </>
     </Box>
   );
 }

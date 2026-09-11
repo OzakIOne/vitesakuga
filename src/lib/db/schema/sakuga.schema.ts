@@ -318,6 +318,7 @@ export const postEdits = pgTable("post_edits", {
   createdAt: timestamp().defaultNow().notNull(),
   id: serial().primaryKey(),
   payload: json().$type<string>().notNull(),
+  previousPayload: json("previous_payload").$type<string>().notNull(),
   postId: integer()
     .references(() => posts.id, { onDelete: "cascade" })
     .notNull(),

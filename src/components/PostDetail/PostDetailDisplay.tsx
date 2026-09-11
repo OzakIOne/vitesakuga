@@ -309,7 +309,11 @@ export function PostDetailDisplay({
         />
       )}
 
-      <Comments currentUserId={currentUserId} postId={post.id} />
+      <Comments
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        postId={post.id}
+      />
     </VStack>
   );
 }

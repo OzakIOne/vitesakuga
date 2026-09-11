@@ -21,25 +21,29 @@ import { Combobox, TagsInput } from "./overlay";
 const CREATE_TAG_VALUE = "\u0000create-tag";
 
 type TagInputProps = {
+  inputId?: string;
   value: Tag[];
   onChange: (tags: Tag[]) => void;
   onBlur?: () => void;
 };
 
-export function TagInput({ value, onChange, onBlur }: TagInputProps) {
+export function TagInput({ inputId, value, onChange, onBlur }: TagInputProps) {
   return (
     <ClientOnly fallback={null}>
       <TagInputCombobox
         onChange={onChange}
         value={value}
+        {...(inputId ? { inputId } : {})}
         {...(onBlur ? { onBlur } : {})}
       />
     </ClientOnly>
   );
 }
 
-function TagInputCombobox({ value, onChange, onBlur }: TagInputProps) {
+function TagInputCombobox({ inputId, value, onChange, onBlur }: TagInputProps) {
   const uid = useId();
+  const controlId = inputId ? `${inputId}-control` : `control-${uid}`;
+  const resolvedInputId = inputId ?? `input-${uid}`;
   const [searchValue, setSearchValue] = useState("");
 
   const tagNames = useMemo(() => value.map((tag) => tag.name), [value]);
@@ -69,7 +73,7 @@ function TagInputCombobox({ value, onChange, onBlur }: TagInputProps) {
   const tagsInput = useTagsInput({
     allowDuplicates: false,
     blurBehavior: "clear",
-    ids: { control: `control-${uid}`, input: `input-${uid}` },
+    ids: { control: controlId, input: resolvedInputId },
     onValueChange: (details) => {
       onChange(details.value.map((name) => ({ name })));
     },
@@ -80,7 +84,7 @@ function TagInputCombobox({ value, onChange, onBlur }: TagInputProps) {
     allowCustomValue: true,
     closeOnSelect: true,
     collection,
-    ids: { control: `control-${uid}`, input: `input-${uid}` },
+    ids: { control: controlId, input: resolvedInputId },
     onInputValueChange: (details: ComboboxInputValueChangeDetails) => {
       setSearchValue(details.inputValue);
     },
@@ -106,7 +110,7 @@ function TagInputCombobox({ value, onChange, onBlur }: TagInputProps) {
       <TagsInput.RootProvider value={tagsInput}>
         <TagsInput.Control>
           <Combobox.Input asChild>
-            <TagsInput.Input onBlur={onBlur} placeholder="Add tags..." />
+            <TagsInput.Input onBlur={onBlur} placeholder="Add tags…" />
           </Combobox.Input>
         </TagsInput.Control>
         {tagNames.length > 0 && (

@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- the named virtualized scroll region must be keyboard focusable */
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   useCallback,
@@ -175,9 +176,13 @@ export function VirtualPostsGrid({
         </Stack>
       )}
 
-      <div
+      {/* Keyboard users need a focusable element to scroll the virtualized viewport. */}
+      <section
+        aria-label="Posts"
+        className="overscroll-contain focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
         ref={parentRef}
         style={{ height: SCROLL_VIEWPORT, overflowY: "auto" }}
+        tabIndex={0}
       >
         {isFetchingPreviousPage && (
           <Stack align="center" justify="center" py={2}>
@@ -226,7 +231,7 @@ export function VirtualPostsGrid({
             <Spinner size="sm" />
           </Stack>
         )}
-      </div>
+      </section>
     </Box>
   );
 }

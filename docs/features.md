@@ -1,6 +1,8 @@
 # Features — ViteSakuga
 
-Inventaire des fonctionnalités visibles de ViteSakuga (clone de Sakugabooru), vérifié contre le code au **2026-09-06**.
+Inventaire des fonctionnalités visibles de ViteSakuga (clone de Sakugabooru), vérifié contre le code au **2026-09-11**.
+
+Les pages publiques de posts et de playlists utilisent également les données chargées pour leurs titres et descriptions de partage. Les états vides du feed, playlists, news, wiki, séries, profils, modération, recherches sauvegardées, passkeys, commentaires et tags utilisent une primitive commune `src/components/EmptyState.tsx`.
 
 ## Sommaire
 
@@ -38,11 +40,11 @@ La page `/help` répond aux questions fréquentes (compte, upload, votes, sugges
 | **Page de tag**             | Posts d'un tag avec les filtres du feed                                                                                                                                                                                                | `src/routes/posts/tags/$tag.tsx`                                                                                                                                                  |
 | **Détail d'un post**        | Lecteur vidéo ou galerie d'images avec vignettes, navigation clavier et lightbox, métadonnées, post lié, tags, votes, commentaires, édition propriétaire, signalement, navigation épisode/chapitre et panneau « plus de cette série »  | `src/routes/posts/$postId.tsx`, `src/components/PostImageGallery.tsx`, `src/components/PostDetail/PostDetailDisplay.tsx`, `src/components/SeriesHub.tsx`                          |
 | **Hubs de séries**          | Archive accessible depuis le titre de série, groupée par saison/épisode ou volume/chapitre, avec films et métadonnées incomplètes ou contradictoires conservés dans une file de revue                                                  | `src/routes/series.$seriesTitle.tsx`, `src/components/SeriesHub.tsx`, `src/lib/posts/series-hubs.ts`                                                                              |
-| **Annuaire utilisateurs**   | Liste réactive des utilisateurs via TanStack DB                                                                                                                                                                                        | `src/routes/users.index.tsx`, `src/lib/db/collections.ts`                                                                                                                         |
+| **Annuaire utilisateurs**   | Liste server-rendered des utilisateurs publics, triée par nom                                                                                                                                                                          | `src/routes/users.index.tsx`, `src/lib/users/users.service.ts`                                                                                                                    |
 | **Profil utilisateur**      | Profil public du contributeur avec compteurs de contributions, badges de statut, points contextualisés, playlists curatées et posts ; les données de sécurité et l'historique de modération restent privés                             | `src/components/ContributorProfile.tsx`, `src/routes/users.$id.tsx`, `src/lib/users/users.service.ts`                                                                             |
 | **Playlists publiques**     | Liste paginée et détail des playlists publiques                                                                                                                                                                                        | `src/routes/playlists.index.tsx`, `src/routes/users.$id.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`                                                                |
 | **Playlists du compte**     | Playlists personnelles, playlist privée des posts aimés, ajout/retrait unitaire ou en masse, et réordonnancement                                                                                                                       | `src/routes/account_.playlists.*.tsx`, `src/lib/playlists/playlists.service.ts`                                                                                                   |
-| **Notifications**           | Inbox personnelle avec badge non lus et marquage global comme lu                                                                                                                                                                       | `src/routes/notifications.tsx`, `src/lib/notifications/notifications.hooks.ts`                                                                                                    |
+| **Notifications**           | Inbox personnelle avec badge non lus, dates relatives, marquage individuel ou global comme lu et retour d'erreur visible                                                                                                               | `src/routes/notifications.tsx`, `src/lib/notifications/notifications.hooks.ts`                                                                                                    |
 | **Raccourcis clavier**      | `?` (aide), `Mod+K` (recherche), séquences `G P` / `G U` / `G S`, navigation vidéo image par image ; le lien « Skip to content » rejoint le `main` de la page courante et lui donne le focus                                           | `src/components/GlobalShortcuts.tsx`, `src/components/KeyboardShortcutsDialog.tsx`, `src/components/SkipToContentLink.tsx`, `src/routes/__root.tsx`                               |
 | **Thème clair/sombre**      | Sélecteur de mode de couleur                                                                                                                                                                                                           | `src/routes/__root.tsx`, `src/components/ui/color-mode.tsx`                                                                                                                       |
 
@@ -76,6 +78,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB par fichier, jusqu'à 10 images par post). Les images forment une galerie réordonnable sur la page de détail, la première image servant de thumbnail.
 - Génération locale de vignettes vidéo, sélection de thumbnail et métadonnées via mediainfo.js. Les images enregistrent leurs dimensions et utilisent la première image comme thumbnail.
 - Métadonnées : titre, description, URL source, saison/épisode (vidéo) ou volume/chapitre (image), type de source, tags, post lié.
+- Les références de post lié doivent désigner un post existant différent du post en cours. Les identifiants de tags sont vérifiés côté serveur contre leur nom avant association.
 - Brouillon persistant côté client (`useUploadDraft`).
 - Vidéos : URL présignée S3 → PUT direct vers Cloudflare R2 (prod) ou RustFS (local), namespace `videos/_pending/{userId}/`, puis validation et promotion côté serveur.
 - Images et thumbnails transitent par le serveur et sont validées par extension, taille et type de contenu.
@@ -99,10 +102,10 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - **Playlists** : CRUD, visibilité publique/privée, ajout/retrait unitaire et en masse, réordonnancement souris/clavier — `src/lib/playlists/*`, `src/components/PlaylistPostsTable.tsx`.
 - **Recherches sauvegardées** : snapshots privés des paramètres de recherche pour les utilisateurs connectés ; application et suppression depuis le champ de recherche — `src/lib/saved-searches/*`, `src/components/SavedSearchDialogs.tsx`.
 - **Signalements** : signaler un post avec un motif — `src/components/ReportDialog.tsx`, `src/lib/reports/*`.
-- **Suggestions d'édition « wiki »** : depuis le détail d'un post, les uploaders peuvent proposer une modification avec aperçu diff par champ. Les uploaders éligibles, le propriétaire ou le staff peuvent l'approuver/rejeter selon les règles du workflow ; l'historique affiche les suggestions en attente, appliquées ou rejetées, et le suggester reçoit une notification de décision — `src/components/PostDetail/PostEditSuggestionDialog.tsx`, `src/components/PostDetail/PostEditHistory.tsx`, `src/lib/post-edits/*`.
+- **Suggestions d'édition « wiki »** : depuis le détail d'un post, les uploaders peuvent proposer une modification avec aperçu diff par champ. Les uploaders éligibles, le propriétaire ou le staff peuvent l'approuver/rejeter selon les règles du workflow ; l'historique affiche les suggestions en attente, appliquées ou rejetées, et le suggester reçoit une notification de décision — `src/components/PostDetail/PostEditSuggestionDialog.tsx`, `src/components/PostDetail/PostEditHistory.tsx`, `src/lib/post-edits/*`. L'historique persiste et affiche la valeur présente lors de la proposition à côté de la valeur suggérée.
 - **Remplacement de vidéo** : workflow serveur pour remplacer la vidéo en conservant l'identité du post ; révisions conservées 90 jours et restaurables par le staff. Aucun écran public dédié n'est actuellement exposé — `src/lib/videos/*`.
 - **Système de points** : registre append-only `points_ledger` avec caps par action ; utilisé notamment pour la promotion des uploaders — `src/lib/points/*`, `src/lib/promotions/*`.
-- **Notifications in-app** : promotion, décisions de suggestions d'édition (avec lien vers le post), mentions de commentaires et autres événements métier — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
+- **Notifications in-app** : promotion, décisions de suggestions d'édition (avec lien vers le post), mentions de commentaires et autres événements métier ; chaque notification peut être marquée comme lue sans affecter les autres — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
 
 ### Mentions @pseudo
 
@@ -130,13 +133,13 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 
 `/admin` est réservé aux rôles moderator+ (`src/routes/admin.tsx`). Onglets disponibles :
 
-| Onglet           | Rôle                                                                         | Fichiers                                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Promotions**   | File de novices éligibles ; approuver ou rejeter                             | `src/routes/admin.promotions.tsx`, `src/components/admin/PromotionQueuePanel.tsx`, `src/lib/promotions/*` |
-| **Reports**      | File des signalements récents                                                | `src/routes/admin.reports.tsx`, `src/components/admin/ReportsPanel.tsx`, `src/lib/moderation/*`           |
-| **Suggestions**  | Suggestions d'édition en attente, décision staff                             | `src/routes/admin.suggestions.tsx`, `src/components/admin/SuggestionsPanel.tsx`, `src/lib/post-edits/*`   |
-| **Storage (GC)** | Prévisualisation puis purge des révisions vidéo expirées et objets orphelins | `src/routes/admin.storage.tsx`, `src/components/admin/StorageGcPanel.tsx`, `src/lib/videos/*`             |
-| **Roles**        | Attribution manuelle des rôles                                               | `src/routes/admin.roles.tsx`, `src/components/admin/RolesPanel.tsx`, `src/lib/moderation/*`               |
+| Onglet           | Rôle                                                                                                      | Fichiers                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Promotions**   | File de novices éligibles ; approuver ou rejeter, avec confirmation du rejet                              | `src/routes/admin.promotions.tsx`, `src/components/admin/PromotionQueuePanel.tsx`, `src/lib/promotions/*` |
+| **Reports**      | File des signalements récents                                                                             | `src/routes/admin.reports.tsx`, `src/components/admin/ReportsPanel.tsx`, `src/lib/moderation/*`           |
+| **Suggestions**  | Suggestions d'édition en attente, décision staff et confirmation avant rejet                              | `src/routes/admin.suggestions.tsx`, `src/components/admin/SuggestionsPanel.tsx`, `src/lib/post-edits/*`   |
+| **Storage (GC)** | Prévisualisation puis purge confirmée des révisions expirées et objets orphelins, avec comptage explicite | `src/routes/admin.storage.tsx`, `src/components/admin/StorageGcPanel.tsx`, `src/lib/videos/*`             |
+| **Roles**        | Attribution manuelle des rôles                                                                            | `src/routes/admin.roles.tsx`, `src/components/admin/RolesPanel.tsx`, `src/lib/moderation/*`               |
 
 ## API (server functions)
 
@@ -156,10 +159,10 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 ## Tests
 
-État vérifié le **2026-09-07**.
+État vérifié le **2026-09-11**.
 
-- **Vitest** : `nub exec vitest run --maxWorkers=1` — **580/580 tests passés dans 55 fichiers**, dont 54 sous `src/` et `nitro-config.test.ts` à la racine. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
-- **Playwright** : `nub run test:ee` avec Postgres local + RustFS. L'inventaire actuel contient 14 fichiers `e2e/*.spec.ts` et 50 tests découverts ; leur exécution n'a pas été vérifiée dans cet audit.
+- **Vitest** : `nub exec vitest run` — **662/662 tests passés dans 67 fichiers** lors de la vérification du 2026-09-11. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
+- **Playwright** : `nub run test:ee` avec Postgres local + RustFS — le passage complet a atteint **55 tests réussis** avant trois divergences d'assertion de nom accessible ; les **7 tests auth/passkey ciblés** sont ensuite tous passés après alignement de ces assertions (58 scénarios uniques couverts au total) lors de la vérification du 2026-09-11. L'inventaire actuel contient 14 fichiers `e2e/*.spec.ts`.
 - **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts et raccourcis clavier.
 - **Couverture unitaire/service** : recherche et filtres numériques, pagination, posts, tags, utilisateurs, commentaires, mentions, playlists, votes, rapports, notifications, modération, suggestions, révisions vidéo/GC, points, rate limiting, stockage, auth et server-function boundary.
 - **Manques e2e principaux** : parcours feed/recherche → détail, pages accueil/tag/utilisateur/playlists publiques, inbox notifications, soumission de signalement, panneaux admin et upload d'image.

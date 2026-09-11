@@ -17,16 +17,14 @@ type PasswordVisibilityProps = {
 };
 
 export type PasswordInputProps = {
+  ref?: React.Ref<HTMLInputElement>;
   rootProps?: React.HTMLAttributes<HTMLDivElement>;
   /** Marks the input as invalid (sets `aria-invalid` and `data-invalid`). */
   invalid?: boolean;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "type"> &
   PasswordVisibilityProps;
 
-export const PasswordInput = React.forwardRef<
-  HTMLInputElement,
-  PasswordInputProps
->(function PasswordInput(props, ref) {
+export function PasswordInput({ ref, ...props }: PasswordInputProps) {
   const {
     rootProps,
     defaultVisible,
@@ -69,7 +67,7 @@ export const PasswordInput = React.forwardRef<
         />
         <ArkPasswordInput.VisibilityTrigger
           aria-label="Toggle password visibility"
-          className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-400/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-400/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           <ArkPasswordInput.Indicator fallback={visibilityIcon.on}>
             {visibilityIcon.off}
@@ -78,7 +76,7 @@ export const PasswordInput = React.forwardRef<
       </ArkPasswordInput.Control>
     </ArkPasswordInput.Root>
   );
-});
+}
 
 /**
  * Invisible account identifier for password-only forms (change password,
@@ -123,16 +121,17 @@ export function getPasswordStrength(password: string): PasswordStrengthResult {
 }
 
 type PasswordStrengthMeterProps = {
+  ref?: React.Ref<HTMLDivElement>;
   max?: number;
   value: number;
   /** Overrides the computed label (e.g. a specific tier name). */
   label?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
 
-export const PasswordStrengthMeter = React.forwardRef<
-  HTMLDivElement,
-  PasswordStrengthMeterProps
->(function PasswordStrengthMeter(props, ref) {
+export function PasswordStrengthMeter({
+  ref,
+  ...props
+}: PasswordStrengthMeterProps) {
   const { max = 4, value, label, ...rest } = props;
   const percent = (value / max) * 100;
   const { colorClass, label: defaultLabel } = getColorPalette(percent);
@@ -153,7 +152,7 @@ export const PasswordStrengthMeter = React.forwardRef<
         {Array.from({ length: max }).map((_, index) => (
           <div
             className={cn(
-              "h-1 flex-1 rounded-sm bg-gray-200",
+              "h-1 flex-1 rounded-sm bg-gray-200 dark:bg-gray-700",
               index < value ? colorClass : undefined,
             )}
             key={index}
@@ -163,7 +162,7 @@ export const PasswordStrengthMeter = React.forwardRef<
       {label && <div className="text-xs">{accessibleLabel}</div>}
     </div>
   );
-});
+}
 
 function getColorPalette(percent: number) {
   if (percent < 33) {

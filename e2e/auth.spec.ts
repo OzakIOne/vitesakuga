@@ -20,6 +20,66 @@ test.describe("Auth flow", () => {
     ).toBeVisible();
   });
 
+  test("social login button recovers after provider failure", async ({
+    page,
+  }) => {
+    let intercepted = false;
+    await page.route("**/api/auth/sign-in/social**", async (route) => {
+      intercepted = true;
+      await route.fulfill({
+        body: JSON.stringify({
+          error: { message: "Provider unavailable" },
+        }),
+        contentType: "application/json",
+        status: 500,
+      });
+    });
+
+    await page.goto("/login", { timeout: 30000, waitUntil: "load" });
+    await page.waitForLoadState("networkidle");
+
+    const githubButton = page.getByRole("button", {
+      name: "Login with GitHub",
+    });
+    await expect(githubButton).toBeEnabled();
+    await githubButton.click();
+    await expect.poll(() => intercepted).toBe(true);
+    await expect(page.getByRole("alert")).toContainText(
+      "Failed to sign in with github",
+    );
+    await expect(githubButton).toBeEnabled();
+  });
+
+  test("social sign-up shows provider failures without crashing", async ({
+    page,
+  }) => {
+    let intercepted = false;
+    await page.route("**/api/auth/sign-in/social**", async (route) => {
+      intercepted = true;
+      await route.fulfill({
+        body: JSON.stringify({
+          error: { message: "Provider unavailable" },
+        }),
+        contentType: "application/json",
+        status: 500,
+      });
+    });
+
+    await page.goto("/signup", { timeout: 30000, waitUntil: "load" });
+    await page.waitForLoadState("networkidle");
+
+    const githubButton = page.getByRole("button", {
+      name: "Sign up with GitHub",
+    });
+    await expect(githubButton).toBeEnabled();
+    await githubButton.click();
+    await expect.poll(() => intercepted).toBe(true);
+    await expect(page.getByRole("alert")).toContainText(
+      "Failed to sign in with github",
+    );
+    await expect(githubButton).toBeEnabled();
+  });
+
   test("sign out clears authenticated state", async ({ context, page }) => {
     await context.addCookies([
       {

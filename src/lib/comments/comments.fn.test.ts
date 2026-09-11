@@ -294,6 +294,16 @@ describe("CommentsService.delete_", () => {
     expect(error.message).toBe("You can only delete your own comments");
   });
 
+  it("allows moderators to delete another user's comment", async () => {
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "moderator-1", role: "moderator" }),
+    );
+
+    const result = await runEffect(CommentsService.delete_(commentId));
+
+    expect(result).toEqual({ success: true });
+  });
+
   it("fails with CommentNotFoundError when comment does not exist", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
@@ -366,6 +376,24 @@ describe("CommentsService.update", () => {
       .where("id", "=", commentId)
       .execute();
     expect(rows[0]?.content).toBe("Editable comment");
+  });
+
+  it("allows moderators to edit another user's comment", async () => {
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "moderator-1", role: "moderator" }),
+    );
+
+    const result = await runEffect(
+      CommentsService.update({ commentId, content: "Moderated edit" }),
+    );
+
+    expect(result).toEqual({ success: true });
+    const row = await db
+      .selectFrom("comments")
+      .select("content")
+      .where("id", "=", commentId)
+      .executeTakeFirstOrThrow();
+    expect(row.content).toBe("Moderated edit");
   });
 
   it("fails with CommentNotFoundError when the comment does not exist", async () => {

@@ -2,6 +2,13 @@ import * as React from "react";
 import { LuX } from "react-icons/lu";
 
 import {
+  PALETTE_GHOST,
+  PALETTE_OUTLINE,
+  PALETTE_SOLID,
+  PALETTE_SUBTLE,
+  type Palette,
+} from "./palette";
+import {
   classToken,
   cn,
   Slot,
@@ -10,47 +17,6 @@ import {
 } from "./ui-utils";
 
 type Variant = "solid" | "outline" | "ghost" | "subtle";
-type Palette = "blue" | "gray" | "red" | "green" | "orange";
-
-const SOLID_CLASSES = {
-  blue: "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-600/40",
-  gray: "bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:ring-neutral-900/40",
-  red: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600/40",
-  green:
-    "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-600/40",
-  orange:
-    "bg-orange-600 text-white hover:bg-orange-700 focus-visible:ring-orange-600/40",
-} satisfies Record<Palette, string>;
-
-const OUTLINE_CLASSES = {
-  blue: "border border-blue-600 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-600/40 dark:border-blue-500 dark:text-blue-300 dark:hover:bg-blue-950",
-  gray: "border border-gray-300 text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400/40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800",
-  red: "border border-red-600 text-red-700 hover:bg-red-50 focus-visible:ring-red-600/40 dark:border-red-500 dark:text-red-300 dark:hover:bg-red-950",
-  green:
-    "border border-green-600 text-green-700 hover:bg-green-50 focus-visible:ring-green-600/40 dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950",
-  orange:
-    "border border-orange-600 text-orange-700 hover:bg-orange-50 focus-visible:ring-orange-600/40 dark:border-orange-500 dark:text-orange-300 dark:hover:bg-orange-950",
-} satisfies Record<Palette, string>;
-
-const GHOST_CLASSES = {
-  blue: "text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-600/40 dark:text-blue-300 dark:hover:bg-blue-950",
-  gray: "text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400/40 dark:text-gray-300 dark:hover:bg-gray-800",
-  red: "text-red-700 hover:bg-red-50 focus-visible:ring-red-600/40 dark:text-red-300 dark:hover:bg-red-950",
-  green:
-    "text-green-700 hover:bg-green-50 focus-visible:ring-green-600/40 dark:text-green-300 dark:hover:bg-green-950",
-  orange:
-    "text-orange-700 hover:bg-orange-50 focus-visible:ring-orange-600/40 dark:text-orange-300 dark:hover:bg-orange-950",
-} satisfies Record<Palette, string>;
-
-const SUBTLE_CLASSES = {
-  blue: "bg-blue-100 text-blue-800 hover:bg-blue-200 focus-visible:ring-blue-600/40 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900",
-  gray: "bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-400/40 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700",
-  red: "bg-red-100 text-red-800 hover:bg-red-200 focus-visible:ring-red-600/40 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900",
-  green:
-    "bg-green-100 text-green-800 hover:bg-green-200 focus-visible:ring-green-600/40 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900",
-  orange:
-    "bg-orange-100 text-orange-800 hover:bg-orange-200 focus-visible:ring-orange-600/40 dark:bg-orange-950 dark:text-orange-300 dark:hover:bg-orange-900",
-} satisfies Record<Palette, string>;
 
 type Size = "xs" | "sm" | "md" | "lg";
 
@@ -97,10 +63,10 @@ function buttonClasses({
 }): string {
   const palette = colorPalette ?? colorScheme ?? "gray";
   const variantClasses = {
-    solid: SOLID_CLASSES[palette],
-    outline: OUTLINE_CLASSES[palette],
-    ghost: GHOST_CLASSES[palette],
-    subtle: SUBTLE_CLASSES[palette],
+    solid: PALETTE_SOLID[palette],
+    outline: PALETTE_OUTLINE[palette],
+    ghost: PALETTE_GHOST[palette],
+    subtle: PALETTE_SUBTLE[palette],
   }[variant];
   return cn(BASE, classToken(SIZES, size, "md"), variantClasses);
 }
@@ -130,6 +96,7 @@ export function Button({
   loadingText,
   asChild = false,
   disabled,
+  onClick,
   children,
   ...props
 }: ButtonProps) {
@@ -142,19 +109,30 @@ export function Button({
   const content = loading ? (
     <>
       <Spinner size={size} />
+      {!loadingText && <span className="sr-only">Loading: </span>}
       {loadingText ?? children}
     </>
   ) : (
     children
   );
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (isDisabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClick?.(event);
+  };
 
   if (asChild) {
     // SAFETY: useChakraProps strips Chakra style props into className/style; children is rendered by a Slot that accepts any React element.
     return (
       <Slot
+        aria-busy={loading || undefined}
         aria-disabled={isDisabled ? "true" : undefined}
         className={classes}
         data-loading={loading ? "" : undefined}
+        onClick={handleClick}
         style={style}
         {...rest}
       >
@@ -166,8 +144,11 @@ export function Button({
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <button
+      aria-busy={loading || undefined}
+      aria-disabled={loading || undefined}
       className={classes}
-      disabled={isDisabled}
+      disabled={disabled}
+      onClick={handleClick}
       style={style}
       type="button"
       {...(rest as React.ButtonHTMLAttributes<HTMLButtonElement>)}
@@ -184,6 +165,7 @@ export function IconButton({
   colorPalette,
   loading = false,
   disabled,
+  onClick,
   "aria-label": ariaLabel,
   children,
   ...props
@@ -192,14 +174,25 @@ export function IconButton({
   // SAFETY: colorScheme/colorPalette are both the Palette union and default to "gray", keeping the key within the palette class maps.
   const palette = (colorScheme ?? colorPalette ?? "gray") as Palette;
   const variantClasses = {
-    solid: SOLID_CLASSES[palette],
-    outline: OUTLINE_CLASSES[palette],
-    ghost: GHOST_CLASSES[palette],
-    subtle: SUBTLE_CLASSES[palette],
+    solid: PALETTE_SOLID[palette],
+    outline: PALETTE_OUTLINE[palette],
+    ghost: PALETTE_GHOST[palette],
+    subtle: PALETTE_SUBTLE[palette],
   }[variant];
+  const isDisabled = disabled || loading;
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (isDisabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClick?.(event);
+  };
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <button
+      aria-busy={loading || undefined}
+      aria-disabled={loading || undefined}
       aria-label={ariaLabel}
       className={cn(
         BASE,
@@ -207,7 +200,8 @@ export function IconButton({
         variantClasses,
         className,
       )}
-      disabled={disabled || loading}
+      disabled={disabled}
+      onClick={handleClick}
       style={style}
       type="button"
       {...(rest as React.ButtonHTMLAttributes<HTMLButtonElement>)}

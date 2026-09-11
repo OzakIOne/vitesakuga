@@ -1,29 +1,31 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Button } from "src/components/ui/button";
+import { Box, Stack } from "src/components/ui/layout";
+import { Heading, Text } from "src/components/ui/typography";
 
 export function NotFound({ children }: { children?: ReactNode }) {
   return (
-    <div className="space-y-2 p-2">
-      <div className="text-gray-600 dark:text-gray-400">
-        {children ?? <p>The page you are looking for does not exist.</p>}
-      </div>
-      <p className="flex flex-wrap items-center gap-2">
+    <Box className="mx-auto max-w-lg" p={8} textAlign="center">
+      <Heading as="h1" mb={3} size="2xl">
+        Page not found
+      </Heading>
+      <Text color="fg.muted" mb={6}>
+        {children ?? "The page you are looking for does not exist."}
+      </Text>
+      <Stack direction="row" flexWrap="wrap" gap={2} justify="center">
         <Button
-          className="rounded bg-emerald-500 px-2 py-1 text-sm font-black text-white uppercase"
           onClick={() => {
             window.history.back();
           }}
+          variant="outline"
         >
           Go back
         </Button>
-        <Link
-          className="rounded bg-cyan-600 px-2 py-1 text-sm font-black text-white uppercase"
-          to="/"
-        >
-          Start Over
-        </Link>
-      </p>
-    </div>
+        <Button asChild colorPalette="blue">
+          <Link to="/">Go home</Link>
+        </Button>
+      </Stack>
+    </Box>
   );
 }

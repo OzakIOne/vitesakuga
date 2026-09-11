@@ -1,23 +1,21 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { EmptyState } from "src/components/EmptyState";
+import { CardGridSkeleton } from "src/components/LoadingSkeletons";
 import { Button } from "src/components/ui/button";
-import { Badge, Spinner } from "src/components/ui/feedback";
-import {
-  Box,
-  HStack,
-  SimpleGrid,
-  Stack,
-  VStack,
-} from "src/components/ui/layout";
+import { Badge } from "src/components/ui/feedback";
+import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
 import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/account_/playlists/")({
   component: ManagePlaylistsContent,
+  pendingComponent: () => <CardGridSkeleton count={8} />,
   ssr: "data-only",
   beforeLoad: ({ context, location }) => {
     if (!context.user) {
@@ -28,6 +26,13 @@ export const Route = createFileRoute("/account_/playlists/")({
     }
     return { user: context.user };
   },
+  head: () => ({
+    meta: seo({
+      description: "Manage your ViteSakuga playlists.",
+      noIndex: true,
+      title: "My playlists · ViteSakuga",
+    }),
+  }),
 });
 
 // Virtual system playlist (YouTube-style): derived from the user's like
@@ -67,9 +72,12 @@ function LikedPostsCard() {
               justifyContent="center"
               w="full"
             >
-              <Text color="gray.300" fontSize="lg">
-                No liked posts yet
-              </Text>
+              <EmptyState
+                description="Like posts to build your private collection."
+                size="compact"
+                title="No liked posts yet"
+                titleAs="p"
+              />
             </Box>
           )}
         </Box>
@@ -100,7 +108,7 @@ function ManagePlaylistsContent() {
   const { user } = Route.useRouteContext();
   const updatePlaylist = useUpdatePlaylist(user.id);
 
-  const { data: playlists, isLoading } = useSuspenseQuery(
+  const { data: playlists } = useSuspenseQuery(
     playlistsQueryUserPlaylists(user.id),
   );
 
@@ -115,117 +123,112 @@ function ManagePlaylistsContent() {
         </Text>
       </VStack>
 
-      {isLoading && (
-        <Stack align="center" justify="center" minH="200px">
-          <Spinner size="lg" />
-        </Stack>
-      )}
-
-      {!isLoading && (
-        <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4}>
-          <LikedPostsCard />
-          {playlists.map((playlist) => (
-            <Box
-              border="1px solid"
-              borderColor="gray.200"
-              borderRadius="lg"
-              key={playlist.id}
-              overflow="hidden"
+      <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4}>
+        <LikedPostsCard />
+        {playlists.map((playlist) => (
+          <Box
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="lg"
+            key={playlist.id}
+            overflow="hidden"
+          >
+            <Link
+              params={{ playlistId: String(playlist.id) }}
+              to="/account/playlists/$playlistId"
             >
+              <Box
+                aspectRatio="16 / 9"
+                bg="gray.800"
+                cursor="pointer"
+                overflow="hidden"
+                position="relative"
+                w="full"
+              >
+                {playlist.thumbnail_key ? (
+                  <Image
+                    alt={playlist.title}
+                    h="full"
+                    objectFit="contain"
+                    src={assetUrl(playlist.thumbnail_key)}
+                    w="full"
+                  />
+                ) : (
+                  <Box
+                    alignItems="center"
+                    display="flex"
+                    h="full"
+                    justifyContent="center"
+                    w="full"
+                  >
+                    <EmptyState
+                      description="Add posts to this playlist to see them here."
+                      size="compact"
+                      title="No posts"
+                      titleAs="p"
+                    />
+                  </Box>
+                )}
+              </Box>
+            </Link>
+
+            <VStack align="start" gap={2} p={3}>
               <Link
                 params={{ playlistId: String(playlist.id) }}
                 to="/account/playlists/$playlistId"
               >
-                <Box
-                  aspectRatio="16 / 9"
-                  bg="gray.800"
-                  cursor="pointer"
-                  overflow="hidden"
-                  position="relative"
-                  w="full"
-                >
-                  {playlist.thumbnail_key ? (
-                    <Image
-                      alt={playlist.title}
-                      h="full"
-                      objectFit="contain"
-                      src={assetUrl(playlist.thumbnail_key)}
-                      w="full"
-                    />
-                  ) : (
-                    <Box
-                      alignItems="center"
-                      display="flex"
-                      h="full"
-                      justifyContent="center"
-                      w="full"
-                    >
-                      <Text color="gray.300" fontSize="lg">
-                        No posts
-                      </Text>
-                    </Box>
-                  )}
-                </Box>
+                <Text fontWeight="medium" lineClamp={2}>
+                  {playlist.title}
+                </Text>
               </Link>
 
-              <VStack align="start" gap={2} p={3}>
-                <Link
-                  params={{ playlistId: String(playlist.id) }}
-                  to="/account/playlists/$playlistId"
+              <HStack gap={2}>
+                <Text color="gray.500" fontSize="xs">
+                  {playlist.post_count} post
+                  {playlist.post_count !== 1 ? "s" : ""}
+                </Text>
+                <Badge
+                  borderRadius="full"
+                  colorPalette={playlist.is_public ? "green" : "gray"}
+                  px={2}
+                  size="xs"
                 >
-                  <Text fontWeight="medium" lineClamp={2}>
-                    {playlist.title}
-                  </Text>
-                </Link>
+                  {playlist.is_public ? "Public" : "Private"}
+                </Badge>
+              </HStack>
 
-                <HStack gap={2}>
-                  <Text color="gray.500" fontSize="xs">
-                    {playlist.post_count} post
-                    {playlist.post_count !== 1 ? "s" : ""}
-                  </Text>
-                  <Badge
-                    borderRadius="full"
-                    colorPalette={playlist.is_public ? "green" : "gray"}
-                    px={2}
-                    size="xs"
+              <HStack gap={2}>
+                <Button
+                  aria-pressed={playlist.is_public}
+                  colorPalette={playlist.is_public ? "gray" : "green"}
+                  loading={
+                    updatePlaylist.isPending &&
+                    updatePlaylist.variables?.playlistId === playlist.id
+                  }
+                  onClick={() =>
+                    updatePlaylist.mutate({
+                      isPublic: !playlist.is_public,
+                      playlistId: playlist.id,
+                    })
+                  }
+                  size="xs"
+                  variant={playlist.is_public ? "outline" : "solid"}
+                >
+                  {playlist.is_public ? "Make private" : "Make public"}
+                </Button>
+                <Button asChild size="xs" variant="ghost">
+                  <Link
+                    params={{ playlistId: String(playlist.id) }}
+                    to="/account/playlists/$playlistId"
                   >
-                    {playlist.is_public ? "Public" : "Private"}
-                  </Badge>
-                </HStack>
-
-                <HStack gap={2}>
-                  <Button
-                    aria-pressed={playlist.is_public}
-                    colorPalette={playlist.is_public ? "gray" : "green"}
-                    loading={
-                      updatePlaylist.isPending &&
-                      updatePlaylist.variables?.playlistId === playlist.id
-                    }
-                    onClick={() =>
-                      updatePlaylist.mutate({
-                        isPublic: !playlist.is_public,
-                        playlistId: playlist.id,
-                      })
-                    }
-                    size="xs"
-                    variant={playlist.is_public ? "outline" : "solid"}
-                  >
-                    {playlist.is_public ? "Make private" : "Make public"}
-                  </Button>
-                  <Button asChild size="xs" variant="ghost">
-                    <Link
-                      params={{ playlistId: String(playlist.id) }}
-                      to="/account/playlists/$playlistId"
-                    >
-                      Manage
-                    </Link>
-                  </Button>
-                </HStack>
-              </VStack>
-            </Box>
-          ))}
-        </SimpleGrid>
-      )}
+                    Manage
+                  </Link>
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+        ))}
+      </SimpleGrid>
     </Box>
   );
 }

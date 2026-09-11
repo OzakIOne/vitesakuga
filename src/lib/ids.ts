@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 
 /**
  * Branded entity identifiers for the two entities whose IDs most often cross
@@ -9,10 +9,23 @@ import { Schema } from "effect";
  * what makes swapped-ID arguments a compile error instead of silent damage.
  */
 
-export const PostId = Schema.Number.pipe(Schema.brand("@App/PostId"));
+export const PositiveInteger = Schema.Number.pipe(
+  Schema.check(Schema.isInt()),
+  Schema.check(Schema.isGreaterThanOrEqualTo(1)),
+);
+
+export const PositiveIntegerFromString = Schema.String.pipe(
+  Schema.check(Schema.isPattern(/^[1-9]\d*$/)),
+  Schema.decodeTo(PositiveInteger, {
+    decode: SchemaGetter.transform((value) => Number(value)),
+    encode: SchemaGetter.transform((value) => String(value)),
+  }),
+);
+
+export const PostId = PositiveInteger.pipe(Schema.brand("@App/PostId"));
 export type PostId = Schema.Schema.Type<typeof PostId>;
 
-export const PlaylistId = Schema.Number.pipe(Schema.brand("@App/PlaylistId"));
+export const PlaylistId = PositiveInteger.pipe(Schema.brand("@App/PlaylistId"));
 export type PlaylistId = Schema.Schema.Type<typeof PlaylistId>;
 
 /**

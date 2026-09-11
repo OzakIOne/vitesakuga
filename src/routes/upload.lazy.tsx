@@ -27,7 +27,7 @@ import { NumberInput } from "src/components/ui/number-input";
 import { Combobox, FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { Video, type VideoRef } from "src/components/Video";
 import { VideoMetadataDialog } from "src/components/VideoMetadataDialog";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
@@ -65,8 +65,8 @@ type MetaNumberFieldProps = {
 // value back to undefined so the key is stripped before schema validation.
 function MetaNumberField({ field, label, inputLabel }: MetaNumberFieldProps) {
   return (
-    <Field.Root>
-      <Field.Label>{label}</Field.Label>
+    <Field.Root id={field.name} invalid={!field.state.meta.isValid}>
+      <Field.Label htmlFor={field.name}>{label}</Field.Label>
       <NumberInput.Root
         allowMouseWheel
         min={1}
@@ -81,7 +81,7 @@ function MetaNumberField({ field, label, inputLabel }: MetaNumberFieldProps) {
         value={field.state.value?.toString() ?? ""}
       >
         <NumberInput.Control>
-          <NumberInput.Input aria-label={inputLabel} />
+          <NumberInput.Input id={field.name} name={field.name} />
           <NumberInput.DecrementTrigger aria-label={`Decrease ${inputLabel}`} />
           <NumberInput.IncrementTrigger aria-label={`Increase ${inputLabel}`} />
         </NumberInput.Control>
@@ -343,6 +343,9 @@ function RouteComponent() {
 
   return (
     <Box maxW="xl" mx="auto" px={4} py={8}>
+      <Heading as="h1" mb={6} size="2xl">
+        Upload Post
+      </Heading>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -403,8 +406,8 @@ function RouteComponent() {
         <Box mb={6}>
           <form.form.Field name="relatedPostId">
             {(field) => (
-              <Field.Root>
-                <Field.Label>Related Post</Field.Label>
+              <Field.Root id={field.name} invalid={!field.state.meta.isValid}>
+                <Field.Label htmlFor="related-post">Related Post</Field.Label>
                 <Field.HelperText>
                   Search by title or enter a post ID
                 </Field.HelperText>
@@ -419,9 +422,9 @@ function RouteComponent() {
                 >
                   <Combobox.Control>
                     <Combobox.Input
+                      id="related-post"
                       onBlur={field.handleBlur}
                       placeholder="Search by title or enter post ID..."
-                      value={relatedPostSearch}
                     />
                     <Combobox.IndicatorGroup>
                       {isFetching && <Spinner size="sm" />}
@@ -565,9 +568,10 @@ function RouteComponent() {
         <Box mb={6}>
           <form.form.Field name="tags">
             {(field) => (
-              <Field.Root>
-                <Field.Label>Tags</Field.Label>
+              <Field.Root id={field.name} invalid={!field.state.meta.isValid}>
+                <Field.Label htmlFor="post-tags">Tags</Field.Label>
                 <TagInput
+                  inputId="post-tags"
                   onChange={(newTags) => {
                     field.handleChange(newTags);
                   }}
@@ -579,11 +583,14 @@ function RouteComponent() {
         </Box>
 
         <Box mb={6}>
-          <Field.Root>
-            <Field.Label>Post type</Field.Label>
+          <fieldset className="m-0 border-0 p-0">
+            <Text as="legend" fontSize="sm" fontWeight="medium">
+              Post type
+            </Text>
             <HStack gap={2}>
               <Button
                 colorPalette="blue"
+                aria-pressed={mediaKind === "video"}
                 onClick={() => {
                   setMediaKind("video");
                 }}
@@ -594,6 +601,7 @@ function RouteComponent() {
               </Button>
               <Button
                 colorPalette="blue"
+                aria-pressed={mediaKind === "image"}
                 onClick={() => {
                   setMediaKind("image");
                 }}
@@ -603,7 +611,7 @@ function RouteComponent() {
                 Image
               </Button>
             </HStack>
-          </Field.Root>
+          </fieldset>
         </Box>
 
         {mediaKind === "video" ? (
@@ -612,7 +620,7 @@ function RouteComponent() {
               {(field) => (
                 <>
                   <Field.Root required>
-                    <Field.Label>
+                    <Field.Label htmlFor="video-upload">
                       Video <Field.RequiredIndicator />
                     </Field.Label>
                     <FileUpload.Root
@@ -624,7 +632,7 @@ function RouteComponent() {
                         await handleFileChange(file);
                       }}
                     >
-                      <FileUpload.HiddenInput />
+                      <FileUpload.HiddenInput id="video-upload" />
                       {!video.videoFile && (
                         <>
                           <FileUpload.Dropzone minHeight="32">
@@ -705,8 +713,8 @@ function RouteComponent() {
                         </Box>
                       </>
                     )}
+                    <FieldInfo field={field} />
                   </Field.Root>
-                  <FieldInfo field={field} />
                 </>
               )}
             </form.form.Field>
@@ -716,7 +724,7 @@ function RouteComponent() {
             <form.form.Field name="images">
               {(field) => (
                 <Field.Root required>
-                  <Field.Label>
+                  <Field.Label htmlFor="image-upload">
                     Images <Field.RequiredIndicator />
                   </Field.Label>
                   <Field.HelperText>
@@ -762,7 +770,7 @@ function RouteComponent() {
                         : null
                     }
                   >
-                    <FileUpload.HiddenInput />
+                    <FileUpload.HiddenInput id="image-upload" />
                     {imageFiles.length < MAX_IMAGES_PER_POST && (
                       <FileUpload.Dropzone minHeight="32">
                         <LuImage className="h-5 w-5 text-neutral-400" />

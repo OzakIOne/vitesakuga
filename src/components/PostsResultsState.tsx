@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EmptyState } from "src/components/EmptyState";
 import { Button } from "src/components/ui/button";
 import { Badge, Spinner } from "src/components/ui/feedback";
 import { Box, Stack, VStack, Wrap } from "src/components/ui/layout";
@@ -109,13 +110,11 @@ export function PostsResultsState({
           activeFilters={activeFilters}
           resultCount={resultCount}
         />
-        <StatePanel>
-          <Heading size="md">No posts found</Heading>
-          <Text color="fg.muted">
-            Try changing your search or clearing the active filters.
-          </Text>
-          <Button onClick={onClearFilters}>Clear filters</Button>
-        </StatePanel>
+        <EmptyState
+          action={<Button onClick={onClearFilters}>Clear filters</Button>}
+          description="Try changing your search or clearing the active filters."
+          title="No posts found"
+        />
       </VStack>
     );
   }

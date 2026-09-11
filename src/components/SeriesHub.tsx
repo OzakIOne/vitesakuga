@@ -7,6 +7,7 @@ import {
   type SeriesNavigation,
 } from "src/lib/posts/series-hubs";
 
+import { EmptyState } from "./EmptyState";
 import { PostCard } from "./PostCard";
 import { Badge } from "./ui/feedback";
 import { Box, Grid, HStack, Stack, VStack } from "./ui/layout";
@@ -146,9 +147,10 @@ export function SeriesHub({ data }: SeriesHubProps) {
       )}
 
       {data.posts.length === 0 && (
-        <Box border="1px" borderRadius="md" p={6}>
-          <Text>No posts have been filed under this series yet.</Text>
-        </Box>
+        <EmptyState
+          description="No posts have been filed under this series yet."
+          title="No posts in this series"
+        />
       )}
     </VStack>
   );
@@ -211,7 +213,7 @@ export function SeriesNavigationPanel({
           {navigation.previous ? (
             <Link
               className="text-blue-600 hover:underline"
-              params={{ postId: navigation.previous.id }}
+              params={{ postId: String(navigation.previous.id) }}
               to="/posts/$postId"
             >
               ← {formatSeriesPosition(navigation.previous) ?? "Previous post"}
@@ -224,7 +226,7 @@ export function SeriesNavigationPanel({
           {navigation.next ? (
             <Link
               className="text-blue-600 hover:underline"
-              params={{ postId: navigation.next.id }}
+              params={{ postId: String(navigation.next.id) }}
               to="/posts/$postId"
             >
               {formatSeriesPosition(navigation.next) ?? "Next post"} →

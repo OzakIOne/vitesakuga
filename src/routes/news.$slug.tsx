@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import Markdown from "react-markdown";
+import { EditorialShell } from "src/components/EditorialShell";
 import { formatNewsDate, newsPosts } from "src/lib/news/news";
 import { seo } from "src/utils/seo";
 
@@ -40,30 +41,20 @@ function NewsNotFound() {
 function NewsArticle() {
   const post = Route.useLoaderData();
   return (
-    <article className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
+    <EditorialShell
+      description={post.summary}
+      eyebrow={`ViteSakuga update · ${formatNewsDate(post.date)}`}
+      title={post.title}
+    >
       <Link
         className="text-sm text-blue-600 hover:underline dark:text-blue-400"
         to="/news"
       >
         <span aria-hidden="true">← </span>All news
       </Link>
-      <header className="mt-8 mb-10 border-b border-gray-200 pb-8 dark:border-gray-800">
-        <time
-          dateTime={post.date}
-          className="text-sm text-gray-600 dark:text-gray-400"
-        >
-          {formatNewsDate(post.date)}
-        </time>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-          {post.title}
-        </h1>
-        <p className="mt-4 text-lg leading-8 text-gray-600 dark:text-gray-400">
-          {post.summary}
-        </p>
-      </header>
       <div className="markdown-prose">
         <Markdown skipHtml>{post.body}</Markdown>
       </div>
-    </article>
+    </EditorialShell>
   );
 }

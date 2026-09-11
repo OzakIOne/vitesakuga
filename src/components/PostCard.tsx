@@ -121,92 +121,75 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
 function PostCardComponent({ post, searchParams }: PostListProps) {
   const episodeInfo = formatEpisodeInfo(post);
   return (
-    <Box h="full">
-      <VStack cursor="pointer" gap={2} h="full">
-        <Link
-          className="group"
-          params={{ postId: post.id }}
-          to="/posts/$postId"
-          {...(searchParams ? { search: searchParams } : {})}
+    <Box className="relative" h="full">
+      <Link
+        aria-label={post.title}
+        className="group flex h-full flex-col gap-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
+        params={{ postId: String(post.id) }}
+        to="/posts/$postId"
+        {...(searchParams ? { search: searchParams } : {})}
+      >
+        <Box
+          _groupHover={{
+            filter: "brightness(0.75)",
+          }}
+          aspectRatio="16 / 9"
+          borderRadius="lg"
+          className="bg-gray-100 dark:bg-gray-900"
+          overflow="hidden"
+          transitionDuration="200ms"
+          transitionProperty="filter"
+          w="full"
         >
-          <Box
-            _groupHover={{
-              filter: "brightness(0.75)",
-            }}
-            aspectRatio="16 / 9"
-            bg="gray.900"
-            borderRadius="lg"
-            overflow="hidden"
-            transitionDuration="200ms"
-            transitionProperty="filter"
+          <Image
+            alt=""
+            h="full"
+            objectFit="contain"
+            src={assetUrl(post.thumbnailKey)}
             w="full"
-          >
-            <Image
-              alt={post.title}
-              h="full"
-              objectFit="contain"
-              src={assetUrl(post.thumbnailKey)}
-              w="full"
-            />
-          </Box>
-        </Link>
+          />
+        </Box>
 
-        {/* Content Container */}
         <VStack align="start" gap={1} px={1} w="full">
-          <HStack alignItems="start" gap={1} w="full">
-            <Link
-              className="group min-w-0 flex-1"
-              params={{ postId: post.id }}
-              to="/posts/$postId"
-              {...(searchParams ? { search: searchParams } : {})}
-            >
-              <Heading
-                _groupHover={{
-                  color: "gray.600",
-                }}
-                as="h3"
-                lineClamp={2}
-                size="sm"
-                transitionProperty="colors"
-              >
-                {post.title}
-              </Heading>
-            </Link>
-            <PostCardMenu post={post} />
-          </HStack>
-          {/* Info Container */}
-          <Link
-            className="group w-full"
-            params={{ postId: post.id }}
-            to="/posts/$postId"
-            {...(searchParams ? { search: searchParams } : {})}
+          <Heading
+            _groupHover={{
+              color: "gray.600",
+            }}
+            as="h3"
+            lineClamp={2}
+            size="sm"
+            transitionProperty="colors"
           >
-            <VStack align="start" gap={1} minW={0}>
-              <Text color="gray.600" fontSize="xs" lineClamp={1}>
-                {post.description}
+            {post.title}
+          </Heading>
+          <VStack align="start" gap={1} minW={0}>
+            <Text color="gray.600" fontSize="xs" lineClamp={1}>
+              {post.description}
+            </Text>
+            {episodeInfo && (
+              <Text color="blue.500" fontSize="xs" lineClamp={1}>
+                {episodeInfo}
               </Text>
-              {episodeInfo && (
-                <Text color="blue.500" fontSize="xs" lineClamp={1}>
-                  {episodeInfo}
-                </Text>
-              )}
-              <Text color="gray.500" fontSize="xs">
-                {formatDateUtc(post.createdAt)}
+            )}
+            <Text color="gray.500" fontSize="xs">
+              {formatDateUtc(post.createdAt)}
+            </Text>
+            <HStack gap={3}>
+              <Text className="tabular-nums" color="gray.500" fontSize="xs">
+                <LuThumbsUp aria-hidden className="mr-1 inline" />
+                {post.likes}
               </Text>
-              <HStack gap={3}>
-                <Text className="tabular-nums" color="gray.500" fontSize="xs">
-                  <LuThumbsUp aria-hidden className="mr-1 inline" />
-                  {post.likes}
-                </Text>
-                <Text className="tabular-nums" color="gray.500" fontSize="xs">
-                  <LuThumbsDown aria-hidden className="mr-1 inline" />
-                  {post.dislikes}
-                </Text>
-              </HStack>
-            </VStack>
-          </Link>
+              <Text className="tabular-nums" color="gray.500" fontSize="xs">
+                <LuThumbsDown aria-hidden className="mr-1 inline" />
+                {post.dislikes}
+              </Text>
+            </HStack>
+          </VStack>
         </VStack>
-      </VStack>
+      </Link>
+      <div className="absolute top-2 right-2">
+        <PostCardMenu post={post} />
+      </div>
     </Box>
   );
 }

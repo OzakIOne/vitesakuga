@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Suspense, useState } from "react";
 import { LuPencil, LuTrash2 } from "react-icons/lu";
+import { EmptyState } from "src/components/EmptyState";
 import { CommentContent } from "src/components/mentions/CommentContent";
 import { MentionTextarea } from "src/components/mentions/MentionTextarea";
 import { Button, CloseButton, IconButton } from "src/components/ui/button";
@@ -11,7 +12,8 @@ import { Textarea } from "src/components/ui/field";
 import { Box, HStack, Stack } from "src/components/ui/layout";
 import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
+import { isStaffRole, roleOf } from "src/lib/auth/roles";
 import {
   useAddComment,
   useDeleteComment,
@@ -26,11 +28,16 @@ import { formatDateUtc } from "src/utils/date-format";
 type CommentsProps = {
   postId: number;
   currentUserId?: string | undefined;
+  currentUserRole?: string | undefined;
 };
 
 type CommentRow = Awaited<ReturnType<typeof fetchComments>>[number];
 
-function CommentsContent({ postId, currentUserId }: CommentsProps) {
+function CommentsContent({
+  postId,
+  currentUserId,
+  currentUserRole,
+}: CommentsProps) {
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
     null,
   );
@@ -50,9 +57,9 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
 
   return (
     <Box borderRadius="md" padding="4">
-      <Text fontSize="xl" fontWeight="bold" mb={4}>
+      <Heading as="h2" mb={4} size="lg">
         Comments
-      </Text>
+      </Heading>
 
       {currentUserId ? (
         <ClientOnly fallback={null}>
@@ -67,16 +74,25 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
       )}
 
       <Box>
-        {comments?.map((comment) => (
-          <CommentItem
-            currentUserId={currentUserId}
-            key={comment.id}
-            comment={comment}
-            onDelete={() => {
-              setCommentIdToDelete(comment.id);
-            }}
+        {comments.length === 0 ? (
+          <EmptyState
+            description="Start the conversation on this post."
+            title="No comments yet"
+            titleAs="h3"
           />
-        ))}
+        ) : (
+          comments.map((comment) => (
+            <CommentItem
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+              key={comment.id}
+              comment={comment}
+              onDelete={() => {
+                setCommentIdToDelete(comment.id);
+              }}
+            />
+          ))
+        )}
       </Box>
 
       <Dialog.Root
@@ -94,10 +110,10 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
                 <Dialog.Title>Delete Comment?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <p>
+                <Dialog.Description>
                   Are you sure you want to delete this comment? This action
                   cannot be undone.
-                </p>
+                </Dialog.Description>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.ActionTrigger asChild>
@@ -125,10 +141,12 @@ function CommentsContent({ postId, currentUserId }: CommentsProps) {
 function CommentItem({
   comment,
   currentUserId,
+  currentUserRole,
   onDelete,
 }: {
   comment: CommentRow;
   currentUserId: CommentsProps["currentUserId"];
+  currentUserRole: CommentsProps["currentUserRole"];
   onDelete: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -143,6 +161,9 @@ function CommentItem({
 
   const updateCommentMutation = useUpdateComment(comment.postId);
   const isOwn = currentUserId === comment.userId;
+  const canModerate = isStaffRole(
+    roleOf({ id: currentUserId, role: currentUserRole }),
+  );
 
   const handleSave = () => {
     const trimmed = editContent.trim();
@@ -192,7 +213,7 @@ function CommentItem({
               {formatDateUtc(comment.createdAt)}
             </Text>
           </HStack>
-          {isOwn && (
+          {(isOwn || canModerate) && (
             <HStack gap={1}>
               <IconButton
                 aria-label="Edit comment"
@@ -284,7 +305,7 @@ function CommentComposer({
       <MentionTextarea
         label="Write a comment"
         onChange={setDraft}
-        placeholder="Write a comment... use @ to mention someone"
+        placeholder="Write a comment… Use @ to mention someone"
         value={comment}
       />
       <Button
@@ -292,23 +313,31 @@ function CommentComposer({
         disabled={addCommentMutation.isPending || !comment.trim()}
         onClick={handleSubmitComment}
       >
-        {addCommentMutation.isPending ? "Adding..." : "Add Comment"}
+        {addCommentMutation.isPending ? "Adding…" : "Add Comment"}
       </Button>
     </Box>
   );
 }
 
-export function Comments({ postId, currentUserId }: CommentsProps) {
+export function Comments({
+  postId,
+  currentUserId,
+  currentUserRole,
+}: CommentsProps) {
   return (
     <Suspense
       fallback={
         <Stack gap={4}>
           <Spinner size="sm" />
-          <Text>Loading comments...</Text>
+          <Text>Loading comments…</Text>
         </Stack>
       }
     >
-      <CommentsContent currentUserId={currentUserId} postId={postId} />
+      <CommentsContent
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        postId={postId}
+      />
     </Suspense>
   );
 }

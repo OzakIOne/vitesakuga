@@ -18,11 +18,11 @@ export function User({
         <Card.Body>
           <HStack>
             <Avatar.Root>
-              {image && <Avatar.Image src={image} />}
+              {image && <Avatar.Image alt={name} src={image} />}
               <Avatar.Fallback name={name} />
             </Avatar.Root>
             <Stack>
-              <Text fontWeight="semibold" textStyle="sm">
+              <Text fontSize="sm" fontWeight="semibold">
                 {name}
               </Text>
             </Stack>

@@ -24,37 +24,39 @@ export function FormTextWrapper({
   inputProps,
 }: FormTextareaFieldProps) {
   return (
-    <>
-      <Field.Root required={isRequired}>
-        <Field.Label>
-          {label} <Field.RequiredIndicator />
-        </Field.Label>
-        {asTextarea ? (
-          <Textarea
-            id={field.name}
-            name={field.name}
-            onBlur={field.handleBlur}
-            onChange={(e) => {
-              field.handleChange(e.target.value);
-            }}
-            value={field.state.value}
-            {...inputProps}
-          />
-        ) : (
-          <Input
-            id={field.name}
-            name={field.name}
-            onBlur={field.handleBlur}
-            onChange={(e) => {
-              field.handleChange(e.target.value);
-            }}
-            value={field.state.value}
-            {...inputProps}
-          />
-        )}
-        {helper && <Field.HelperText>{helper}</Field.HelperText>}
-      </Field.Root>
+    <Field.Root
+      id={field.name}
+      invalid={!field.state.meta.isValid}
+      required={isRequired}
+    >
+      <Field.Label>
+        {label} <Field.RequiredIndicator />
+      </Field.Label>
+      {asTextarea ? (
+        <Textarea
+          id={field.name}
+          name={field.name}
+          onBlur={field.handleBlur}
+          onChange={(e) => {
+            field.handleChange(e.target.value);
+          }}
+          value={field.state.value}
+          {...inputProps}
+        />
+      ) : (
+        <Input
+          id={field.name}
+          name={field.name}
+          onBlur={field.handleBlur}
+          onChange={(e) => {
+            field.handleChange(e.target.value);
+          }}
+          value={field.state.value}
+          {...inputProps}
+        />
+      )}
+      {helper && <Field.HelperText>{helper}</Field.HelperText>}
       <FieldInfo field={field} />
-    </>
+    </Field.Root>
   );
 }

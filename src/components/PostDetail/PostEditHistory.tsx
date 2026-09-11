@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { ConfirmationDialog } from "src/components/ConfirmationDialog";
+import { EmptyState } from "src/components/EmptyState";
 import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Box, HStack, Stack } from "src/components/ui/layout";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import { userHasPermission } from "src/lib/auth/policy";
 import { isStaffRole, roleOf } from "src/lib/auth/roles";
+import { POST_EDIT_REQUIRED_VOTES } from "src/lib/post-edits/post-edits.config";
 import {
   useApprovePostEdit,
   useRejectPostEdit,
@@ -41,20 +45,45 @@ const displayValue = (
     ? "Empty"
     : String(value);
 
-function EditFields({ payload }: { payload: PostEditHistoryEntry["payload"] }) {
+function EditFields({ entry }: { entry: PostEditHistoryEntry }) {
   return (
-    <Stack align="stretch" gap={1}>
-      {FIELD_KEYS.filter((key) => payload[key] !== undefined).map((key) => (
-        <HStack align="start" gap={2} key={key}>
-          <Text fontWeight="medium" minW="6rem">
-            {FIELD_LABELS[key]}
-          </Text>
-          <Text className="break-words text-green-700 dark:text-green-300">
-            {displayValue(payload[key])}
-          </Text>
-        </HStack>
-      ))}
-    </Stack>
+    <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-700">
+      <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+        <thead className="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th className="px-3 py-2 font-medium" scope="col">
+              Field
+            </th>
+            <th className="px-3 py-2 font-medium" scope="col">
+              Before suggestion
+            </th>
+            <th className="px-3 py-2 font-medium" scope="col">
+              Suggested
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {FIELD_KEYS.filter((key) => entry.payload[key] !== undefined).map(
+            (key) => (
+              <tr
+                className="border-t border-gray-200 dark:border-gray-700"
+                key={key}
+              >
+                <th className="px-3 py-2 font-medium" scope="row">
+                  {FIELD_LABELS[key]}
+                </th>
+                <td className="px-3 py-2 break-words text-red-700 dark:text-red-300">
+                  {displayValue(entry.previousPayload[key])}
+                </td>
+                <td className="px-3 py-2 break-words text-green-700 dark:text-green-300">
+                  {displayValue(entry.payload[key])}
+                </td>
+              </tr>
+            ),
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -63,16 +92,17 @@ function HistoryEntry({
   entry,
   isPostOwner,
   currentUserRole,
-  approve,
-  reject,
+  postId,
 }: {
   currentUserId: string | undefined;
   currentUserRole: string | undefined;
   entry: PostEditHistoryEntry;
   isPostOwner: boolean;
-  approve: ReturnType<typeof useApprovePostEdit>;
-  reject: ReturnType<typeof useRejectPostEdit>;
+  postId: number;
 }) {
+  const approve = useApprovePostEdit(postId);
+  const reject = useRejectPostEdit(postId);
+  const [rejectOpen, setRejectOpen] = useState(false);
   const role = roleOf({ id: currentUserId, role: currentUserRole });
   const isStaff = isStaffRole(role);
   const isEligibleContributor =
@@ -118,7 +148,7 @@ function HistoryEntry({
               <Button
                 disabled={busy}
                 loading={reject.isPending}
-                onClick={() => reject.mutate(entry.id)}
+                onClick={() => setRejectOpen(true)}
                 size="xs"
                 variant="outline"
               >
@@ -128,12 +158,25 @@ function HistoryEntry({
           </HStack>
         )}
       </HStack>
+      <ConfirmationDialog
+        confirmLabel="Reject suggestion"
+        confirming={reject.isPending}
+        description="This rejects the proposed changes and prevents them from being applied to the post."
+        onConfirm={() =>
+          reject.mutate(entry.id, {
+            onSuccess: () => setRejectOpen(false),
+          })
+        }
+        onOpenChange={setRejectOpen}
+        open={rejectOpen}
+        title="Reject this suggestion?"
+      />
       <Box mt={3}>
-        <EditFields payload={entry.payload} />
+        <EditFields entry={entry} />
       </Box>
       {entry.status === "pending" && (
         <Text color="gray.500" fontSize="xs" mt={2}>
-          {entry.approvals.length}/2 uploader approvals
+          {entry.approvals.length}/{POST_EDIT_REQUIRED_VOTES} uploader approvals
         </Text>
       )}
     </Box>
@@ -147,30 +190,30 @@ export function PostEditHistory({
   postId,
 }: PostEditHistoryProps) {
   const history = useQuery(postEditsQuery(postId));
-  const approve = useApprovePostEdit(postId);
-  const reject = useRejectPostEdit(postId);
-
   return (
     <Box border="1px" borderRadius="md" p={4} shadow="md">
-      <Text fontSize="xl" fontWeight="bold" mb={3}>
+      <Heading as="h2" mb={3}>
         Edit history
-      </Text>
+      </Heading>
       {history.isPending && <Text color="gray.500">Loading edit history…</Text>}
       {history.isError && <Text>Could not load edit history.</Text>}
       {history.isSuccess && history.data.length === 0 && (
-        <Text color="gray.500">No community edit suggestions yet.</Text>
+        <EmptyState
+          description="Community edit suggestions will appear here."
+          title="No edit suggestions yet"
+          titleAs="h3"
+        />
       )}
       {history.isSuccess && history.data.length > 0 && (
         <Stack align="stretch" gap={3}>
           {history.data.map((entry) => (
             <HistoryEntry
-              approve={approve}
               currentUserId={currentUserId}
               currentUserRole={currentUserRole}
               entry={entry}
               isPostOwner={isPostOwner}
               key={entry.id}
-              reject={reject}
+              postId={postId}
             />
           ))}
         </Stack>

@@ -180,7 +180,9 @@ export class UsersService extends Context.Service<
         db
           .selectFrom("user")
           .select(["id", "name", "image"])
-          .where("deletedAt", "is", null),
+          .where("deletedAt", "is", null)
+          .orderBy("name", "asc")
+          .orderBy("id", "asc"),
       );
       return yield* Effect.try({
         try: () => parse(Schema.Array(userPublicSchema))(data),

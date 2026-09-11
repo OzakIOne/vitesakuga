@@ -3,40 +3,17 @@ import * as React from "react";
 import { LuCircleAlert, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
 
 import {
+  PALETTE_OUTLINE,
+  PALETTE_SOLID,
+  PALETTE_SUBTLE,
+  type Palette,
+} from "./palette";
+import {
   classToken,
   cn,
   useChakraProps,
   type ChakraStyleProps,
 } from "./ui-utils";
-
-type Palette = "blue" | "gray" | "red" | "green" | "orange";
-
-const SUBTLE_BADGE = {
-  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
-  gray: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
-  red: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
-  green: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
-  orange:
-    "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200",
-} satisfies Record<Palette, string>;
-
-const SOLID_BADGE = {
-  blue: "bg-blue-600 text-white",
-  gray: "bg-gray-900 text-white",
-  red: "bg-red-600 text-white",
-  green: "bg-green-600 text-white",
-  orange: "bg-orange-600 text-white",
-} satisfies Record<Palette, string>;
-
-const OUTLINE_BADGE = {
-  blue: "border border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300",
-  gray: "border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300",
-  red: "border border-red-300 text-red-700 dark:border-red-800 dark:text-red-300",
-  green:
-    "border border-green-300 text-green-700 dark:border-green-800 dark:text-green-300",
-  orange:
-    "border border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-300",
-} satisfies Record<Palette, string>;
 
 type BadgeSize = "xs" | "sm" | "lg";
 
@@ -64,9 +41,9 @@ export function Badge({
   const { className, style, rest } = useChakraProps(props);
   const palette = colorPalette ?? colorScheme ?? "gray";
   const paletteClasses = {
-    subtle: SUBTLE_BADGE[palette],
-    solid: SOLID_BADGE[palette],
-    outline: OUTLINE_BADGE[palette],
+    subtle: PALETTE_SUBTLE[palette],
+    solid: PALETTE_SOLID[palette],
+    outline: PALETTE_OUTLINE[palette],
   }[variant];
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
@@ -125,7 +102,10 @@ export function Skeleton(props: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn("animate-pulse rounded bg-gray-200", className)}
+      className={cn(
+        "animate-pulse rounded bg-gray-200 dark:bg-gray-700",
+        className,
+      )}
       style={style}
       {...(rest as React.HTMLAttributes<HTMLDivElement>)}
     />
@@ -133,16 +113,23 @@ export function Skeleton(props: SkeletonProps) {
 }
 
 export const Progress = {
-  // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   Root: ({
-    striped: _striped,
+    striped,
     ...props
   }: { striped?: boolean } & React.ComponentProps<typeof ArkProgress.Root> &
-    ChakraStyleProps) => (
-    <ArkProgress.Root
-      {...(props as React.ComponentProps<typeof ArkProgress.Root>)}
-    />
-  ),
+    ChakraStyleProps) => {
+    const { className, style, rest } = useChakraProps(props);
+    // SAFETY: useChakraProps strips Chakra style props into className/style;
+    // remaining props match Ark's progress root contract.
+    return (
+      <ArkProgress.Root
+        className={className}
+        data-striped={striped || undefined}
+        style={style}
+        {...(rest as React.ComponentProps<typeof ArkProgress.Root>)}
+      />
+    );
+  },
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
   Label: (
     props: React.ComponentProps<typeof ArkProgress.Label> & ChakraStyleProps,
@@ -167,7 +154,7 @@ export const Progress = {
     props: React.ComponentProps<typeof ArkProgress.Track> & ChakraStyleProps,
   ) => (
     <ArkProgress.Track
-      className="h-2 w-full overflow-hidden rounded-full bg-gray-200"
+      className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
       {...(props as React.ComponentProps<typeof ArkProgress.Track>)}
     />
   ),
@@ -183,6 +170,7 @@ export const Progress = {
 };
 
 type AlertProps = {
+  ref?: React.Ref<HTMLDivElement>;
   status?: "error" | "success" | "info" | "warning";
 } & React.HTMLAttributes<HTMLDivElement> &
   ChakraStyleProps;
@@ -191,10 +179,13 @@ export const Alert = {
   Root: ({ status = "error", ...props }: AlertProps) => {
     const { className, style, rest } = useChakraProps(props);
     const statusClasses = {
-      error: "border-red-200 bg-red-50 text-red-800",
-      success: "border-green-200 bg-green-50 text-green-800",
-      info: "border-blue-200 bg-blue-50 text-blue-800",
-      warning: "border-orange-200 bg-orange-50 text-orange-800",
+      error:
+        "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200",
+      success:
+        "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200",
+      info: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200",
+      warning:
+        "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200",
     }[status];
     // Errors/warnings are urgent and should interrupt (role="alert");
     // success/info updates are announced politely (role="status").
@@ -229,10 +220,10 @@ export const Alert = {
           ? LuTriangleAlert
           : LuCircleAlert;
     const iconClasses = {
-      error: "text-red-600",
-      success: "text-green-600",
-      info: "text-blue-600",
-      warning: "text-orange-600",
+      error: "text-red-600 dark:text-red-400",
+      success: "text-green-600 dark:text-green-400",
+      info: "text-blue-600 dark:text-blue-400",
+      warning: "text-orange-600 dark:text-orange-400",
     }[status ?? "error"];
     return (
       <Icon
@@ -303,7 +294,7 @@ export const DataList = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dt
-        className={cn("text-gray-500", className)}
+        className={cn("text-gray-600 dark:text-gray-400", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />

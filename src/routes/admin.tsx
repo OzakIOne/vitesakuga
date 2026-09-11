@@ -6,7 +6,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { Spinner } from "src/components/ui/feedback";
+import { AdminSkeleton } from "src/components/LoadingSkeletons";
 import { Container, Stack } from "src/components/ui/layout";
 import {
   TABS_LIST_BASE,
@@ -15,6 +15,7 @@ import {
 } from "src/components/ui/tabs";
 import { Text } from "src/components/ui/typography";
 import { roleOf } from "src/lib/auth/roles";
+import { seo } from "src/utils/seo";
 
 const ADMIN_TABS = [
   { label: "Promotions", to: "/admin/promotions" },
@@ -37,6 +38,13 @@ export const Route = createFileRoute("/admin")({
     }
   },
   component: AdminLayout,
+  head: () => ({
+    meta: seo({
+      description: "Staff moderation tools for ViteSakuga.",
+      noIndex: true,
+      title: "Admin · ViteSakuga",
+    }),
+  }),
 });
 
 /**
@@ -48,6 +56,18 @@ function AdminLayout() {
     <ClientOnly fallback={<AdminLoading />}>
       <Container py={6}>
         <Stack gap={4}>
+          <header>
+            <Text color="gray.500" fontSize="sm">
+              Staff workspace
+            </Text>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              Moderation dashboard
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
+              Review community activity, resolve reports, and keep the archive
+              healthy.
+            </p>
+          </header>
           <nav aria-label="Admin sections">
             <div className={TABS_LIST_BASE}>
               {ADMIN_TABS.map((tab) => (
@@ -73,10 +93,5 @@ function AdminLayout() {
 }
 
 function AdminLoading() {
-  return (
-    <Stack align="center" justify="center" minH="300px">
-      <Spinner size="lg" />
-      <Text>Loading moderation queues…</Text>
-    </Stack>
-  );
+  return <AdminSkeleton />;
 }

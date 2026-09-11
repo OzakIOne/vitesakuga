@@ -46,8 +46,8 @@ export function Post({
         <PostImageGallery images={images} title={post.title} />
       ) : null}
       {post.title && (
-        <HStack justify="space-between">
-          <VStack align="start" gap={1}>
+        <HStack align="start" flexWrap="wrap" justify="space-between">
+          <VStack align="start" className="min-w-0 flex-1" gap={1}>
             <Heading as="h1" className="break-words">
               {post.title}
             </Heading>
@@ -67,7 +67,7 @@ export function Post({
               </Text>
             )}
           </VStack>
-          <HStack gap={2}>
+          <HStack flexWrap="wrap" gap={2}>
             {isOwner && onEditClick && (
               <Button onClick={onEditClick} size="sm" variant="outline">
                 Edit Post
@@ -103,13 +103,22 @@ export function Post({
         </HStack>
       )}
       {post.description && (
-        <Text className="break-words" mb={4}>
+        <Text className="break-words whitespace-pre-wrap" mb={4}>
           {post.description}
         </Text>
       )}
       {post.createdAt && (
         <Text color="gray.500" fontSize="sm" mb={4}>
           Posted {formatDateUtc(post.createdAt)}
+        </Text>
+      )}
+
+      {post.source && (
+        <Text color="gray.500" fontSize="sm" mb={4}>
+          Source:{" "}
+          <a href={post.source} rel="noopener noreferrer" target="_blank">
+            View original
+          </a>
         </Text>
       )}
 
@@ -148,7 +157,7 @@ export function Post({
           </Text>
           <Link
             className="text-blue-500 hover:underline"
-            params={{ postId: relatedPost.id }}
+            params={{ postId: String(relatedPost.id) }}
             to="/posts/$postId"
           >
             {relatedPost.title}

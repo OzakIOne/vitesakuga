@@ -4,8 +4,8 @@ import {
   useSuspenseInfiniteQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Schema } from "effect";
 import { useCallback, useContext, useMemo, useState } from "react";
+import { EmptyState } from "src/components/EmptyState";
 import { PlaylistPostsTable } from "src/components/PlaylistPostsTable";
 import type { PlaylistPostTableRow } from "src/components/PlaylistPostsTable";
 import { Button, CloseButton } from "src/components/ui/button";
@@ -14,7 +14,6 @@ import { Field, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
-import { parse } from "src/lib/effect/schema.utils";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
 import {
@@ -25,11 +24,14 @@ import {
   playlistsKeys,
   playlistsQueryDetailInfinite,
 } from "src/lib/playlists/playlists.queries";
+import { rethrowRouteDataError } from "src/lib/router/not-found";
+import { parsePositiveIntegerRouteParam } from "src/lib/router/route-params";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/account_/playlists/$playlistId")({
   component: ManagePlaylistContent,
-  notFoundComponent: () => <NotFoundContent />,
   ssr: "data-only",
+  notFoundComponent: () => <NotFoundContent />,
   beforeLoad: ({ context, location }) => {
     if (!context.user) {
       throw redirect({
@@ -39,6 +41,24 @@ export const Route = createFileRoute("/account_/playlists/$playlistId")({
     }
     return { user: context.user };
   },
+  loader: async ({ context, params }) => {
+    const playlistId = parsePositiveIntegerRouteParam(params.playlistId);
+    try {
+      await context.queryClient.infiniteQuery({
+        ...playlistsQueryDetailInfinite({ playlistId }),
+        staleTime: "static",
+      });
+    } catch (error) {
+      rethrowRouteDataError(error);
+    }
+  },
+  head: () => ({
+    meta: seo({
+      description: "Manage a ViteSakuga playlist.",
+      noIndex: true,
+      title: "Manage playlist · ViteSakuga",
+    }),
+  }),
 });
 
 function NotFoundContent() {
@@ -68,7 +88,7 @@ function parsePostIds(raw: string): number[] {
 function ManagePlaylistContent() {
   const { user } = Route.useRouteContext();
   const params = Route.useParams();
-  const playlistId = parse(Schema.NumberFromString)(params.playlistId);
+  const playlistId = parsePositiveIntegerRouteParam(params.playlistId);
 
   const queryClient = useQueryClient();
   const { bulkAddPostsToPlaylist, bulkRemovePostsFromPlaylist } =
@@ -320,11 +340,11 @@ function ManagePlaylistContent() {
                   <Dialog.Title>Remove posts from playlist?</Dialog.Title>
                 </Dialog.Header>
                 <Dialog.Body>
-                  <p>
+                  <Dialog.Description>
                     {selectedCount} {selectedCount === 1 ? "post" : "posts"}{" "}
                     will be removed from this playlist. You can add them back by
                     their post ID.
-                  </p>
+                  </Dialog.Description>
                 </Dialog.Body>
                 <Dialog.Footer>
                   <Dialog.ActionTrigger asChild>
@@ -362,17 +382,11 @@ function ManagePlaylistContent() {
 
       <Box display="flex" direction="column" flex={1} style={{ minHeight: 0 }}>
         {rows.length === 0 ? (
-          <Box
-            alignItems="center"
-            border="1px solid"
-            borderColor="gray.200"
-            borderRadius="md"
-            display="flex"
-            flex={1}
-            justifyContent="center"
-            style={{ minHeight: 0 }}
-          >
-            <Text color="gray.500">This playlist is empty</Text>
+          <Box display="flex" flex={1} style={{ minHeight: 0 }}>
+            <EmptyState
+              description="Add posts by ID to start building this playlist."
+              title="This playlist is empty"
+            />
           </Box>
         ) : (
           <Box

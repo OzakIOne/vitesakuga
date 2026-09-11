@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 import { LuBookmark, LuBookmarkPlus, LuPlay, LuTrash2 } from "react-icons/lu";
+import { EmptyState } from "src/components/EmptyState";
 import { Button, CloseButton } from "src/components/ui/button";
+import { Alert } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
@@ -156,12 +158,33 @@ export function SavedSearchesDialog({ onApply }: SavedSearchesDialogProps) {
             </Dialog.Header>
             <Dialog.Body>
               {savedSearchesQuery.isPending ? (
-                <Text>Loading saved searches...</Text>
+                <Text>Loading saved searches…</Text>
+              ) : savedSearchesQuery.isError ? (
+                <Alert.Root status="error">
+                  <Alert.Content>
+                    <Alert.Indicator status="error" />
+                    <div>
+                      <Alert.Title>Could Not Load Saved Searches</Alert.Title>
+                      <Alert.Description>
+                        Check your connection and try again.
+                      </Alert.Description>
+                      <Button
+                        className="mt-3"
+                        onClick={() => void savedSearchesQuery.refetch()}
+                        size="sm"
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </Alert.Content>
+                </Alert.Root>
               ) : savedSearches.length === 0 ? (
-                <Text color="fg.muted">
-                  You have no saved searches yet. Save the current search to
-                  find it here.
-                </Text>
+                <EmptyState
+                  description="Save the current search to find it here."
+                  size="compact"
+                  title="No saved searches yet"
+                  titleAs="h3"
+                />
               ) : (
                 <VStack align="stretch" gap={2}>
                   {savedSearches.map((search) => (

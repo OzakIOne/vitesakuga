@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
-import { ensureOwned } from "../auth/ownership";
+import { ensureOwnedOrStaff } from "../auth/ownership";
+import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import {
@@ -323,10 +324,11 @@ export class CommentsService extends Context.Service<
           .where("id", "=", commentId),
       );
 
-      yield* ensureOwned({
+      yield* ensureOwnedOrStaff({
         resource: commentOption,
         selectOwnerId: (row) => row.userId,
         userId: user.id,
+        userRole: getUserRole(user),
         notFound: new CommentNotFoundError({
           commentId,
           message: `Comment ${commentId} not found`,
@@ -363,10 +365,11 @@ export class CommentsService extends Context.Service<
           .where("id", "=", data.commentId),
       );
 
-      const comment = yield* ensureOwned({
+      const comment = yield* ensureOwnedOrStaff({
         resource: commentOption,
         selectOwnerId: (row) => row.userId,
         userId: user.id,
+        userRole: getUserRole(user),
         notFound: new CommentNotFoundError({
           commentId: data.commentId,
           message: `Comment ${data.commentId} not found`,

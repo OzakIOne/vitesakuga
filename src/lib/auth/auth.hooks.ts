@@ -206,12 +206,19 @@ export function useChangePassword() {
     }: {
       currentPassword: string;
       newPassword: string;
-    }) =>
-      authClient.changePassword({
+    }) => {
+      const { error, data } = await authClient.changePassword({
         currentPassword,
         newPassword,
         revokeOtherSessions: true,
-      }),
+      });
+
+      if (error) {
+        throw new Error(error.message ?? "Failed to change password");
+      }
+
+      return data;
+    },
     successDescription: "Your password has been successfully changed.",
     successTitle: "Password updated",
   });

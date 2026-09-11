@@ -72,25 +72,24 @@ function ColorModeIcon() {
   return theme === "dark" ? <LuMoon /> : <LuSun />;
 }
 
-type ColorModeButtonProps = {} & Omit<ButtonProps, "aria-label">;
+type ColorModeButtonProps = Omit<ButtonProps, "aria-label" | "ref"> & {
+  ref?: React.Ref<HTMLButtonElement>;
+};
 
-export const ColorModeButton = React.forwardRef<
-  HTMLButtonElement,
-  ColorModeButtonProps
->(function ColorModeButton(props, ref) {
+export function ColorModeButton({ ref, ...props }: ColorModeButtonProps) {
   const { toggleColorMode } = useColorMode();
   return (
     <ClientOnly fallback={<Skeleton boxSize="8" />}>
       <IconButton
         aria-label="Toggle color mode"
         onClick={toggleColorMode}
-        ref={ref}
         size="sm"
         variant="ghost"
+        {...(ref ? { ref } : {})}
         {...props}
       >
         <ColorModeIcon />
       </IconButton>
     </ClientOnly>
   );
-});
+}

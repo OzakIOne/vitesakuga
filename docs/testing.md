@@ -14,13 +14,17 @@ nub run test:ee                     # Playwright e2e suite
 Vitest is configured with a maximum of four workers in `vitest.config.ts`. The
 service-test harness uses real PGlite and RustFS layers where practical. E2e
 runs use the Playwright web server on port 3100 with local Postgres and RustFS;
-they are separate from the Vitest suite.
+they are separate from the Vitest suite. The local server uses Nitro's
+`node-server` preset and disables the Turnstile requirement so the browser tests
+exercise the same authentication path as the test server.
 
 ## Current verification
 
-On **2026-09-06**, `nub exec vitest run --reporter=json` passed **566 tests in
-53 test files**. This is a point-in-time result; rerun the command after code or
-dependency changes.
+On **2026-09-11**, `nub exec vitest run` passed **662 tests in 67 test files**.
+The Playwright inventory contains **58 tests in 15 files**; the full run passed
+55 tests before three stale accessible-name assertions were aligned, followed
+by a 7-test auth/passkey run with all 7 passing. These are
+point-in-time results; rerun the commands after code or dependency changes.
 
 The e2e specs currently cover authentication, comments, conversion, account
 deletion, hydration, mentions, passkeys, playlists, shortcuts, toasts, 2FA,

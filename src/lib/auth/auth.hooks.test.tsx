@@ -267,6 +267,25 @@ describe(useChangePassword, () => {
     );
   });
 
+  it("surfaces Better Auth errors returned from changing the password", async () => {
+    mockAuth.changePassword.mockResolvedValueOnce({
+      error: { message: "Invalid current password" },
+    });
+    const { result } = renderHook(() => useChangePassword(), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({
+      currentPassword: "wrong-password",
+      newPassword: "new-password",
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toMatchObject({
+      message: "Invalid current password",
+    });
+  });
+
   it("shows success toast on success", async () => {
     mockAuth.changePassword.mockResolvedValueOnce({});
     const { result } = renderHook(() => useChangePassword(), {

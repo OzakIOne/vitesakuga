@@ -10,13 +10,20 @@ import {
 
 type ImageProps = React.ImgHTMLAttributes<HTMLImageElement> & ChakraStyleProps;
 
-export function Image({ alt, ...props }: ImageProps) {
+export function Image({
+  alt,
+  decoding = "async",
+  loading = "lazy",
+  ...props
+}: ImageProps) {
   const { className, style, rest } = useChakraProps(props);
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
     <img
       alt={alt ?? ""}
       className={cn(className)}
+      decoding={decoding}
+      loading={loading}
       style={style}
       {...(rest as React.ImgHTMLAttributes<HTMLImageElement>)}
     />
@@ -61,11 +68,12 @@ export const Avatar = {
     // An empty string src re-downloads the page URL as the "image";
     // normalize it so the fallback avatar renders instead.
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
-    const { src, ...others } = rest as React.ComponentProps<
+    const { alt, src, ...others } = rest as React.ComponentProps<
       typeof ArkAvatar.Image
     >;
     return (
       <ArkAvatar.Image
+        alt={alt ?? ""}
         className={cn("h-full w-full object-cover", className)}
         src={src || undefined}
         style={style}

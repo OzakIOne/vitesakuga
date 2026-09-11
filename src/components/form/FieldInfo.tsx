@@ -1,4 +1,5 @@
 import type { AnyFieldApi } from "@tanstack/react-form";
+import { Field } from "src/components/ui/field";
 
 export function FieldInfo({ field }: { field: AnyFieldApi }) {
   const errors: string[] = [];
@@ -21,12 +22,12 @@ export function FieldInfo({ field }: { field: AnyFieldApi }) {
   return (
     <>
       {errors.length > 0 ? (
-        <p className="text-sm break-words text-red-700" role="alert">
+        <Field.ErrorText className="text-sm break-words" role="alert">
           {errors.join(", ")}
-        </p>
+        </Field.ErrorText>
       ) : null}
       {field.state.meta.isValidating ? (
-        <p aria-live="polite">Validating...</p>
+        <Field.HelperText aria-live="polite">Validating…</Field.HelperText>
       ) : null}
     </>
   );

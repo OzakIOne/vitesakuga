@@ -60,7 +60,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.HelperText
-        className={cn("text-xs text-gray-500", className)}
+        className={cn("text-xs text-gray-600 dark:text-gray-400", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.HelperText>)}
       />
@@ -73,7 +73,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.ErrorText
-        className={cn("text-xs text-red-600", className)}
+        className={cn("text-xs text-red-600 dark:text-red-400", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.ErrorText>)}
       />
@@ -102,10 +102,10 @@ export function Input({ size = "md", ...props }: InputProps) {
   const { className, style, rest } = useChakraProps(props);
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
-    <input
+    <ArkField.Input
       className={cn(INPUT_BASE, classToken(INPUT_SIZES, size, "md"), className)}
       style={style}
-      {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
+      {...(rest as React.ComponentProps<typeof ArkField.Input>)}
     />
   );
 }
@@ -120,10 +120,10 @@ export function Textarea(props: TextareaProps) {
   const { className, style, rest } = useChakraProps(props);
   // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
   return (
-    <textarea
+    <ArkField.Textarea
       className={cn(INPUT_BASE, "min-h-20 resize-y px-3 py-2", className)}
       style={style}
-      {...(rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+      {...(rest as React.ComponentProps<typeof ArkField.Textarea>)}
     />
   );
 }
@@ -200,7 +200,7 @@ export const Checkbox = {
     return (
       <ArkCheckbox.Control
         className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white transition-colors data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 group-hover:border-gray-400",
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white transition-colors data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 group-hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:group-hover:border-gray-500",
           className,
         )}
         style={style}

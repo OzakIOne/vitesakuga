@@ -42,11 +42,17 @@ beforeEach(async () => {
 afterEach(() => closeCtx());
 
 describe("UsersService.all", () => {
-  it("returns all users", async () => {
+  it("returns all users ordered by display name", async () => {
+    await db
+      .updateTable("user")
+      .set({ name: "Aaron" })
+      .where("id", "=", "user-2")
+      .execute();
+
     const result = await runEffect(UsersService.all());
 
     expect(result).toHaveLength(2);
-    expect(result.map((u) => u.name).sort()).toEqual(["Alice", "Bob"]);
+    expect(result.map((u) => u.name)).toEqual(["Aaron", "Alice"]);
   });
 
   it("excludes deleted (anonymized) users", async () => {
@@ -323,18 +329,48 @@ describe("UsersService.contributorProfile", () => {
         {
           payload: { title: "Accepted" },
           postId: post.id,
+          previous_payload: {
+            animeTitle: null,
+            chapterNumber: null,
+            description: "Content",
+            episodeNumber: null,
+            seasonNumber: null,
+            source: null,
+            title: "Profile post",
+            volumeNumber: null,
+          },
           status: "approved",
           suggestedBy: "user-1",
         },
         {
           payload: { title: "Pending" },
           postId: post.id,
+          previous_payload: {
+            animeTitle: null,
+            chapterNumber: null,
+            description: "Content",
+            episodeNumber: null,
+            seasonNumber: null,
+            source: null,
+            title: "Profile post",
+            volumeNumber: null,
+          },
           status: "pending",
           suggestedBy: "user-1",
         },
         {
           payload: { title: "Rejected" },
           postId: post.id,
+          previous_payload: {
+            animeTitle: null,
+            chapterNumber: null,
+            description: "Content",
+            episodeNumber: null,
+            seasonNumber: null,
+            source: null,
+            title: "Profile post",
+            volumeNumber: null,
+          },
           status: "rejected",
           suggestedBy: "user-1",
         },

@@ -412,7 +412,10 @@ export const Combobox = {
     return (
       <ArkCombobox.ClearTrigger
         aria-label="Clear"
-        className={cn("flex items-center text-gray-500", className)}
+        className={cn(
+          "flex items-center text-gray-500 dark:text-gray-400",
+          className,
+        )}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.ClearTrigger>)}
       >
@@ -423,7 +426,7 @@ export const Combobox = {
   Trigger: (props: React.ComponentProps<typeof ArkCombobox.Trigger>) => (
     <ArkCombobox.Trigger
       aria-label="Open options"
-      className="flex items-center text-gray-500"
+      className="flex items-center text-gray-500 dark:text-gray-400"
       {...props}
     >
       <LuChevronDown />
@@ -470,7 +473,10 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.ItemGroupLabel
-        className={cn("px-2 py-1 text-xs font-medium text-gray-500", className)}
+        className={cn(
+          "px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400",
+          className,
+        )}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.ItemGroupLabel>)}
       />
@@ -508,7 +514,10 @@ export const Combobox = {
   ItemIndicator: (
     props: React.ComponentProps<typeof ArkCombobox.ItemIndicator>,
   ) => (
-    <ArkCombobox.ItemIndicator className="text-blue-600" {...props}>
+    <ArkCombobox.ItemIndicator
+      className="text-blue-600 dark:text-blue-400"
+      {...props}
+    >
       <LuCheck />
     </ArkCombobox.ItemIndicator>
   ),
@@ -519,7 +528,10 @@ export const Combobox = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkCombobox.Empty
-        className={cn("px-2 py-1.5 text-sm text-gray-500", className)}
+        className={cn(
+          "px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400",
+          className,
+        )}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkCombobox.Empty>)}
       />
@@ -617,7 +629,7 @@ export const TagsInput = {
       <ArkTagsInput.ItemDeleteTrigger
         aria-label="Remove tag"
         className={cn(
-          "cursor-pointer rounded p-0.5 text-gray-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40",
+          "cursor-pointer rounded p-0.5 text-gray-500 transition-colors hover:text-red-600 focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:outline-none dark:text-gray-400 dark:hover:text-red-400",
           className,
         )}
         style={style}
@@ -672,7 +684,7 @@ export const TagsInput = {
       <ArkTagsInput.ClearTrigger
         aria-label="Clear all tags"
         className={cn(
-          "cursor-pointer rounded p-1 text-gray-500 transition-colors hover:text-red-600",
+          "cursor-pointer rounded p-1 text-gray-500 transition-colors hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400",
           className,
         )}
         style={style}
@@ -718,7 +730,7 @@ export const Slider = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component at the call site.
     return (
       <ArkSlider.ValueText
-        className={cn("text-sm text-gray-500", className)}
+        className={cn("text-sm text-gray-600 dark:text-gray-400", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkSlider.ValueText>)}
       />
@@ -745,7 +757,7 @@ export const Slider = {
     return (
       <ArkSlider.Track
         className={cn(
-          "relative h-1.5 w-full overflow-hidden rounded-full bg-gray-200",
+          "relative h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700",
           className,
         )}
         style={style}
@@ -774,7 +786,7 @@ export const Slider = {
     return (
       <ArkSlider.Thumb
         className={cn(
-          "block h-4 w-4 rounded-full border border-gray-300 bg-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2",
+          "block h-4 w-4 rounded-full border border-gray-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-gray-600 dark:bg-gray-800 dark:focus-visible:ring-offset-gray-900",
           className,
         )}
         style={style}
@@ -860,12 +872,12 @@ export const FileUpload = {
               <span className="flex min-w-0 items-center gap-2">
                 <ArkFileUpload.ItemName className="truncate font-medium" />
                 {showSize && (
-                  <ArkFileUpload.ItemSizeText className="shrink-0 text-xs text-gray-500" />
+                  <ArkFileUpload.ItemSizeText className="shrink-0 text-xs text-gray-600 dark:text-gray-400" />
                 )}
               </span>
               <ArkFileUpload.ItemDeleteTrigger
                 aria-label={`Remove ${file.name}`}
-                className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600"
+                className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-red-400"
               >
                 <LuX />
               </ArkFileUpload.ItemDeleteTrigger>
@@ -873,7 +885,7 @@ export const FileUpload = {
           ))}
         </ArkFileUpload.ItemGroup>
         {clearable && (
-          <ArkFileUpload.ClearTrigger className="mt-2 text-sm text-blue-600 hover:underline">
+          <ArkFileUpload.ClearTrigger className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400">
             Clear all
           </ArkFileUpload.ClearTrigger>
         )}

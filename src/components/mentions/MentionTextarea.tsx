@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { LuAtSign } from "react-icons/lu";
 import { Textarea } from "src/components/ui/field";
 import { Avatar } from "src/components/ui/media";
@@ -45,6 +45,7 @@ export function MentionTextarea({
   value,
 }: MentionTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const listId = useId();
   const [triggeredHandle, setTriggeredHandle] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -55,7 +56,6 @@ export function MentionTextarea({
 
   const users: readonly MentionUser[] = suggestions;
   const isOpen = triggeredHandle !== null && users.length > 0;
-  const listId = "mention-suggestions";
 
   const closeMention = () => {
     setTriggeredHandle(null);
@@ -142,7 +142,7 @@ export function MentionTextarea({
       {isOpen && (
         <ul
           aria-label="User suggestions"
-          className="absolute right-0 bottom-full left-0 z-10 mb-1 max-h-56 overflow-y-auto rounded border bg-white shadow-lg dark:bg-gray-900"
+          className="absolute right-0 bottom-full left-0 z-10 mb-1 max-h-56 overflow-y-auto rounded border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
           id={listId}
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- custom ARIA listbox: ul/li carry the listbox role for the mention dropdown (avatars + active-descendant nav); a native datalist/select cannot render this inside a multiline textarea widget
           role="listbox"

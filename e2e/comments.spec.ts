@@ -114,7 +114,7 @@ test.describe("Comments", () => {
     await page.getByRole("button", { name: "Edit comment" }).click();
     const editTextarea = page.getByRole("textbox", { name: "Edit comment" });
     await editTextarea.fill("Comment after edit");
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     await expect(commentBody(page, "Comment after edit")).toBeVisible();
     await expect(commentBody(page, "Comment before edit")).toBeHidden();

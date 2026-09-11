@@ -1,29 +1,27 @@
-import { queryCollectionOptions } from "@tanstack/query-db-collection";
-import { createCollection } from "@tanstack/react-db";
+import {
+  queryCollectionOptions,
+  type QueryCollectionUtils,
+} from "@tanstack/query-db-collection";
+import { createCollection, type Collection } from "@tanstack/react-db";
 
 import { getQueryClient } from "../query-client";
 import { getAllTags } from "../tags/tags.service";
-import type { UserPublic } from "../users/users.schema";
-import { fetchUsers } from "../users/users.service";
 
 const queryClient = getQueryClient();
 
-export const tagsCollection = createCollection(
-  queryCollectionOptions<{ id: number; name: string }>({
-    queryKey: ["tags", "collection"],
-    queryFn: async () => getAllTags(),
-    queryClient,
-    getKey: (item) => item.id,
-    syncMode: "eager",
-  }),
-);
+type TagRecord = { id: number; name: string };
+type EagerQueryCollection<
+  T extends object,
+  TKey extends string | number,
+> = Collection<T, TKey, QueryCollectionUtils<T, TKey, T>, never, T>;
 
-export const usersCollection = createCollection(
-  queryCollectionOptions<UserPublic>({
-    queryKey: ["users", "collection"],
-    queryFn: async () => [...(await fetchUsers())],
-    queryClient,
-    getKey: (item) => item.id,
-    syncMode: "eager",
-  }),
-);
+export const tagsCollection: EagerQueryCollection<TagRecord, number> =
+  createCollection(
+    queryCollectionOptions({
+      queryKey: ["tags", "collection"],
+      queryFn: async (): Promise<TagRecord[]> => getAllTags(),
+      queryClient,
+      getKey: (item: TagRecord): number => item.id,
+      syncMode: "eager",
+    }),
+  );

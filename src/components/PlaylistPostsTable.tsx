@@ -193,7 +193,7 @@ const columns = columnHelper.columns([
           )}
           <Link
             className="min-w-0"
-            params={{ postId: item.postId }}
+            params={{ postId: String(item.postId) }}
             to="/posts/$postId"
           >
             <Text fontWeight="medium" lineClamp={2}>
@@ -453,15 +453,13 @@ export function PlaylistPostsTable({
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
-        {/* display:grid strips native table semantics; explicit roles restore them */}
         <table
+          aria-label="Playlist posts"
           className="w-full text-sm"
-
           style={{ display: "grid" }}
         >
           <thead
             className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"
-
             style={{ display: "grid" }}
           >
             {table.getHeaderGroups().map((group) => (
@@ -472,7 +470,6 @@ export function PlaylistPostsTable({
                     <th
                       className="flex items-center overflow-hidden border-b border-gray-200 px-3 py-2.5 text-left font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
                       key={header.id}
-
                       style={{
                         flex: grow ? "1 1 0%" : "0 0 auto",
                         minWidth: grow ? 0 : header.column.getSize(),
@@ -492,7 +489,6 @@ export function PlaylistPostsTable({
           </thead>
           <tbody
             className="relative"
-
             style={{
               display: "grid",
               height: `${virtualizer.getTotalSize()}px`,

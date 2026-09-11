@@ -74,6 +74,16 @@ const insertPendingEdit = async (
       createdAt: args.createdAt,
       payload: { title: "Edited" },
       postId: args.postId,
+      previous_payload: {
+        animeTitle: null,
+        chapterNumber: null,
+        description: "Original description",
+        episodeNumber: null,
+        seasonNumber: null,
+        source: null,
+        title: "Original title",
+        volumeNumber: null,
+      },
       status: "pending",
       suggestedBy: args.suggestedById,
     })
@@ -177,6 +187,16 @@ describe("ModerationService.overview", () => {
       .values({
         createdAt: new Date("2026-01-01T09:00:00.000Z"),
         payload: { title: "Resolved" },
+        previous_payload: {
+          animeTitle: null,
+          chapterNumber: null,
+          description: "Original description",
+          episodeNumber: null,
+          seasonNumber: null,
+          source: null,
+          title: "Original title",
+          volumeNumber: null,
+        },
         postId,
         status: "approved",
         suggestedBy: "suggester-1",

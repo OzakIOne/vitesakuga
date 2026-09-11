@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import Markdown from "react-markdown";
+import { EditorialShell } from "src/components/EditorialShell";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/help")({
@@ -20,16 +21,11 @@ export const Route = createFileRoute("/help")({
 function HelpPage() {
   const { body } = Route.useLoaderData();
   return (
-    <div className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
-      <header className="mb-12">
-        <p className="mb-3 text-sm font-medium text-blue-600 dark:text-blue-400">
-          ViteSakuga support
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Help</h1>
-        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
-          Quick answers about using the site and fixing problems.
-        </p>
-      </header>
+    <EditorialShell
+      description="Quick answers about using the site and fixing problems."
+      eyebrow="ViteSakuga support"
+      title="Help"
+    >
       <div className="markdown-prose">
         <Markdown skipHtml>{body}</Markdown>
       </div>
@@ -47,6 +43,6 @@ function HelpPage() {
           See what’s new <span aria-hidden="true">→</span>
         </Link>
       </div>
-    </div>
+    </EditorialShell>
   );
 }

@@ -1,11 +1,11 @@
 import { Portal } from "@ark-ui/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
+import { EmptyState } from "src/components/EmptyState";
 import { Button } from "src/components/ui/button";
 import { Checkbox, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
-import { Text } from "src/components/ui/typography";
 import { toastError, toastSuccess } from "src/lib/mutations/mutation-feedback";
 import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
 import {
@@ -185,9 +185,12 @@ export function PlaylistAddModal({
                     </Checkbox.Root>
                   ))
                 ) : (
-                  <Text color="gray.500" fontSize="sm">
-                    No playlists yet. Create one below.
-                  </Text>
+                  <EmptyState
+                    description="Create a playlist below to add this post."
+                    size="compact"
+                    title="No playlists yet"
+                    titleAs="h3"
+                  />
                 )}
 
                 <Box borderTop="1px" borderColor="gray.100" pt={3}>

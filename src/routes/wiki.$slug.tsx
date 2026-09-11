@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import Markdown from "react-markdown";
+import { EditorialShell } from "src/components/EditorialShell";
 import { findWikiArticle } from "src/lib/wiki/wiki";
 import { seo } from "src/utils/seo";
 
@@ -41,27 +42,20 @@ function WikiNotFound() {
 function WikiArticlePage() {
   const article = Route.useLoaderData();
   return (
-    <article className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
+    <EditorialShell
+      description={article.summary}
+      eyebrow={`ViteSakuga knowledge base · ${article.category}`}
+      title={article.title}
+    >
       <Link
         className="text-sm text-blue-600 hover:underline dark:text-blue-400"
         to="/wiki"
       >
         <span aria-hidden="true">← </span>All wiki articles
       </Link>
-      <header className="mt-8 mb-10 border-b border-gray-200 pb-8 dark:border-gray-800">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {article.category}
-        </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-          {article.title}
-        </h1>
-        <p className="mt-4 text-lg leading-8 text-gray-600 dark:text-gray-400">
-          {article.summary}
-        </p>
-      </header>
       <div className="markdown-prose">
         <Markdown skipHtml>{article.body}</Markdown>
       </div>
-    </article>
+    </EditorialShell>
   );
 }

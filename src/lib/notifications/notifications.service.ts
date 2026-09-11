@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, DateTime, Effect, Layer } from "effect";
+import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { SqlError } from "../effect/effect.utils";
+import { parse } from "../effect/schema.utils";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 
 export type NotificationType =
@@ -48,6 +49,12 @@ export class NotificationsService extends Context.Service<
 
     /** Flips `readAt` on every unread row of the user. */
     readonly markAllRead: (userId: string) => Effect.Effect<void, SqlError>;
+
+    /** Flips one notification's `readAt`, scoped to its owner. */
+    readonly markRead: (
+      userId: string,
+      notificationId: number,
+    ) => Effect.Effect<void, SqlError>;
   }
 >()("NotificationsService", {
   make: Effect.gen(function* () {
@@ -108,7 +115,22 @@ export class NotificationsService extends Context.Service<
       },
     );
 
-    return { notifyOrLog, list, markAllRead };
+    const markRead = Effect.fn("NotificationsService.markRead")(function* (
+      userId: string,
+      notificationId: number,
+    ) {
+      const now = yield* DateTime.now;
+      yield* db.execute(
+        db
+          .updateTable("notifications")
+          .set({ readAt: DateTime.toDate(now) })
+          .where("id", "=", notificationId)
+          .where("userId", "=", userId)
+          .where("readAt", "is", null),
+      );
+    });
+
+    return { notifyOrLog, list, markAllRead, markRead };
   }),
 }) {
   static readonly list = Effect.fn("NotificationsService.list")(function* () {
@@ -128,6 +150,17 @@ export class NotificationsService extends Context.Service<
       );
       const svc = yield* NotificationsService;
       return yield* svc.markAllRead(user.id);
+    },
+  );
+
+  static readonly markRead = Effect.fn("NotificationsService.markRead")(
+    function* (notificationId: number) {
+      const sessions = yield* SessionService;
+      const user = yield* sessions.requireUser(
+        "You must be logged in to update your notifications",
+      );
+      const svc = yield* NotificationsService;
+      return yield* svc.markRead(user.id, notificationId);
     },
   );
 }
@@ -154,3 +187,12 @@ export const markAllNotificationsRead = createServerFn({
     baseLayerFactories.auth,
   )(NotificationsService.markAllRead),
 );
+
+export const markNotificationRead = createServerFn({ method: "POST" })
+  .validator(parse(Schema.Number))
+  .handler(
+    createHandler(
+      NotificationsServiceLive,
+      baseLayerFactories.auth,
+    )(NotificationsService.markRead),
+  );

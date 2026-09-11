@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, DateTime, Effect, Layer, Option } from "effect";
+import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { isStaffRole } from "../auth/roles";
@@ -30,15 +30,16 @@ import {
 import { PointsServiceLive } from "../points/points.service";
 import { PointsService } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { POST_EDIT_REQUIRED_VOTES } from "./post-edits.config";
 import {
   decodePostEditPayload,
   editIdSchema,
   fetchPostEditsSchema,
   proposeEditSchema,
   type PostEditPayload,
+  type PostEditPreviousPayload,
+  postEditPreviousPayloadSchema,
 } from "./post-edits.schema";
-
-const REQUIRED_VOTES = 2;
 
 /** Field iteration order for applying suggestion patches. */
 const PAYLOAD_KEYS: ReadonlyArray<keyof PostEditPayload> = [
@@ -58,6 +59,7 @@ export type PostEditHistoryEntry = {
   readonly createdAt: string;
   readonly id: number;
   readonly payload: PostEditPayload;
+  readonly previousPayload: PostEditPreviousPayload;
   readonly postId: number;
   readonly resolvedAt: string | null;
   readonly resolvedBy: string | null;
@@ -150,10 +152,7 @@ export class PostEditsService extends Context.Service<
       > = db,
     ) =>
       executor.executeTakeFirstOption(
-        executor
-          .selectFrom("posts")
-          .select(["id", "userId"])
-          .where("id", "=", postId),
+        executor.selectFrom("posts").selectAll().where("id", "=", postId),
       );
 
     const loadEdit = (editId: number, trx: EffectTransition<DB>) =>
@@ -279,12 +278,26 @@ export class PostEditsService extends Context.Service<
         });
       }
 
+      const post = postOption.value;
+      const previousPayload = Schema.decodeUnknownSync(
+        postEditPreviousPayloadSchema,
+      )({
+        animeTitle: post.animeTitle,
+        chapterNumber: post.chapterNumber,
+        description: post.description,
+        episodeNumber: post.episodeNumber,
+        seasonNumber: post.seasonNumber,
+        source: post.source,
+        title: post.title,
+        volumeNumber: post.volumeNumber,
+      });
       const created = yield* db.executeTakeFirstOrError(
         db
           .insertInto("post_edits")
           .values({
             payload: input.payload,
             postId: input.postId,
+            previous_payload: previousPayload,
             status: "pending",
             suggestedBy: user.id,
           })
@@ -319,7 +332,10 @@ export class PostEditsService extends Context.Service<
                 row.userId !== context.userId &&
                 row.userId !== context.edit.suggestedBy,
             ).length;
-            stillNeeded = Math.max(0, REQUIRED_VOTES - 1 - otherVotes);
+            stillNeeded = Math.max(
+              0,
+              POST_EDIT_REQUIRED_VOTES - 1 - otherVotes,
+            );
           }
 
           // Record this vote; repeat clicks are no-ops via the composite PK.
@@ -473,6 +489,7 @@ export class PostEditsService extends Context.Service<
             "post_edits.createdAt",
             "post_edits.id",
             "post_edits.payload",
+            "post_edits.previous_payload",
             "post_edits.postId",
             "post_edits.resolvedAt",
             "post_edits.resolvedBy",
@@ -494,6 +511,9 @@ export class PostEditsService extends Context.Service<
             createdAt: toIsoTimestamp(row.createdAt),
             id: row.id,
             payload: decodePostEditPayload(row.payload),
+            previousPayload: Schema.decodeUnknownSync(
+              postEditPreviousPayloadSchema,
+            )(row.previous_payload),
             postId: row.postId,
             resolvedAt: row.resolvedAt ? toIsoTimestamp(row.resolvedAt) : null,
             resolvedBy: row.resolvedBy,

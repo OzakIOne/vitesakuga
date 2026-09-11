@@ -1,17 +1,19 @@
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
 import { FieldInfo } from "src/components/form/FieldInfo";
 import { Button } from "src/components/ui/button";
 import { EmailAutocomplete } from "src/components/ui/email-autocomplete";
+import { Alert } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import {
   PasswordInput,
   PasswordStrengthMeter,
   getPasswordStrength,
 } from "src/components/ui/password-input";
+import { Heading } from "src/components/ui/typography";
 import {
   useResendEmailVerification,
   useSignUp,
@@ -23,9 +25,17 @@ import { signUpSchema } from "src/lib/auth/auth.schemas";
 import { useTurnstile } from "src/lib/auth/useTurnstile";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { envClient } from "src/lib/env/client";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/(auth)/signup")({
   component: SignupForm,
+  head: () => ({
+    meta: seo({
+      description:
+        "Create a ViteSakuga account to upload and curate animation references.",
+      title: "Create an account · ViteSakuga",
+    }),
+  }),
 });
 
 function SignupForm() {
@@ -41,6 +51,11 @@ function SignupForm() {
   );
 
   const [serverError, setServerError] = useState("");
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (serverError) errorRef.current?.focus();
+  }, [serverError]);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
   const verifyEmailMutation = useVerifyEmail(redirectUrl);
@@ -85,11 +100,13 @@ function SignupForm() {
 
   if (verificationEmail) {
     return (
-      <div className="with-full flex h-fit flex-col items-center justify-center p-4">
+      <div className="flex min-h-[calc(100dvh-8rem)] w-full flex-col items-center justify-center p-4">
         <div className="w-80 max-w-full">
           <div className="flex flex-col gap-5">
             <div>
-              <h1 className="text-xl font-bold">Check your email</h1>
+              <Heading as="h1" size="lg">
+                Check your email
+              </Heading>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 We sent a six-digit verification code to {verificationEmail}.
                 Enter it here to finish creating your account.
@@ -139,9 +156,15 @@ function SignupForm() {
             </form>
 
             {serverError && (
-              <div className="alert alert-error" role="alert">
-                <span>{serverError}</span>
-              </div>
+              <Alert.Root ref={errorRef} status="error" tabIndex={-1}>
+                <Alert.Content>
+                  <Alert.Indicator status="error" />
+                  <div>
+                    <Alert.Title>Could Not Verify Email</Alert.Title>
+                    <Alert.Description>{serverError}</Alert.Description>
+                  </div>
+                </Alert.Content>
+              </Alert.Root>
             )}
 
             <div className="flex flex-col gap-2">
@@ -182,7 +205,7 @@ function SignupForm() {
   }
 
   return (
-    <div className="with-full flex h-fit flex-col items-center justify-center p-4">
+    <div className="flex min-h-[calc(100dvh-8rem)] w-full flex-col items-center justify-center p-4">
       <form
         className="w-80 max-w-full"
         onSubmit={(e) => {
@@ -190,12 +213,19 @@ function SignupForm() {
           void form.handleSubmit();
         }}
       >
+        <Heading as="h1" className="mb-6" size="xl">
+          Create Account
+        </Heading>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
             <form.Field name="name">
               {(field) => (
                 <>
-                  <Field.Root id={field.name} required>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                    required
+                  >
                     <Field.Label>
                       Name <Field.RequiredIndicator />
                     </Field.Label>
@@ -209,8 +239,8 @@ function SignupForm() {
                       placeholder="Jane Doe"
                       value={field.state.value}
                     />
+                    <FieldInfo field={field} />
                   </Field.Root>
-                  <FieldInfo field={field} />
                 </>
               )}
             </form.Field>
@@ -218,7 +248,11 @@ function SignupForm() {
             <form.Field name="email">
               {(field) => (
                 <>
-                  <Field.Root id={field.name} required>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                    required
+                  >
                     <Field.Label>
                       Email <Field.RequiredIndicator />
                     </Field.Label>
@@ -230,8 +264,8 @@ function SignupForm() {
                       placeholder="hello@gmail.com"
                       value={field.state.value}
                     />
+                    <FieldInfo field={field} />
                   </Field.Root>
-                  <FieldInfo field={field} />
                 </>
               )}
             </form.Field>
@@ -241,7 +275,11 @@ function SignupForm() {
                 const strength = getPasswordStrength(field.state.value);
                 return (
                   <>
-                    <Field.Root id={field.name} required>
+                    <Field.Root
+                      id={field.name}
+                      invalid={!field.state.meta.isValid}
+                      required
+                    >
                       <Field.Label>
                         Password <Field.RequiredIndicator />
                       </Field.Label>
@@ -264,8 +302,8 @@ function SignupForm() {
                           value={strength.score}
                         />
                       )}
+                      <FieldInfo field={field} />
                     </Field.Root>
-                    <FieldInfo field={field} />
                   </>
                 );
               }}
@@ -285,7 +323,11 @@ function SignupForm() {
             >
               {(field) => (
                 <>
-                  <Field.Root id={field.name} required>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                    required
+                  >
                     <Field.Label>
                       Confirm password <Field.RequiredIndicator />
                     </Field.Label>
@@ -302,8 +344,8 @@ function SignupForm() {
                       }}
                       value={field.state.value}
                     />
+                    <FieldInfo field={field} />
                   </Field.Root>
-                  <FieldInfo field={field} />
                 </>
               )}
             </form.Field>
@@ -322,14 +364,26 @@ function SignupForm() {
             <div className="hidden" ref={containerRef} />
           </div>
           {serverError && (
-            <div className="alert alert-error" role="alert">
-              <span>{serverError}</span>
-            </div>
+            <Alert.Root ref={errorRef} status="error" tabIndex={-1}>
+              <Alert.Content>
+                <Alert.Indicator status="error" />
+                <div>
+                  <Alert.Title>Could Not Create Account</Alert.Title>
+                  <Alert.Description>{serverError}</Alert.Description>
+                </div>
+              </Alert.Content>
+            </Alert.Root>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Button
               disabled={signUpMutation.isPending}
-              onClick={() => void socialLogin("github").catch(setServerError)}
+              onClick={() =>
+                void socialLogin("github").catch((error) =>
+                  setServerError(
+                    error instanceof Error ? error.message : String(error),
+                  ),
+                )
+              }
               type="button"
             >
               <IoLogoGithub aria-hidden="true" />
@@ -338,7 +392,13 @@ function SignupForm() {
             {envClient.VITE_GOOGLE_CLIENT_ID && (
               <Button
                 disabled={signUpMutation.isPending}
-                onClick={() => void socialLogin("google").catch(setServerError)}
+                onClick={() =>
+                  void socialLogin("google").catch((error) =>
+                    setServerError(
+                      error instanceof Error ? error.message : String(error),
+                    ),
+                  )
+                }
                 type="button"
               >
                 <FcGoogle aria-hidden="true" />

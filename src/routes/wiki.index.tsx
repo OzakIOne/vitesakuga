@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { EditorialShell } from "src/components/EditorialShell";
+import { EmptyState } from "src/components/EmptyState";
 import { wikiArticles, wikiCategories } from "src/lib/wiki/wiki";
 import { seo } from "src/utils/seo";
 
@@ -15,25 +17,21 @@ export const Route = createFileRoute("/wiki/")({
 
 function WikiPage() {
   return (
-    <div className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
-      <header className="mb-12">
-        <p className="mb-3 text-sm font-medium text-blue-600 dark:text-blue-400">
-          ViteSakuga knowledge base
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Wiki</h1>
-        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
-          Evergreen guides about the archive and how to contribute to it.
-        </p>
-      </header>
+    <EditorialShell
+      description="Evergreen guides about the archive and how to contribute to it."
+      eyebrow="ViteSakuga knowledge base"
+      title="Wiki"
+    >
       {wikiArticles.length === 0 ? (
-        <p className="text-gray-600 dark:text-gray-400">
-          No wiki articles yet. Check back soon.
-        </p>
+        <EmptyState
+          description="Check back soon for permanent guides from ViteSakuga."
+          title="No wiki articles yet"
+        />
       ) : (
         <div className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800">
           {wikiCategories().map((category) => (
             <section key={category} aria-label={category} className="py-8">
-              <h2 className="text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-500">
+              <h2 className="text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                 {category}
               </h2>
               {wikiArticles
@@ -66,6 +64,6 @@ function WikiPage() {
           ))}
         </div>
       )}
-    </div>
+    </EditorialShell>
   );
 }

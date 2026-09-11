@@ -1,6 +1,7 @@
-import { ErrorComponent } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 
-export function UserErrorComponent({ error }: ErrorComponentProps) {
-  return <ErrorComponent error={error} />;
+import { DefaultCatchBoundary } from "./DefaultCatchBoundary";
+
+export function UserErrorComponent(props: ErrorComponentProps) {
+  return <DefaultCatchBoundary {...props} />;
 }

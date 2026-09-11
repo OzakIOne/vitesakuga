@@ -1,8 +1,13 @@
+import { Portal } from "@ark-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "src/components/ui/button";
-import { Spinner } from "src/components/ui/feedback";
+import { useState } from "react";
+import { ListSkeleton } from "src/components/LoadingSkeletons";
+import { Button, CloseButton } from "src/components/ui/button";
+import { Alert } from "src/components/ui/feedback";
 import { HStack, Stack } from "src/components/ui/layout";
+import { Dialog } from "src/components/ui/overlay";
 import { Text } from "src/components/ui/typography";
+import { Heading } from "src/components/ui/typography";
 import { previewGc, runGc } from "src/lib/videos/videos.service";
 
 const GC_STALE_MS = 60_000;
@@ -13,6 +18,7 @@ const GC_STALE_MS = 60_000;
  * explicit, confirmable sweep.
  */
 export function StorageGcPanel() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const queryClient = useQueryClient();
   const preview = useQuery({
     queryFn: async ({ signal }) => previewGc({ signal }),
@@ -25,21 +31,23 @@ export function StorageGcPanel() {
       await queryClient.invalidateQueries({
         queryKey: ["moderation", "gc-preview"],
       });
+      setConfirmOpen(false);
     },
   });
 
   if (preview.isPending) {
-    return (
-      <Stack align="center" justify="center" minH="200px">
-        <Spinner size="lg" />
-      </Stack>
-    );
+    return <ListSkeleton count={3} />;
   }
   if (preview.isError) {
     return (
-      <Text>
-        Could not load the storage audit. Only admins can run maintenance.
-      </Text>
+      <Alert.Root status="error">
+        <Alert.Content>
+          <Alert.Indicator status="error" />
+          <Alert.Description>
+            Could not load the storage audit. Only admins can run maintenance.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
     );
   }
 
@@ -48,6 +56,9 @@ export function StorageGcPanel() {
 
   return (
     <Stack gap={4}>
+      <Heading as="h2" size="lg">
+        Storage cleanup
+      </Heading>
       <Text>
         {purgeableRevisions.length} revision(s) past the retention window and{" "}
         {orphanKeys.length} orphaned object(s) would be removed.
@@ -79,7 +90,7 @@ export function StorageGcPanel() {
         <Button
           disabled={totalKeys === 0 || run.isPending}
           loading={run.isPending}
-          onClick={() => run.mutate()}
+          onClick={() => setConfirmOpen(true)}
         >
           Run cleanup
         </Button>
@@ -93,16 +104,72 @@ export function StorageGcPanel() {
       </HStack>
 
       {run.isSuccess && (
-        <Text fontSize="sm">
-          Cleanup done: {run.data.deletedKeys} object(s) deleted,{" "}
-          {run.data.purgedRevisions} revision(s) purged.
-        </Text>
+        <Alert.Root status="success">
+          <Alert.Content>
+            <Alert.Indicator status="success" />
+            <div>
+              <Alert.Title>Cleanup complete</Alert.Title>
+              <Alert.Description>
+                {run.data.deletedKeys} object(s) deleted and{" "}
+                {run.data.purgedRevisions} revision(s) purged.
+              </Alert.Description>
+            </div>
+          </Alert.Content>
+        </Alert.Root>
       )}
       {run.isError && (
-        <Text color="red.500" fontSize="sm">
-          Cleanup failed partway — check the server logs and refresh the audit.
-        </Text>
+        <Alert.Root status="error">
+          <Alert.Content>
+            <Alert.Indicator status="error" />
+            <div>
+              <Alert.Title>Cleanup failed</Alert.Title>
+              <Alert.Description>
+                Cleanup failed partway. Check the server logs and refresh the
+                audit before retrying.
+              </Alert.Description>
+            </div>
+          </Alert.Content>
+        </Alert.Root>
       )}
+
+      <Dialog.Root
+        onOpenChange={(details) => setConfirmOpen(details.open)}
+        open={confirmOpen}
+        role="alertdialog"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content maxW="md">
+              <Dialog.Header>
+                <Dialog.Title>Run storage cleanup?</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Dialog.Description>
+                  This permanently deletes {orphanKeys.length} orphaned
+                  object(s) and purges {purgeableRevisions.length} expired
+                  revision(s). This action cannot be undone.
+                </Dialog.Description>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline">Cancel</Button>
+                </Dialog.ActionTrigger>
+                <Button
+                  colorPalette="red"
+                  loading={run.isPending}
+                  onClick={() => run.mutate()}
+                >
+                  Delete {totalKeys} object(s)
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Stack>
   );
 }

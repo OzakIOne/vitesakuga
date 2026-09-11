@@ -298,3 +298,53 @@ describe("NotificationsService.markAllRead", () => {
     );
   });
 });
+
+describe("NotificationsService.markRead", () => {
+  it("marks only the requested notification owned by the session user", async () => {
+    const ctx = await makeServiceTestLayer(NotificationsServiceLive);
+    closeCtx = ctx.close;
+    const { db, runEffect, mockGetSession } = ctx;
+    await insertUser(db, "user-a");
+    await insertUser(db, "user-b");
+    const target = await insertNotification(db, {
+      type: "comment-mention",
+      userId: "user-a",
+    });
+    await insertNotification(db, {
+      type: "comment-mention",
+      userId: "user-a",
+    });
+    const otherUser = await insertNotification(db, {
+      type: "comment-mention",
+      userId: "user-b",
+    });
+    mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-a" }));
+
+    await runEffect(NotificationsService.markRead(target.id));
+    await runEffect(NotificationsService.markRead(otherUser.id));
+
+    const rows = await notificationRows(db);
+    expect(rows.find((row) => row.id === target.id)?.readAt).not.toBeNull();
+    expect(
+      rows.find((row) => row.id !== target.id && row.userId === "user-a")
+        ?.readAt,
+    ).toBeNull();
+    expect(rows.find((row) => row.id === otherUser.id)?.readAt).toBeNull();
+  });
+
+  it("fails with UnauthorizedError when signed out", async () => {
+    const ctx = await makeServiceTestLayer(NotificationsServiceLive);
+    closeCtx = ctx.close;
+    const { runEffect, mockGetSession } = ctx;
+    mockGetSession.mockResolvedValue(null);
+
+    const error = await runEffect(
+      Effect.flip(NotificationsService.markRead(1)),
+    );
+
+    expect(error._tag).toBe("UnauthorizedError");
+    expect(error.message).toBe(
+      "You must be logged in to update your notifications",
+    );
+  });
+});

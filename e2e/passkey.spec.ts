@@ -40,16 +40,16 @@ test("registers a passkey and signs in with it", async ({ context, page }) => {
       // The button flips to "Registering..." once React's mutation is pending;
       // waiting for it proves the click actually reached the handler.
       await expect(
-        page.getByRole("button", { name: "Registering..." }),
+        page.getByRole("button", { name: /^Registering/ }),
       ).toBeVisible({ timeout: 5000 });
       break;
     } catch {
       // Hydration race: retry the click.
     }
   }
-  await expect(
-    page.getByRole("button", { name: "Registering..." }),
-  ).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: /^Registering/ })).toBeVisible({
+    timeout: 10000,
+  });
 
   // Registration completes and the refreshed list shows the new passkey row.
   await expect(page.getByText(/Added/)).toBeVisible({ timeout: 30000 });

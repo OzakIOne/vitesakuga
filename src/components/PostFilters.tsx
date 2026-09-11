@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "src/components/ui/feedback";
-import { Box, Stack, VStack } from "src/components/ui/layout";
+import { Stack, VStack } from "src/components/ui/layout";
 import { Text } from "src/components/ui/typography";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 
@@ -22,16 +22,28 @@ type DateRangeOption = {
   value: NonNullable<PostsSearchParams["dateRange"]>;
 };
 
+export const POST_SORT_LABELS = {
+  newest: "Newest",
+  oldest: "Oldest",
+} as const satisfies Record<SortOption["value"], string>;
+
+export const POST_DATE_RANGE_LABELS = {
+  all: "All time",
+  month: "This month",
+  today: "Today",
+  week: "This week",
+} as const satisfies Record<DateRangeOption["value"], string>;
+
 const SORT_OPTIONS: readonly SortOption[] = [
-  { label: "Newest", value: "newest" },
-  { label: "Oldest", value: "oldest" },
+  { label: POST_SORT_LABELS.newest, value: "newest" },
+  { label: POST_SORT_LABELS.oldest, value: "oldest" },
 ];
 
 const DATE_RANGE_OPTIONS: readonly DateRangeOption[] = [
-  { label: "All Time", value: "all" },
-  { label: "Today", value: "today" },
-  { label: "This Week", value: "week" },
-  { label: "This Month", value: "month" },
+  { label: POST_DATE_RANGE_LABELS.all, value: "all" },
+  { label: POST_DATE_RANGE_LABELS.today, value: "today" },
+  { label: POST_DATE_RANGE_LABELS.week, value: "week" },
+  { label: POST_DATE_RANGE_LABELS.month, value: "month" },
 ];
 
 function FilterButton({
@@ -69,7 +81,6 @@ export function PostFilters({
   fromRoute,
 }: PostFiltersProps) {
   const navigate = useNavigate({ from: fromRoute });
-
   if (discoveryView !== "chronological") {
     return (
       <Text color="fg.muted" fontSize="xs">
@@ -81,8 +92,8 @@ export function PostFilters({
 
   return (
     <VStack align="stretch" gap={3}>
-      <Box>
-        <Text fontSize="xs" fontWeight="bold" mb={1}>
+      <fieldset className="m-0 border-0 p-0">
+        <Text as="legend" fontSize="xs" fontWeight="bold" mb={1}>
           Sort By
         </Text>
         <Stack direction="row" flexWrap="wrap" gap={2}>
@@ -99,9 +110,9 @@ export function PostFilters({
             />
           ))}
         </Stack>
-      </Box>
-      <Box>
-        <Text fontSize="xs" fontWeight="bold" mb={1}>
+      </fieldset>
+      <fieldset className="m-0 border-0 p-0">
+        <Text as="legend" fontSize="xs" fontWeight="bold" mb={1}>
           Date Range
         </Text>
         <Stack direction="row" flexWrap="wrap" gap={2}>
@@ -118,7 +129,7 @@ export function PostFilters({
             />
           ))}
         </Stack>
-      </Box>
+      </fieldset>
     </VStack>
   );
 }

@@ -25,6 +25,7 @@ import {
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 import { usersKeys } from "src/lib/users/users.queries";
+import { seo } from "src/utils/seo";
 
 const memberSinceFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -78,11 +79,11 @@ function DeleteAccountDialog({
               <Dialog.Title>Are you sure?</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
-              <Text mb={4}>
+              <Dialog.Description mb={4}>
                 This action cannot be undone. Your posts and comments will
                 remain publicly visible, published as &ldquo;Deleted
                 user&rdquo;. All your other data will be permanently removed.
-              </Text>
+              </Dialog.Description>
               <form
                 id="delete-account-confirm"
                 onSubmit={(e) => {
@@ -92,11 +93,13 @@ function DeleteAccountDialog({
               >
                 {hasPassword && <HiddenUsernameField value={email} />}
                 {hasPassword ? (
-                  <Field.Root>
+                  <Field.Root id="delete-password">
                     <Field.Label>Confirm your password</Field.Label>
                     <PasswordInput
                       autoComplete="current-password"
                       className="h-12 w-full"
+                      id="delete-password"
+                      name="password"
                       onChange={(e) => {
                         setConfirmation(e.target.value);
                       }}
@@ -105,7 +108,7 @@ function DeleteAccountDialog({
                     />
                   </Field.Root>
                 ) : (
-                  <Field.Root>
+                  <Field.Root id="delete-account-confirmation">
                     <Field.Label htmlFor="delete-account-confirmation">
                       Type &ldquo;{DELETE_CONFIRMATION_PHRASE}&rdquo; to confirm
                     </Field.Label>
@@ -163,6 +166,14 @@ export const Route = createFileRoute("/account")({
     return { user: context.user, hasPassword: security.hasPassword };
   },
   component: RouteComponent,
+  head: () => ({
+    meta: seo({
+      description:
+        "Manage your ViteSakuga profile, security, and account settings.",
+      noIndex: true,
+      title: "Account settings · ViteSakuga",
+    }),
+  }),
 });
 
 function RouteComponent() {
@@ -210,20 +221,23 @@ function RouteComponent() {
   const isChangePending = changePasswordMutation.isPending;
 
   return (
-    <Box className="flex min-h-dvh flex-col items-center px-4 py-16 sm:px-8">
+    <Box className="flex flex-col items-center px-4 py-8 sm:px-8">
       <div className="w-full max-w-lg space-y-12 rounded-2xl px-8 py-12 sm:px-12 sm:py-14">
         <div className="flex items-center gap-5">
           <AvatarGroup>
             <Avatar.Root size="2xl">
-              <Avatar.Fallback />
+              <Avatar.Fallback name={user.name} />
               <Avatar.Image
+                alt={user.name}
                 className="rounded-full"
                 src={user.image || undefined}
               />
             </Avatar.Root>
           </AvatarGroup>
           <div className="min-w-0 flex-1">
-            <Heading size="lg">{user.name}</Heading>
+            <Heading as="h1" size="lg">
+              {user.name}
+            </Heading>
             <Text color="gray.500" fontSize="sm">
               @{user.username}
             </Text>
@@ -265,7 +279,10 @@ function RouteComponent() {
             >
               <profileForm.Field name="name">
                 {(field) => (
-                  <Field.Root>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                  >
                     <Field.Label>Display name</Field.Label>
                     <InputGroup startElement={<LuUser />}>
                       <Input
@@ -288,7 +305,10 @@ function RouteComponent() {
 
               <profileForm.Field name="username">
                 {(field) => (
-                  <Field.Root>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                  >
                     <Field.Label>Username</Field.Label>
                     <InputGroup startElement={<LuAtSign />}>
                       <Input
@@ -311,7 +331,10 @@ function RouteComponent() {
 
               <profileForm.Field name="image">
                 {(field) => (
-                  <Field.Root>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                  >
                     <Field.Label>Profile picture URL</Field.Label>
                     <InputGroup startElement={<LuImage />}>
                       <Input
@@ -330,14 +353,15 @@ function RouteComponent() {
                     </InputGroup>
                     {!field.state.meta.errors &&
                       field.state.value !== user.image && (
-                        <div className="mt-3 flex items-center gap-3 rounded-lg bg-white p-4">
+                        <div className="mt-3 flex items-center gap-3 rounded-lg bg-white p-4 dark:bg-gray-800">
                           <Text color="gray.500" fontSize="sm">
                             Preview
                           </Text>
                           <AvatarGroup>
                             <Avatar.Root size="lg">
-                              <Avatar.Fallback />
+                              <Avatar.Fallback name={user.name} />
                               <Avatar.Image
+                                alt={`${user.name} preview`}
                                 src={field.state.value || undefined}
                               />
                             </Avatar.Root>
@@ -384,7 +408,7 @@ function RouteComponent() {
             </form>
           </section>
 
-          <section className="border-t border-gray-200 pt-12">
+          <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
             <Heading as="h2" mb={1} size="md">
               Password
             </Heading>
@@ -401,7 +425,10 @@ function RouteComponent() {
               <HiddenUsernameField value={user.email} />
               <passwordForm.Field name="currentPassword">
                 {(field) => (
-                  <Field.Root>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                  >
                     <Field.Label>Current password</Field.Label>
                     <PasswordInput
                       autoComplete="current-password"
@@ -415,13 +442,17 @@ function RouteComponent() {
                       placeholder="Enter current password"
                       value={field.state.value}
                     />
+                    <FieldInfo field={field} />
                   </Field.Root>
                 )}
               </passwordForm.Field>
 
               <passwordForm.Field name="newPassword">
                 {(field) => (
-                  <Field.Root>
+                  <Field.Root
+                    id={field.name}
+                    invalid={!field.state.meta.isValid}
+                  >
                     <Field.Label>New password</Field.Label>
                     <PasswordInput
                       autoComplete="new-password"
@@ -435,6 +466,7 @@ function RouteComponent() {
                       placeholder="Enter new password"
                       value={field.state.value}
                     />
+                    <FieldInfo field={field} />
                   </Field.Root>
                 )}
               </passwordForm.Field>
@@ -476,7 +508,7 @@ function RouteComponent() {
             hasPassword={hasPassword}
           />
 
-          <section className="border-t border-gray-200 pt-12">
+          <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
             <Heading as="h2" mb={1} size="md">
               Danger zone
             </Heading>

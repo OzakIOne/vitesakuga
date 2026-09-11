@@ -1,46 +1,48 @@
-import { ClientOnly } from "@ark-ui/react";
-import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { createFileRoute } from "@tanstack/react-router";
-import { Suspense } from "react";
-import { Spinner } from "src/components/ui/feedback";
-import { Stack } from "src/components/ui/layout";
-import { Text } from "src/components/ui/typography";
+import { EmptyState } from "src/components/EmptyState";
+import { CardGridSkeleton } from "src/components/LoadingSkeletons";
+import { Heading } from "src/components/ui/typography";
 import { User } from "src/components/User";
-import { usersCollection } from "src/lib/db/collections";
+import { fetchUsers } from "src/lib/users/users.service";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/users/")({
-  component: UsersLayoutComponent,
+  component: UsersContent,
+  loader: async () => ({ users: await fetchUsers() }),
+  pendingComponent: () => <CardGridSkeleton count={8} />,
+  head: () => ({
+    meta: seo({
+      title: "Contributors · ViteSakuga",
+      description: "Browse the contributors who build the ViteSakuga archive.",
+    }),
+  }),
 });
 
 function UsersContent() {
-  const { data: users } = useLiveSuspenseQuery((q) =>
-    q.from({ u: usersCollection }).orderBy(({ u }) => u.name, "asc"),
-  );
+  const { users } = Route.useLoaderData();
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {users.map((user) => (
-        <User id={user.id} image={user.image} key={user.id} name={user.name} />
-      ))}
+    <div className="p-4">
+      <Heading as="h1" className="mb-6" size="2xl">
+        Contributors
+      </Heading>
+      {users.length === 0 ? (
+        <EmptyState
+          description="Contributor profiles will appear after members join."
+          title="No contributors yet"
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {users.map((user) => (
+            <User
+              id={user.id}
+              image={user.image}
+              key={user.id}
+              name={user.name}
+            />
+          ))}
+        </div>
+      )}
     </div>
-  );
-}
-
-function UsersLayoutComponent() {
-  return (
-    <Suspense fallback={<UsersLoading />}>
-      <ClientOnly fallback={<UsersLoading />}>
-        <UsersContent />
-      </ClientOnly>
-    </Suspense>
-  );
-}
-
-function UsersLoading() {
-  return (
-    <Stack align="center" justify="center" minH="400px">
-      <Spinner size="lg" />
-      <Text>Loading users...</Text>
-    </Stack>
   );
 }

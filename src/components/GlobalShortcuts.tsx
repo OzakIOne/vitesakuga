@@ -5,20 +5,27 @@ import { KeyboardShortcutsDialog } from "src/components/KeyboardShortcutsDialog"
 import { IconButton } from "src/components/ui/button";
 import { Box } from "src/components/ui/layout";
 
-function focusSearchInput() {
+function focusSearchInput(): boolean {
   const searchInput = document.getElementById("search-input");
   searchInput?.focus();
+  return searchInput !== null;
 }
 
 export function GlobalShortcuts() {
   const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const focusOrOpenSearch = () => {
+    if (focusSearchInput()) return;
+    void navigate({ to: "/posts" }).then(() => {
+      requestAnimationFrame(focusSearchInput);
+    });
+  };
 
   useHotkey({ key: "/", shift: true }, () => {
     setShortcutsOpen((open) => !open);
   });
 
-  useHotkey("Mod+K", focusSearchInput);
+  useHotkey("Mod+K", focusOrOpenSearch);
 
   useHotkeySequences([
     {
@@ -34,7 +41,7 @@ export function GlobalShortcuts() {
       sequence: ["G", "U"],
     },
     {
-      callback: focusSearchInput,
+      callback: focusOrOpenSearch,
       sequence: ["G", "S"],
     },
   ]);

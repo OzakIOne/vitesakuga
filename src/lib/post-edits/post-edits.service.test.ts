@@ -82,6 +82,16 @@ describe("PostEditsService.propose", () => {
     const row = await editRow(db, result.editId);
     expect(row.status).toBe("pending");
     expect(decodePostEditPayload(row.payload)).toEqual(PAYLOAD);
+    expect(row.previous_payload).toEqual({
+      animeTitle: null,
+      chapterNumber: null,
+      description: "original description",
+      episodeNumber: null,
+      seasonNumber: null,
+      source: null,
+      title: "Original title",
+      volumeNumber: null,
+    });
   });
 
   it("fails with UnauthorizedError when signed out", async () => {
@@ -722,5 +732,15 @@ describe("PostEditsService.listForPost", () => {
     expect(pending[0]!.approvals).toEqual(["second-voter"]);
     expect(pending[0]!.status).toBe("pending");
     expect(pending[0]!.suggestedByName).toBe("voter-5");
+    expect(pending[0]!.previousPayload).toEqual({
+      animeTitle: null,
+      chapterNumber: null,
+      description: "original description",
+      episodeNumber: null,
+      seasonNumber: null,
+      source: null,
+      title: "Original title",
+      volumeNumber: null,
+    });
   });
 });

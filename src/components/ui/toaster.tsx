@@ -35,7 +35,7 @@ function ToastIndicator({ type }: { type: string | undefined }) {
   return (
     <LuLoader
       aria-hidden="true"
-      className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-blue-600"
+      className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-blue-600 dark:text-blue-400"
     />
   );
 }
@@ -46,7 +46,7 @@ export const Toaster = () => (
       {(toast) => (
         <Toast.Root
           className={
-            "pointer-events-auto flex w-full items-start gap-3 rounded-lg border bg-white p-4 shadow-lg dark:bg-gray-800 " +
+            "pointer-events-auto flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 " +
             (toast.type === "success"
               ? "border-green-200 dark:border-green-800"
               : toast.type === "error"
@@ -68,14 +68,14 @@ export const Toaster = () => (
             )}
           </div>
           {toast.action && (
-            <Toast.ActionTrigger className="shrink-0 text-sm font-medium text-blue-600 hover:underline">
+            <Toast.ActionTrigger className="shrink-0 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
               {toast.action.label}
             </Toast.ActionTrigger>
           )}
           {toast.closable && (
             <Toast.CloseTrigger
               aria-label="Dismiss notification"
-              className="shrink-0 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              className="shrink-0 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             >
               <LuX aria-hidden="true" />
             </Toast.CloseTrigger>

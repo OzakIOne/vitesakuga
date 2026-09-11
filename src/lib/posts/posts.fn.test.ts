@@ -708,6 +708,7 @@ describe("PostsService.fetchDetail", () => {
     expect(result.post.title).toBe("Detail Post");
     expect(result.post.description).toBe("<p>Rich description</p>");
     expect(result.post.source).toBe("https://example.com");
+    expect(result.post.thumbnailKey).toBe("thumbnails/user-1/abc.jpg");
     expect(result.user.name).toBe("Alice");
     expect(result.user.id).toBe("user-1");
     expect(result.tags).toEqual([]);
@@ -872,6 +873,22 @@ describe("PostsService.upload", () => {
     expect(post.title).toBe("Uploaded Post");
   });
 
+  it("rejects an upload that references a missing post", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const error = await runEffect(
+      Effect.flip(
+        PostsService.upload({
+          ...makeUploadInput("videos/_pending/user-1/not-used.mp4"),
+          relatedPostId: asPostId(9999),
+        }),
+      ),
+    );
+
+    expect(error._tag).toBe("ValidationError");
+    expect(error.message).toBe("Related post 9999 not found");
+  });
+
   it("fails with ValidationError for a video key outside the user's staging namespace", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
@@ -924,8 +941,27 @@ describe("PostsService.upload", () => {
       ),
     );
 
-    expect(error._tag).toBe("SqlError");
+    expect(error._tag).toBe("ValidationError");
+    expect(error.message).toBe("Tag selection is invalid");
     expect(await db.selectFrom("posts").selectAll().execute()).toEqual([]);
+  });
+
+  it("rejects tag ids whose names do not match the submitted tag", async () => {
+    const imageTagId = await insertTag("image");
+    const { key: pendingKey } = await uploadVideoToStorage();
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const result = await runEffect(
+      Effect.flip(
+        PostsService.upload({
+          ...makeUploadInput(pendingKey),
+          tags: [{ id: imageTagId, name: "safe-tag" }],
+        }),
+      ),
+    );
+
+    expect(result._tag).toBe("ValidationError");
+    expect(result.message).toBe("Tag selection is invalid");
   });
 });
 
@@ -1018,6 +1054,27 @@ describe("PostsService.update", () => {
     expect(result.source).toBe("https://new.example.com");
   });
 
+  it("rejects an update that references a missing post", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+    const postId = await insertPost();
+
+    const error = await runEffect(
+      Effect.flip(
+        PostsService.update({
+          postId,
+          title: "Updated",
+          description: "New description",
+          source: "",
+          relatedPostId: asPostId(9999),
+          tags: [],
+        }),
+      ),
+    );
+
+    expect(error._tag).toBe("ValidationError");
+    expect(error.message).toBe("Related post 9999 not found");
+  });
+
   it("adds tags to updated post", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const postId = await insertPost();
@@ -1093,7 +1150,8 @@ describe("PostsService.update", () => {
       ),
     );
 
-    expect(error._tag).toBe("SqlError");
+    expect(error._tag).toBe("ValidationError");
+    expect(error.message).toBe("Tag selection is invalid");
     const post = await db
       .selectFrom("posts")
       .select(["title", "description"])

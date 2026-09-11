@@ -2,19 +2,15 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Effect, Schema } from "effect";
 import { useCallback } from "react";
+import { EmptyState } from "src/components/EmptyState";
+import { CardGridSkeleton } from "src/components/LoadingSkeletons";
 import { Pagination } from "src/components/Pagination";
-import { Spinner } from "src/components/ui/feedback";
-import {
-  Box,
-  HStack,
-  SimpleGrid,
-  Stack,
-  VStack,
-} from "src/components/ui/layout";
+import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { publicPlaylistsQueryOptions } from "src/lib/playlists/playlists.queries";
+import { seo } from "src/utils/seo";
 
 const PlaylistsSearchSchema = Schema.Struct({
   page: Schema.Number.pipe(
@@ -25,17 +21,22 @@ const PlaylistsSearchSchema = Schema.Struct({
 
 export const Route = createFileRoute("/playlists/")({
   component: PlaylistsContent,
+  pendingComponent: () => <CardGridSkeleton count={10} />,
   validateSearch: Schema.toStandardSchemaV1(PlaylistsSearchSchema),
-  ssr: "data-only",
+  head: () => ({
+    meta: seo({
+      description:
+        "Browse public playlists curated by ViteSakuga contributors.",
+      title: "Public playlists · ViteSakuga",
+    }),
+  }),
 });
 
 function PlaylistsContent() {
   const { page } = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const { data, isLoading } = useSuspenseQuery(
-    publicPlaylistsQueryOptions({ page }),
-  );
+  const { data } = useSuspenseQuery(publicPlaylistsQueryOptions({ page }));
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -55,24 +56,11 @@ function PlaylistsContent() {
         Public Playlists
       </Heading>
 
-      {isLoading && (
-        <Stack align="center" justify="center" minH="200px">
-          <Spinner size="lg" />
-        </Stack>
-      )}
-
-      {!isLoading && data.data.length === 0 ? (
-        <Box
-          alignItems="center"
-          border="1px solid"
-          borderColor="gray.200"
-          borderRadius="md"
-          display="flex"
-          h="200px"
-          justifyContent="center"
-        >
-          <Text color="gray.500">No public playlists yet</Text>
-        </Box>
+      {data.data.length === 0 ? (
+        <EmptyState
+          description="Create or publish a playlist to share your favorite posts."
+          title="No public playlists yet"
+        />
       ) : (
         <>
           <SimpleGrid columns={{ base: 1, lg: 4, md: 3, sm: 2, xl: 5 }} gap={4}>
@@ -113,9 +101,12 @@ function PlaylistsContent() {
                         justifyContent="center"
                         w="full"
                       >
-                        <Text color="gray.300" fontSize="lg">
-                          No posts
-                        </Text>
+                        <EmptyState
+                          description="Add posts to this playlist to see them here."
+                          size="compact"
+                          title="No posts"
+                          titleAs="p"
+                        />
                       </Box>
                     )}
                   </Box>

@@ -12,7 +12,7 @@ import {
   HiddenUsernameField,
 } from "src/components/ui/password-input";
 import { toaster } from "src/components/ui/toaster";
-import { Text } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
 import {
   useDisableTwoFactor,
   useEnableTwoFactor,
@@ -226,10 +226,12 @@ export function TwoFactorSection({
           : "Enable two-factor authentication";
 
   return (
-    <section className="border-t border-gray-200 pt-12">
+    <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Two-factor authentication</h2>
+          <Heading as="h2" size="md">
+            Two-factor authentication
+          </Heading>
           <Text color="gray.500" fontSize="sm" mt={1}>
             {enabled
               ? "Protected with an authenticator app (TOTP)."
@@ -306,10 +308,12 @@ export function TwoFactorSection({
                       Enter your password to confirm. You&apos;ll then scan a QR
                       code with your authenticator app.
                     </Text>
-                    <Field.Root>
+                    <Field.Root id="enable-two-factor-password">
                       <Field.Label>Password</Field.Label>
                       <PasswordInput
                         autoComplete="current-password"
+                        id="enable-two-factor-password"
+                        name="password"
                         onChange={(e) => setEnablePassword(e.target.value)}
                         placeholder="Enter your password"
                         value={enablePassword}
@@ -332,7 +336,7 @@ export function TwoFactorSection({
                       Scan this code with your authenticator app, then enter the
                       6-digit code it shows.
                     </Text>
-                    <div className="rounded-xl bg-white p-3">
+                    <div className="rounded-xl bg-white p-3 dark:bg-gray-800">
                       <QRCode
                         aria-label="Two-factor authentication setup QR code"
                         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- QRCode renders an inline <svg> with no image URL, so a native <img> is impossible; role="img" on the svg keeps it announced as a labeled image
@@ -370,13 +374,13 @@ export function TwoFactorSection({
                       id="verify-2fa-code"
                       onSubmit={handleVerifyCode}
                     >
-                      <Field.Root>
+                      <Field.Root id="two-factor-code">
                         <Field.Label>6-digit code</Field.Label>
                         <Input
-                          aria-label="6-digit verification code"
                           autoComplete="one-time-code"
                           autoFocus
                           inputMode="numeric"
+                          name="code"
                           maxLength={6}
                           onChange={(e) =>
                             setCode(e.target.value.replace(/\D/g, ""))
@@ -505,14 +509,16 @@ export function TwoFactorSection({
                 {hasPassword ? (
                   <form id="disable-2fa" onSubmit={handleDisable}>
                     <HiddenUsernameField value={email} />
-                    <Text color="gray.500" fontSize="sm" mb={4}>
+                    <Dialog.Description color="gray.500" fontSize="sm" mb={4}>
                       Your account will only be protected by your password.
                       Enter your password to confirm.
-                    </Text>
-                    <Field.Root>
+                    </Dialog.Description>
+                    <Field.Root id="disable-two-factor-password">
                       <Field.Label>Password</Field.Label>
                       <PasswordInput
                         autoComplete="current-password"
+                        id="disable-two-factor-password"
+                        name="password"
                         onChange={(e) => setDisablePassword(e.target.value)}
                         placeholder="Enter your password"
                         value={disablePassword}
@@ -520,10 +526,10 @@ export function TwoFactorSection({
                     </Field.Root>
                   </form>
                 ) : (
-                  <Text color="gray.500" fontSize="sm" mb={4}>
+                  <Dialog.Description color="gray.500" fontSize="sm" mb={4}>
                     Your account will only be protected by your GitHub or Google
                     sign-in. Confirm to turn off two-factor authentication.
-                  </Text>
+                  </Dialog.Description>
                 )}
               </Dialog.Body>
               <Dialog.Footer>
@@ -605,10 +611,12 @@ export function TwoFactorSection({
                       will stop working immediately. Enter your password to
                       confirm.
                     </Text>
-                    <Field.Root>
+                    <Field.Root id="regenerate-two-factor-password">
                       <Field.Label>Password</Field.Label>
                       <PasswordInput
                         autoComplete="current-password"
+                        id="regenerate-two-factor-password"
+                        name="password"
                         onChange={(e) => setRegeneratePassword(e.target.value)}
                         placeholder="Enter your password"
                         value={regeneratePassword}

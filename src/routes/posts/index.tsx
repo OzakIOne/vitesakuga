@@ -1,18 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Schema } from "effect";
+import {
+  POST_DATE_RANGE_LABELS,
+  POST_SORT_LABELS,
+} from "src/components/PostFilters";
 import { PostsPageLayout } from "src/components/PostsPageLayout";
 import { PostsResultsState } from "src/components/PostsResultsState";
 import { Box } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
 import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
-import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
+import { DISCOVERY_VIEW_INFO } from "src/lib/posts/discovery";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
+import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/posts/")({
   component: PostsContent,
-  validateSearch: toStandardSchemaV1Strict(searchPostsBaseSchema),
-  ssr: "data-only",
+  validateSearch: Schema.toStandardSchemaV1(searchPostsBaseSchema),
+  head: () => ({
+    meta: seo({
+      description:
+        "Browse and search the ViteSakuga animation reference archive.",
+      title: "Posts · ViteSakuga",
+    }),
+  }),
 });
 
 function PostsContent() {
@@ -46,9 +58,13 @@ function PostsContent() {
   const activeFilters = [
     ...(q ? [`Search: ${q}`] : []),
     ...tags.map((tag) => `Tag: ${tag}`),
-    ...(dateRange !== "all" ? [`Date: ${dateRange}`] : []),
-    ...(sortBy !== "newest" ? [`Sort: ${sortBy}`] : []),
-    ...(view !== "chronological" ? [`View: ${view}`] : []),
+    ...(dateRange !== "all"
+      ? [`Date: ${POST_DATE_RANGE_LABELS[dateRange]}`]
+      : []),
+    ...(sortBy !== "newest" ? [`Sort: ${POST_SORT_LABELS[sortBy]}`] : []),
+    ...(view !== "chronological"
+      ? [`View: ${DISCOVERY_VIEW_INFO[view].label}`]
+      : []),
     ...(seriesTitle ? [`Series: ${seriesTitle}`] : []),
   ];
 

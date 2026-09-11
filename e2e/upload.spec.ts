@@ -28,9 +28,38 @@ test.describe("Upload page", () => {
     await expect(page.getByRole("button", { name: "Upload" })).toBeVisible();
   });
 
+  test("related post search does not emit a controlled-input warning", async ({
+    page,
+  }) => {
+    const controlledInputWarnings: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        message.text().includes("both value and defaultValue")
+      ) {
+        controlledInputWarnings.push(message.text());
+      }
+    });
+
+    await page.goto("/upload", { timeout: 30000, waitUntil: "load" });
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByPlaceholder("Search by title or enter post ID..."),
+    ).toBeVisible();
+
+    expect(controlledInputWarnings).toEqual([]);
+  });
+
   test("uploading a video shows preview and thumbnail selector", async ({
     page,
   }) => {
+    const mediaErrors: string[] = [];
+    page.on("pageerror", (error) => {
+      if (error.message.includes("querySelector")) {
+        mediaErrors.push(error.message);
+      }
+    });
+
     await page.locator("#title").fill("Test Video");
     await page.locator("#description").fill("A test video description");
 
@@ -63,6 +92,7 @@ test.describe("Upload page", () => {
     await expect(page.locator("media-controller")).toBeVisible({
       timeout: 20000,
     });
+    expect(mediaErrors).toEqual([]);
 
     await expect(page.getByText("Select Thumbnail")).toBeVisible({
       timeout: 15000,

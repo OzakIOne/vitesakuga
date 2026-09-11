@@ -49,9 +49,9 @@ function isStyleObject(value: ChakraValue): value is StyleObject {
 }
 
 function mapColor(value: string): string {
-  if (value === "fg") return "text-neutral-900";
+  if (value === "fg") return "text-neutral-900 dark:text-neutral-100";
   if (value === "fg.subtle") return "text-neutral-500 dark:text-neutral-400";
-  if (value === "fg.muted") return "text-neutral-400 dark:text-neutral-500";
+  if (value === "fg.muted") return "text-neutral-600 dark:text-neutral-400";
   // Light-mode override: blue.500 on white fails WCAG AA for body-size text.
   // SAFETY: the lookup keys are arbitrary token strings; a miss returns undefined and falls through to the generic mapping.
   const override =
@@ -70,6 +70,7 @@ function mapColor(value: string): string {
 /** Dark-mode text classes for tokens whose light shade fails WCAG AA on the
     dark background (gray-950). Applied on top of the base light class. */
 const TEXT_DARK_VARIANTS = {
+  "gray.400": "text-gray-400",
   "gray.500": "text-gray-400",
   "gray.600": "text-gray-400",
   "gray.700": "text-gray-300",
@@ -77,6 +78,11 @@ const TEXT_DARK_VARIANTS = {
   "blue.500": "text-blue-400",
   "blue.600": "text-blue-400",
   "blue.700": "text-blue-300",
+  "green.600": "text-green-400",
+  "green.700": "text-green-300",
+  "orange.600": "text-orange-400",
+  "orange.700": "text-orange-300",
+  "red.500": "text-red-400",
   "red.600": "text-red-400",
   "red.700": "text-red-300",
 } satisfies Record<string, string>;
@@ -84,15 +90,55 @@ const TEXT_DARK_VARIANTS = {
 /** Light-mode replacements for tokens that fail WCAG AA on white. */
 const TEXT_LIGHT_OVERRIDES = {
   "blue.500": "text-blue-600",
+  "gray.400": "text-gray-600",
 } satisfies Record<string, string>;
 
 function mapBorderColor(value: string): string {
-  if (value === "border") return "border-neutral-200";
-  if (value === "fg") return "border-neutral-900";
-  return `border-${value
+  if (value === "border") {
+    return "border-neutral-200 dark:border-neutral-700";
+  }
+  if (value === "fg") {
+    return "border-neutral-900 dark:border-neutral-100";
+  }
+  const base = `border-${value
     .split(".")
     .map((part) => part.replaceAll("_", "-"))
     .join("-")}`;
+  // SAFETY: token strings are open-ended; a missing key intentionally falls
+  // through to the light-only base class.
+  const dark = BORDER_DARK_VARIANTS[value as keyof typeof BORDER_DARK_VARIANTS];
+  return dark ? `${base} dark:${dark}` : base;
+}
+
+const BORDER_DARK_VARIANTS = {
+  "blue.500": "border-blue-400",
+  "gray.100": "border-gray-800",
+  "gray.200": "border-gray-700",
+  "orange.300": "border-orange-700",
+} satisfies Record<string, string>;
+
+function mapBackgroundColor(value: string): string {
+  const base = `bg-${value.split(".").join("-")}`;
+  // SAFETY: token strings are open-ended; a missing key intentionally falls
+  // through to the unchanged base class.
+  const dark =
+    BACKGROUND_DARK_VARIANTS[value as keyof typeof BACKGROUND_DARK_VARIANTS];
+  return dark ? `${base} dark:${dark}` : base;
+}
+
+const BACKGROUND_DARK_VARIANTS = {
+  "blue.50": "bg-blue-950/30",
+  "gray.50": "bg-gray-800",
+  "red.50": "bg-red-950/30",
+} satisfies Record<string, string>;
+
+const CSS_LENGTH_PATTERN = /[a-z%]|\(/i;
+
+function mapMinimumLength(prefix: "min-h" | "min-w", value: string): string {
+  const compactValue = value.replaceAll(" ", "");
+  return CSS_LENGTH_PATTERN.test(compactValue)
+    ? `${prefix}-[${compactValue}]`
+    : `${prefix}-${compactValue}`;
 }
 
 function mapResponsive(
@@ -376,7 +422,9 @@ export function useChakraProps<P extends ChakraStyleProps>(
         break;
       }
       case "minW": {
-        classes.push(...mapResponsive(value, (v) => `min-w-${v}`));
+        classes.push(
+          ...mapResponsive(value, (v) => mapMinimumLength("min-w", v)),
+        );
         break;
       }
       case "h":
@@ -392,23 +440,13 @@ export function useChakraProps<P extends ChakraStyleProps>(
       }
       case "minH": {
         classes.push(
-          ...mapResponsive(value, (v) => {
-            if (v.endsWith("px") || v.includes("(")) {
-              return `min-h-[${v.replaceAll(" ", "")}]`;
-            }
-            return `min-h-${v}`;
-          }),
+          ...mapResponsive(value, (v) => mapMinimumLength("min-h", v)),
         );
         break;
       }
       case "minHeight": {
         classes.push(
-          ...mapResponsive(value, (v) => {
-            if (v.endsWith("px") || v.includes("(")) {
-              return `min-h-[${v.replaceAll(" ", "")}]`;
-            }
-            return `min-h-${v}`;
-          }),
+          ...mapResponsive(value, (v) => mapMinimumLength("min-h", v)),
         );
         break;
       }
@@ -644,9 +682,7 @@ export function useChakraProps<P extends ChakraStyleProps>(
       }
       case "bg":
       case "backgroundColor": {
-        classes.push(
-          ...mapResponsive(value, (v) => `bg-${v.split(".").join("-")}`),
-        );
+        classes.push(...mapResponsive(value, mapBackgroundColor));
         break;
       }
       case "shadow": {

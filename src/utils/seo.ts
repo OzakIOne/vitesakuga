@@ -3,11 +3,15 @@ export const seo = ({
   description,
   keywords,
   image,
+  noIndex = false,
+  url,
 }: {
   title: string;
   description?: string;
   image?: string;
   keywords?: string;
+  noIndex?: boolean;
+  url?: string;
 }) => {
   const tags = [
     { title },
@@ -15,15 +19,20 @@ export const seo = ({
     { content: keywords, name: "keywords" },
     { content: title, name: "twitter:title" },
     { content: description, name: "twitter:description" },
-    { content: "@tannerlinsley", name: "twitter:creator" },
-    { content: "@tannerlinsley", name: "twitter:site" },
+    {
+      content: image ? "summary_large_image" : "summary",
+      name: "twitter:card",
+    },
     { content: "website", name: "og:type" },
     { content: title, name: "og:title" },
     { content: description, name: "og:description" },
+    ...(noIndex ? [{ content: "noindex, nofollow", name: "robots" }] : []),
+    ...(url ? [{ content: url, name: "og:url" }] : []),
+    { content: "ViteSakuga", name: "og:site_name" },
+    { content: "en_US", name: "og:locale" },
     ...(image
       ? [
           { content: image, name: "twitter:image" },
-          { content: "summary_large_image", name: "twitter:card" },
           { content: image, name: "og:image" },
         ]
       : []),

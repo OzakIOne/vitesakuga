@@ -4,7 +4,7 @@ import {
   type RegisteredRouter,
 } from "@tanstack/react-router";
 import { Badge } from "src/components/ui/feedback";
-import { Box, Stack } from "src/components/ui/layout";
+import { Stack } from "src/components/ui/layout";
 import { Text } from "src/components/ui/typography";
 import {
   DISCOVERY_VIEW_INFO,
@@ -23,15 +23,13 @@ export function DiscoveryViewSelector({
 }: DiscoveryViewSelectorProps) {
   const navigate = useNavigate({ from: fromRoute });
   const { user } = useRouteContext({ from: "__root__" });
-
   return (
-    <Box>
-      <Text fontSize="xs" fontWeight="bold" mb={1}>
-        Browse intentionally
+    <fieldset className="m-0 border-0 p-0">
+      <Text as="legend" fontSize="xs" fontWeight="bold" mb={1}>
+        Browse Posts
       </Text>
       <Text color="fg.muted" fontSize="xs" mb={2}>
-        Chronological stays the default. Choose an experiment when you want a
-        different way to study the archive.
+        Choose how posts are ordered. Newest first is the default.
       </Text>
       <Stack direction="row" flexWrap="wrap" gap={2}>
         {DISCOVERY_VIEW_ORDER.map((option) => {
@@ -39,9 +37,6 @@ export function DiscoveryViewSelector({
           const needsLogin = info.requiresAuthentication && user === null;
           return (
             <button
-              aria-label={
-                needsLogin ? `${info.label} (sign in required)` : info.label
-              }
               aria-pressed={view === option}
               className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               disabled={needsLogin}
@@ -79,6 +74,6 @@ export function DiscoveryViewSelector({
           Sign in to unlock followed-tag discovery.
         </Text>
       )}
-    </Box>
+    </fieldset>
   );
 }

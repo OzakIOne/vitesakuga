@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { EmptyState } from "src/components/EmptyState";
 import { assetUrl } from "src/lib/assets/url";
 import { PROMOTION_RULES } from "src/lib/promotions/promotions.config";
 import type { ContributorProfile as ContributorProfileData } from "src/lib/users/users.schema";
@@ -40,7 +41,9 @@ export function ContributorProfile({ profile }: ContributorProfileProps) {
       <Card.Body>
         <HStack align="start" gap={4}>
           <Avatar.Root size="xl">
-            {profile.image && <Avatar.Image src={profile.image} />}
+            {profile.image && (
+              <Avatar.Image alt={profile.name} src={profile.image} />
+            )}
             <Avatar.Fallback name={profile.name} />
           </Avatar.Root>
           <Stack flex={1} gap={1} minW={0}>
@@ -139,9 +142,12 @@ export function ContributorProfile({ profile }: ContributorProfileProps) {
                         display="flex"
                         justifyContent="center"
                       >
-                        <Text color="gray.300" fontSize="sm">
-                          No posts
-                        </Text>
+                        <EmptyState
+                          description="This contributor has not published posts yet."
+                          size="compact"
+                          title="No posts"
+                          titleAs="p"
+                        />
                       </Box>
                     )}
                     <Card.Body>

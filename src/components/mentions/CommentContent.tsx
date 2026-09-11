@@ -89,7 +89,7 @@ export function CommentContent({
   );
 
   return (
-    <Text className="break-words" mt={2}>
+    <Text className="break-words whitespace-pre-wrap" mt={2}>
       {segments.map((segment, index) =>
         segment.kind === "text" ? (
           <Fragment key={index}>{segment.text}</Fragment>

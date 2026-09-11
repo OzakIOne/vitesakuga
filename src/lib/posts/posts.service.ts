@@ -137,6 +137,7 @@ type PostDetailResult = {
     seasonNumber: number | null;
     source: string | null;
     sourceType: Schema.Schema.Type<typeof postSourceSchema> | null;
+    thumbnailKey: string;
     title: string;
     videoKey: string | null;
     videoMetadata: Schema.Schema.Type<typeof VideoMetadataSchema>;
@@ -202,7 +203,8 @@ export class PostsService extends Context.Service<
       | SessionFetchError
       | SqlError
       | SqlNoFirstResult
-      | RowParseError,
+      | RowParseError
+      | ValidationError,
       SessionService
     >;
     readonly getByTag: (
@@ -214,6 +216,39 @@ export class PostsService extends Context.Service<
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
     const points = yield* PointsService;
+
+    const validateRelatedPost = Effect.fn("PostsService.validateRelatedPost")(
+      function* (args: {
+        readonly postId?: PostId | undefined;
+        readonly relatedPostId?: PostId | undefined;
+      }) {
+        if (args.relatedPostId === undefined) {
+          return;
+        }
+
+        if (args.postId === args.relatedPostId) {
+          return yield* Effect.fail(
+            new ValidationError({
+              message: "A post cannot be related to itself",
+            }),
+          );
+        }
+
+        const relatedPost = yield* db.executeTakeFirstOption(
+          db
+            .selectFrom("posts")
+            .select("id")
+            .where("id", "=", args.relatedPostId),
+        );
+        if (Option.isNone(relatedPost)) {
+          return yield* Effect.fail(
+            new ValidationError({
+              message: `Related post ${args.relatedPostId} not found`,
+            }),
+          );
+        }
+      },
+    );
 
     const search = Effect.fn("PostsService.search")(function* (
       data: PostsSearchInput,
@@ -520,6 +555,7 @@ export class PostsService extends Context.Service<
             "posts.chapterNumber",
             "posts.volumeNumber",
             "posts.sourceType",
+            "posts.thumbnailKey",
             "user.id as userId",
             "user.name as userName",
             "user.image as userImage",
@@ -591,6 +627,7 @@ export class PostsService extends Context.Service<
             ? asPostId(postWithUser.relatedPostId as number)
             : null,
           source: postWithUser.source,
+          thumbnailKey: postWithUser.thumbnailKey,
           title: postWithUser.title,
           videoKey: postWithUser.videoKey,
           videoMetadata: parse(VideoMetadataSchema)(postWithUser.videoMetadata),
@@ -630,6 +667,8 @@ export class PostsService extends Context.Service<
         videoMetadata,
         videoKey,
       } = data;
+
+      yield* validateRelatedPost({ relatedPostId });
 
       yield* Effect.logInfo("Upload started").pipe(
         Effect.annotateLogs({
@@ -935,6 +974,8 @@ export class PostsService extends Context.Service<
         }),
       });
 
+      yield* validateRelatedPost({ postId, relatedPostId });
+
       const updatedPost = yield* db.transaction().execute((trx) =>
         Effect.gen(function* () {
           const updatedPost = yield* trx.executeTakeFirstOrError(
@@ -1053,11 +1094,30 @@ export class PostsService extends Context.Service<
 const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   db: Pick<
     EffectTransition<DB>,
-    "execute" | "executeTakeFirstOrError" | "insertInto"
+    "execute" | "executeTakeFirstOrError" | "insertInto" | "selectFrom"
   >,
   postId: PostId,
   tags: ReadonlyArray<{ id?: number | undefined; name: string }>,
 ) {
+  const tagIds = [
+    ...new Set(tags.flatMap((tag) => (tag.id === undefined ? [] : [tag.id]))),
+  ];
+  if (tagIds.length > 0) {
+    const persistedTags = yield* db.execute(
+      db.selectFrom("tags").select(["id", "name"]).where("id", "in", tagIds),
+    );
+    const persistedTagNames = new Map(
+      persistedTags.map((tag) => [tag.id, tag.name]),
+    );
+    for (const tag of tags) {
+      if (tag.id !== undefined && persistedTagNames.get(tag.id) !== tag.name) {
+        return yield* Effect.fail(
+          new ValidationError({ message: "Tag selection is invalid" }),
+        );
+      }
+    }
+  }
+
   const allTagIds: number[] = [];
 
   // Upserts retain row locks until commit. Every request must acquire them
