@@ -83,7 +83,18 @@ const scriptSource = isProductionStage
 // per-origin allow-list would need updating for every new host. Images are the
 // lowest-risk resource type (no script execution from <img>); media-src for
 // video stays strictly allow-listed.
-const contentSecurityPolicy = `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: ${mediaSources}; connect-src ${connectSources}; font-src 'self' data:; object-src 'none'; frame-src 'self' ${turnstileSource}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
+const localMediaOrigins = isProductionStage ? [] : ["http://localhost:9000"];
+const imageSources = [
+  "'self'",
+  "data:",
+  "blob:",
+  "https:",
+  r2Origin,
+  ...localMediaOrigins,
+]
+  .filter(Boolean)
+  .join(" ");
+const contentSecurityPolicy = `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src ${imageSources}; media-src 'self' blob: ${mediaSources}; connect-src ${connectSources}; font-src 'self' data:; object-src 'none'; frame-src 'self' ${turnstileSource}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
 export default defineNitroConfig({
   cloudflare: {

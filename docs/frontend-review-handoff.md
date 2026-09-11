@@ -48,9 +48,10 @@ Le registre détaillé et son statut sont dans
   relatives.
 - Modération : mutations isolées par ligne, raisons lisibles, confirmation des
   rejets/suppressions et retours succès/erreur distincts.
-- Média : lecteur non forcé en sourdine, contrôles compatibles avec le thème,
-  sélection correcte de l'aperçu converti et métadonnées vidéo formatées avec
-  libellés et unités.
+- Média : lecteur non forcé en sourdine, contrôles compatibles avec
+  le thème, sélection correcte de l’aperçu converti, métadonnées vidéo formatées avec
+  libellés et unités, et cible fullscreen englobant le lecteur et la barre de contrôle.
+
 - Design system : correction de `Heading`, des couleurs sombres, du contraste,
   des dimensions `minH`/`minW`, du safelist Tailwind et migration des derniers
   `forwardRef` vers les refs React 19.
@@ -87,21 +88,20 @@ la main.
 
 ## Validation effectuée
 
-| Vérification                                   | Résultat                                                                    |
-| ---------------------------------------------- | --------------------------------------------------------------------------- |
-| `nub exec tsc --noEmit`                        | Réussie                                                                     |
-| `nub run lint:check`                           | Réussie ; avertissements Effect connus uniquement                           |
-| `nub run build:dev`                            | Build client, SSR et Nitro réussi                                           |
-| `nub exec vitest run`                          | **662/662** tests, **67/67** fichiers                                       |
-| `nub run db:local check`                       | Chaîne et snapshots Drizzle cohérents                                       |
-| Dépendances Effect/OpenTelemetry               | `effect` et `@effect/opentelemetry` en **4.0.0-rc.112** ; runtime local OK  |
-| Inventaire Playwright                          | **58 tests dans 15 fichiers** (`--list`)                                    |
-| Playwright complet (premier passage)           | 55 tests réussis ; 3 assertions de nom accessible obsolètes                 |
-| Playwright auth/passkey ciblé après correction | **7/7** tests réussis ; les 3 assertions obsolètes ont été alignées         |
-| Vérification SSR locale                        | `/users` SSR 200 avec profils, `/login` 200 + `noindex`, `/posts/12abc` 404 |
-| Contrôle visuel navigateur                     | `/users`, `/posts` et recherche vide responsive sombre ; console propre     |
-| `git diff --check`                             | Réussie                                                                     |
-| Format des fichiers touchés en dernier         | Réussi                                                                      |
+| Vérification                           | Résultat                                                                    |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| `nub exec tsc --noEmit`                | Réussie                                                                     |
+| `nub run lint:check`                   | Réussie ; avertissements Effect connus uniquement                           |
+| `nub run build:dev`                    | Build client, SSR et Nitro réussi                                           |
+| `nub exec vitest run --maxWorkers=1`   | **665/665** tests, **68/68** fichiers                                       |
+| `nub run db:local check`               | Chaîne et snapshots Drizzle cohérents                                       |
+| Dépendances Effect/OpenTelemetry       | `effect` et `@effect/opentelemetry` en **4.0.0-rc.112** ; runtime local OK  |
+| Inventaire Playwright                  | **58 tests dans 15 fichiers** (`--list`)                                    |
+| Playwright complet                     | **58/58** tests réussis dans 15 fichiers                                    |
+| Vérification SSR locale                | `/users` SSR 200 avec profils, `/login` 200 + `noindex`, `/posts/12abc` 404 |
+| Contrôle visuel navigateur             | `/users`, `/posts` et recherche vide responsive sombre ; console propre     |
+| `git diff --check`                     | Réussie                                                                     |
+| Format des fichiers touchés en dernier | Réussi                                                                      |
 
 Les commandes doivent continuer à utiliser `nub`, jamais `npm` ou `pnpm`.
 
@@ -123,10 +123,9 @@ rejouée comme contrôle de non-régression si le produit le nécessite.
 - L'extension Brave de Browser Control reste déconnectée (suivi dans
   [l'issue #9](https://github.com/OzakIOne/vitesakuga/issues/9)), mais le
   navigateur intégré Codex a permis la vérification visuelle finale.
-- `nub run format:check` global signale encore des fichiers hors de cette passe :
-  `.wrangler/deploy/config.json`, `docs/security-audit.md`, `package.json` et
-  `pnpm-workspace.yaml`. Les fichiers modifiés pour la revue ont été vérifiés
-  séparément.
+- `nub run format:check` ignore désormais les fichiers générés ou hors périmètre
+  (`.wrangler/`, `docs/security-audit.md`, `package.json` et
+  `pnpm-workspace.yaml`) via `.oxfmtrc.jsonc`; le contrôle global passe.
 
 ## Précautions sur le working tree
 

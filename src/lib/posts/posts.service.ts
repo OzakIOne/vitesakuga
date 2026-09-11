@@ -71,16 +71,16 @@ const numericFilterExpression = (filter: NumericSearchFilter) => {
   const value = filter.value;
   switch (filter.field) {
     case "width":
-      return sql<boolean>`exists (select 1 from post_images pi where pi.post_id = posts.id and pi.width ${comparison} ${value})`;
+      return sql<boolean>`exists (select 1 from post_images pi where pi."postId" = posts.id and pi.width ${comparison} ${value})`;
     case "height":
-      return sql<boolean>`exists (select 1 from post_images pi where pi.post_id = posts.id and pi.height ${comparison} ${value})`;
+      return sql<boolean>`exists (select 1 from post_images pi where pi."postId" = posts.id and pi.height ${comparison} ${value})`;
     case "video_width":
-      return sql<boolean>`(posts.video_metadata->>'Width')::numeric ${comparison} ${value}`;
+      return sql<boolean>`(posts."videoMetadata"->>'Width')::numeric ${comparison} ${value}`;
     case "video_height":
-      return sql<boolean>`(posts.video_metadata->>'Height')::numeric ${comparison} ${value}`;
+      return sql<boolean>`(posts."videoMetadata"->>'Height')::numeric ${comparison} ${value}`;
     case "likes":
     case "score":
-      return sql<boolean>`(select count(*) from post_votes pv where pv.post_id = posts.id and pv.vote = 'like') ${comparison} ${value}`;
+      return sql<boolean>`(select count(*) from post_votes pv where pv."postId" = posts.id and pv.vote = 'like') ${comparison} ${value}`;
   }
 };
 

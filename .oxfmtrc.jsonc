@@ -10,5 +10,9 @@
     "drizzle/",
     ".agents/",
     "tools/oxlint/anti-slop/",
+    ".wrangler/",
+    "docs/security-audit.md",
+    "package.json",
+    "pnpm-workspace.yaml",
   ],
 }

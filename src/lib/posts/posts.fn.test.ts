@@ -644,6 +644,63 @@ describe("PostsService.search", () => {
     expect(disliked?.dislikes).toBe(1);
   });
 
+  it("filters image dimensions, video dimensions, and likes", async () => {
+    const imagePost = await insertPost({ title: "Large image" });
+    await db
+      .insertInto("post_images")
+      .values({
+        height: 1080,
+        postId: imagePost,
+        position: 0,
+        storageKey: "images/large.jpg",
+        width: 1920,
+      })
+      .execute();
+
+    const videoPost = await insertPost({
+      title: "Wide video",
+      videoMetadata: JSON.stringify({ Width: 1920, Height: 1080 }),
+    });
+    const likedPost = await insertPost({ title: "Liked post" });
+    await db
+      .insertInto("post_votes")
+      .values({ postId: likedPost, userId: "user-1", vote: "like" })
+      .execute();
+
+    const imageResults = await runEffect(
+      PostsService.search({
+        q: "width:>1000",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+    expect(imageResults.data.map((post) => post.id)).toContain(imagePost);
+
+    const videoResults = await runEffect(
+      PostsService.search({
+        q: "video_width:=1920",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+    expect(videoResults.data.map((post) => post.id)).toContain(videoPost);
+
+    const likeResults = await runEffect(
+      PostsService.search({
+        q: "likes:>0",
+        tags: [],
+        page: 0,
+        sortBy: "newest",
+        dateRange: "all",
+      }),
+    );
+    expect(likeResults.data.map((post) => post.id)).toContain(likedPost);
+  });
+
   it("scopes popular tags to the search query", async () => {
     const mechaPost = await insertPost({
       description: "all about mecha",

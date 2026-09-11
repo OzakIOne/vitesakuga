@@ -161,8 +161,8 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 État vérifié le **2026-09-11**.
 
-- **Vitest** : `nub exec vitest run` — **662/662 tests passés dans 67 fichiers** lors de la vérification du 2026-09-11. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
-- **Playwright** : `nub run test:ee` avec Postgres local + RustFS — le passage complet a atteint **55 tests réussis** avant trois divergences d'assertion de nom accessible ; les **7 tests auth/passkey ciblés** sont ensuite tous passés après alignement de ces assertions (58 scénarios uniques couverts au total) lors de la vérification du 2026-09-11. L'inventaire actuel contient 14 fichiers `e2e/*.spec.ts`.
+- **Vitest** : `nub exec vitest run --maxWorkers=1` — **665/665 tests passés dans 68 fichiers** lors de la vérification du 2026-09-11. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
+- **Playwright** : `nub run test:ee` avec Postgres local + RustFS — **58/58 tests passés dans 15 fichiers** lors de la vérification du 2026-09-11. L'inventaire actuel contient 15 fichiers `e2e/*.spec.ts`.
 - **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts et raccourcis clavier.
 - **Couverture unitaire/service** : recherche et filtres numériques, pagination, posts, tags, utilisateurs, commentaires, mentions, playlists, votes, rapports, notifications, modération, suggestions, révisions vidéo/GC, points, rate limiting, stockage, auth et server-function boundary.
 - **Manques e2e principaux** : parcours feed/recherche → détail, pages accueil/tag/utilisateur/playlists publiques, inbox notifications, soumission de signalement, panneaux admin et upload d'image.

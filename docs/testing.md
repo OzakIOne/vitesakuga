@@ -20,11 +20,10 @@ exercise the same authentication path as the test server.
 
 ## Current verification
 
-On **2026-09-11**, `nub exec vitest run` passed **662 tests in 67 test files**.
-The Playwright inventory contains **58 tests in 15 files**; the full run passed
-55 tests before three stale accessible-name assertions were aligned, followed
-by a 7-test auth/passkey run with all 7 passing. These are
-point-in-time results; rerun the commands after code or dependency changes.
+On **2026-09-11**, `nub exec vitest run --maxWorkers=1` passed **665 tests in 68 test files**.
+The full Playwright suite passed **58/58 tests in 15 files** (`nub run test:ee`).
+These are point-in-time results; rerun the commands after code or dependency
+changes.
 
 The e2e specs currently cover authentication, comments, conversion, account
 deletion, hydration, mentions, passkeys, playlists, shortcuts, toasts, 2FA,

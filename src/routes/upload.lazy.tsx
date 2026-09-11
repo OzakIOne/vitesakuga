@@ -319,9 +319,7 @@ function RouteComponent() {
     }
     setRelatedPostSearch(details.inputValue);
     setSelectedPost(null);
-    if (details.inputValue.length === 0) {
-      form.form.setFieldValue("relatedPostId", undefined);
-    }
+    form.form.setFieldValue("relatedPostId", undefined);
   };
 
   const handleRelatedPostValueChange = (

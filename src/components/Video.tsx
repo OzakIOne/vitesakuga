@@ -15,7 +15,7 @@ import {
   MediaPlaybackRateMenu,
   MediaPlaybackRateMenuButton,
 } from "media-chrome/react/menu";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import type { ComponentRef } from "react";
 import { assetUrl } from "src/lib/assets/url";
 
@@ -45,7 +45,15 @@ export function Video({ url, bypass, frameRate, ref }: VideoProps) {
   const controllerId = `controller-${uuid}`;
   const menuId = `menu-${uuid}`;
   const buttonId = `button-${uuid}`;
+  const fullscreenElementRef = useRef<HTMLDivElement>(null);
+  const controllerRef = useRef<ComponentRef<typeof MediaController>>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const setFullscreenElement = useCallback((element: HTMLDivElement | null) => {
+    fullscreenElementRef.current = element;
+    if (element && controllerRef.current) {
+      controllerRef.current.fullscreenElement = element;
+    }
+  }, []);
 
   const seekOffset = frameRate ? 1 / frameRate : 0.04;
 
@@ -112,8 +120,24 @@ export function Video({ url, bypass, frameRate, ref }: VideoProps) {
   }, [seekOffset]);
 
   return (
-    <div className="flex w-full flex-col">
-      <MediaController id={controllerId} ref={ref}>
+    <div className="flex w-full flex-col" ref={setFullscreenElement}>
+      <MediaController
+        id={controllerId}
+        ref={(element) => {
+          controllerRef.current = element;
+          if (element && fullscreenElementRef.current) {
+            element.fullscreenElement = fullscreenElementRef.current;
+          }
+          if (!ref) {
+            return;
+          }
+          if ("current" in ref) {
+            ref.current = element;
+            return;
+          }
+          ref(element);
+        }}
+      >
         <video
           ref={videoRef}
           slot="media"

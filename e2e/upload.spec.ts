@@ -89,9 +89,21 @@ test.describe("Upload page", () => {
       }
     });
 
-    await expect(page.locator("media-controller")).toBeVisible({
+    const mediaController = page.locator("media-controller");
+    await expect(mediaController).toBeVisible({
       timeout: 20000,
     });
+    const fullscreenTargetIsPlayer = await mediaController.evaluate(
+      (element) => {
+        // SAFETY: media-controller exposes fullscreenElement as a Media Chrome
+        // custom-element property; the parent is the wrapper rendered by Video.
+        const controller = element as HTMLElement & {
+          fullscreenElement?: HTMLElement;
+        };
+        return controller.fullscreenElement === element.parentElement;
+      },
+    );
+    expect(fullscreenTargetIsPlayer).toBe(true);
     expect(mediaErrors).toEqual([]);
 
     await expect(page.getByText("Select Thumbnail")).toBeVisible({

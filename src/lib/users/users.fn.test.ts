@@ -214,6 +214,51 @@ describe("UsersService.userPosts", () => {
     expect(result.meta.pagination.hasMore).toBe(false);
   });
 
+  it("counts a post once when multiple selected tags match it", async () => {
+    const firstTag = await db
+      .insertInto("tags")
+      .values({ name: "first" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const secondTag = await db
+      .insertInto("tags")
+      .values({ name: "second" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const post = await db
+      .insertInto("posts")
+      .values({
+        description: "Tagged twice",
+        title: "One post",
+        userId: "user-1",
+        videoKey: "videos/one.mp4",
+        thumbnailKey: "thumbnails/one.jpg",
+        videoMetadata: "{}",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    await db
+      .insertInto("post_tags")
+      .values([
+        { postId: post.id, tagId: firstTag.id },
+        { postId: post.id, tagId: secondTag.id },
+      ])
+      .execute();
+
+    const result = await runEffect(
+      UsersService.userPosts({
+        userId: "user-1",
+        tags: ["first", "second"],
+        q: "",
+        page: 0,
+      }),
+    );
+
+    expect(result.data).toHaveLength(1);
+    expect(result.meta.pagination.total).toBe(1);
+  });
+
   it("scopes popular tags to the same search filters as the post list", async () => {
     const selectedTag = await db
       .insertInto("tags")

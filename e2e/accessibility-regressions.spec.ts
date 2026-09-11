@@ -31,7 +31,10 @@ test.describe("Accessibility regressions", () => {
   test("B5: home and feed expose page-level headings", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
     await expect(
-      page.getByRole("heading", { name: "ViteSakuga", level: 1 }),
+      page.getByRole("heading", {
+        level: 1,
+        name: "Find the moment you remember.",
+      }),
     ).toBeVisible();
 
     await page.goto("/posts", { waitUntil: "load" });

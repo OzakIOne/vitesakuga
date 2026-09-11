@@ -55,13 +55,12 @@ dashboard header, headings, retry/error states, controls, and shared approval
 threshold; and news, wiki, and help use the shared editorial shell on index and
 article pages.
 
-Verification for this pass: `nub exec vitest run` (662 tests in 67 files),
-`nub run lint:check`, `nub run build:dev`, public-route SSR/status checks, and the
-Playwright suite (55 passed in the full run; the 7-test auth/passkey subset then
-passed after three stale accessible-name assertions were aligned). A final
-in-app browser pass verified the responsive dark-theme `/users`, `/posts`, and
-filtered empty-search layouts, their accessibility trees, and the absence of
-browser console errors or warnings.
+Verification for this pass: `nub exec vitest run --maxWorkers=1` (665 tests in 68 files),
+`nub run lint:check`, `nub exec tsc --noEmit`, `nub run build:dev`, public-route SSR/status checks, and
+`nub run test:ee` (**58/58 Playwright tests passed in 15 files**). A final in-app
+browser pass verified the responsive dark-theme `/users`, `/posts`, and filtered
+empty-search layouts, their accessibility trees, and the absence of browser
+console errors or warnings.
 
 **Priority.** `P0` user-visible correctness bug that undermines a shared
 primitive. `P1` significant UX/SEO/a11y gap that affects many pages. `P2`
