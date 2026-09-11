@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { EditorialShell } from "src/components/EditorialShell";
 import { findWikiArticle } from "src/lib/wiki/wiki";
 import { seo } from "src/utils/seo";
@@ -54,7 +55,9 @@ function WikiArticlePage() {
         <span aria-hidden="true">← </span>All wiki articles
       </Link>
       <div className="markdown-prose">
-        <Markdown skipHtml>{article.body}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm]} skipHtml>
+          {article.body}
+        </Markdown>
       </div>
     </EditorialShell>
   );
