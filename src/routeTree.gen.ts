@@ -16,6 +16,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as RandomRouteImport } from './routes/random'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
@@ -76,6 +77,11 @@ const HelpRoute = HelpRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RandomRoute = RandomRouteImport.update({
+  id: '/random',
+  path: '/random',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TwoFactorRoute = TwoFactorRouteImport.update({
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/convert': typeof ConvertRoute
   '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
+  '/random': typeof RandomRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/convert': typeof ConvertRoute
   '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
+  '/random': typeof RandomRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/login': typeof authLoginRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   '/convert': typeof ConvertRoute
   '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
+  '/random': typeof RandomRoute
   '/two-factor': typeof TwoFactorRoute
   '/upload': typeof UploadRoute
   '/(auth)/login': typeof authLoginRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/convert'
     | '/help'
     | '/notifications'
+    | '/random'
     | '/two-factor'
     | '/upload'
     | '/login'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/convert'
     | '/help'
     | '/notifications'
+    | '/random'
     | '/two-factor'
     | '/upload'
     | '/login'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/convert'
     | '/help'
     | '/notifications'
+    | '/random'
     | '/two-factor'
     | '/upload'
     | '/(auth)/login'
@@ -438,6 +450,7 @@ export interface RootRouteChildren {
   ConvertRoute: typeof ConvertRoute
   HelpRoute: typeof HelpRoute
   NotificationsRoute: typeof NotificationsRoute
+  RandomRoute: typeof RandomRoute
   TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
   NewsSlugRoute: typeof NewsSlugRoute
@@ -506,6 +519,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/random': {
+      id: '/random'
+      path: '/random'
+      fullPath: '/random'
+      preLoaderRoute: typeof RandomRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/two-factor': {
@@ -755,6 +775,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConvertRoute: ConvertRoute,
   HelpRoute: HelpRoute,
   NotificationsRoute: NotificationsRoute,
+  RandomRoute: RandomRoute,
   TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
   NewsSlugRoute: NewsSlugRoute,

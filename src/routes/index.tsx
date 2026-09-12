@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PopularTagsSection } from "src/components/PopularTagsSection";
 import { SearchBox } from "src/components/SearchBox";
+import { Button } from "src/components/ui/button";
 import { Box, Flex } from "src/components/ui/layout";
 import { Heading, Text } from "src/components/ui/typography";
 import { tagsQueryGetPopularTags } from "src/lib/tags/tags.queries";
@@ -48,6 +49,11 @@ function Home() {
       <Box maxW="md" mt={4} w="full">
         <PopularTagsSection tags={popularTags.data} />
       </Box>
+      <Button asChild className="mt-8" colorPalette="blue" size="lg">
+        <Link to="/random">
+          Show me a random video <span aria-hidden="true">→</span>
+        </Link>
+      </Button>
       <Link
         className="mt-8 text-sm text-blue-600 hover:underline dark:text-blue-400"
         to="/news"

@@ -247,6 +247,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                     className: ACTIVE_NAV_LINK_CLASS,
                   }}
                   className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                  to="/random"
+                >
+                  Random video
+                </Link>{" "}
+                <Link
+                  activeProps={{
+                    className: ACTIVE_NAV_LINK_CLASS,
+                  }}
+                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
                   to="/users"
                 >
                   Users
@@ -420,6 +429,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                         </Menu.Item>
                         <Menu.Item asChild value="posts">
                           <Link to="/posts">Posts</Link>
+                        </Menu.Item>
+                        <Menu.Item asChild value="random">
+                          <Link to="/random">Random video</Link>
                         </Menu.Item>
                         <Menu.Item asChild value="users">
                           <Link to="/users">Users</Link>
