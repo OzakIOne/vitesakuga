@@ -16,13 +16,27 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 
-const SSR_DIR = new URL("../.output/server/_ssr/", import.meta.url);
+const SERVER_DIR = new URL("../.output/server/", import.meta.url);
 const NITRO_JSON = new URL("../.output/nitro.json", import.meta.url);
 const SERVER_ENTRY = new URL("../.output/server/index.mjs", import.meta.url);
 
 // SSR chunks compiled with the React dev JSX runtime call this require shim
 // (`require_jsx_dev_runtime().jsxDEV(...)`). Production builds never emit it.
 const DEV_JSX_MARKER = "require_jsx_dev_runtime(";
+
+const serverModules = [SERVER_ENTRY];
+const collectServerModules = (directory) => {
+  if (!existsSync(directory)) return;
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const url = new URL(entry.name, directory);
+    if (entry.isDirectory()) {
+      collectServerModules(`${url.href}/`);
+    } else if (entry.isFile() && entry.name.endsWith(".mjs")) {
+      serverModules.push(url);
+    }
+  }
+};
+collectServerModules(SERVER_DIR);
 
 const missing = [
   [NITRO_JSON, ".output/nitro.json"],
@@ -45,9 +59,8 @@ if (missing.length > 0) {
 }
 
 let devJsxChunks = 0;
-for (const file of readdirSync(SSR_DIR)) {
-  if (!file.endsWith(".mjs")) continue;
-  if (readFileSync(new URL(file, SSR_DIR), "utf8").includes(DEV_JSX_MARKER)) {
+for (const file of serverModules) {
+  if (readFileSync(file, "utf8").includes(DEV_JSX_MARKER)) {
     devJsxChunks += 1;
   }
 }

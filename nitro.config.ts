@@ -102,6 +102,14 @@ export default defineNitroConfig({
     nodeCompat: true,
   },
   compatibilityDate: "2026-04-21",
+  // Work around the Vite 8/Rolldown SSR namespace re-export bug that emits
+  // an undeclared `ssr_exports` binding in split SSR chunks.
+  rolldownConfig: {
+    output: {
+      codeSplitting: false,
+      ["inlineDynamicImports"]: true, // oxlint-disable-line typescript/no-deprecated
+    },
+  },
   preset: "cloudflare_module",
   // App-level rate limiter for mutation requests (defence-in-depth over the
   // Cloudflare edge binding + a dev implementation). Global middleware.

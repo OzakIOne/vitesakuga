@@ -139,6 +139,9 @@ export default Alchemy.Stack(
     });
 
     const SakugaWorker = Cloudflare.Worker("SakugaWorker", {
+      // Keep the existing physical Worker name so custom-domain ownership
+      // survives state-store recovery.
+      name: `vitesakuga-infra-sakugaworker-${stage}-5osp6ydh4rodg534`,
       // Nitro `cloudflare_module` build output (see nitro.config.ts). Run
       // `nub run build` before deploying so `.output/` exists.
       main: "./.output/server/index.mjs",
