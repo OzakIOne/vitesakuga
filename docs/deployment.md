@@ -91,6 +91,15 @@ variables. Le script utilise `--adopt` pour rattacher l'environnement déjà
 créé manuellement. Le secret `PREPRODUCTION_ENV_FILE` existant est laissé
 intact : GitHub ne permet pas de lire sa valeur en clair.
 
+Pour effectuer le bootstrap GitHub puis le déploiement Cloudflare en une seule
+commande :
+
+```bash
+nub run infra:preproduction
+```
+
+Le déploiement Cloudflare ne démarre que si la configuration GitHub réussit.
+
 Le token Cloudflare de déploiement doit être le même que celui utilisé pour
 Analytics, ou le workflow doit être modifié pour fournir deux tokens séparés.
 
