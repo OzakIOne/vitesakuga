@@ -52,6 +52,14 @@ nub exec varlock load --format json
 nub run dev
 ```
 
+The project pins `nitro@3.0.260610-beta` with Vite 8.2.x. The newer
+`nitro@3.0.260903-beta` development runner sends React's CommonJS entry
+through the local Workerd evaluator without the `module` global, causing
+`nub run dev` to fail with `ReferenceError: module is not defined`. The pinned
+combination keeps Cloudflare development emulation and the deployable build
+working. Do not update Nitro alone until this upstream incompatibility is
+fixed.
+
 ## Environments
 
 Three stages, each with its own gitignored env file:
