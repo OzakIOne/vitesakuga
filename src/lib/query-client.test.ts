@@ -11,8 +11,8 @@ describe("getQueryClient", () => {
     const queryClient = getQueryClient();
     const defaults = queryClient.getDefaultOptions().queries;
 
-    expect(defaults.staleTime).toBe(QUERY_STALE_TIME);
-    expect(defaults.gcTime).toBe(QUERY_GC_TIME);
+    expect(defaults?.staleTime).toBe(QUERY_STALE_TIME);
+    expect(defaults?.gcTime).toBe(QUERY_GC_TIME);
   });
 
   it("creates an isolated client for every server-side request", async () => {

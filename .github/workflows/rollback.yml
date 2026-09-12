@@ -1,0 +1,50 @@
+name: Roll back production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: "Worker version ID to restore; empty restores previous version"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Nub and pinned Node
+        uses: nubjs/setup-nub@v0
+
+      - name: Install dependencies
+        run: nub install --ignore-scripts --frozen-lockfile
+
+      - name: Roll back Worker
+        shell: bash
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+        run: |
+          if [[ -n "$VERSION_ID" ]]; then
+            nubx wrangler rollback "$VERSION_ID" \
+              --name "${CLOUDFLARE_WORKER_NAME:-vitesakuga-infra-sakugaworker-production-5osp6ydh4rodg534}" \
+              --message "Manual production rollback"
+          else
+            nubx wrangler rollback \
+              --name "${CLOUDFLARE_WORKER_NAME:-vitesakuga-infra-sakugaworker-production-5osp6ydh4rodg534}" \
+              --message "Manual production rollback to previous version"
+          fi

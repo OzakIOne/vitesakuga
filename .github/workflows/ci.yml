@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  APP_ENV: test
+  CI: true
+  NODE_ENV: test
+  DATABASE_DRIVER: local
+  DATABASE_URL: postgresql://user:password@localhost:5432/sakuga
+  BETTER_AUTH_SECRET: ci-only-secret
+  VITE_BASE_URL: http://localhost:3000
+  CLOUDFLARE_BUCKET: ci-bucket
+  CLOUDFLARE_R2: http://localhost:9000/ci-bucket
+  CLOUDFLARE_ACCESS_KEY: ci-access-key
+  CLOUDFLARE_SECRET_KEY: ci-secret-key
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: http://localhost:9000/ci-bucket
+  GITHUB_CLIENT_ID: ci-github-client
+  GITHUB_CLIENT_SECRET: ci-github-secret
+  GOOGLE_CLIENT_ID: ci-google-client
+  GOOGLE_CLIENT_SECRET: ci-google-secret
+  VITE_TURNSTILE_REQUIRED: "0"
+  VITE_TURNSTILE_SITEKEY: 1x00000000000000000000AA
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Nub and pinned Node
+        uses: nubjs/setup-nub@v0
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Check formatting
+        run: nub run format:check
+
+      - name: Check lint and type-aware rules
+        run: nub run lint:check
+
+      - name: Check TypeScript
+        run: nub exec tsc --noEmit
+
+      - name: Run unit and integration tests
+        run: nub exec vitest run --maxWorkers=1
+
+      - name: Build production bundle
+        run: nub run build
+
+      - name: Check production bundle
+        run: nub scripts/check-prod-build.mjs

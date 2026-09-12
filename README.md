@@ -134,3 +134,16 @@ You also need to manually add the **S3 API Token** from the Cloudflare R2 dashbo
 CLOUDFLARE_ACCESS_KEY="your-access-key"
 CLOUDFLARE_SECRET_KEY="your-secret-key"
 ```
+
+## Production CI/CD
+
+La production ne se déploie pas sur chaque commit. La CI vérifie chaque pull
+request et chaque push sur `master`; le déploiement démarre seulement après
+publication d'une GitHub Release. Le workflow capture la version Cloudflare
+active, déploie via Alchemy, vérifie le site et surveille les erreurs Worker.
+Au-dessus du seuil configuré, il exécute automatiquement un rollback vers la
+version précédente.
+
+Voir [docs/deployment.md](docs/deployment.md) pour configurer l'environnement
+GitHub `production`, le token Cloudflare, le secret `.env.production` et le
+service token Cloudflare Access nécessaire au smoke check.

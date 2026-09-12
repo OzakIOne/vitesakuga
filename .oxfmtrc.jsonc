@@ -6,6 +6,7 @@
   "sortImports": true,
   "sortTailwindcss": true,
   "ignorePatterns": [
+    ".alchemy/",
     "routeTree.gen.ts",
     "drizzle/",
     ".agents/",
