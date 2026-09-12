@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import Markdown from "react-markdown";
 import { EditorialShell } from "src/components/EditorialShell";
+import { MarkdownContent } from "src/components/MarkdownContent";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/help")({
@@ -26,9 +26,7 @@ function HelpPage() {
       eyebrow="ViteSakuga support"
       title="Help"
     >
-      <div className="markdown-prose">
-        <Markdown skipHtml>{body}</Markdown>
-      </div>
+      <MarkdownContent>{body}</MarkdownContent>
       <div className="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-gray-200 pt-8 text-sm dark:border-gray-800">
         <Link
           className="font-medium text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"

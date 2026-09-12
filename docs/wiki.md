@@ -14,7 +14,7 @@ Categories are a small, stable set (currently “About the site”, “Using the
 
 ## Writing rules
 
-The page supplies the title as its main heading. Start article sections at `##`. Paragraphs, lists, tables, links, quotes, images, and fenced code blocks are supported. Raw HTML is ignored; Markdown renders through React without HTML injection.
+The page supplies the title as its main heading. Start article sections at `##`. Paragraphs, lists, tables, links, quotes, images, and fenced code blocks are supported by the shared TanStack Markdown renderer. Raw HTML is not interpreted; Markdown renders through React without HTML injection.
 
 - Use root-relative links for site pages, e.g. `[Search operators](/wiki/search-operators)`.
 - Cross-link related wiki articles and the help page so readers never dead-end.

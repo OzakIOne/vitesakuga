@@ -305,7 +305,7 @@ function CommentComposer({
       <MentionTextarea
         label="Write a comment"
         onChange={setDraft}
-        placeholder="Write a comment… Use @ to mention someone"
+        placeholder="Write a comment… Markdown and @mentions are supported"
         value={comment}
       />
       <Button

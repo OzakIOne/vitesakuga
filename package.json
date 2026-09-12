@@ -59,6 +59,7 @@
     "@opentelemetry/sdk-trace-node": "^2.10.0",
     "@opentelemetry/sdk-trace-web": "^2.10.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@tanstack/markdown": "^0.0.14",
     "@tanstack/query-db-collection": "^1.2.4",
     "@tanstack/react-db": "^0.3.2",
     "@tanstack/react-form": "^1.33.5",
@@ -86,9 +87,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
-    "react-markdown": "^10.1.0",
     "react-qr-code": "^2.2.0",
-    "remark-gfm": "^4.0.1",
     "sanitize-html": "^2.17.7",
     "xstate": "^6.0.0-alpha.38",
     "yet-another-react-lightbox": "^3.32.2"

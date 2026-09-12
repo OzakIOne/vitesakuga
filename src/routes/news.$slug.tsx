@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import Markdown from "react-markdown";
 import { EditorialShell } from "src/components/EditorialShell";
+import { MarkdownContent } from "src/components/MarkdownContent";
 import { formatNewsDate, newsPosts } from "src/lib/news/news";
 import { seo } from "src/utils/seo";
 
@@ -52,9 +52,7 @@ function NewsArticle() {
       >
         <span aria-hidden="true">← </span>All news
       </Link>
-      <div className="markdown-prose">
-        <Markdown skipHtml>{post.body}</Markdown>
-      </div>
+      <MarkdownContent>{post.body}</MarkdownContent>
     </EditorialShell>
   );
 }

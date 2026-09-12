@@ -98,7 +98,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - **Votes** : like/dislike sur les posts, un vote par utilisateur ; playlist « Liked posts » dérivée des likes — `src/lib/votes/*`, `src/routes/account_.playlists.liked.tsx`.
 - **Découverte intentionnelle** : vues opt-in `Trending`, `Most liked this week`, `New from followed tags`, `Under-seen gems` et `Random study queue`, avec fenêtre et signaux affichés — `src/lib/posts/discovery.ts`, `src/lib/posts/posts.service.ts`, `src/components/DiscoverySummary.tsx`.
 - **Tags suivis** : suivi/désabonnement authentifié depuis une page de tag, utilisé uniquement par la vue « New from followed tags » — `src/lib/tags/tags.service.ts`, `src/components/TagFollowButton.tsx`.
-- **Commentaires** : ajout/édition/suppression (propriétaire ou staff), sanitization serveur et mentions `@pseudo` avec autocomplétion — `src/lib/comments/*`, `src/lib/mentions/*`, `src/lib/sanitize.server.ts`.
+- **Commentaires** : ajout/édition/suppression (propriétaire ou staff), Markdown contrôlé pour le texte et les liens, sanitization serveur et mentions `@pseudo` avec autocomplétion — `src/lib/comments/*`, `src/lib/mentions/*`, `src/lib/sanitize.server.ts`.
 - **Playlists** : CRUD, visibilité publique/privée, ajout/retrait unitaire et en masse, réordonnancement souris/clavier — `src/lib/playlists/*`, `src/components/PlaylistPostsTable.tsx`.
 - **Recherches sauvegardées** : snapshots privés des paramètres de recherche pour les utilisateurs connectés ; application et suppression depuis le champ de recherche — `src/lib/saved-searches/*`, `src/components/SavedSearchDialogs.tsx`.
 - **Signalements** : signaler un post avec un motif — `src/components/ReportDialog.tsx`, `src/lib/reports/*`.
@@ -112,7 +112,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - Chaque compte possède un pseudo unique (`user.username`), généré à l'inscription et modifiable sur `/account`.
 - Dans un commentaire, `@` ouvre une autocomplétion clavier accessible. Le contenu est stocké avec des tokens liés à l'identifiant utilisateur, donc un changement de pseudo ne casse pas les anciennes mentions.
 - Les nouvelles mentions créent `comment_mentions` et une notification best-effort ; les comptes supprimés et l'auto-mention sont exclus.
-- Rendu : `src/components/mentions/CommentContent.tsx`, `src/components/mentions/MentionTextarea.tsx`, `src/lib/mentions/mentions.ts`.
+- Rendu : Markdown via `src/components/mentions/CommentContent.tsx`, pont des mentions via `src/lib/mentions/markdown.ts`, autocomplétion via `src/components/mentions/MentionTextarea.tsx` et canonicalisation via `src/lib/mentions/mentions.ts`.
 
 ## Authentification & comptes
 
