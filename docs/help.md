@@ -9,7 +9,6 @@ The page renders a single Markdown document from `src/content/help/help.md`. The
 - The page supplies the main heading; start sections at `##` so each question reads as a section.
 - Keep answers short and link out for depth instead of duplicating wiki articles, e.g. `[Roles and points](/wiki/roles-and-points)`.
 - Use root-relative links for site pages (`/wiki`, `/news`, `/posts`). Raw HTML is ignored; Markdown renders through React without HTML injection.
-- The footer links below the body point to the wiki and news; update the copy in `src/routes/help.tsx` if those need to change.
 
 ## Keeping it accurate
 

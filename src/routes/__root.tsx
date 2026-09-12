@@ -31,7 +31,6 @@ import { Box, Center } from "src/components/ui/layout";
 import { Menu } from "src/components/ui/overlay";
 import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
-import { Text } from "src/components/ui/typography";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import { AuthClientContext } from "src/lib/auth/client-context";
@@ -531,7 +530,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             </nav>
           </header>
           <main
-            className="min-h-[calc(100dvh-8rem)]"
+            className="min-h-[calc(100dvh-4rem)]"
             id="main-content"
             tabIndex={-1}
           >
@@ -543,24 +542,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             className="sr-only"
             id="route-announcer"
           />
-          <footer className="border-t border-gray-200 px-4 py-6 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-400">
-            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
-              <Text>ViteSakuga — an animation reference archive.</Text>
-              <nav aria-label="Footer">
-                <div className="flex flex-wrap gap-4">
-                  <Link className="hover:underline" to="/news">
-                    News
-                  </Link>
-                  <Link className="hover:underline" to="/wiki">
-                    Wiki
-                  </Link>
-                  <Link className="hover:underline" to="/help">
-                    Help
-                  </Link>
-                </div>
-              </nav>
-            </div>
-          </footer>
           <ClientOnly fallback={null}>
             <Toaster />
             {import.meta.env.DEV && (
