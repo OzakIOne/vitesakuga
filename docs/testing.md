@@ -7,6 +7,7 @@ Use `nub` for all project commands:
 ```sh
 nub exec vitest run                 # all unit/integration tests
 nub exec vitest run path/to/test.ts # one test file
+nub run test:deployment             # deployment monitor/rollback decisions
 nub run test                        # Vitest watch mode
 nub run test:ee                     # Playwright e2e suite
 ```
@@ -20,10 +21,14 @@ exercise the same authentication path as the test server.
 
 ## Current verification
 
-On **2026-09-11**, `nub exec vitest run --maxWorkers=1` passed **665 tests in 68 test files**.
+On **2026-09-12**, `nub exec vitest run --maxWorkers=1` passed **693 tests in 75 test files**.
 The full Playwright suite passed **58/58 tests in 15 files** (`nub run test:ee`).
 These are point-in-time results; rerun the commands after code or dependency
 changes.
+
+The deployment monitor and rollback command construction are covered by the
+focused `test:deployment` check. Its pure decision helpers run without
+Cloudflare or Wrangler credentials.
 
 The e2e specs currently cover authentication, comments, conversion, account
 deletion, hydration, mentions, passkeys, playlists, shortcuts, toasts, 2FA,

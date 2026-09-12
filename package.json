@@ -35,6 +35,7 @@
     "knip": "knip",
     "knip:production": "knip --production --include files,dependencies",
     "test": "vitest -w",
+    "test:deployment": "nub exec vitest run scripts/cloudflare-release.test.mjs",
     "test:ee": "playwright test --config=e2e/playwright.config.ts",
     "test:ee:lightpanda": "CDP_HTTP=http://127.0.0.1:9223 E2E_CONFIG=e2e/playwright.lightpanda.config.ts nub e2e/setup-cdp.mjs",
     "test:ee:ui": "playwright test --config=e2e/playwright.config.ts --ui",

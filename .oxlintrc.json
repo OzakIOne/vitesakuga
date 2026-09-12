@@ -25,7 +25,6 @@
   ],
   "ignorePatterns": [
     "*.test.*",
-    "scripts/",
     ".agent/**",
     ".agents/**",
     ".claude/**",
@@ -62,7 +61,8 @@
         "src/lib/db/collections.ts",
         "src/lib/mutations/mutation-feedback.ts",
         "src/lib/auth/client.ts",
-        "src/lib/env/client.ts"
+        "src/lib/env/client.ts",
+        "scripts/**"
       ],
       "rules": {
         "effecttsgo/abort-controller-in-effect": "off",

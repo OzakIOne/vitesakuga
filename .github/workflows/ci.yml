@@ -63,6 +63,9 @@ jobs:
       - name: Run unit and integration tests
         run: nub exec vitest run --maxWorkers=1
 
+      - name: Check deployment scripts
+        run: nub run test:deployment
+
       - name: Build production bundle
         run: nub run build
 

@@ -2,6 +2,15 @@ import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+import {
+  createRollbackCommand,
+  exceedsErrorRateThreshold,
+  getErrorRate,
+  parseNumberValue,
+  selectActiveVersion,
+  validateMonitoringConfiguration,
+} from "./cloudflare-release-core.mjs";
+
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4";
 const CLOUDFLARE_GRAPHQL_URL = `${CLOUDFLARE_API_BASE}/graphql`;
 const DEFAULT_STATE_FILE = ".ci/deployment-state.json";
@@ -40,21 +49,13 @@ const requireEnvironment = (name) => {
   return value;
 };
 
-const getNumberEnvironment = (name, fallback, { integer = false } = {}) => {
-  const value = process.env[name];
-  if (!value) {
-    return fallback;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || (integer && !Number.isInteger(parsed))) {
-    throw new Error(
-      `${name} must be a valid ${integer ? "integer" : "number"}`,
-    );
-  }
-
-  return parsed;
-};
+const getNumberEnvironment = (name, fallback, options = {}) =>
+  parseNumberValue({
+    fallback,
+    name,
+    value: process.env[name],
+    ...options,
+  });
 
 const sleep = async (milliseconds) => {
   await new Promise((resolvePromise) => {
@@ -113,17 +114,7 @@ const getActiveVersion = async () => {
   const deployments = Array.isArray(result?.deployments)
     ? result.deployments
     : [];
-  const activeDeployment = [...deployments].sort((left, right) => {
-    const leftDate = left.created_on ?? left.createdOn ?? "";
-    const rightDate = right.created_on ?? right.createdOn ?? "";
-    return rightDate.localeCompare(leftDate);
-  })[0];
-  const versions = Array.isArray(activeDeployment?.versions)
-    ? activeDeployment.versions
-    : [];
-  const activeVersion = [...versions].sort(
-    (left, right) => (right.percentage ?? 0) - (left.percentage ?? 0),
-  )[0];
+  const activeVersion = selectActiveVersion(deployments);
   const versionId = activeVersion?.version_id ?? activeVersion?.versionId;
 
   if (!versionId) {
@@ -338,12 +329,12 @@ const monitorDeployment = async () => {
       { integer: true },
     ) * 1_000;
 
-  if (maxErrorRate < 0 || maxErrorRate > 1) {
-    throw new Error("MAX_ERROR_RATE must be between 0 and 1");
-  }
-  if (minRequests < 1 || attempts < 1 || intervalMilliseconds < 1) {
-    throw new Error("Monitoring thresholds must be positive");
-  }
+  validateMonitoringConfiguration({
+    attempts,
+    intervalMilliseconds,
+    maxErrorRate,
+    minRequests,
+  });
 
   await runSmokeChecks();
 
@@ -353,13 +344,18 @@ const monitorDeployment = async () => {
       end: new Date(),
       start: deployedAt,
     });
-    const errorRate =
-      metrics.requests === 0 ? 0 : metrics.errors / metrics.requests;
+    const errorRate = getErrorRate(metrics);
     console.log(
       `Metrics ${attempt}/${attempts}: ${metrics.errors}/${metrics.requests} errors (${(errorRate * 100).toFixed(2)}%)`,
     );
 
-    if (metrics.requests >= minRequests && errorRate > maxErrorRate) {
+    if (
+      exceedsErrorRateThreshold({
+        maxErrorRate,
+        metrics,
+        minRequests,
+      })
+    ) {
       throw new Error(
         `Error rate ${(errorRate * 100).toFixed(2)}% exceeds ${(maxErrorRate * 100).toFixed(2)}%`,
       );
@@ -376,19 +372,14 @@ const rollback = async () => {
   }
 
   const workerName = state.workerName ?? getWorkerName();
-  const child = spawn(
-    "nubx",
-    [
-      "wrangler",
-      "rollback",
-      state.previousVersionId,
-      "--name",
-      workerName,
-      "--message",
-      `Automatic rollback after failed release health checks (${state.deployedVersionId ?? "unknown version"})`,
-    ],
-    { stdio: "inherit" },
-  );
+  const rollbackCommand = createRollbackCommand({
+    deployedVersionId: state.deployedVersionId,
+    previousVersionId: state.previousVersionId,
+    workerName,
+  });
+  const child = spawn(rollbackCommand.command, rollbackCommand.args, {
+    stdio: "inherit",
+  });
 
   await new Promise((resolvePromise, reject) => {
     child.once("error", reject);

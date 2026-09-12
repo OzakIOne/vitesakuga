@@ -95,7 +95,15 @@ React/bundle runtime), and Vite `--mode` (bakes `import.meta.env.MODE`).
 | `infra:deploy`                                      | builds (dev) → guard → Alchemy deploy                                                 | dev (alchemy `dev`)         | `.env`                                            | —                 |
 | `infra:deploy:prod`                                 | builds (prod) → guard → Alchemy deploy                                                | prod (alchemy `production`) | `.env.production`                                 | —                 |
 | `infra:destroy` / `infra:destroy:prod`              | Alchemy destroy                                                                       | dev / prod                  | `.env` / `.env.production`                        | —                 |
+| `test:deployment`                                   | focused deployment monitor and rollback checks                                        | —                           | —                                                 | —                 |
 | `docker:up` / `docker:down` (aliases `dcu` / `dcd`) | local Docker stack (Postgres, rustfs, lightpanda, otelite)                            | local                       | `.env.test`                                       | —                 |
+
+Deployment safety logic has a focused check in addition to the full Vitest
+run:
+
+```bash
+nub run test:deployment
+```
 
 The optional SigNoz stack is isolated to loopback ports and uses pinned image
 digests. Set its credentials in the shell before starting it:

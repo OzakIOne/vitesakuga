@@ -3,6 +3,10 @@ import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { homedir } from "os";
 import { join } from "path";
 
+import { Schema } from "effect";
+
+import { parse } from "../src/lib/effect/schema.utils";
+
 const DB_PATH = join(homedir(), ".local/share/opencode/opencode.db");
 const db = new Database(DB_PATH);
 
@@ -35,19 +39,24 @@ function collectFlags(raw: string[]): FlagArgs {
   const flags: Record<string, string> = {};
   const positional: string[] = [];
   for (let i = 0; i < raw.length; i++) {
-    const a = raw[i]!;
-    if (a.startsWith("--") || a.startsWith("-")) {
-      const eqIdx = a.indexOf("=");
+    const argument = raw[i];
+    if (argument === undefined) continue;
+
+    if (argument.startsWith("--") || argument.startsWith("-")) {
+      const eqIdx = argument.indexOf("=");
       if (eqIdx !== -1) {
-        flags[a.slice(0, eqIdx)] = a.slice(eqIdx + 1);
-      } else if (i + 1 < raw.length && !raw[i + 1]!.startsWith("-")) {
-        i++;
-        flags[a] = raw[i]!;
+        flags[argument.slice(0, eqIdx)] = argument.slice(eqIdx + 1);
       } else {
-        flags[a] = "";
+        const nextArgument = raw[i + 1];
+        if (nextArgument !== undefined && !nextArgument.startsWith("-")) {
+          i++;
+          flags[argument] = nextArgument;
+        } else {
+          flags[argument] = "";
+        }
       }
     } else {
-      positional.push(a);
+      positional.push(argument);
     }
   }
   return { flags, positional };
@@ -87,15 +96,81 @@ if (help) {
   process.exit(0);
 }
 
+const messageContentObjectSchema = Schema.Struct({
+  text: Schema.optionalKey(Schema.String),
+});
+
+const opencodeMessageSchema = Schema.Struct({
+  content: Schema.optionalKey(
+    Schema.Union([Schema.String, messageContentObjectSchema]),
+  ),
+  finish: Schema.optionalKey(Schema.String),
+  model: Schema.optionalKey(
+    Schema.Struct({ modelID: Schema.optionalKey(Schema.String) }),
+  ),
+  modelID: Schema.optionalKey(Schema.String),
+  role: Schema.optionalKey(Schema.String),
+  summary: Schema.optionalKey(
+    Schema.Struct({
+      diffs: Schema.optionalKey(
+        Schema.Array(
+          Schema.Struct({ file: Schema.optionalKey(Schema.String) }),
+        ),
+      ),
+      user: Schema.optionalKey(Schema.String),
+    }),
+  ),
+});
+
+type OpencodeMessage = typeof opencodeMessageSchema.Type;
+
+const parseMessage = (raw: string): OpencodeMessage =>
+  parse(opencodeMessageSchema)(JSON.parse(raw));
+
+function extractText(msg: OpencodeMessage): string {
+  if (Schema.is(Schema.String)(msg.content)) return msg.content;
+  if (Schema.is(messageContentObjectSchema)(msg.content) && msg.content.text) {
+    return msg.content.text;
+  }
+
+  if (msg.summary?.user) return msg.summary.user;
+  if (msg.summary?.diffs?.length) {
+    const files = msg.summary.diffs
+      .map((diff) => diff.file?.split("/").pop() ?? diff.file ?? "unknown")
+      .join(", ");
+    return `[diffs: ${files}]`;
+  }
+
+  if (msg.role === "assistant" && msg.finish === "tool-calls") {
+    return "(tool calls)";
+  }
+  if (msg.role === "assistant" && msg.finish === "stop") return "(response)";
+  return "";
+}
+
+function printMessage(msg: OpencodeMessage) {
+  const role = msg.role ?? "?";
+  const text = extractText(msg);
+  const model = msg.modelID ?? msg.model?.modelID ?? "";
+  const prefix = `[${role}]${model ? ` (${model})` : ""}`;
+  if (text) {
+    for (const line of text.split("\n").filter(Boolean)) {
+      console.log(`  ${prefix}: ${line.slice(0, 500)}`);
+    }
+  } else {
+    console.log(`  ${prefix}: (metadata only)`);
+  }
+}
+
 // --- Show full session conversation ---
 if (sessionIdFlag) {
   const session = db
-    .query(
+    .query<Session, string>(
       `SELECT id, title, datetime(time_created/1000, 'unixepoch') as created,
               datetime(time_updated/1000, 'unixepoch') as updated, agent, model
        FROM session WHERE id = ?`,
     )
-    .get(sessionIdFlag) as Session | null;
+    .get(sessionIdFlag);
 
   if (!session) {
     console.error(`Session "${sessionIdFlag}" not found.`);
@@ -111,28 +186,28 @@ if (sessionIdFlag) {
   console.log();
 
   const messages = db
-    .query(
+    .query<{ data: string }, string>(
       `SELECT data FROM message WHERE session_id = ? ORDER BY time_created, id`,
     )
-    .all(sessionIdFlag) as { data: string }[];
+    .all(sessionIdFlag);
 
   if (messages.length === 0) {
     const sm = db
-      .query(
+      .query<{ data: string }, string>(
         `SELECT data FROM session_message WHERE session_id = ? ORDER BY seq`,
       )
-      .all(sessionIdFlag) as { data: string }[];
+      .all(sessionIdFlag);
     if (sm.length === 0) {
       console.log("(no messages)");
     } else {
       for (const row of sm) {
-        const msg = JSON.parse(row.data);
+        const msg = parseMessage(row.data);
         printMessage(msg);
       }
     }
   } else {
     for (const row of messages) {
-      const msg = JSON.parse(row.data);
+      const msg = parseMessage(row.data);
       printMessage(msg);
     }
   }
@@ -142,7 +217,7 @@ if (sessionIdFlag) {
 
 // --- Build query ---
 const conditions: string[] = [];
-const params: unknown[] = [];
+const params: SQLQueryBindings[] = [];
 
 if (after !== null) {
   conditions.push("s.time_created >= ?");
@@ -157,7 +232,7 @@ const whereClause =
   conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
 
 const sessions = db
-  .query(
+  .query<Session, SQLQueryBindings[]>(
     `SELECT s.id, s.title, datetime(s.time_created/1000, 'unixepoch') as created,
             datetime(s.time_updated/1000, 'unixepoch') as updated, s.agent, s.model
      FROM session s
@@ -165,19 +240,23 @@ const sessions = db
      ORDER BY s.time_created DESC
      LIMIT ?`,
   )
-  .all(...(params as SQLQueryBindings[]), limit) as Session[];
+  .all(...params, limit);
 
 // --- Search messages for keyword ---
-let keywordMatched = new Set<string>();
+const keywordMatched = new Set<string>();
 
 if (keyword) {
   const kw = `%${keyword}%`;
   const msgMatches = db
-    .query(`SELECT DISTINCT session_id FROM message WHERE data LIKE ?`)
-    .all(kw) as { session_id: string }[];
+    .query<{ session_id: string }, string>(
+      `SELECT DISTINCT session_id FROM message WHERE data LIKE ?`,
+    )
+    .all(kw);
   const smMatches = db
-    .query(`SELECT DISTINCT session_id FROM session_message WHERE data LIKE ?`)
-    .all(kw) as { session_id: string }[];
+    .query<{ session_id: string }, string>(
+      `SELECT DISTINCT session_id FROM session_message WHERE data LIKE ?`,
+    )
+    .all(kw);
 
   for (const m of msgMatches) keywordMatched.add(m.session_id);
   for (const m of smMatches) keywordMatched.add(m.session_id);
@@ -212,12 +291,12 @@ for (const s of filtered) {
 
   if (showMessages) {
     const msgs = db
-      .query(
+      .query<{ data: string }, string>(
         `SELECT data FROM message WHERE session_id = ? ORDER BY time_created LIMIT 2`,
       )
-      .all(s.id) as { data: string }[];
+      .all(s.id);
     for (const row of msgs) {
-      const msg = JSON.parse(row.data);
+      const msg = parseMessage(row.data);
       const text = extractText(msg);
       const role = msg.role ?? "?";
       if (text) {
@@ -233,34 +312,4 @@ if (!showMessages && !sessionIdFlag) {
   console.log(
     "Tip: add --messages or -m to preview messages, or --session <id> to view full conversation.",
   );
-}
-
-function extractText(msg: any): string {
-  if (typeof msg.content === "string") return msg.content;
-  if (typeof msg.content?.text === "string") return msg.content.text;
-  if (msg.summary?.user) return msg.summary.user;
-  if (msg.summary?.diffs?.length) {
-    const files = msg.summary.diffs
-      .map((d: any) => d.file?.split("/").pop() ?? d.file)
-      .join(", ");
-    return `[diffs: ${files}]`;
-  }
-  if (msg.role === "assistant" && msg.finish === "tool-calls")
-    return "(tool calls)";
-  if (msg.role === "assistant" && msg.finish === "stop") return "(response)";
-  return "";
-}
-
-function printMessage(msg: any) {
-  const role = msg.role ?? "?";
-  const text = extractText(msg);
-  const model = msg.modelID ?? msg.model?.modelID ?? "";
-  const prefix = `[${role}]${model ? ` (${model})` : ""}`;
-  if (text) {
-    for (const line of text.split("\n").filter(Boolean)) {
-      console.log(`  ${prefix}: ${line.slice(0, 500)}`);
-    }
-  } else {
-    console.log(`  ${prefix}: (metadata only)`);
-  }
 }
