@@ -51,7 +51,7 @@ function Home() {
       </Box>
       <Button asChild className="mt-8" colorPalette="blue" size="lg">
         <Link to="/random">
-          Show me a random video <span aria-hidden="true">→</span>
+          Show me a random post <span aria-hidden="true">→</span>
         </Link>
       </Button>
       <Link

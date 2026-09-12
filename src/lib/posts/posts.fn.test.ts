@@ -66,7 +66,7 @@ const insertPost = async (
     title: string;
     description: string;
     userId: string;
-    videoKey: string;
+    videoKey: string | null;
     thumbnailKey: string;
     source: string | null;
     relatedPostId: number | null;
@@ -595,6 +595,19 @@ describe("PostsService.search", () => {
     expect(first).toHaveLength(4);
     expect(new Set(first).size).toBe(4);
     expect(second).toEqual(first);
+  });
+
+  it("finds a random post regardless of its media type", async () => {
+    const imagePostId = await insertPost({
+      title: "Image post",
+      videoKey: null,
+    });
+
+    const result = await runEffect(
+      PostsService.fetchRandomPost({ randomSeed: 42 }),
+    );
+
+    expect(result).toBe(imagePostId);
   });
 
   it("reports per-post like and dislike counts", async () => {

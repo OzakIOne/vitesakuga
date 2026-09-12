@@ -255,6 +255,12 @@ const discoveryViewSchema = Schema.Literals([
 
 export type DiscoveryView = Schema.Schema.Type<typeof discoveryViewSchema>;
 
+export const randomPostSchema = Schema.Struct({
+  randomSeed: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+  ),
+});
+
 export const searchPostsBaseSchema = Schema.Struct({
   dateRange: Schema.Literals(["all", "today", "week", "month"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("all")),

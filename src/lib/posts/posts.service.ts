@@ -51,6 +51,7 @@ import {
   MAX_VIDEO_SIZE_BYTES,
   postByTagSchema,
   RESERVED_TAG_NAMES,
+  randomPostSchema,
   searchPostsBaseSchema,
   seriesHubSchema,
   type PostsSearchInput,
@@ -163,6 +164,9 @@ export class PostsService extends Context.Service<
       SqlError | RowParseError | SessionFetchError,
       SessionService
     >;
+    readonly fetchRandomPost: (
+      data: Schema.Schema.Type<typeof randomPostSchema>,
+    ) => Effect.Effect<PostId | null, SqlError>;
     readonly fetchSeriesHub: (
       data: Schema.Schema.Type<typeof seriesHubSchema>,
     ) => Effect.Effect<SeriesHubResult, SqlError | RowParseError>;
@@ -502,6 +506,24 @@ export class PostsService extends Context.Service<
         },
       };
     });
+
+    const fetchRandomPost = Effect.fn("PostsService.fetchRandomPost")(
+      function* (data: Schema.Schema.Type<typeof randomPostSchema>) {
+        const post = yield* db.executeTakeFirstOption(
+          db
+            .selectFrom("posts")
+            .select("posts.id")
+            .orderBy(randomOrderExpression(data.randomSeed), "asc")
+            .orderBy("posts.id", "asc"),
+        );
+
+        return Option.match(post, {
+          onNone: () => null,
+          // SAFETY: posts.id is the table's primary key.
+          onSome: (row) => asPostId(row.id),
+        });
+      },
+    );
 
     const fetchSeriesHub = Effect.fn("PostsService.fetchSeriesHub")(function* (
       data: Schema.Schema.Type<typeof seriesHubSchema>,
@@ -1032,6 +1054,7 @@ export class PostsService extends Context.Service<
 
     return {
       search,
+      fetchRandomPost,
       fetchSeriesHub,
       fetchDetail,
       upload,
@@ -1047,6 +1070,13 @@ export class PostsService extends Context.Service<
     const svc = yield* PostsService;
     return yield* svc.search(data);
   });
+
+  static readonly fetchRandomPost = Effect.fn("PostsService.fetchRandomPost")(
+    function* (data: Schema.Schema.Type<typeof randomPostSchema>) {
+      const svc = yield* PostsService;
+      return yield* svc.fetchRandomPost(data);
+    },
+  );
 
   static readonly fetchDetail = Effect.fn("PostsService.fetchDetail")(
     function* (postId: PostId) {
@@ -1162,6 +1192,15 @@ export const searchPosts = createServerFn({ strict: { output: false } })
       PostsServiceLive,
       baseLayerFactories.auth,
     )(PostsService.search),
+  );
+
+export const fetchRandomPostId = createServerFn({ strict: { output: false } })
+  .validator(parseStrict(randomPostSchema))
+  .handler(
+    createHandler(
+      PostsServiceLive,
+      baseLayerFactories.db,
+    )(PostsService.fetchRandomPost),
   );
 
 export const fetchSeriesHub = createServerFn({ strict: { output: false } })
