@@ -10,6 +10,7 @@ yarn.lock
 !.env.schema
 .dev.vars
 .alchemy/log/
+.alchemy/state/
 .wrangler/state/v3/observability/
 .vercel
 .output

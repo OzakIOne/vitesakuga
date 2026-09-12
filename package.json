@@ -21,7 +21,7 @@
     "infra:dev": "alchemy dev infra/alchemy.run.ts --stage dev",
     "infra:deploy": "VITE_BASE_URL=https://sakuga-dev.ozaki.one nub run build:dev && nub scripts/check-prod-build.mjs && alchemy deploy infra/alchemy.run.ts --stage dev",
     "infra:deploy:prod": "nub run build && nub scripts/check-prod-build.mjs && alchemy deploy infra/alchemy.run.ts --stage production --env-file .env.production",
-    "github:preproduction": "alchemy deploy infra/github-environment.run.ts --stage preproduction --adopt",
+    "github:preproduction": "alchemy deploy infra/github-environment.run.ts --stage preproduction --adopt --yes",
     "infra:destroy": "alchemy destroy infra/alchemy.run.ts --stage dev",
     "infra:destroy:prod": "alchemy destroy infra/alchemy.run.ts --stage production --env-file .env.production",
     "dcu": "docker compose up -d",
