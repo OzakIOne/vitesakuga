@@ -49,6 +49,10 @@ Auth dans Cloudflare Access.
 Le monitoring couvre cinq échantillons d'une minute par défaut. Une absence de
 trafic ne déclenche pas de rollback ; les smoke checks restent obligatoires.
 
+La sitekey publique Turnstile est provisionnée par Alchemy et exposée au client
+via `/api/turnstile` au runtime. Elle n'a donc pas besoin d'être copiée dans
+`.env.production`; seul `TURNSTILE_SECRET` reste strictement serveur.
+
 ## Configuration GitHub
 
 Créer un environnement GitHub nommé `production`. Ajouter ces secrets :

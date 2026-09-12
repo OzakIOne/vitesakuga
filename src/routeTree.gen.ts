@@ -27,6 +27,7 @@ import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminStorageRouteImport } from './routes/admin.storage'
 import { Route as AdminSuggestionsRouteImport } from './routes/admin.suggestions'
+import { Route as ApiTurnstileRouteImport } from './routes/api/turnstile'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as NewsSlugRouteImport } from './routes/news.$slug'
 import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
@@ -134,6 +135,11 @@ const AdminSuggestionsRoute = AdminSuggestionsRouteImport.update({
   path: '/suggestions',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiTurnstileRoute = ApiTurnstileRouteImport.update({
+  id: '/api/turnstile',
+  path: '/api/turnstile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NewsIndexRoute = NewsIndexRouteImport.update({
   id: '/news/',
   path: '/news/',
@@ -239,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/api/turnstile': typeof ApiTurnstileRoute
   '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/api/turnstile': typeof ApiTurnstileRoute
   '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
@@ -312,6 +320,7 @@ export interface FileRoutesById {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/api/turnstile': typeof ApiTurnstileRoute
   '/news/$slug': typeof NewsSlugRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/series/$seriesTitle': typeof SeriesSeriesTitleRoute
@@ -350,6 +359,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/storage'
     | '/admin/suggestions'
+    | '/api/turnstile'
     | '/news/$slug'
     | '/posts/$postId'
     | '/series/$seriesTitle'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/storage'
     | '/admin/suggestions'
+    | '/api/turnstile'
     | '/news/$slug'
     | '/posts/$postId'
     | '/series/$seriesTitle'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/storage'
     | '/admin/suggestions'
+    | '/api/turnstile'
     | '/news/$slug'
     | '/posts/$postId'
     | '/series/$seriesTitle'
@@ -453,6 +465,7 @@ export interface RootRouteChildren {
   RandomRoute: typeof RandomRoute
   TwoFactorRoute: typeof TwoFactorRoute
   UploadRoute: typeof UploadRoute
+  ApiTurnstileRoute: typeof ApiTurnstileRoute
   NewsSlugRoute: typeof NewsSlugRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   SeriesSeriesTitleRoute: typeof SeriesSeriesTitleRoute
@@ -597,6 +610,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/suggestions'
       preLoaderRoute: typeof AdminSuggestionsRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/turnstile': {
+      id: '/api/turnstile'
+      path: '/api/turnstile'
+      fullPath: '/api/turnstile'
+      preLoaderRoute: typeof ApiTurnstileRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/news/': {
       id: '/news/'
@@ -778,6 +798,7 @@ const rootRouteChildren: RootRouteChildren = {
   RandomRoute: RandomRoute,
   TwoFactorRoute: TwoFactorRoute,
   UploadRoute: UploadRoute,
+  ApiTurnstileRoute: ApiTurnstileRoute,
   NewsSlugRoute: NewsSlugRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   SeriesSeriesTitleRoute: SeriesSeriesTitleRoute,

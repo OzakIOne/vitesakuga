@@ -78,6 +78,9 @@ const serverEnvConfig = Config.all({
   TURNSTILE_SECRET: Config.string("TURNSTILE_SECRET").pipe(
     Config.withDefault(""),
   ),
+  TURNSTILE_SITEKEY: Config.string("TURNSTILE_SITEKEY").pipe(
+    Config.withDefault(""),
+  ),
   VITE_BASE_URL: Config.string("VITE_BASE_URL"),
 });
 
@@ -108,6 +111,7 @@ const serverEnvSchema = (requireOAuth: boolean) =>
     // secret is actually configured (see auth/index.ts). Kept as a Redacted
     // secret so it is never logged.
     TURNSTILE_SECRET: Schema.RedactedFromValue(Schema.String),
+    TURNSTILE_SITEKEY: Schema.String,
     VITE_BASE_URL: nonEmpty("VITE_BASE_URL"),
     VITE_CLOUDFLARE_R2_PUBLIC_URL: nonEmpty("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   });
@@ -128,6 +132,7 @@ export type ServerEnv = {
   readonly NODE_ENV: "development" | "production" | "test";
   readonly RESEND_API_KEY: Redacted.Redacted<string>;
   readonly TURNSTILE_SECRET: Redacted.Redacted<string>;
+  readonly TURNSTILE_SITEKEY: string;
   readonly VITE_BASE_URL: string;
 };
 

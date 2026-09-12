@@ -208,7 +208,8 @@ export default Alchemy.Stack(
           namespaceId: 1001,
           simple: { limit: 100, period: 60 },
         }),
-        // Turnstile widget keys: sitekey is public, secret is server-only.
+        // The public sitekey is served to the auth forms through /api/turnstile;
+        // the secret remains server-only for Better Auth verification.
         TURNSTILE_SITEKEY: turnstile.sitekey,
         TURNSTILE_SECRET: turnstile.secret,
         // Same stage-scoped domain as the worker itself (sakuga-dev.ozaki.one
