@@ -4,7 +4,7 @@ import {
   type ComboboxValueChangeDetails,
 } from "@ark-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LuX } from "react-icons/lu";
@@ -13,7 +13,7 @@ import { Badge } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import { Box, Group, Wrap } from "src/components/ui/layout";
 import { Combobox } from "src/components/ui/overlay";
-import { Heading, Text } from "src/components/ui/typography";
+import { Heading } from "src/components/ui/typography";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 import { useTagCollection } from "src/lib/tags/tags.hooks";
 
@@ -209,17 +209,6 @@ export function SearchBox({
           }}
         />
       </Wrap>
-      <Text color="fg.muted" fontSize="xs" mb={3}>
-        Try <code>likes:&gt;10</code>.{" "}
-        <Link
-          className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-          to="/wiki/$slug"
-          params={{ slug: "search-operators" }}
-        >
-          View all advanced filters
-        </Link>
-        .
-      </Text>
       <Field.Root id="tag-filter">
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
         <Box w="full">
