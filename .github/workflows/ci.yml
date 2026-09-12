@@ -6,6 +6,11 @@ on:
     branches:
       - master
   workflow_call:
+    inputs:
+      ref:
+        description: "Branch or tag to verify"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -37,6 +42,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Nub and pinned Node
         uses: nubjs/setup-nub@v0
