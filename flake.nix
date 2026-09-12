@@ -10,22 +10,26 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        nub = import ./nix/nub.nix { inherit pkgs; };
       in
       {
+        packages.nub = nub;
+        packages.default = nub;
+
         devShells.default = pkgs.mkShell {
           name = "vitesakuga";
 
-          packages = with pkgs; [
-            nodejs_22
-            pnpm
-            pkg-config
-            python3
-            vips
-            glib
-            sqlite
-            docker
-            docker-compose
-            postgresql
+          packages = [
+            nub
+            pkgs.nodejs_26
+            pkgs.pkg-config
+            pkgs.python3
+            pkgs.vips
+            pkgs.glib
+            pkgs.sqlite
+            pkgs.docker
+            pkgs.docker-compose
+            pkgs.postgresql
           ];
 
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
@@ -37,7 +41,7 @@
               echo "→ Copy .env.example to .env and configure"
             fi
 
-            echo "→ pnpm install && pnpm dcu && pnpm db migrate && pnpm dev"
+            echo "→ nub install && nub run dcu && nub run db migrate && nub run dev"
           '';
         };
       }
