@@ -125,16 +125,20 @@ nub exec alchemy login
 # Set your Cloudflare Account ID
 export CLOUDFLARE_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
-# Deploy the resources (dev stage keeps the existing vitesakuga-media bucket)
+# Deploy the dev resources (bucket, domain, and CORS come from the stage map)
 nub run infra:deploy
 
-# Deploy the production bucket (creates vitesakuga-media-production)
+# Deploy the production resources
 nub run infra:deploy:prod
 ```
 
 ### 3. Sync to Environment
 
-Follow the console output from the deploy script to manually update the matching env file (`.env` for dev, `.env.production` for prod) with the newly created bucket name and your account ID.
+Alchemy derives bucket names, custom domains, CORS, and Worker storage bindings
+from `src/lib/env/stage-config.ts`; deployable Vite builds use that same map for
+their app and media URLs. There is no bucket or URL value to copy between env
+files. Update that single stage map when a resource name or domain intentionally
+changes, then rebuild and deploy the same stage.
 
 You also need to manually add the **S3 API Token** from the Cloudflare R2 dashboard to your `.env` file to set `CLOUDFLARE_ACCESS_KEY` and `CLOUDFLARE_SECRET_KEY`:
 

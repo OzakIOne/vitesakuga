@@ -78,7 +78,14 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Deployment
 
-Stage env files (`.env` for dev, `.env.production` for prod) feed **both** the Alchemy worker bindings (`alchemy deploy --stage dev|production`) **and** the Vite build via `import.meta.env`. Client `VITE_*` vars are baked into the bundle at build time, so each stage needs its own build script that pins the right stage env. Build scripts set `APP_ENV` (which env file nub loads: `development`→`.env`, `test`→`.env.test`, `production`→`.env.production`) and `NODE_ENV` (React runtime) independently — nub keys its env-file mode off `APP_ENV`, not `NODE_ENV`.
+Stage env files (`.env` for dev, `.env.production` for prod) provide secrets and
+local overrides. The shared stage map in `src/lib/env/stage-config.ts` derives
+bucket names, domains, CORS, Worker storage bindings, and deployable client URLs
+for both Alchemy and Vite. Client `VITE_*` vars are baked into the bundle at
+build time, so each stage still needs its own build script. Build scripts set
+`APP_ENV` (which env file nub loads: `development`→`.env`, `test`→`.env.test`,
+`production`→`.env.production`) and `NODE_ENV` (React runtime) independently —
+nub keys its env-file mode off `APP_ENV`, not `NODE_ENV`.
 
 **Build scripts:**
 

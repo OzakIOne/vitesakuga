@@ -1,6 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { loadInfraEnv } from "./defs";
+import { loadClientEnv, loadInfraEnv } from "./defs";
+
+const makeClientEnv = (
+  overrides: Partial<Parameters<typeof loadClientEnv>[0]> = {},
+) => ({
+  BASE_URL: "http://localhost:3000/",
+  DEV: false,
+  MODE: "production",
+  PROD: true,
+  SSR: false,
+  VITE_BASE_URL: "https://copied.example",
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: "https://copied.example/media",
+  VITE_GOOGLE_CLIENT_ID: "",
+  VITE_TURNSTILE_REQUIRED: "0",
+  VITE_TURNSTILE_SITEKEY: "",
+  ...overrides,
+});
 
 describe(loadInfraEnv, () => {
   it("reads all flags from an explicit source", () => {
@@ -46,5 +62,32 @@ describe(loadInfraEnv, () => {
         driver,
       );
     }
+  });
+});
+
+describe(loadClientEnv, () => {
+  it("uses stage-derived URLs for deployable builds", () => {
+    const env = loadClientEnv(makeClientEnv());
+
+    expect(env.VITE_BASE_URL).toBe("https://sakuga.ozaki.one");
+    expect(env.VITE_CLOUDFLARE_R2_PUBLIC_URL).toBe("https://media.ozaki.one");
+  });
+
+  it("keeps explicit URLs for a local dev server", () => {
+    const env = loadClientEnv(
+      makeClientEnv({
+        BASE_URL: "http://localhost:5173/",
+        DEV: true,
+        MODE: "development",
+        PROD: false,
+        VITE_BASE_URL: "http://localhost:5173",
+        VITE_CLOUDFLARE_R2_PUBLIC_URL: "http://localhost:9000/e2e-test",
+      }),
+    );
+
+    expect(env.VITE_BASE_URL).toBe("http://localhost:5173");
+    expect(env.VITE_CLOUDFLARE_R2_PUBLIC_URL).toBe(
+      "http://localhost:9000/e2e-test",
+    );
   });
 });

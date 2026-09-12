@@ -1,6 +1,11 @@
 import * as dotenv from "dotenv";
 import { defineNitroConfig } from "nitro/config";
 
+import {
+  getApplicationStageConfig,
+  stageConfig,
+} from "./src/lib/env/stage-config";
+
 // Nitro config runs before Vite loads any env file, so stage values must be
 // loaded explicitly to compute the CSP (same pattern as drizzle.config.ts).
 const ENV_FILES = {
@@ -26,19 +31,20 @@ dotenv.config({ path: envFile });
 // hash cannot cover — blocking them breaks hydration ("Expected to find
 // bootstrap data on window.$_TSR").
 const isProductionStage = process.env["APP_ENV"] === "production";
+const currentStageConfig = getApplicationStageConfig(stage);
 
-const r2PublicUrl = process.env["VITE_CLOUDFLARE_R2_PUBLIC_URL"];
+const r2PublicUrl = isProductionStage
+  ? currentStageConfig.mediaUrl
+  : process.env["VITE_CLOUDFLARE_R2_PUBLIC_URL"] || currentStageConfig.mediaUrl;
 const r2Origin = r2PublicUrl ? new URL(r2PublicUrl).origin : "";
+const stageMediaOrigins = [
+  new URL(stageConfig.dev.mediaUrl).origin,
+  new URL(stageConfig.prod.mediaUrl).origin,
+];
 
 // The bucket's public origins for every stage (custom media domains + the
 // stage's R2 public URL, e.g. http://localhost:9000 for the local rustfs).
-const mediaSources = [
-  r2Origin,
-  "https://media-dev.ozaki.one",
-  "https://media.ozaki.one",
-]
-  .filter(Boolean)
-  .join(" ");
+const mediaSources = [r2Origin, ...stageMediaOrigins].filter(Boolean).join(" ");
 
 // Direct-to-R2 video uploads: the browser PUTs video bytes to the presigned
 // URL on the S3 API endpoint (storage.adapter.ts `presignVideoUpload`), which
@@ -47,7 +53,11 @@ const mediaSources = [
 // carries the bucket as an extra label. A CSP host wildcard matches exactly
 // one label, so `*.<endpoint-host>` covers every bucket on the account.
 const r2UploadOrigin = (() => {
-  const endpoint = process.env["CLOUDFLARE_R2"];
+  const endpoint =
+    process.env["CLOUDFLARE_R2"] ||
+    (process.env["CLOUDFLARE_ACCOUNT_ID"]
+      ? `https://${process.env["CLOUDFLARE_ACCOUNT_ID"]}.eu.r2.cloudflarestorage.com`
+      : "");
   if (!endpoint) {
     return "";
   }
@@ -122,8 +132,8 @@ export default defineNitroConfig({
   ],
   // Security response headers applied to every response the app serves.
   // - CSP allows self + the public media bucket for BOTH stages
-  //   (media-dev.ozaki.one dev / media.ozaki.one prod, per the domainSuffix
-  //   logic in infra/alchemy.run.ts). The config is shared across stages, so
+  //   (media-dev.ozaki.one dev / media.ozaki.one prod, per the shared stage
+  //   config). The config is shared across stages, so
   //   both origins are allow-listed; dropping the prod one would break media.
   // - connect-src also allows the R2 S3 API endpoint: direct-to-R2 video
   //   uploads PUT presigned URLs cross-origin from the browser (plus the

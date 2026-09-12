@@ -1,5 +1,7 @@
 import { Config, ConfigProvider, Effect, Redacted, Schema } from "effect";
 
+import { getApplicationStageConfig } from "./stage-config";
+
 /**
  * Shared environment schemas and loaders, without any module-level side
  * effects. App entry points (`env/server.ts`, `env/client.ts`) and the
@@ -148,6 +150,19 @@ export const loadServerEnv = (
 
 // ---- Client environment ----
 
+type ClientEnvSource = Readonly<{
+  readonly BASE_URL?: string;
+  readonly DEV?: boolean;
+  readonly MODE?: string;
+  readonly PROD?: boolean;
+  readonly SSR?: boolean;
+  readonly VITE_BASE_URL?: string | undefined;
+  readonly VITE_CLOUDFLARE_R2_PUBLIC_URL?: string | undefined;
+  readonly VITE_GOOGLE_CLIENT_ID?: string | undefined;
+  readonly VITE_TURNSTILE_REQUIRED?: string | undefined;
+  readonly VITE_TURNSTILE_SITEKEY?: string | undefined;
+}>;
+
 const clientEnvConfig = Config.all({
   BASE_URL: Config.string("BASE_URL"),
   DEV: Config.boolean("DEV"),
@@ -190,8 +205,20 @@ const clientEnvSchema = Schema.Struct({
   VITE_TURNSTILE_REQUIRED: Schema.String,
 });
 
-export const loadClientEnv = (source: ImportMetaEnv = import.meta.env) => {
-  const raw = parseWith("client", clientEnvConfig, source);
+export const loadClientEnv = (source: ClientEnvSource) => {
+  const stageConfig = getApplicationStageConfig(source.MODE ?? "development");
+  const stageSource = {
+    ...source,
+    VITE_BASE_URL:
+      source.DEV === true
+        ? source.VITE_BASE_URL || stageConfig.appUrl
+        : stageConfig.appUrl,
+    VITE_CLOUDFLARE_R2_PUBLIC_URL:
+      source.DEV === true
+        ? source.VITE_CLOUDFLARE_R2_PUBLIC_URL || stageConfig.mediaUrl
+        : stageConfig.mediaUrl,
+  };
+  const raw = parseWith("client", clientEnvConfig, stageSource);
   return decodeWith("client", clientEnvSchema, raw);
 };
 

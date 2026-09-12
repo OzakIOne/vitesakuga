@@ -4,11 +4,7 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Neon from "alchemy/Neon";
 import { Config, Console, Effect, Layer } from "effect";
 
-/**
- * Stage → subdomain suffix mapping. Dev gets `-dev`, production keeps the
- * bare domain (sakuga.ozaki.one / media.ozaki.one).
- */
-const domainSuffix = (stage: string) => (stage === "dev" ? "-dev" : "");
+import { getDeploymentStageConfig } from "../src/lib/env/stage-config";
 
 /**
  * Neon-backed database wiring. The resources are ready below but need
@@ -29,17 +25,11 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const stage = yield* Stage;
-
-    const suffix = domainSuffix(stage);
-    // Fully stage-scoped bucket name: the EU jurisdiction is fixed at bucket
-    // creation, so each stage gets its own bucket (vitesakuga-media-dev,
-    // vitesakuga-media-production).
-    const bucketName = `vitesakuga-media-${stage}`;
-    const appDomain = `sakuga${suffix}.ozaki.one`;
-    const mediaDomain = `media${suffix}.ozaki.one`;
+    const stageConfiguration = getDeploymentStageConfig(stage);
+    const accountId = yield* Config.string("CLOUDFLARE_ACCOUNT_ID");
 
     yield* Effect.logInfo(
-      `Initializing Alchemy deployment for stage "${stage}" (bucket: ${bucketName}, app: ${appDomain})...`,
+      `Initializing Alchemy deployment for stage "${stage}" (bucket: ${stageConfiguration.bucketName}, app: ${stageConfiguration.appDomain})...`,
     );
 
     // ---- Neon (serverless Postgres) --------------------------------------
@@ -84,12 +74,12 @@ export default Alchemy.Stack(
       : undefined;
 
     const SakugaBucket = Cloudflare.R2.Bucket("SakugaBucket", {
-      name: bucketName,
+      name: stageConfiguration.bucketName,
       // EU data residency + Western Europe storage location.
       jurisdiction: "eu",
       locationHint: "weur",
       // Public bucket domain, e.g. media-dev.ozaki.one.
-      domains: [{ name: mediaDomain }],
+      domains: [{ name: stageConfiguration.mediaDomain }],
       // Staged direct-to-R2 uploads (`videos/_pending/`) that were never
       // confirmed expire after 48h: closes the orphan window where a video
       // was PUT to R2 but its confirm call never ran (tab closed, validator
@@ -114,11 +104,11 @@ export default Alchemy.Stack(
           allowedOrigins:
             stage === "dev"
               ? [
-                  `https://${appDomain}`,
+                  stageConfiguration.appUrl,
                   "http://localhost:3000",
                   "http://localhost:5173",
                 ]
-              : [`https://${appDomain}`],
+              : [stageConfiguration.appUrl],
           allowedHeaders: ["range", "content-type"],
           exposeHeaders: ["etag", "content-range", "accept-ranges"],
           maxAgeSeconds: 3600,
@@ -134,7 +124,7 @@ export default Alchemy.Stack(
     // server-side by the Better Auth captcha plugin and bound as a secret.
     const turnstile = yield* Cloudflare.Turnstile.Widget("SakugaTurnstile", {
       name: `sakuga-turnstile-${stage}`,
-      domains: [appDomain],
+      domains: [stageConfiguration.appDomain],
       mode: "invisible",
     });
 
@@ -157,7 +147,7 @@ export default Alchemy.Stack(
         flags: ["nodejs_compat", "nodejs_compat_populate_process_env"],
       },
       workersDev: false,
-      domain: appDomain,
+      domain: stageConfiguration.appDomain,
       // Cloudflare Workers Observability: logs + automatic traces (fetch
       // handler, R2/KV/rate-limit bindings) in the Cloudflare dashboard.
       // Kept dashboard-only — OTLP export to external providers is billed
@@ -179,13 +169,11 @@ export default Alchemy.Stack(
       },
       env: {
         BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
-        CLOUDFLARE_ACCOUNT_ID: Config.string("CLOUDFLARE_ACCOUNT_ID"),
+        CLOUDFLARE_ACCOUNT_ID: accountId,
         CLOUDFLARE_ACCESS_KEY: Config.redacted("CLOUDFLARE_ACCESS_KEY"),
-        CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
-        CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
-        VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string(
-          "VITE_CLOUDFLARE_R2_PUBLIC_URL",
-        ),
+        CLOUDFLARE_BUCKET: stageConfiguration.bucketName,
+        CLOUDFLARE_R2: `https://${accountId}.eu.r2.cloudflarestorage.com`,
+        VITE_CLOUDFLARE_R2_PUBLIC_URL: stageConfiguration.mediaUrl,
         CLOUDFLARE_SECRET_KEY: Config.redacted("CLOUDFLARE_SECRET_KEY"),
         DATABASE_URL:
           appBranch === undefined
@@ -196,7 +184,7 @@ export default Alchemy.Stack(
         GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
         GOOGLE_CLIENT_SECRET: Config.redacted("GOOGLE_CLIENT_SECRET"),
         EMAIL_FROM: Config.string("EMAIL_FROM").pipe(
-          Config.withDefault(`noreply@${appDomain}`),
+          Config.withDefault(`noreply@${stageConfiguration.appDomain}`),
         ),
         RESEND_API_KEY: Config.redacted("RESEND_API_KEY"),
         NODE_ENV: Config.string("NODE_ENV").pipe(
@@ -212,15 +200,13 @@ export default Alchemy.Stack(
         // the secret remains server-only for Better Auth verification.
         TURNSTILE_SITEKEY: turnstile.sitekey,
         TURNSTILE_SECRET: turnstile.secret,
-        // Same stage-scoped domain as the worker itself (sakuga-dev.ozaki.one
-        // or sakuga.ozaki.one) — not read from the env file so it always
-        // matches the deployed app domain.
-        VITE_BASE_URL: `https://${appDomain}`,
+        // Same stage-scoped domain as the worker itself — not read from the
+        // env file so it always matches the deployed app domain.
+        VITE_BASE_URL: stageConfiguration.appUrl,
       },
     });
 
     const worker = yield* SakugaWorker;
-    const accountId = yield* Config.string("CLOUDFLARE_ACCOUNT_ID");
 
     // Cloudflare Access: the app is only reachable by the owner's email.
     // Set CLOUDFLARE_ACCESS_EMAIL in the stage env file.
@@ -233,26 +219,16 @@ export default Alchemy.Stack(
 
     yield* Cloudflare.Access.Application("SakugaAccess", {
       type: "self_hosted",
-      domain: appDomain,
+      domain: stageConfiguration.appDomain,
       sessionDuration: "720h",
       policies: [allowOwner.policyId],
     });
 
     yield* Console.log("\n✅ Deployment successfully orchestrated!");
-    yield* Console.log("\n--- Action Required ---");
-    yield* Console.log(
-      "Please ensure the following values are updated in your env file:",
-    );
-    yield* Console.log(`\nAPP_URL="https://${appDomain}"`);
-    yield* Console.log(`MEDIA_URL="https://${mediaDomain}"`);
+    yield* Console.log("\n--- Stage-derived configuration ---");
+    yield* Console.log(`APP_URL="${stageConfiguration.appUrl}"`);
+    yield* Console.log(`MEDIA_URL="${stageConfiguration.mediaUrl}"`);
     yield* Console.log(`CLOUDFLARE_ACCESS_EMAIL="${ownerEmail}"`);
-    yield* Console.log(`\nCLOUDFLARE_BUCKET="${bucketName}"`);
-    yield* Console.log(
-      `VITE_CLOUDFLARE_R2_PUBLIC_URL="https://${mediaDomain}"`,
-    );
-    yield* Console.log(
-      `CLOUDFLARE_R2="https://${accountId}.eu.r2.cloudflarestorage.com"`,
-    );
     yield* Console.log("-----------------------\n");
     yield* Console.log(
       `(R2 Endpoint for reference: https://${accountId}.eu.r2.cloudflarestorage.com)`,

@@ -3,6 +3,13 @@
 La production est déployée uniquement quand une GitHub Release est publiée.
 Les push et pull requests exécutent la CI, mais ne déploient rien.
 
+Les noms de bucket, domaines média, domaine applicatif, CORS et bindings de
+stockage sont centralisés dans `src/lib/env/stage-config.ts`. Le build client
+et Alchemy lisent cette même configuration : les valeurs `CLOUDFLARE_BUCKET`,
+`CLOUDFLARE_R2` et `VITE_CLOUDFLARE_R2_PUBLIC_URL` ne sont donc plus à recopier
+entre les fichiers d'environnement de déploiement. Les identifiants Cloudflare
+et les autres secrets restent fournis par l'environnement ciblé.
+
 ## Préproduction
 
 La préproduction utilise le stage Alchemy `dev` et se déploie manuellement

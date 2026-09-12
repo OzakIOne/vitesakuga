@@ -19,7 +19,7 @@
     "db:prod": "STAGE=prod NODE_ENV=production drizzle-kit",
     "neonctl": "neonctl",
     "infra:dev": "alchemy dev infra/alchemy.run.ts --stage dev",
-    "infra:deploy": "VITE_BASE_URL=https://sakuga-dev.ozaki.one nub run build:dev && nub scripts/check-prod-build.mjs && alchemy deploy infra/alchemy.run.ts --stage dev",
+    "infra:deploy": "nub run build:dev && nub scripts/check-prod-build.mjs && alchemy deploy infra/alchemy.run.ts --stage dev",
     "infra:deploy:prod": "nub run build && nub scripts/check-prod-build.mjs && alchemy deploy infra/alchemy.run.ts --stage production --env-file .env.production",
     "github:preproduction": "alchemy deploy infra/github-environment.run.ts --stage preproduction --adopt --yes",
     "github:production": "alchemy deploy infra/github-environment.run.ts --stage production --env-file .env.production --adopt --yes",
