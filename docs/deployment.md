@@ -3,6 +3,33 @@
 La production est déployée uniquement quand une GitHub Release est publiée.
 Les push et pull requests exécutent la CI, mais ne déploient rien.
 
+## Préproduction
+
+La préproduction utilise le stage Alchemy `dev` et se déploie manuellement
+depuis **Actions → Deploy pre-production → Run workflow**. Le champ `ref`
+permet de choisir la branche ou le tag à tester sans déployer chaque commit.
+
+Créer un environnement GitHub nommé `preproduction` avec ces secrets :
+
+- `CLOUDFLARE_API_TOKEN` : même token Cloudflare que pour la production.
+- `PREPRODUCTION_ENV_FILE` : contenu complet du `.env` de développement,
+  notamment `CLOUDFLARE_ACCESS_EMAIL`, sans committer ce fichier.
+
+Ajouter ces variables :
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_WORKER_NAME` :
+  `vitesakuga-infra-sakugaworker-dev-5osp6ydh4rodg534`
+- `HEALTHCHECK_URL` : `https://sakuga-dev.ozaki.one/login` si la valeur par
+  défaut doit être remplacée.
+
+Les secrets `CF_ACCESS_CLIENT_ID` et `CF_ACCESS_CLIENT_SECRET` sont optionnels
+pour l’instant. Le healthcheck accepte une redirection Access (`3xx`) et le
+workflow préproduction cible actuellement l’application Access déjà existante
+du stage `dev`. Pour vérifier le contenu applicatif derrière Access avec un
+code `200`, il faudra créer un Service Token et lui ajouter une policy Service
+Auth dans Cloudflare Access.
+
 ## Séquence
 
 1. La CI vérifie format, Oxlint type-aware, TypeScript, tests Vitest, build et

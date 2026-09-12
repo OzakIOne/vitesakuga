@@ -1,0 +1,89 @@
+name: Deploy pre-production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to deploy"
+        required: false
+        default: master
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preproduction-deployment
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: preproduction
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME || 'vitesakuga-infra-sakugaworker-dev-5osp6ydh4rodg534' }}
+      PREPRODUCTION_ENV_FILE: ${{ secrets.PREPRODUCTION_ENV_FILE }}
+      HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL || 'https://sakuga-dev.ozaki.one/login' }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      MAX_ERROR_RATE: ${{ vars.MAX_ERROR_RATE || '0.10' }}
+      MIN_REQUESTS: ${{ vars.MIN_REQUESTS || '20' }}
+      MONITOR_ATTEMPTS: ${{ vars.MONITOR_ATTEMPTS || '5' }}
+      MONITOR_INTERVAL_SECONDS: ${{ vars.MONITOR_INTERVAL_SECONDS || '60' }}
+    steps:
+      - name: Check out selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Nub and pinned Node
+        uses: nubjs/setup-nub@v0
+
+      - name: Write pre-production environment
+        shell: bash
+        run: |
+          if [[ -z "$PREPRODUCTION_ENV_FILE" ]]; then
+            echo "::error::Configure the pre-production environment file secret"
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$PREPRODUCTION_ENV_FILE" > .env
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Capture active Worker version
+        run: nub scripts/cloudflare-release.mjs capture
+
+      - name: Build and deploy dev stage
+        id: deploy
+        run: |
+          nub run build:dev
+          nub scripts/check-prod-build.mjs
+          nubx alchemy deploy infra/alchemy.run.ts --stage dev --env-file .env
+
+      - name: Record deployed Worker version
+        id: mark_deployed
+        if: steps.deploy.outcome == 'success'
+        run: nub scripts/cloudflare-release.mjs mark-deployed
+
+      - name: Monitor pre-production health
+        id: monitor
+        if: always() && steps.deploy.outcome == 'success' && steps.mark_deployed.outcome == 'success'
+        continue-on-error: true
+        run: nub scripts/cloudflare-release.mjs monitor
+
+      - name: Roll back unhealthy pre-production release
+        if: steps.monitor.outcome == 'failure'
+        run: nub scripts/cloudflare-release.mjs rollback
+
+      - name: Fail release after health rollback
+        if: steps.deploy.outcome != 'success' || steps.mark_deployed.outcome != 'success' || steps.monitor.outcome == 'failure'
+        run: exit 1
