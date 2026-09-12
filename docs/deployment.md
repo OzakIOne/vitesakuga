@@ -70,6 +70,29 @@ Le nom Worker actuel est utilisé par défaut dans le workflow :
 `vitesakuga-infra-sakugaworker-production-5osp6ydh4rodg534`. Définir
 `CLOUDFLARE_WORKER_NAME` si Alchemy le change.
 
+### Automatiser la configuration GitHub avec Alchemy
+
+Le provider GitHub d'Alchemy peut créer ou synchroniser l'environnement
+`preproduction`, ses deux secrets et ses variables. L'authentification GitHub
+utilise la session `gh` locale ; elle doit avoir le scope `repo`.
+
+Les secrets GitHub sont chiffrés par l'API GitHub et ne peuvent pas être relus
+en clair. Le premier bootstrap doit donc recevoir leurs valeurs dans
+l'environnement local, sans les écrire dans le dépôt :
+
+```bash
+CLOUDFLARE_API_TOKEN="..." \
+PREPRODUCTION_ENV_FILE="$(<.env)" \
+  nub run github:preproduction
+```
+
+Le stack crée ou met à jour `CLOUDFLARE_API_TOKEN` et
+`PREPRODUCTION_ENV_FILE` comme secrets d'environnement, ainsi que
+`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME` et `HEALTHCHECK_URL` comme
+variables. Le script utilise `--adopt` pour rattacher l'environnement déjà
+créé manuellement. Les valeurs déjà présentes dans GitHub ne sont pas importables ;
+elles doivent être fournies à nouveau localement pour un premier bootstrap.
+
 Le token Cloudflare de déploiement doit être le même que celui utilisé pour
 Analytics, ou le workflow doit être modifié pour fournir deux tokens séparés.
 
