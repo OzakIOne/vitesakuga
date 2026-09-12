@@ -83,9 +83,15 @@ jobs:
         run: nub scripts/cloudflare-release.mjs monitor
 
       - name: Roll back unhealthy pre-production release
-        if: steps.monitor.outcome == 'failure'
+        if: >-
+          always() && steps.deploy.outcome == 'success' &&
+          (steps.mark_deployed.outcome == 'failure' || steps.monitor.outcome == 'failure')
         run: nub scripts/cloudflare-release.mjs rollback
 
       - name: Fail release after health rollback
-        if: steps.deploy.outcome != 'success' || steps.mark_deployed.outcome != 'success' || steps.monitor.outcome == 'failure'
+        if: >-
+          always() &&
+          (steps.deploy.outcome != 'success' ||
+          steps.mark_deployed.outcome != 'success' ||
+          steps.monitor.outcome == 'failure')
         run: exit 1

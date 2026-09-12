@@ -38,8 +38,10 @@ Auth dans Cloudflare Access.
 3. Alchemy déploie la release sur Cloudflare.
 4. Le workflow attend la nouvelle version, sonde `HEALTHCHECK_URL`, puis
    interroge Workers Analytics.
-5. Si le taux d'erreur dépasse `MAX_ERROR_RATE` avec au moins `MIN_REQUESTS`
-   requêtes, Wrangler restaure automatiquement la version précédente.
+5. Si l'enregistrement de la version échoue après déploiement ou si le taux
+   d'erreur dépasse `MAX_ERROR_RATE` avec au moins `MIN_REQUESTS` requêtes,
+   Wrangler restaure automatiquement la version précédente puis le workflow
+   échoue.
 
 Le monitoring couvre cinq échantillons d'une minute par défaut. Une absence de
 trafic ne déclenche pas de rollback ; les smoke checks restent obligatoires.
