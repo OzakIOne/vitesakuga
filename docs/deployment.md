@@ -72,9 +72,10 @@ Le nom Worker actuel est utilisé par défaut dans le workflow :
 
 ### Automatiser la configuration GitHub avec Alchemy
 
-Le provider GitHub d'Alchemy peut créer ou synchroniser l'environnement
-`preproduction`, le token Cloudflare et ses variables. L'authentification GitHub
-utilise la session `gh` locale ; elle doit avoir le scope `repo`.
+Le provider GitHub d'Alchemy peut créer ou synchroniser les environnements
+`preproduction` et `production`, leurs tokens Cloudflare et leurs variables.
+L'authentification GitHub utilise la session `gh` locale ; elle doit avoir le
+scope `repo`.
 
 Ajoute uniquement `CLOUDFLARE_API_TOKEN` dans le `.env` local, qui est ignoré
 par Git. Alchemy lit cette clé pour le secret GitHub ; il n'envoie pas le reste
@@ -99,6 +100,18 @@ nub run infra:preproduction
 ```
 
 Le déploiement Cloudflare ne démarre que si la configuration GitHub réussit.
+
+Pour préparer l'environnement GitHub de production, ajoute uniquement
+`CLOUDFLARE_API_TOKEN` dans `.env.production`, puis lance :
+
+```bash
+nub run github:production
+```
+
+Cette commande configure l'environnement `production`, mais ne déploie pas le
+Worker. Le déploiement production reste déclenché par la publication d'une
+GitHub Release. Le secret `PRODUCTION_ENV_FILE` reste géré séparément, car sa
+valeur ne peut pas être relue depuis GitHub.
 
 Le token Cloudflare de déploiement doit être le même que celui utilisé pour
 Analytics, ou le workflow doit être modifié pour fournir deux tokens séparés.

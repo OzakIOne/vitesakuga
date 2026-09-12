@@ -16,19 +16,36 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const stage = yield* Stage;
 
-    if (stage !== "preproduction") {
-      return yield* Effect.die(
-        `This stack manages the preproduction GitHub environment, received stage "${stage}"`,
-      );
-    }
+    const configuration =
+      stage === "preproduction"
+        ? {
+            environmentName: "preproduction",
+            resourcePrefix: "Preproduction",
+            workerName: "vitesakuga-infra-sakugaworker-dev-5osp6ydh4rodg534",
+            healthcheckUrl: "https://sakuga-dev.ozaki.one/login",
+          }
+        : stage === "production"
+          ? {
+              environmentName: "production",
+              resourcePrefix: "Production",
+              workerName:
+                "vitesakuga-infra-sakugaworker-production-5osp6ydh4rodg534",
+              healthcheckUrl: "https://sakuga.ozaki.one/login",
+            }
+          : yield* Effect.die(
+              `This stack manages preproduction or production, received stage "${stage}"`,
+            );
 
-    const environment = yield* GitHub.Environment("PreproductionEnvironment", {
-      owner,
-      repository,
-      name: "preproduction",
-    });
+    const environment = yield* GitHub.Environment(
+      `${configuration.resourcePrefix}Environment`,
+      {
+        owner,
+        repository,
+        name: configuration.environmentName,
+      },
+    );
 
-    yield* GitHub.Secret("PreproductionCloudflareApiToken", {
+    yield* GitHub.Secret(`${configuration.resourcePrefix}CloudflareApiToken`, {
       owner,
       repository,
       environment,
@@ -36,33 +53,34 @@ export default Alchemy.Stack(
       value: yield* Config.redacted("CLOUDFLARE_API_TOKEN"),
     });
 
-    yield* GitHub.Variable("PreproductionCloudflareAccountId", {
-      owner,
-      repository,
-      environment,
-      name: "CLOUDFLARE_ACCOUNT_ID",
-      value: yield* Config.string("CLOUDFLARE_ACCOUNT_ID"),
-    });
+    yield* GitHub.Variable(
+      `${configuration.resourcePrefix}CloudflareAccountId`,
+      {
+        owner,
+        repository,
+        environment,
+        name: "CLOUDFLARE_ACCOUNT_ID",
+        value: yield* Config.string("CLOUDFLARE_ACCOUNT_ID"),
+      },
+    );
 
-    yield* GitHub.Variable("PreproductionWorkerName", {
+    yield* GitHub.Variable(`${configuration.resourcePrefix}WorkerName`, {
       owner,
       repository,
       environment,
       name: "CLOUDFLARE_WORKER_NAME",
       value: Config.string("CLOUDFLARE_WORKER_NAME").pipe(
-        Config.withDefault(
-          "vitesakuga-infra-sakugaworker-dev-5osp6ydh4rodg534",
-        ),
+        Config.withDefault(configuration.workerName),
       ),
     });
 
-    yield* GitHub.Variable("PreproductionHealthcheckUrl", {
+    yield* GitHub.Variable(`${configuration.resourcePrefix}HealthcheckUrl`, {
       owner,
       repository,
       environment,
       name: "HEALTHCHECK_URL",
       value: Config.string("HEALTHCHECK_URL").pipe(
-        Config.withDefault("https://sakuga-dev.ozaki.one/login"),
+        Config.withDefault(configuration.healthcheckUrl),
       ),
     });
 
