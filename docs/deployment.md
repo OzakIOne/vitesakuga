@@ -73,25 +73,23 @@ Le nom Worker actuel est utilisé par défaut dans le workflow :
 ### Automatiser la configuration GitHub avec Alchemy
 
 Le provider GitHub d'Alchemy peut créer ou synchroniser l'environnement
-`preproduction`, ses deux secrets et ses variables. L'authentification GitHub
+`preproduction`, le token Cloudflare et ses variables. L'authentification GitHub
 utilise la session `gh` locale ; elle doit avoir le scope `repo`.
 
-Les secrets GitHub sont chiffrés par l'API GitHub et ne peuvent pas être relus
-en clair. Le premier bootstrap doit donc recevoir leurs valeurs dans
-l'environnement local, sans les écrire dans le dépôt :
+Ajoute uniquement `CLOUDFLARE_API_TOKEN` dans le `.env` local, qui est ignoré
+par Git. Alchemy lit cette clé pour le secret GitHub ; il n'envoie pas le reste
+du fichier `.env` :
 
 ```bash
-CLOUDFLARE_API_TOKEN="..." \
-PREPRODUCTION_ENV_FILE="$(<.env)" \
-  nub run github:preproduction
+CLOUDFLARE_API_TOKEN="..." nub run github:preproduction --yes
 ```
 
-Le stack crée ou met à jour `CLOUDFLARE_API_TOKEN` et
-`PREPRODUCTION_ENV_FILE` comme secrets d'environnement, ainsi que
+Le stack crée ou met à jour `CLOUDFLARE_API_TOKEN` comme secret d'environnement,
+ainsi que
 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME` et `HEALTHCHECK_URL` comme
 variables. Le script utilise `--adopt` pour rattacher l'environnement déjà
-créé manuellement. Les valeurs déjà présentes dans GitHub ne sont pas importables ;
-elles doivent être fournies à nouveau localement pour un premier bootstrap.
+créé manuellement. Le secret `PREPRODUCTION_ENV_FILE` existant est laissé
+intact : GitHub ne permet pas de lire sa valeur en clair.
 
 Le token Cloudflare de déploiement doit être le même que celui utilisé pour
 Analytics, ou le workflow doit être modifié pour fournir deux tokens séparés.

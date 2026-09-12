@@ -36,14 +36,6 @@ export default Alchemy.Stack(
       value: yield* Config.redacted("CLOUDFLARE_API_TOKEN"),
     });
 
-    yield* GitHub.Secret("PreproductionEnvFile", {
-      owner,
-      repository,
-      environment,
-      name: "PREPRODUCTION_ENV_FILE",
-      value: yield* Config.redacted("PREPRODUCTION_ENV_FILE"),
-    });
-
     yield* GitHub.Variable("PreproductionCloudflareAccountId", {
       owner,
       repository,
