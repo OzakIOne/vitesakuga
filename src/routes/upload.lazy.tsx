@@ -5,6 +5,7 @@ import {
   type ComboboxValueChangeDetails,
 } from "@ark-ui/react";
 import type { AnyFieldApi } from "@tanstack/react-form";
+import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,7 +39,10 @@ import {
   MIN_TEXT_LENGTH,
 } from "src/lib/posts/posts.schema";
 import { searchPosts } from "src/lib/posts/posts.service";
-import { useUploadDraft } from "src/lib/upload/useUploadDraft";
+import {
+  useUploadDraft,
+  type UploadDraftData,
+} from "src/lib/upload/useUploadDraft";
 import {
   useUploadForm,
   type UploadMediaKind,
@@ -90,6 +94,29 @@ function MetaNumberField({ field, label, inputLabel }: MetaNumberFieldProps) {
     </Field.Root>
   );
 }
+
+type UploadDraftFormValues = Omit<UploadDraftData, "videoName">;
+
+type UploadDraftPersistenceProps = {
+  persist: (values: UploadDraftData) => void;
+  values: UploadDraftFormValues;
+  videoName: string;
+};
+
+const UploadDraftPersistence = ({
+  persist,
+  values,
+  videoName,
+}: UploadDraftPersistenceProps) => {
+  useEffect(() => {
+    if (!values.title && !values.description) {
+      return;
+    }
+    persist({ ...values, videoName });
+  }, [persist, values, videoName]);
+
+  return null;
+};
 
 function RouteComponent() {
   const [mediaKind, setMediaKind] = useState<UploadMediaKind>("video");
@@ -244,21 +271,34 @@ function RouteComponent() {
   };
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
+  const [debouncedRelatedPostSearch, setDebouncedRelatedPostSearch] =
+    useState("");
   const [selectedPost, setSelectedPost] = useState<{
     id: number;
     title: string;
   } | null>(null);
   const isNumericSearch = /^\d+$/.test(relatedPostSearch.trim());
   const numericId = isNumericSearch ? Number(relatedPostSearch.trim()) : null;
+  const relatedPostQuery = relatedPostSearch.trim();
+  const isRelatedPostSearchReady =
+    relatedPostQuery.length > 2 &&
+    !isNumericSearch &&
+    relatedPostQuery === debouncedRelatedPostSearch;
+  const setDebouncedRelatedPostSearchLater = useDebouncer(
+    (query: string) => {
+      setDebouncedRelatedPostSearch(query);
+    },
+    { wait: 500 },
+  );
 
   const { data: relatedPosts, isFetching: isSearchLoading } = useQuery({
-    enabled: relatedPostSearch.length > 2 && !isNumericSearch,
+    enabled: isRelatedPostSearchReady,
     queryFn: async () =>
       searchPosts({
         data: {
           dateRange: "all",
           page: 0,
-          q: relatedPostSearch,
+          q: debouncedRelatedPostSearch,
           randomSeed: 0,
           sortBy: "newest",
           tags: [],
@@ -268,7 +308,7 @@ function RouteComponent() {
     queryKey: postsKeys.search({
       dateRange: "all",
       page: 0,
-      q: relatedPostSearch,
+      q: debouncedRelatedPostSearch,
       randomSeed: 0,
       sortBy: "newest",
       tags: [],
@@ -288,25 +328,35 @@ function RouteComponent() {
 
   const relatedPostCollection = useMemo(() => {
     const items = new Map<string, { label: string; value: string }>();
-    for (const post of relatedPosts?.data ?? []) {
+    for (const post of isRelatedPostSearchReady
+      ? (relatedPosts?.data ?? [])
+      : []) {
       items.set(String(post.id), { label: post.title, value: String(post.id) });
     }
     if (postById) {
       const { id, title } = postById.post;
       items.set(String(id), { label: `${title} (#${id})`, value: String(id) });
     }
+    if (selectedPost) {
+      items.set(String(selectedPost.id), {
+        label: selectedPost.title,
+        value: String(selectedPost.id),
+      });
+    }
     return createListCollection({
       itemToString: (item) => item.label,
       itemToValue: (item) => item.value,
       items: [...items.values()],
     });
-  }, [postById, relatedPosts]);
+  }, [isRelatedPostSearchReady, postById, relatedPosts, selectedPost]);
 
   const handleRelatedPostInputValueChange = (
     details: ComboboxInputValueChangeDetails,
   ) => {
     if (details.reason === "clear-trigger") {
+      setDebouncedRelatedPostSearchLater.cancel();
       setRelatedPostSearch("");
+      setDebouncedRelatedPostSearch("");
       setSelectedPost(null);
       form.form.setFieldValue("relatedPostId", undefined);
       return;
@@ -320,6 +370,13 @@ function RouteComponent() {
     setRelatedPostSearch(details.inputValue);
     setSelectedPost(null);
     form.form.setFieldValue("relatedPostId", undefined);
+    const query = details.inputValue.trim();
+    if (query.length > 2 && !/^\d+$/.test(query)) {
+      setDebouncedRelatedPostSearchLater.maybeExecute(query);
+      return;
+    }
+    setDebouncedRelatedPostSearchLater.cancel();
+    setDebouncedRelatedPostSearch("");
   };
 
   const handleRelatedPostValueChange = (
@@ -888,24 +945,13 @@ function RouteComponent() {
         )}
 
         <form.form.Subscribe selector={(state) => state.values}>
-          {(values) => {
-            if (values.title || values.description) {
-              draft.persist({
-                chapterNumber: values.chapterNumber,
-                description: values.description ?? "",
-                episodeNumber: values.episodeNumber,
-                relatedPostId: values.relatedPostId,
-                seasonNumber: values.seasonNumber,
-                source: values.source,
-                tags: values.tags ?? [],
-                title: values.title ?? "",
-                videoName:
-                  video.videoFile?.name ?? draft.draft?.videoName ?? "",
-                volumeNumber: values.volumeNumber,
-              });
-            }
-            return null;
-          }}
+          {(values) => (
+            <UploadDraftPersistence
+              persist={draft.persist}
+              values={values}
+              videoName={video.videoFile?.name ?? draft.draft?.videoName ?? ""}
+            />
+          )}
         </form.form.Subscribe>
 
         <form.form.Subscribe

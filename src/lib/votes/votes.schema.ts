@@ -2,6 +2,7 @@ import { Schema } from "effect";
 
 import { postVoteSchema } from "../db/schema";
 import { PostId } from "../ids";
+import { PageNumberSchema } from "../pagination/pagination.schema";
 
 export const setPostVoteSchema = Schema.Struct({
   postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
@@ -13,10 +14,7 @@ export const removePostVoteSchema = Schema.Struct({
 });
 
 export const fetchLikedPostsSchema = Schema.Struct({
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isInt()),
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-  ),
+  page: PageNumberSchema,
 });
 
 export type SetPostVoteInput = Schema.Schema.Type<typeof setPostVoteSchema>;

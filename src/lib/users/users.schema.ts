@@ -1,6 +1,7 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
 import { RoleSchema } from "../auth/roles";
+import { PageNumberWithDefaultSchema } from "../pagination/pagination.schema";
 import {
   MAX_SEARCH_QUERY_LENGTH,
   MAX_SEARCH_TAGS_COUNT,
@@ -77,11 +78,7 @@ export const mentionSearchInputSchema = Schema.Struct({
 });
 
 export const fetchUserInputSchema = Schema.Struct({
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isInt()),
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
   q: Schema.String.pipe(
     Schema.decode({
       decode: SchemaGetter.transform((val) => val.trim()),

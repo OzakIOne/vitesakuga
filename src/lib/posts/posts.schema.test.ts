@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parse, parseStrict } from "../effect/schema.utils";
+import { MAX_PAGE_NUMBER } from "../pagination/pagination.schema";
 import "../sanitize.server";
 import {
   MAX_SEARCH_QUERY_LENGTH,
@@ -76,6 +77,12 @@ describe("searchPostsBaseSchema", () => {
 
   it("should throw on invalid page number (< 0)", () => {
     expect(() => parseStrict(searchPostsBaseSchema)({ page: -1 })).toThrow();
+  });
+
+  it("should throw on a page number beyond the offset cap", () => {
+    expect(() =>
+      parseStrict(searchPostsBaseSchema)({ page: MAX_PAGE_NUMBER + 1 }),
+    ).toThrow();
   });
 
   it("should throw on fractional page numbers", () => {
@@ -195,6 +202,26 @@ describe("updatePostInputSchema", () => {
       parseStrict(updatePostInputSchema)({
         ...defaultValues,
         tags: ["invalid"],
+      }),
+    ).toThrow();
+  });
+
+  it("should throw when an update contains too many tags", () => {
+    expect(() =>
+      parseStrict(updatePostInputSchema)({
+        ...defaultValues,
+        tags: Array.from({ length: MAX_SEARCH_TAGS_COUNT + 1 }, () => ({
+          name: "tag",
+        })),
+      }),
+    ).toThrow();
+  });
+
+  it("should throw when an update contains an oversized tag name", () => {
+    expect(() =>
+      parseStrict(updatePostInputSchema)({
+        ...defaultValues,
+        tags: [{ name: "a".repeat(MAX_TAG_NAME_LENGTH + 1) }],
       }),
     ).toThrow();
   });

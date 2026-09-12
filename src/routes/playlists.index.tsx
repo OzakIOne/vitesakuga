@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Effect, Schema } from "effect";
+import { Schema } from "effect";
 import { useCallback } from "react";
 import { EmptyState } from "src/components/EmptyState";
 import { CardGridSkeleton } from "src/components/LoadingSkeletons";
@@ -9,14 +9,12 @@ import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
+import { PageNumberWithDefaultSchema } from "src/lib/pagination/pagination.schema";
 import { publicPlaylistsQueryOptions } from "src/lib/playlists/playlists.queries";
 import { seo } from "src/utils/seo";
 
 const PlaylistsSearchSchema = Schema.Struct({
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
 });
 
 export const Route = createFileRoute("/playlists/")({

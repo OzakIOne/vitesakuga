@@ -1,6 +1,7 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
 import { PlaylistId, PostId } from "../ids";
+import { PageNumberWithDefaultSchema } from "../pagination/pagination.schema";
 import { sanitize } from "../sanitize";
 
 const sanitizeString = <S extends Schema.Schema<string>>(schema: S) =>
@@ -74,17 +75,9 @@ export const reorderPlaylistPostsInputSchema = Schema.Struct({
 
 export const fetchPlaylistDetailSchema = Schema.Struct({
   playlistId: PlaylistId,
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isInt()),
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
 });
 
 export const fetchPublicPlaylistsSchema = Schema.Struct({
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isInt()),
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
 });

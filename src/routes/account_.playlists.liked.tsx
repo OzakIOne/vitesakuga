@@ -5,7 +5,7 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { Effect, Schema } from "effect";
+import { Schema } from "effect";
 import { useCallback } from "react";
 import { Pagination } from "src/components/Pagination";
 import { Badge } from "src/components/ui/feedback";
@@ -13,15 +13,13 @@ import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
+import { PageNumberWithDefaultSchema } from "src/lib/pagination/pagination.schema";
 import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
 import { formatDateUtc } from "src/utils/date-format";
 import { seo } from "src/utils/seo";
 
 const LikedSearchSchema = Schema.Struct({
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
 });
 
 export const Route = createFileRoute("/account_/playlists/liked")({

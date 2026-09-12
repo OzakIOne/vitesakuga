@@ -35,7 +35,10 @@ export const postTags = pgTable(
       .references(() => tags.id, { onDelete: "cascade" })
       .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.postId, t.tagId] })],
+  (t) => [
+    primaryKey({ columns: [t.postId, t.tagId] }),
+    index("post_tags_tag_id_idx").on(t.tagId),
+  ],
 );
 
 // Explicit opt-in preferences for the "new from followed tags" discovery
@@ -58,26 +61,33 @@ export const tagFollows = pgTable(
   ],
 );
 
-export const posts = pgTable("posts", {
-  animeTitle: text(),
-  chapterNumber: integer(),
-  createdAt: timestamp().defaultNow().notNull(),
-  description: text().notNull(),
-  episodeNumber: integer(),
-  id: serial("id").primaryKey(),
-  relatedPostId: integer(),
-  seasonNumber: integer(),
-  source: text(),
-  sourceType: text(),
-  thumbnailKey: text().notNull(),
-  title: text().notNull(),
-  userId: text()
-    .references(() => user.id)
-    .notNull(),
-  videoKey: text(),
-  videoMetadata: json().$type<string>().notNull(),
-  volumeNumber: integer(),
-});
+export const posts = pgTable(
+  "posts",
+  {
+    animeTitle: text(),
+    chapterNumber: integer(),
+    createdAt: timestamp().defaultNow().notNull(),
+    description: text().notNull(),
+    episodeNumber: integer(),
+    id: serial("id").primaryKey(),
+    relatedPostId: integer(),
+    seasonNumber: integer(),
+    source: text(),
+    sourceType: text(),
+    thumbnailKey: text().notNull(),
+    title: text().notNull(),
+    userId: text()
+      .references(() => user.id)
+      .notNull(),
+    videoKey: text(),
+    videoMetadata: json().$type<string>().notNull(),
+    volumeNumber: integer(),
+  },
+  (t) => [
+    index("posts_created_at_idx").on(t.createdAt),
+    index("posts_user_created_at_idx").on(t.userId, t.createdAt),
+  ],
+);
 
 // One row per attached image; `position` orders them for display. Position
 // zero is also copied to posts.thumbnailKey for cards and playlists.
@@ -108,7 +118,10 @@ export const postVotes = pgTable(
       .notNull(),
     vote: text().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.postId, t.userId] }),
+    index("post_votes_user_created_at_idx").on(t.userId, t.createdAt),
+  ],
 );
 
 export const postReports = pgTable(
@@ -123,20 +136,30 @@ export const postReports = pgTable(
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.postId, t.userId] }),
+    index("post_reports_created_at_idx").on(t.createdAt),
+  ],
 );
 
-export const playlists = pgTable("playlists", {
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  description: text("description"),
-  id: serial("id").primaryKey(),
-  isPublic: boolean("is_public").notNull().default(false),
-  title: text("title").notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  userId: text("user_id")
-    .references(() => user.id, { onDelete: "cascade" })
-    .notNull(),
-});
+export const playlists = pgTable(
+  "playlists",
+  {
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    description: text("description"),
+    id: serial("id").primaryKey(),
+    isPublic: boolean("is_public").notNull().default(false),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    userId: text("user_id")
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [
+    index("playlists_user_created_at_idx").on(t.userId, t.createdAt),
+    index("playlists_public_created_at_idx").on(t.isPublic, t.createdAt),
+  ],
+);
 
 // A private, named snapshot of the post-search parameters owned by one user.
 // Keeping the filters in typed columns makes saved searches easy to query and
@@ -173,17 +196,21 @@ export const playlistPosts = pgTable(
   ],
 );
 
-export const comments = pgTable("comments", {
-  content: text().notNull(),
-  createdAt: timestamp().defaultNow().notNull(),
-  id: serial("id").primaryKey(),
-  postId: bigint({ mode: "number" })
-    .references(() => posts.id, { onDelete: "cascade" })
-    .notNull(),
-  userId: text()
-    .references(() => user.id)
-    .notNull(),
-});
+export const comments = pgTable(
+  "comments",
+  {
+    content: text().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    id: serial("id").primaryKey(),
+    postId: bigint({ mode: "number" })
+      .references(() => posts.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text()
+      .references(() => user.id)
+      .notNull(),
+  },
+  (t) => [index("comments_post_created_at_idx").on(t.postId, t.createdAt)],
+);
 
 // @mentions resolved in comment content (src/lib/mentions). One row per
 // (comment, mentioned user); notifications for new mentions are written
@@ -270,16 +297,22 @@ export const commentUpdateSchema = Schema.Struct({
 // review queue itself is derived live from points + account age; this table
 // records what staff decided and when, and keeps rejected candidates out of
 // the queue until they earn more points than the snapshot taken at rejection.
-export const promotionReviews = pgTable("promotion_reviews", {
-  createdAt: timestamp().defaultNow().notNull(),
-  id: serial().primaryKey(),
-  pointsAtReview: integer().notNull(),
-  reviewedBy: text(),
-  status: text().$type<"approved" | "rejected">().notNull(),
-  userId: text()
-    .references(() => user.id, { onDelete: "cascade" })
-    .notNull(),
-});
+export const promotionReviews = pgTable(
+  "promotion_reviews",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    id: serial().primaryKey(),
+    pointsAtReview: integer().notNull(),
+    reviewedBy: text(),
+    status: text().$type<"approved" | "rejected">().notNull(),
+    userId: text()
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => [
+    index("promotion_reviews_user_created_at_idx").on(t.userId, t.createdAt),
+  ],
+);
 
 // In-app notification inbox (src/lib/notifications). Rows are created
 // server-side by business events (promotion approved/rejected…); clients
@@ -314,21 +347,28 @@ export const notifications = pgTable(
 // `payload` holds the proposed field changes as a JSON string. A suggestion
 // applies when a moderator/admin decides so, or after two distinct uploader
 // approvals; the row then doubles as the applied-change history entry.
-export const postEdits = pgTable("post_edits", {
-  createdAt: timestamp().defaultNow().notNull(),
-  id: serial().primaryKey(),
-  payload: json().$type<string>().notNull(),
-  previousPayload: json("previous_payload").$type<string>().notNull(),
-  postId: integer()
-    .references(() => posts.id, { onDelete: "cascade" })
-    .notNull(),
-  resolvedAt: timestamp(),
-  resolvedBy: text(),
-  status: text().$type<"approved" | "pending" | "rejected">().notNull(),
-  suggestedBy: text()
-    .references(() => user.id)
-    .notNull(),
-});
+export const postEdits = pgTable(
+  "post_edits",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    id: serial().primaryKey(),
+    payload: json().$type<string>().notNull(),
+    previousPayload: json("previous_payload").$type<string>().notNull(),
+    postId: integer()
+      .references(() => posts.id, { onDelete: "cascade" })
+      .notNull(),
+    resolvedAt: timestamp(),
+    resolvedBy: text(),
+    status: text().$type<"approved" | "pending" | "rejected">().notNull(),
+    suggestedBy: text()
+      .references(() => user.id)
+      .notNull(),
+  },
+  (t) => [
+    index("post_edits_post_created_at_idx").on(t.postId, t.createdAt),
+    index("post_edits_status_created_at_idx").on(t.status, t.createdAt),
+  ],
+);
 
 // One row per uploader backing a pending suggestion; two distinct rows (or
 // one staff/owner decision) make it apply. The suggester can never appear

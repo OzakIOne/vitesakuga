@@ -27,8 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: preproduction
     timeout-minutes: 15
-    env:
-      PREPRODUCTION_ENV_FILE: ${{ secrets.PREPRODUCTION_ENV_FILE }}
     steps:
       - name: Check out selected ref
         uses: actions/checkout@v4
@@ -39,6 +37,8 @@ jobs:
         uses: nubjs/setup-nub@v0
 
       - name: Write pre-production environment
+        env:
+          PREPRODUCTION_ENV_FILE: ${{ secrets.PREPRODUCTION_ENV_FILE }}
         shell: bash
         run: |
           if [[ -z "$PREPRODUCTION_ENV_FILE" ]]; then
@@ -63,7 +63,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME || 'vitesakuga-infra-sakugaworker-dev-5osp6ydh4rodg534' }}
-      PREPRODUCTION_ENV_FILE: ${{ secrets.PREPRODUCTION_ENV_FILE }}
       HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL || 'https://sakuga-dev.ozaki.one/login' }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
@@ -81,6 +80,8 @@ jobs:
         uses: nubjs/setup-nub@v0
 
       - name: Write pre-production environment
+        env:
+          PREPRODUCTION_ENV_FILE: ${{ secrets.PREPRODUCTION_ENV_FILE }}
         shell: bash
         run: |
           if [[ -z "$PREPRODUCTION_ENV_FILE" ]]; then
@@ -96,12 +97,14 @@ jobs:
       - name: Capture active Worker version
         run: nub scripts/cloudflare-release.mjs capture
 
-      - name: Build and deploy dev stage
-        id: deploy
+      - name: Build development bundle
         run: |
           nub run build:dev
           nub scripts/check-prod-build.mjs
-          nubx alchemy deploy infra/alchemy.run.ts --stage dev --env-file .env
+
+      - name: Deploy Worker
+        id: deploy
+        run: nubx alchemy deploy infra/alchemy.run.ts --stage dev --env-file .env
 
       - name: Record deployed Worker version
         id: mark_deployed
@@ -116,8 +119,10 @@ jobs:
 
       - name: Roll back unhealthy pre-production release
         if: >-
-          always() && steps.deploy.outcome == 'success' &&
-          (steps.mark_deployed.outcome == 'failure' || steps.monitor.outcome == 'failure')
+          always() &&
+          (steps.deploy.outcome == 'failure' ||
+          steps.mark_deployed.outcome == 'failure' ||
+          steps.monitor.outcome == 'failure')
         run: nub scripts/cloudflare-release.mjs rollback
 
       - name: Fail release after health rollback

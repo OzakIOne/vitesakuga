@@ -514,7 +514,8 @@ export class PostsService extends Context.Service<
             .selectFrom("posts")
             .select("posts.id")
             .orderBy(randomOrderExpression(data.randomSeed), "asc")
-            .orderBy("posts.id", "asc"),
+            .orderBy("posts.id", "asc")
+            .limit(1),
         );
 
         return Option.match(post, {

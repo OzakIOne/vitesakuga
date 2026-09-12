@@ -21,7 +21,7 @@ exercise the same authentication path as the test server.
 
 ## Current verification
 
-On **2026-09-12**, `nub exec vitest run --maxWorkers=1` passed **693 tests in 75 test files**.
+On **2026-09-13**, `nub exec vitest run --maxWorkers=1` passed **699 tests in 76 test files**.
 The full Playwright suite passed **58/58 tests in 15 files** (`nub run test:ee`).
 These are point-in-time results; rerun the commands after code or dependency
 changes.

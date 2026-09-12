@@ -1,6 +1,7 @@
 import { Effect, Schema, SchemaGetter } from "effect";
 
 import { PostId } from "../ids";
+import { PageNumberWithDefaultSchema } from "../pagination/pagination.schema";
 import { sanitize } from "../sanitize";
 import {
   MAX_SEARCH_QUERY_LENGTH,
@@ -38,8 +39,23 @@ export type VideoMetadata = Schema.Schema.Type<typeof VideoMetadataSchema>;
 
 const TagSchema = Schema.Struct({
   id: Schema.optionalKey(Schema.Number),
-  name: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+  name: Schema.String.pipe(
+    Schema.check(Schema.isMinLength(1)),
+    Schema.check(
+      Schema.isMaxLength(MAX_TAG_NAME_LENGTH, {
+        message: `Tag names must not exceed ${MAX_TAG_NAME_LENGTH} characters`,
+      }),
+    ),
+  ),
 });
+
+const PostTagsSchema = Schema.Array(TagSchema).pipe(
+  Schema.check(
+    Schema.isMaxLength(MAX_SEARCH_TAGS_COUNT, {
+      message: `Select at most ${MAX_SEARCH_TAGS_COUNT} tags`,
+    }),
+  ),
+);
 
 export type Tag = Schema.Schema.Type<typeof TagSchema>;
 
@@ -160,7 +176,7 @@ const SharedUploadFields = {
   seasonNumber: Schema.optional(CoerceNumber),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
   sourceType: PostSourceUploadSchema,
-  tags: Schema.Array(TagSchema),
+  tags: PostTagsSchema,
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   volumeNumber: Schema.optional(CoerceNumber),
 };
@@ -223,7 +239,7 @@ export const updatePostInputSchema = Schema.Struct({
   postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
   relatedPostId: Schema.optional(RelatedPostId),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
-  tags: Schema.Array(TagSchema),
+  tags: PostTagsSchema,
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
 });
 
@@ -269,11 +285,7 @@ export const searchPostsBaseSchema = Schema.Struct({
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
     Schema.withDecodingDefault(Effect.succeed(0)),
   ),
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isInt()),
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
   q: Schema.String.pipe(
     Schema.decode({
       decode: SchemaGetter.transform((val) => val.trim()),
@@ -327,10 +339,6 @@ export type PostsSearchInput = Omit<PostsSearchParams, "randomSeed" | "view"> &
   Partial<Pick<PostsSearchParams, "randomSeed" | "view">>;
 
 export const postByTagSchema = Schema.Struct({
-  page: Schema.Number.pipe(
-    Schema.check(Schema.isInt()),
-    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
-    Schema.withDecodingDefault(Effect.succeed(0)),
-  ),
+  page: PageNumberWithDefaultSchema,
   tag: Schema.String,
 });
