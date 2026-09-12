@@ -16,8 +16,40 @@ jobs:
   verify:
     uses: ./.github/workflows/ci.yml
 
-  deploy:
+  migrate:
     needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Nub and pinned Node
+        uses: nubjs/setup-nub@v0
+
+      - name: Write production environment
+        shell: bash
+        run: |
+          if [[ -z "$PRODUCTION_ENV_FILE" ]]; then
+            echo "::error::Configure the production environment file secret"
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$PRODUCTION_ENV_FILE" > .env.production
+
+      - name: Install dependencies
+        run: nub install --frozen-lockfile
+
+      - name: Apply production database migrations
+        run: nub run db:prod migrate
+
+  deploy:
+    needs: [verify, migrate]
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 45

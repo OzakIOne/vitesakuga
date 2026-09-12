@@ -34,11 +34,14 @@ Auth dans Cloudflare Access.
 
 1. La CI vérifie format, Oxlint type-aware, TypeScript, tests Vitest, build et
    garde-fou du bundle production.
-2. Le workflow capture la version Worker active.
-3. Alchemy déploie la release sur Cloudflare.
-4. Le workflow attend la nouvelle version, sonde `HEALTHCHECK_URL`, puis
+2. Un job dédié applique les migrations Drizzle au stage ciblé avant tout
+   déploiement. Les changements de schéma doivent rester compatibles avec la
+   version courante pendant la transition expand/contract.
+3. Le workflow capture la version Worker active.
+4. Alchemy déploie la release sur Cloudflare.
+5. Le workflow attend la nouvelle version, sonde `HEALTHCHECK_URL`, puis
    interroge Workers Analytics.
-5. Si l'enregistrement de la version échoue après déploiement ou si le taux
+6. Si l'enregistrement de la version échoue après déploiement ou si le taux
    d'erreur dépasse `MAX_ERROR_RATE` avec au moins `MIN_REQUESTS` requêtes,
    Wrangler restaure automatiquement la version précédente puis le workflow
    échoue.
