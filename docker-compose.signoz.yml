@@ -1,4 +1,3 @@
-version: "3"
 x-common: &common
   networks:
     - signoz-net
@@ -9,7 +8,7 @@ x-common: &common
       max-file: "3"
 x-clickhouse-defaults: &clickhouse-defaults
   !!merge <<: *common
-  image: clickhouse/clickhouse-server:25.5.6
+  image: clickhouse/clickhouse-server:25.5.6@sha256:4536143e22dc9bddb217c7e610f6b7ed5e6efd8fefdbc61acdeadb5d8022213a
   tty: true
   labels:
     signoz.io/scrape: "true"
@@ -39,7 +38,7 @@ x-clickhouse-defaults: &clickhouse-defaults
     - CLICKHOUSE_SKIP_USER_SETUP=1
 x-zookeeper-defaults: &zookeeper-defaults
   !!merge <<: *common
-  image: signoz/zookeeper:3.7.1
+  image: signoz/zookeeper:3.7.1@sha256:fcc4a3288154ccaa3bdb5ae6dc10180c084d29a8a6a26b62ac8e30a8940dc2e6
   user: root
   labels:
     signoz.io/scrape: "true"
@@ -60,8 +59,7 @@ x-db-depend: &db-depend
 services:
   init-clickhouse:
     !!merge <<: *common
-    image: clickhouse/clickhouse-server:25.5.6
-    container_name: signoz-init-clickhouse
+    image: clickhouse/clickhouse-server:25.5.6@sha256:4536143e22dc9bddb217c7e610f6b7ed5e6efd8fefdbc61acdeadb5d8022213a
     command:
       - bash
       - -c
@@ -79,7 +77,6 @@ services:
       - ./infra/signoz/common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
   zookeeper-1:
     !!merge <<: *zookeeper-defaults
-    container_name: signoz-zookeeper-1
     # ports:
     #   - "2181:2181"
     #   - "2888:2888"
@@ -94,7 +91,6 @@ services:
       - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
   clickhouse:
     !!merge <<: *clickhouse-defaults
-    container_name: signoz-clickhouse
     # ports:
     #   - "9000:9000"
     #   - "8123:8123"
@@ -109,17 +105,16 @@ services:
       # - ./infra/signoz/common/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml
   signoz:
     !!merge <<: *db-depend
-    image: signoz/signoz:${VERSION:-v0.127.0}
-    container_name: signoz
+    image: signoz/signoz:v0.127.0@sha256:e0b9c07ddf119c67e669ed5c7cf55941f2c6ba844868199dc800facd7bf7c0fd
     ports:
-      - "8080:8080" # signoz port
+      - "127.0.0.1:8080:8080" # signoz port
     volumes:
       - sqlite:/var/lib/signoz/
     environment:
       - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
       - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
-      - SIGNOZ_TOKENIZER_JWT_SECRET=secret
+      - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_TOKENIZER_JWT_SECRET:?SIGNOZ_TOKENIZER_JWT_SECRET must be set}
     healthcheck:
       test:
         - CMD
@@ -132,8 +127,7 @@ services:
       retries: 3
   otel-collector:
     !!merge <<: *db-depend
-    image: signoz/signoz-otel-collector:${OTELCOL_TAG:-v0.144.5}
-    container_name: signoz-otel-collector
+    image: signoz/signoz-otel-collector:v0.144.5@sha256:f9bf94d566055d06581f3befbf361cc26d670f31ad00cb31fda2ec380210c5ec
     entrypoint:
       - /bin/sh
     command:
@@ -153,12 +147,11 @@ services:
       - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
     ports:
       # - "1777:1777"     # pprof extension
-      - "4317:4317" # OTLP gRPC receiver
-      - "4318:4318" # OTLP HTTP receiver
+      - "127.0.0.1:4317:4317" # OTLP gRPC receiver
+      - "127.0.0.1:4318:4318" # OTLP HTTP receiver
   signoz-telemetrystore-migrator:
     !!merge <<: *db-depend
-    image: signoz/signoz-otel-collector:${OTELCOL_TAG:-v0.144.5}
-    container_name: signoz-telemetrystore-migrator
+    image: signoz/signoz-otel-collector:v0.144.5@sha256:f9bf94d566055d06581f3befbf361cc26d670f31ad00cb31fda2ec380210c5ec
     environment:
       - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
       - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
@@ -175,18 +168,17 @@ services:
     restart: on-failure
   signoz-mcp-server:
     !!merge <<: *common
-    image: signoz/signoz-mcp-server:latest
-    container_name: signoz-mcp-server
+    image: signoz/signoz-mcp-server:v0.14.0@sha256:4e154632ccd0c5272a17eabbfd42302a752bf6d4ee0bd6caba6349cce3239b1f
     depends_on:
       signoz:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - TRANSPORT_MODE=http
       - MCP_SERVER_PORT=8000
       - SIGNOZ_URL=http://signoz:8080
-      - SIGNOZ_API_KEY=HZKdHXjGQto1GHVqOyqq7kuc79C4Rf9mKyQQEhimjjQ=
+      - SIGNOZ_API_KEY=${SIGNOZ_API_KEY:?SIGNOZ_API_KEY must be set}
 
 networks:
   signoz-net:

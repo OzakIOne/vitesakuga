@@ -97,6 +97,17 @@ React/bundle runtime), and Vite `--mode` (bakes `import.meta.env.MODE`).
 | `infra:destroy` / `infra:destroy:prod`              | Alchemy destroy                                                                       | dev / prod                  | `.env` / `.env.production`                        | —                 |
 | `docker:up` / `docker:down` (aliases `dcu` / `dcd`) | local Docker stack (Postgres, rustfs, lightpanda, otelite)                            | local                       | `.env.test`                                       | —                 |
 
+The optional SigNoz stack is isolated to loopback ports and uses pinned image
+digests. Set its credentials in the shell before starting it:
+
+```bash
+export SIGNOZ_API_KEY="<signoz-api-key>"
+export SIGNOZ_TOKENIZER_JWT_SECRET="<long-random-secret>"
+docker compose -f docker-compose.signoz.yml up -d
+```
+
+Update the image tag and digest together when upgrading the stack.
+
 > Note: app stages are `local` / `dev` / `prod`, but Alchemy stages are `dev` /
 > `production` — the Alchemy stack derives bucket names
 > (`vitesakuga-media-production`), domains, and CORS from those exact strings,

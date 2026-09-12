@@ -1,9 +1,8 @@
 services:
   postgres:
-    container_name: postgres
-    image: postgres:18
+    image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     env_file:
       - .env.test
     volumes:
@@ -12,11 +11,10 @@ services:
       - my_network
 
   rustfs:
-    container_name: rustfs
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0-rc.6@sha256:97171b3d72cd47dc81000f92ea84de25608bfc35a94c965501afaeb5d99f6035
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
       - RUSTFS_ACCESS_KEY=rustfsadmin
       - RUSTFS_SECRET_KEY=rustfsadmin
@@ -30,23 +28,8 @@ services:
     command:
       ["--access-key", "rustfsadmin", "--secret-key", "rustfsadmin", "/data"]
 
-  # drizzle-gate:
-  #   image: ghcr.io/drizzle-team/gateway:latest
-  #   container_name: drizzle-gate
-  #   restart: always
-  #   ports:
-  #     - "4983:4983"
-  #   environment:
-  #     - PORT=4983
-  #     - MASTERPASS=ozaki
-  #   volumes:
-  #     - drizzle:/app
-  #   networks:
-  #     - my_network
-
   lightpanda:
-    container_name: lightpanda
-    image: lightpanda/browser:nightly
+    image: lightpanda/browser:nightly@sha256:4307c2b2cce54c2e90351f0084dbc1e07ae424c7caf47632fab033f7401b8b67
     ports:
       - "127.0.0.1:9223:9222"
     networks:
@@ -55,9 +38,9 @@ services:
   otelite:
     build: .
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "4000:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:4000:3000"
     volumes:
       - otelite_data:/home/ozaki/.local/share/otelite
 
@@ -69,4 +52,3 @@ volumes:
   pgdata:
   rustfs_data:
   otelite_data:
-  # drizzle:
