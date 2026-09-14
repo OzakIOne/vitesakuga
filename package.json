@@ -105,6 +105,7 @@
     "@opencode-ai/browser-control": "^0.7.0",
     "@oxlint/plugins": "1.81.0",
     "@playwright/test": "^1.62.1",
+    "@shadcn/lint": "^0.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/devtools-vite": "^0.8.3",
     "@tanstack/eslint-plugin-query": "^5.101.4",

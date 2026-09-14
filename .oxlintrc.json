@@ -21,8 +21,14 @@
     "@tanstack/eslint-plugin-query",
     "@tanstack/eslint-plugin-router",
     "@effect/eslint-plugin",
+    "@shadcn/lint",
     { "name": "anti-slop", "specifier": "./tools/oxlint/anti-slop/index.ts" }
   ],
+  "settings": {
+    "shadcn": {
+      "ui": "src/components/ui"
+    }
+  },
   "ignorePatterns": [
     "*.test.*",
     ".agent/**",
