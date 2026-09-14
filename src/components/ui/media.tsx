@@ -52,7 +52,7 @@ export const Avatar = {
     return (
       <ArkAvatar.Root
         className={cn(
-          "relative inline-flex shrink-0 overflow-hidden rounded-full bg-gray-200",
+          "relative inline-flex shrink-0 overflow-hidden rounded-full bg-tone-200",
           classToken(AVATAR_SIZES, size, "md"),
           className,
         )}
@@ -90,7 +90,7 @@ export const Avatar = {
     return (
       <ArkAvatar.Fallback
         className={cn(
-          "flex h-full w-full items-center justify-center bg-gray-200 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+          "flex h-full w-full items-center justify-center bg-tone-200 font-medium text-tone-700 dark:bg-tone-700 dark:text-tone-200",
           className,
         )}
         style={style}
@@ -121,7 +121,7 @@ export const Card = {
     return (
       <div
         className={cn(
-          "rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800",
+          "rounded-lg border border-tone-200 bg-white shadow-sm dark:border-tone-700 dark:bg-tone-800",
           className,
         )}
         style={style}

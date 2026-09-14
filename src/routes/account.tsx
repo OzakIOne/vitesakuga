@@ -249,7 +249,7 @@ function RouteComponent() {
         </div>
 
         <div className="space-y-12">
-          <section className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-700">
+          <section className="border-tone-200 dark:border-tone-700 flex items-center justify-between gap-4 rounded-2xl border p-5">
             <div>
               <Heading as="h2" mb={1} size="md">
                 Playlists
@@ -353,7 +353,7 @@ function RouteComponent() {
                     </InputGroup>
                     {!field.state.meta.errors &&
                       field.state.value !== user.image && (
-                        <div className="mt-3 flex items-center gap-3 rounded-lg bg-white p-4 dark:bg-gray-800">
+                        <div className="dark:bg-tone-800 mt-3 flex items-center gap-3 rounded-lg bg-white p-4">
                           <Text color="gray.500" fontSize="sm">
                             Preview
                           </Text>
@@ -408,7 +408,7 @@ function RouteComponent() {
             </form>
           </section>
 
-          <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
+          <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
             <Heading as="h2" mb={1} size="md">
               Password
             </Heading>
@@ -508,12 +508,12 @@ function RouteComponent() {
             hasPassword={hasPassword}
           />
 
-          <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
+          <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
             <Heading as="h2" mb={1} size="md">
               Danger zone
             </Heading>
             <Text
-              className="dark:text-gray-400"
+              className="dark:text-tone-400"
               color="gray.500"
               fontSize="sm"
               mb={4}
@@ -521,8 +521,12 @@ function RouteComponent() {
               Deleting your account is permanent. Your posts and comments stay
               public under the name &ldquo;Deleted user&rdquo;.
             </Text>
-            <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-red-100 bg-red-50 p-4 sm:flex-row sm:items-center dark:border-red-900 dark:bg-red-950/40">
-              <Text className="dark:text-red-300" color="red.700" fontSize="sm">
+            <div className="border-danger-100 bg-danger-50 dark:border-danger-900 dark:bg-danger-950/40 flex flex-col items-start justify-between gap-4 rounded-lg border p-4 sm:flex-row sm:items-center">
+              <Text
+                className="dark:text-danger-300"
+                color="red.700"
+                fontSize="sm"
+              >
                 This removes your account and personal data for good. Public
                 content is anonymized, not deleted.
               </Text>

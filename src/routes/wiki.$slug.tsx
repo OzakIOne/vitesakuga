@@ -32,7 +32,10 @@ function WikiNotFound() {
       <p className="my-4">
         This article doesn’t exist or is no longer published.
       </p>
-      <Link className="text-blue-600 underline dark:text-blue-400" to="/wiki">
+      <Link
+        className="text-accent-600 dark:text-accent-400 underline"
+        to="/wiki"
+      >
         Back to the wiki
       </Link>
     </div>
@@ -48,7 +51,7 @@ function WikiArticlePage() {
       title={article.title}
     >
       <Link
-        className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+        className="text-accent-600 dark:text-accent-400 text-sm hover:underline"
         to="/wiki"
       >
         <span aria-hidden="true">← </span>All wiki articles

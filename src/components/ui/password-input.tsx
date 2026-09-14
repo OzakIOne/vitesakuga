@@ -67,7 +67,7 @@ export function PasswordInput({ ref, ...props }: PasswordInputProps) {
         />
         <ArkPasswordInput.VisibilityTrigger
           aria-label="Toggle password visibility"
-          className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-400/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="text-tone-700 hover:bg-tone-100 focus-visible:ring-tone-400/40 dark:text-tone-300 dark:hover:bg-tone-700 absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
         >
           <ArkPasswordInput.Indicator fallback={visibilityIcon.on}>
             {visibilityIcon.off}
@@ -152,7 +152,7 @@ export function PasswordStrengthMeter({
         {Array.from({ length: max }).map((_, index) => (
           <div
             className={cn(
-              "h-1 flex-1 rounded-sm bg-gray-200 dark:bg-gray-700",
+              "h-1 flex-1 rounded-sm bg-tone-200 dark:bg-tone-700",
               index < value ? colorClass : undefined,
             )}
             key={index}
@@ -166,10 +166,10 @@ export function PasswordStrengthMeter({
 
 function getColorPalette(percent: number) {
   if (percent < 33) {
-    return { colorClass: "bg-red-500", label: "Low" };
+    return { colorClass: "bg-danger-500", label: "Low" };
   }
   if (percent < 66) {
-    return { colorClass: "bg-orange-500", label: "Medium" };
+    return { colorClass: "bg-warning-500", label: "Medium" };
   }
-  return { colorClass: "bg-green-500", label: "High" };
+  return { colorClass: "bg-success-500", label: "High" };
 }

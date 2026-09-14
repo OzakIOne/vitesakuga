@@ -103,7 +103,7 @@ export function Skeleton(props: SkeletonProps) {
     <div
       aria-hidden="true"
       className={cn(
-        "animate-pulse rounded bg-gray-200 dark:bg-gray-700",
+        "animate-pulse rounded bg-tone-200 dark:bg-tone-700",
         className,
       )}
       style={style}
@@ -154,7 +154,7 @@ export const Progress = {
     props: React.ComponentProps<typeof ArkProgress.Track> & ChakraStyleProps,
   ) => (
     <ArkProgress.Track
-      className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+      className="bg-tone-200 dark:bg-tone-700 h-2 w-full overflow-hidden rounded-full"
       {...(props as React.ComponentProps<typeof ArkProgress.Track>)}
     />
   ),
@@ -163,7 +163,7 @@ export const Progress = {
     props: React.ComponentProps<typeof ArkProgress.Range> & ChakraStyleProps,
   ) => (
     <ArkProgress.Range
-      className="h-full rounded-full bg-blue-600 transition-[width]"
+      className="bg-accent-600 h-full rounded-full transition-[width]"
       {...(props as React.ComponentProps<typeof ArkProgress.Range>)}
     />
   ),
@@ -180,12 +180,12 @@ export const Alert = {
     const { className, style, rest } = useChakraProps(props);
     const statusClasses = {
       error:
-        "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200",
+        "border-danger-200 bg-danger-50 text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200",
       success:
-        "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200",
-      info: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200",
+        "border-success-200 bg-success-50 text-success-800 dark:border-success-900 dark:bg-success-950/40 dark:text-success-200",
+      info: "border-accent-200 bg-accent-50 text-accent-800 dark:border-accent-900 dark:bg-accent-950/40 dark:text-accent-200",
       warning:
-        "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200",
+        "border-warning-200 bg-warning-50 text-warning-800 dark:border-warning-900 dark:bg-warning-950/40 dark:text-warning-200",
     }[status];
     // Errors/warnings are urgent and should interrupt (role="alert");
     // success/info updates are announced politely (role="status").
@@ -220,10 +220,10 @@ export const Alert = {
           ? LuTriangleAlert
           : LuCircleAlert;
     const iconClasses = {
-      error: "text-red-600 dark:text-red-400",
-      success: "text-green-600 dark:text-green-400",
-      info: "text-blue-600 dark:text-blue-400",
-      warning: "text-orange-600 dark:text-orange-400",
+      error: "text-danger-600 dark:text-danger-400",
+      success: "text-success-600 dark:text-success-400",
+      info: "text-accent-600 dark:text-accent-400",
+      warning: "text-warning-600 dark:text-warning-400",
     }[status ?? "error"];
     return (
       <Icon
@@ -294,7 +294,7 @@ export const DataList = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed native element.
     return (
       <dt
-        className={cn("text-gray-600 dark:text-gray-400", className)}
+        className={cn("text-tone-600 dark:text-tone-400", className)}
         style={style}
         {...(rest as React.HTMLAttributes<HTMLDivElement>)}
       />

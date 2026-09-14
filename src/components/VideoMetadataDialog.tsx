@@ -24,7 +24,7 @@ export function VideoMetadataDialog({ metadata }: VideoMetadataDialogProps) {
         size="sm"
         variant="outline"
       >
-        <LuInfo aria-hidden style={{ marginRight: "6px" }} />
+        <LuInfo aria-hidden className="mr-1.5" />
         Media Info
       </Button>
       <Portal>

@@ -226,7 +226,7 @@ export function TwoFactorSection({
           : "Enable two-factor authentication";
 
   return (
-    <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
+    <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Heading as="h2" size="md">
@@ -273,7 +273,7 @@ export function TwoFactorSection({
       </div>
 
       {enabled && (
-        <div className="mt-5 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/40">
+        <div className="border-success-200 bg-success-50 dark:border-success-900 dark:bg-success-950/40 mt-5 rounded-lg border p-4">
           <Text color="green.700" fontSize="sm">
             Two-factor authentication is on. You&apos;ll be asked for a code
             from your authenticator app when signing in.
@@ -336,7 +336,7 @@ export function TwoFactorSection({
                       Scan this code with your authenticator app, then enter the
                       6-digit code it shows.
                     </Text>
-                    <div className="rounded-xl bg-white p-3 dark:bg-gray-800">
+                    <div className="dark:bg-tone-800 rounded-xl bg-white p-3">
                       <QRCode
                         aria-label="Two-factor authentication setup QR code"
                         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- QRCode renders an inline <svg> with no image URL, so a native <img> is impossible; role="img" on the svg keeps it announced as a labeled image
@@ -345,7 +345,7 @@ export function TwoFactorSection({
                         value={totpUri}
                       />
                     </div>
-                    <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                    <div className="border-tone-200 dark:border-tone-700 flex w-full items-center justify-between gap-3 rounded-lg border p-3">
                       <div className="min-w-0">
                         <Text color="gray.500" fontSize="xs">
                           Manual entry key
@@ -405,7 +405,7 @@ export function TwoFactorSection({
                     <div className="grid grid-cols-2 gap-2">
                       {backupCodes.map((backupCode) => (
                         <code
-                          className="rounded-md border border-gray-200 px-3 py-2 text-center font-mono text-sm dark:border-gray-700"
+                          className="border-tone-200 dark:border-tone-700 rounded-md border px-3 py-2 text-center font-mono text-sm"
                           key={backupCode}
                         >
                           {backupCode}
@@ -427,7 +427,7 @@ export function TwoFactorSection({
 
                 {enableError && (
                   <p
-                    className="mt-3 text-sm text-red-600 dark:text-red-400"
+                    className="text-danger-600 dark:text-danger-400 mt-3 text-sm"
                     role="alert"
                   >
                     {enableError}
@@ -585,7 +585,7 @@ export function TwoFactorSection({
                     <div className="grid grid-cols-2 gap-2">
                       {newBackupCodes.map((backupCode) => (
                         <code
-                          className="rounded-md border border-gray-200 px-3 py-2 text-center font-mono text-sm dark:border-gray-700"
+                          className="border-tone-200 dark:border-tone-700 rounded-md border px-3 py-2 text-center font-mono text-sm"
                           key={backupCode}
                         >
                           {backupCode}

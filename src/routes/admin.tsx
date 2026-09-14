@@ -63,7 +63,7 @@ function AdminLayout() {
             <h1 className="mt-1 text-3xl font-bold tracking-tight">
               Moderation dashboard
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-tone-600 dark:text-tone-400 mt-2 max-w-2xl text-sm">
               Review community activity, resolve reports, and keep the archive
               healthy.
             </p>

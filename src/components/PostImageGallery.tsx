@@ -53,7 +53,7 @@ export function PostImageGallery({ images, title }: PostImageGalleryProps) {
           aria-label={
             "Open image " + (activeIndex + 1) + " of " + images.length
           }
-          className="block w-full cursor-zoom-in focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none"
+          className="focus-visible:ring-accent-600 block w-full cursor-zoom-in focus-visible:ring-2 focus-visible:outline-none"
           onClick={() => setIsLightboxOpen(true)}
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -112,7 +112,7 @@ export function PostImageGallery({ images, title }: PostImageGalleryProps) {
                 }
                 className={
                   index === activeIndex
-                    ? "w-20 shrink-0 overflow-hidden rounded border-2 border-blue-500 p-0"
+                    ? "border-accent-500 w-20 shrink-0 overflow-hidden rounded border-2 p-0"
                     : "w-20 shrink-0 overflow-hidden rounded border-2 border-transparent p-0 opacity-70 hover:opacity-100"
                 }
                 key={slide.src}

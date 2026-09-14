@@ -82,7 +82,7 @@ export function PasskeysSection() {
   };
 
   return (
-    <section className="border-t border-gray-200 pt-12 dark:border-gray-700">
+    <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Heading as="h2" size="md">
@@ -139,13 +139,13 @@ export function PasskeysSection() {
         ) : (
           passkeys.map((passkey) => (
             <div
-              className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+              className="border-tone-200 dark:border-tone-700 flex items-center justify-between gap-4 rounded-lg border p-4"
               key={passkey.id}
             >
               <div className="flex min-w-0 items-center gap-3">
                 <LuFingerprint
                   aria-hidden="true"
-                  className="shrink-0 text-gray-400"
+                  className="text-tone-400 shrink-0"
                   size={20}
                 />
                 <div className="min-w-0">

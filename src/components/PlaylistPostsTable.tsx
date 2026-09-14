@@ -36,6 +36,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  type CSSProperties,
 } from "react";
 import { LuGripVertical } from "react-icons/lu";
 import { Spinner } from "src/components/ui/feedback";
@@ -76,6 +77,10 @@ const NEXT_BUFFER_ROWS = 10;
 
 type TableColumnMeta = { grow?: boolean };
 
+type CSSVariableProperties = CSSProperties & {
+  [key: `--${string}`]: string | number;
+};
+
 const features = tableFeatures({
   columnSizingFeature,
   // SAFETY: phantom type-only slot; the value is ignored at runtime, only the
@@ -113,7 +118,7 @@ function RowDragHandle() {
       {...attributes}
       {...listeners}
       aria-label={title ? `Drag to reorder ${title}` : "Drag to reorder post"}
-      className="cursor-grab touch-none rounded p-1 text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:outline-none active:cursor-grabbing dark:hover:text-gray-300"
+      className="text-tone-400 hover:text-tone-600 focus-visible:ring-accent-500/40 dark:hover:text-tone-300 cursor-grab touch-none rounded p-1 focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
       ref={setActivatorNodeRef}
       type="button"
     >
@@ -187,7 +192,7 @@ const columns = columnHelper.columns([
           {item.thumbnailKey && (
             <Image
               alt=""
-              className="h-12 w-20 shrink-0 rounded border border-gray-200 object-contain dark:border-gray-700"
+              className="border-tone-200 dark:border-tone-700 h-12 w-20 shrink-0 rounded border object-contain"
               src={assetUrl(item.thumbnailKey)}
             />
           )}
@@ -265,7 +270,6 @@ function PlaylistRow({ measureElement, row, virtualRow }: PlaylistRowProps) {
     setActivatorNodeRef,
     setNodeRef,
     transform,
-    transition,
   } = useSortable({ disabled: row.original.isOrphan, id: row.original.postId });
 
   // Stable combined ref: dnd-kit droppable registration + virtualizer
@@ -294,41 +298,37 @@ function PlaylistRow({ measureElement, row, virtualRow }: PlaylistRowProps) {
       setActivatorNodeRef,
     ],
   );
+  const rowStyle: CSSVariableProperties = {
+    // Rows are positioned with `top` (not transform) because dnd-kit
+    // measures droppables transform-agnostically; the sortable delta is
+    // the only transform applied.
+    "--row-top": `${virtualRow.start}px`,
+    "--row-transform":
+      transform?.y != null ? `translate3d(0, ${transform.y}px, 0)` : "none",
+  };
 
   return (
     <RowDragContext.Provider value={dragContext}>
       <tr
-        className={`absolute left-0 w-full border-b border-gray-100 bg-white transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800/60 ${
+        className={`border-tone-100 hover:bg-tone-50 dark:border-tone-800 dark:bg-tone-900 dark:hover:bg-tone-800/60 absolute [top:var(--row-top)] left-0 flex w-full [transform:var(--row-transform)] border-b bg-white transition last:border-0 ${
           isDragging ? "z-10 opacity-60 shadow-lg" : ""
         }`}
         data-index={virtualRow.index}
         ref={rowRef}
-        style={{
-          display: "flex",
-          position: "absolute",
-          // Rows are positioned with `top` (not transform) because dnd-kit
-          // measures droppables transform-agnostically; the sortable delta is
-          // the only transform applied.
-          top: virtualRow.start,
-          transform:
-            transform?.y != null
-              ? `translate3d(0, ${transform.y}px, 0)`
-              : undefined,
-          transition,
-          width: "100%",
-        }}
+        style={rowStyle}
       >
         {row.getAllCells().map((cell) => {
           const grow = cell.column.columnDef.meta?.grow ?? false;
+          const cellStyle: CSSVariableProperties = {
+            "--cell-flex": grow ? "1 1 0%" : "0 0 auto",
+            "--cell-min-width": grow ? "0px" : `${cell.column.getSize()}px`,
+            "--cell-width": grow ? "auto" : `${cell.column.getSize()}px`,
+          };
           return (
             <td
-              className="flex min-w-0 items-center overflow-hidden px-3 py-2"
+              className="flex [width:var(--cell-width)] [min-width:var(--cell-min-width)] min-w-0 [flex:var(--cell-flex)] items-center overflow-hidden px-3 py-2"
               key={cell.id}
-              style={{
-                flex: grow ? "1 1 0%" : "0 0 auto",
-                minWidth: grow ? 0 : cell.column.getSize(),
-                width: grow ? "auto" : cell.column.getSize(),
-              }}
+              style={cellStyle}
             >
               <FlexRender cell={cell} />
             </td>
@@ -424,6 +424,9 @@ export function PlaylistPostsTable({
     overscan: 6,
   });
   const virtualItems = virtualizer.getVirtualItems();
+  const tableStyle: CSSVariableProperties = {
+    "--table-height": `${virtualizer.getTotalSize()}px`,
+  };
 
   useEffect(() => {
     const lastItem = virtualItems[virtualItems.length - 1];
@@ -446,35 +449,33 @@ export function PlaylistPostsTable({
   return (
     <div
       ref={scrollRef}
-      className="h-full overflow-auto rounded-lg border border-gray-200 dark:border-gray-700"
+      className="border-tone-200 dark:border-tone-700 h-full overflow-auto rounded-lg border"
     >
       <DndContext
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
-        <table
-          aria-label="Playlist posts"
-          className="w-full text-sm"
-          style={{ display: "grid" }}
-        >
-          <thead
-            className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"
-            style={{ display: "grid" }}
-          >
+        <table aria-label="Playlist posts" className="grid w-full text-sm">
+          <thead className="bg-tone-50 dark:bg-tone-800 sticky top-0 z-10 grid">
             {table.getHeaderGroups().map((group) => (
               <tr className="flex w-full" key={group.id}>
                 {group.headers.map((header) => {
                   const grow = header.column.columnDef.meta?.grow ?? false;
+                  const headerStyle: CSSVariableProperties = {
+                    "--column-flex": grow ? "1 1 0%" : "0 0 auto",
+                    "--column-min-width": grow
+                      ? "0px"
+                      : `${header.column.getSize()}px`,
+                    "--column-width": grow
+                      ? "auto"
+                      : `${header.column.getSize()}px`,
+                  };
                   return (
                     <th
-                      className="flex items-center overflow-hidden border-b border-gray-200 px-3 py-2.5 text-left font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                      className="border-tone-200 text-tone-700 dark:border-tone-700 dark:text-tone-200 flex [width:var(--column-width)] [min-width:var(--column-min-width)] [flex:var(--column-flex)] items-center overflow-hidden border-b px-3 py-2.5 text-left font-medium"
                       key={header.id}
-                      style={{
-                        flex: grow ? "1 1 0%" : "0 0 auto",
-                        minWidth: grow ? 0 : header.column.getSize(),
-                        width: grow ? "auto" : header.column.getSize(),
-                      }}
+                      style={headerStyle}
                     >
                       <span className="min-w-0 truncate">
                         {header.isPlaceholder ? null : (
@@ -488,11 +489,8 @@ export function PlaylistPostsTable({
             ))}
           </thead>
           <tbody
-            className="relative"
-            style={{
-              display: "grid",
-              height: `${virtualizer.getTotalSize()}px`,
-            }}
+            className="relative grid h-(--table-height)"
+            style={tableStyle}
           >
             <SortableContext
               items={sortableIds}

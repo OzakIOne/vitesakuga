@@ -27,29 +27,29 @@ function NewsPage() {
           title="No updates yet"
         />
       ) : (
-        <div className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+        <div className="divide-tone-200 border-tone-200 dark:divide-tone-800 dark:border-tone-800 divide-y border-y">
           {newsPosts.map((post) => (
             <article key={post.slug} className="py-8">
               <time
                 dateTime={post.date}
-                className="text-sm text-gray-600 dark:text-gray-400"
+                className="text-tone-600 dark:text-tone-400 text-sm"
               >
                 {formatNewsDate(post.date)}
               </time>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight">
                 <Link
-                  className="rounded-sm hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500 dark:hover:text-blue-400"
+                  className="hover:text-accent-600 focus-visible:outline-accent-500 dark:hover:text-accent-400 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4"
                   to="/news/$slug"
                   params={{ slug: post.slug }}
                 >
                   {post.title}
                 </Link>
               </h2>
-              <p className="mt-3 leading-7 text-gray-600 dark:text-gray-400">
+              <p className="text-tone-600 dark:text-tone-400 mt-3 leading-7">
                 {post.summary}
               </p>
               <Link
-                className="mt-5 inline-block rounded-sm text-sm font-medium text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+                className="text-accent-600 dark:text-accent-400 mt-5 inline-block rounded-sm text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
                 to="/news/$slug"
                 params={{ slug: post.slug }}
                 aria-label={`Read update: ${post.title}`}

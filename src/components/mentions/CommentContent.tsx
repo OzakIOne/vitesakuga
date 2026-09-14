@@ -38,7 +38,7 @@ function CommentMarkdownAnchor({
   if (profileId !== undefined) {
     return (
       <Link
-        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+        className="text-accent-600 dark:text-accent-400 font-medium hover:underline"
         params={{ id: profileId }}
         to="/users/$id"
       >

@@ -107,7 +107,7 @@ function SignupForm() {
               <Heading as="h1" size="lg">
                 Check your email
               </Heading>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              <p className="text-tone-600 dark:text-tone-300 mt-2 text-sm">
                 We sent a six-digit verification code to {verificationEmail}.
                 Enter it here to finish creating your account.
               </p>

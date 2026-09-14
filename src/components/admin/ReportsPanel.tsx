@@ -82,7 +82,7 @@ export function ReportsPanel() {
         >
           <Stack gap={0}>
             <Link
-              className="link"
+              className="text-accent-600 underline"
               params={{ postId: String(report.postId) }}
               to="/posts/$postId"
             >

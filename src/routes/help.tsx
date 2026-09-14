@@ -27,15 +27,15 @@ function HelpPage() {
       title="Help"
     >
       <MarkdownContent>{body}</MarkdownContent>
-      <div className="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-gray-200 pt-8 text-sm dark:border-gray-800">
+      <div className="border-tone-200 dark:border-tone-800 mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t pt-8 text-sm">
         <Link
-          className="font-medium text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+          className="text-accent-600 dark:text-accent-400 font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
           to="/wiki"
         >
           Browse the wiki <span aria-hidden="true">→</span>
         </Link>
         <Link
-          className="font-medium text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+          className="text-accent-600 dark:text-accent-400 font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
           to="/news"
         >
           See what’s new <span aria-hidden="true">→</span>

@@ -78,7 +78,7 @@ function SuggestionRow({
     <HStack border="1px solid" borderRadius="md" justify="space-between" p={3}>
       <Stack gap={0}>
         <Link
-          className="link"
+          className="text-accent-600 underline"
           params={{ postId: String(suggestion.postId) }}
           to="/posts/$postId"
         >

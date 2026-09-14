@@ -222,24 +222,24 @@ export function PostEditSuggestionDialog({
                       No changes yet.
                     </Text>
                   ) : (
-                    <div className="overflow-hidden rounded-md border border-gray-200 text-sm dark:border-gray-700">
-                      <div className="grid grid-cols-[minmax(7rem,0.7fr)_1fr_1fr] gap-2 bg-gray-50 px-3 py-2 font-medium dark:bg-gray-800">
+                    <div className="border-tone-200 dark:border-tone-700 overflow-hidden rounded-md border text-sm">
+                      <div className="bg-tone-50 dark:bg-tone-800 grid grid-cols-[minmax(7rem,0.7fr)_1fr_1fr] gap-2 px-3 py-2 font-medium">
                         <span>Field</span>
                         <span>Current</span>
                         <span>Suggested</span>
                       </div>
                       {changedFields.map((key) => (
                         <div
-                          className="grid grid-cols-[minmax(7rem,0.7fr)_1fr_1fr] gap-2 border-t border-gray-200 px-3 py-2 dark:border-gray-700"
+                          className="border-tone-200 dark:border-tone-700 grid grid-cols-[minmax(7rem,0.7fr)_1fr_1fr] gap-2 border-t px-3 py-2"
                           key={key}
                         >
                           <span className="font-medium">
                             {FIELD_LABELS[key]}
                           </span>
-                          <span className="break-words text-red-700 dark:text-red-300">
+                          <span className="text-danger-700 dark:text-danger-300 break-words">
                             {displayValue(original[key])}
                           </span>
-                          <span className="break-words text-green-700 dark:text-green-300">
+                          <span className="text-success-700 dark:text-success-300 break-words">
                             {displayValue(draft[key])}
                           </span>
                         </div>

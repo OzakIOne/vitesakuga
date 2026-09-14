@@ -28,10 +28,10 @@ function WikiPage() {
           title="No wiki articles yet"
         />
       ) : (
-        <div className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+        <div className="divide-tone-200 border-tone-200 dark:divide-tone-800 dark:border-tone-800 divide-y border-y">
           {wikiCategories().map((category) => (
             <section key={category} aria-label={category} className="py-8">
-              <h2 className="text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              <h2 className="text-tone-500 dark:text-tone-400 text-sm font-semibold tracking-wide uppercase">
                 {category}
               </h2>
               {wikiArticles
@@ -40,18 +40,18 @@ function WikiPage() {
                   <article key={article.slug} className="mt-5 first:mt-6">
                     <h3 className="text-2xl font-semibold tracking-tight">
                       <Link
-                        className="rounded-sm hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500 dark:hover:text-blue-400"
+                        className="hover:text-accent-600 focus-visible:outline-accent-500 dark:hover:text-accent-400 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4"
                         to="/wiki/$slug"
                         params={{ slug: article.slug }}
                       >
                         {article.title}
                       </Link>
                     </h3>
-                    <p className="mt-2 leading-7 text-gray-600 dark:text-gray-400">
+                    <p className="text-tone-600 dark:text-tone-400 mt-2 leading-7">
                       {article.summary}
                     </p>
                     <Link
-                      className="mt-3 inline-block rounded-sm text-sm font-medium text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+                      className="text-accent-600 dark:text-accent-400 mt-3 inline-block rounded-sm text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
                       to="/wiki/$slug"
                       params={{ slug: article.slug }}
                       aria-label={`Read article: ${article.title}`}

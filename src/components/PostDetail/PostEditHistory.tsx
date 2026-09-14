@@ -47,9 +47,9 @@ const displayValue = (
 
 function EditFields({ entry }: { entry: PostEditHistoryEntry }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-700">
+    <div className="border-tone-200 dark:border-tone-700 overflow-x-auto rounded-md border">
       <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
-        <thead className="bg-gray-50 dark:bg-gray-800">
+        <thead className="bg-tone-50 dark:bg-tone-800">
           <tr>
             <th className="px-3 py-2 font-medium" scope="col">
               Field
@@ -66,16 +66,16 @@ function EditFields({ entry }: { entry: PostEditHistoryEntry }) {
           {FIELD_KEYS.filter((key) => entry.payload[key] !== undefined).map(
             (key) => (
               <tr
-                className="border-t border-gray-200 dark:border-gray-700"
+                className="border-tone-200 dark:border-tone-700 border-t"
                 key={key}
               >
                 <th className="px-3 py-2 font-medium" scope="row">
                   {FIELD_LABELS[key]}
                 </th>
-                <td className="px-3 py-2 break-words text-red-700 dark:text-red-300">
+                <td className="text-danger-700 dark:text-danger-300 px-3 py-2 break-words">
                   {displayValue(entry.previousPayload[key])}
                 </td>
-                <td className="px-3 py-2 break-words text-green-700 dark:text-green-300">
+                <td className="text-success-700 dark:text-success-300 px-3 py-2 break-words">
                   {displayValue(entry.payload[key])}
                 </td>
               </tr>

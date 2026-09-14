@@ -49,9 +49,11 @@ function isStyleObject(value: ChakraValue): value is StyleObject {
 }
 
 function mapColor(value: string): string {
-  if (value === "fg") return "text-neutral-900 dark:text-neutral-100";
-  if (value === "fg.subtle") return "text-neutral-500 dark:text-neutral-400";
-  if (value === "fg.muted") return "text-neutral-600 dark:text-neutral-400";
+  if (value === "fg") return "text-neutral-tone-900 dark:text-neutral-tone-100";
+  if (value === "fg.subtle")
+    return "text-neutral-tone-500 dark:text-neutral-tone-400";
+  if (value === "fg.muted")
+    return "text-neutral-tone-600 dark:text-neutral-tone-400";
   // Light-mode override: blue.500 on white fails WCAG AA for body-size text.
   // SAFETY: the lookup keys are arbitrary token strings; a miss returns undefined and falls through to the generic mapping.
   const override =
@@ -68,37 +70,37 @@ function mapColor(value: string): string {
 }
 
 /** Dark-mode text classes for tokens whose light shade fails WCAG AA on the
-    dark background (gray-950). Applied on top of the base light class. */
+    dark background (tone-950). Applied on top of the base light class. */
 const TEXT_DARK_VARIANTS = {
-  "gray.400": "text-gray-400",
-  "gray.500": "text-gray-400",
-  "gray.600": "text-gray-400",
-  "gray.700": "text-gray-300",
-  "gray.800": "text-gray-200",
-  "blue.500": "text-blue-400",
-  "blue.600": "text-blue-400",
-  "blue.700": "text-blue-300",
-  "green.600": "text-green-400",
-  "green.700": "text-green-300",
-  "orange.600": "text-orange-400",
-  "orange.700": "text-orange-300",
-  "red.500": "text-red-400",
-  "red.600": "text-red-400",
-  "red.700": "text-red-300",
+  "gray.400": "text-tone-400",
+  "gray.500": "text-tone-400",
+  "gray.600": "text-tone-400",
+  "gray.700": "text-tone-300",
+  "gray.800": "text-tone-200",
+  "blue.500": "text-accent-400",
+  "blue.600": "text-accent-400",
+  "blue.700": "text-accent-300",
+  "green.600": "text-success-400",
+  "green.700": "text-success-300",
+  "orange.600": "text-warning-400",
+  "orange.700": "text-warning-300",
+  "red.500": "text-danger-400",
+  "red.600": "text-danger-400",
+  "red.700": "text-danger-300",
 } satisfies Record<string, string>;
 
 /** Light-mode replacements for tokens that fail WCAG AA on white. */
 const TEXT_LIGHT_OVERRIDES = {
-  "blue.500": "text-blue-600",
-  "gray.400": "text-gray-600",
+  "blue.500": "text-accent-600",
+  "gray.400": "text-tone-600",
 } satisfies Record<string, string>;
 
 function mapBorderColor(value: string): string {
   if (value === "border") {
-    return "border-neutral-200 dark:border-neutral-700";
+    return "border-neutral-tone-200 dark:border-neutral-tone-700";
   }
   if (value === "fg") {
-    return "border-neutral-900 dark:border-neutral-100";
+    return "border-neutral-tone-900 dark:border-neutral-tone-100";
   }
   const base = `border-${value
     .split(".")
@@ -111,10 +113,10 @@ function mapBorderColor(value: string): string {
 }
 
 const BORDER_DARK_VARIANTS = {
-  "blue.500": "border-blue-400",
-  "gray.100": "border-gray-800",
-  "gray.200": "border-gray-700",
-  "orange.300": "border-orange-700",
+  "blue.500": "border-accent-400",
+  "gray.100": "border-tone-800",
+  "gray.200": "border-tone-700",
+  "orange.300": "border-warning-700",
 } satisfies Record<string, string>;
 
 function mapBackgroundColor(value: string): string {
@@ -127,9 +129,9 @@ function mapBackgroundColor(value: string): string {
 }
 
 const BACKGROUND_DARK_VARIANTS = {
-  "blue.50": "bg-blue-950/30",
-  "gray.50": "bg-gray-800",
-  "red.50": "bg-red-950/30",
+  "blue.50": "bg-accent-950/30",
+  "gray.50": "bg-tone-800",
+  "red.50": "bg-danger-950/30",
 } satisfies Record<string, string>;
 
 const CSS_LENGTH_PATTERN = /[a-z%]|\(/i;
@@ -766,7 +768,7 @@ export function useChakraProps<P extends ChakraStyleProps>(
   }
 
   if (hasBorderWidth && !hasBorderColor) {
-    classes.push("border-gray-200 dark:border-gray-700");
+    classes.push("border-tone-200 dark:border-tone-700");
   }
 
   return { className: cn(classes), style, rest };

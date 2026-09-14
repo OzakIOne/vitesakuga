@@ -31,7 +31,10 @@ function NewsNotFound() {
       <p className="my-4">
         This update doesn’t exist or is no longer published.
       </p>
-      <Link className="text-blue-600 underline dark:text-blue-400" to="/news">
+      <Link
+        className="text-accent-600 dark:text-accent-400 underline"
+        to="/news"
+      >
         Back to news
       </Link>
     </div>
@@ -47,7 +50,7 @@ function NewsArticle() {
       title={post.title}
     >
       <Link
-        className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+        className="text-accent-600 dark:text-accent-400 text-sm hover:underline"
         to="/news"
       >
         <span aria-hidden="true">← </span>All news

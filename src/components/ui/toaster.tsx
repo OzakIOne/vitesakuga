@@ -20,7 +20,7 @@ function ToastIndicator({ type }: { type: string | undefined }) {
     return (
       <LuCircleCheck
         aria-hidden="true"
-        className="mt-0.5 h-4 w-4 shrink-0 text-green-600"
+        className="text-success-600 mt-0.5 h-4 w-4 shrink-0"
       />
     );
   }
@@ -28,14 +28,14 @@ function ToastIndicator({ type }: { type: string | undefined }) {
     return (
       <LuCircleAlert
         aria-hidden="true"
-        className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+        className="text-danger-600 mt-0.5 h-4 w-4 shrink-0"
       />
     );
   }
   return (
     <LuLoader
       aria-hidden="true"
-      className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-blue-600 dark:text-blue-400"
+      className="text-accent-600 dark:text-accent-400 mt-0.5 h-4 w-4 shrink-0 animate-spin"
     />
   );
 }
@@ -46,36 +46,36 @@ export const Toaster = () => (
       {(toast) => (
         <Toast.Root
           className={
-            "pointer-events-auto flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 " +
+            "border-tone-200 dark:border-tone-700 dark:bg-tone-800 pointer-events-auto flex w-full items-start gap-3 rounded-lg border bg-white p-4 shadow-lg " +
             (toast.type === "success"
-              ? "border-green-200 dark:border-green-800"
+              ? "border-success-200 dark:border-success-800"
               : toast.type === "error"
-                ? "border-red-200 dark:border-red-800"
-                : "border-gray-200 dark:border-gray-700")
+                ? "border-danger-200 dark:border-danger-800"
+                : "border-tone-200 dark:border-tone-700")
           }
         >
           <ToastIndicator type={toast.type} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {toast.title && (
-              <Toast.Title className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <Toast.Title className="text-tone-900 dark:text-tone-100 text-sm font-semibold">
                 {toast.title}
               </Toast.Title>
             )}
             {toast.description && (
-              <Toast.Description className="text-sm text-gray-600 dark:text-gray-300">
+              <Toast.Description className="text-tone-600 dark:text-tone-300 text-sm">
                 {toast.description}
               </Toast.Description>
             )}
           </div>
           {toast.action && (
-            <Toast.ActionTrigger className="shrink-0 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+            <Toast.ActionTrigger className="text-accent-600 dark:text-accent-400 shrink-0 text-sm font-medium hover:underline">
               {toast.action.label}
             </Toast.ActionTrigger>
           )}
           {toast.closable && (
             <Toast.CloseTrigger
               aria-label="Dismiss notification"
-              className="shrink-0 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              className="text-tone-500 hover:bg-tone-100 hover:text-tone-700 dark:text-tone-400 dark:hover:bg-tone-700 dark:hover:text-tone-200 shrink-0 rounded p-1 transition-colors"
             >
               <LuX aria-hidden="true" />
             </Toast.CloseTrigger>

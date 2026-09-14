@@ -86,7 +86,7 @@ export function SeriesHub({ data }: SeriesHubProps) {
           )}
         </HStack>
         <Link
-          className="mt-4 inline-block text-sm text-blue-600 hover:underline"
+          className="text-accent-600 mt-4 inline-block text-sm hover:underline"
           search={{
             dateRange: "all",
             page: 0,
@@ -180,7 +180,7 @@ export function MoreFromSeriesPanel({
           More from this series
         </Heading>
         <Link
-          className="text-sm text-blue-600 hover:underline"
+          className="text-accent-600 text-sm hover:underline"
           params={{ seriesTitle: title }}
           to="/series/$seriesTitle"
         >
@@ -212,7 +212,7 @@ export function SeriesNavigationPanel({
         <HStack flexWrap="wrap" justify="space-between" gap={3}>
           {navigation.previous ? (
             <Link
-              className="text-blue-600 hover:underline"
+              className="text-accent-600 hover:underline"
               params={{ postId: String(navigation.previous.id) }}
               to="/posts/$postId"
             >
@@ -225,7 +225,7 @@ export function SeriesNavigationPanel({
           )}
           {navigation.next ? (
             <Link
-              className="text-blue-600 hover:underline"
+              className="text-accent-600 hover:underline"
               params={{ postId: String(navigation.next.id) }}
               to="/posts/$postId"
             >

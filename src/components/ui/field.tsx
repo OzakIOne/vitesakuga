@@ -31,7 +31,7 @@ export const Field = {
     return (
       <ArkField.Label
         className={cn(
-          "text-sm font-medium text-gray-800 dark:text-gray-200",
+          "text-sm font-medium text-tone-800 dark:text-tone-200",
           className,
         )}
         style={style}
@@ -47,7 +47,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.RequiredIndicator
-        className={cn("text-red-500", className)}
+        className={cn("text-danger-500", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.RequiredIndicator>)}
       />
@@ -60,7 +60,7 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.HelperText
-        className={cn("text-xs text-gray-600 dark:text-gray-400", className)}
+        className={cn("text-xs text-tone-600 dark:text-tone-400", className)}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.HelperText>)}
       />
@@ -73,7 +73,10 @@ export const Field = {
     // SAFETY: useChakraProps strips Chakra style props into className/style; remaining rest props spread onto the typed Ark component.
     return (
       <ArkField.ErrorText
-        className={cn("text-xs text-red-600 dark:text-red-400", className)}
+        className={cn(
+          "text-xs text-danger-600 dark:text-danger-400",
+          className,
+        )}
         style={style}
         {...(rest as React.ComponentProps<typeof ArkField.ErrorText>)}
       />
@@ -91,7 +94,7 @@ export const INPUT_SIZES = {
 } satisfies Record<InputSize, string>;
 
 export const INPUT_BASE =
-  "w-full rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
+  "w-full rounded-md border border-tone-300 bg-white text-tone-900 shadow-sm transition-colors placeholder:text-tone-400 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-tone-600 dark:bg-tone-800 dark:text-tone-100";
 
 type InputProps = {
   size?: string;
@@ -160,7 +163,7 @@ export function InputGroup({
       {...(rest as React.HTMLAttributes<HTMLDivElement>)}
     >
       {startElement && (
-        <span className="pointer-events-none absolute start-3 top-1/2 z-10 -translate-y-1/2 text-gray-500">
+        <span className="text-tone-500 pointer-events-none absolute start-3 top-1/2 z-10 -translate-y-1/2">
           {startElement}
         </span>
       )}
@@ -200,7 +203,7 @@ export const Checkbox = {
     return (
       <ArkCheckbox.Control
         className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white transition-colors data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 group-hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:group-hover:border-gray-500",
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-tone-300 bg-white transition-colors data-[state=checked]:border-accent-600 data-[state=checked]:bg-accent-600 group-hover:border-tone-400 dark:border-tone-600 dark:bg-tone-800 dark:group-hover:border-tone-500",
           className,
         )}
         style={style}

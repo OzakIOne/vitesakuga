@@ -53,12 +53,12 @@ export function ReportDialog({ onCancel, postId }: ReportDialogProps) {
                   <legend className="sr-only">Report reason</legend>
                   {REPORT_REASONS.map((value) => (
                     <label
-                      className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                      className="border-tone-200 hover:bg-tone-50 dark:border-tone-700 dark:hover:bg-tone-800 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm"
                       key={value}
                     >
                       <input
                         checked={reason === value}
-                        className="accent-blue-600"
+                        className="accent-accent-600"
                         name="report-reason"
                         onChange={() => setReason(value)}
                         type="radio"

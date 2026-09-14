@@ -520,7 +520,7 @@ function RouteComponent() {
                   numericId > 0 &&
                   !postById && (
                     <Text
-                      className="dark:text-gray-400"
+                      className="dark:text-tone-400"
                       color="gray.500"
                       fontSize="sm"
                       mt={2}
@@ -532,7 +532,7 @@ function RouteComponent() {
                   <Box
                     bg="blue.50"
                     borderRadius="md"
-                    className="dark:bg-blue-900/30"
+                    className="dark:bg-accent-900/30"
                     mt={2}
                     p={2}
                   >
@@ -556,7 +556,7 @@ function RouteComponent() {
                     shows the selected title; the hint below confirms the id. */}
                 {field.state.value && selectedPost && (
                   <Text
-                    className="dark:text-gray-400"
+                    className="dark:text-tone-400"
                     color="gray.500"
                     fontSize="sm"
                     mt={2}
@@ -691,7 +691,7 @@ function RouteComponent() {
                       {!video.videoFile && (
                         <>
                           <FileUpload.Dropzone minHeight="32">
-                            <LuUpload className="h-5 w-5 text-neutral-400" />
+                            <LuUpload className="text-neutral-tone-400 h-5 w-5" />
                             <FileUpload.DropzoneContent>
                               <Box>Drag and drop files here</Box>
                               <Box color="fg.muted">.mp4, .mov, .mkv</Box>
@@ -731,7 +731,7 @@ function RouteComponent() {
                                 size="sm"
                                 variant="outline"
                               >
-                                <LuCamera style={{ marginRight: "8px" }} />
+                                <LuCamera className="mr-2" />
                                 Capture Current Frame
                               </Button>
                             </HStack>
@@ -746,8 +746,8 @@ function RouteComponent() {
                                     aria-pressed={isSelected}
                                     className={
                                       isSelected
-                                        ? "block cursor-pointer overflow-hidden rounded-md border-4 border-blue-500 p-0 transition-colors duration-200"
-                                        : "block cursor-pointer overflow-hidden rounded-md border-4 border-transparent p-0 transition-colors duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                                        ? "border-accent-500 block cursor-pointer overflow-hidden rounded-md border-4 p-0 transition-colors duration-200"
+                                        : "hover:border-tone-300 dark:hover:border-tone-600 block cursor-pointer overflow-hidden rounded-md border-4 border-transparent p-0 transition-colors duration-200"
                                     }
                                     key={thumb.url}
                                     onClick={() => {
@@ -828,7 +828,7 @@ function RouteComponent() {
                     <FileUpload.HiddenInput id="image-upload" />
                     {imageFiles.length < MAX_IMAGES_PER_POST && (
                       <FileUpload.Dropzone minHeight="32">
-                        <LuImage className="h-5 w-5 text-neutral-400" />
+                        <LuImage className="text-neutral-tone-400 h-5 w-5" />
                         <FileUpload.DropzoneContent>
                           <Box>Drag and drop images here</Box>
                           <Box color="fg.muted">
@@ -921,14 +921,14 @@ function RouteComponent() {
                       aria-live="polite"
                       bg="red.50"
                       borderRadius="md"
-                      className="dark:bg-red-950/30"
+                      className="dark:bg-danger-950/30"
                       mt={3}
                       p={3}
                     >
                       <Text color="red.700" fontSize="sm" fontWeight="medium">
                         Some images were not added:
                       </Text>
-                      <ul className="mt-1 list-disc pl-5 text-sm text-red-700">
+                      <ul className="text-danger-700 mt-1 list-disc pl-5 text-sm">
                         {Object.entries(imageValidationErrors).map(
                           ([fileKey, message]) => (
                             <li key={fileKey}>{message}</li>
@@ -975,7 +975,7 @@ function RouteComponent() {
                   : imageFiles.length === 0)
               }
               loading={isFormSubmitting === true || form.isSubmitting === true}
-              style={{ width: "100%" }}
+              className="w-full"
               type="submit"
             >
               {isFormSubmitting || form.isSubmitting

@@ -1,13 +1,82 @@
 @import "tailwindcss";
 
+@theme {
+  --color-tone-50: var(--color-gray-50);
+  --color-tone-100: var(--color-gray-100);
+  --color-tone-200: var(--color-gray-200);
+  --color-tone-300: var(--color-gray-300);
+  --color-tone-400: var(--color-gray-400);
+  --color-tone-500: var(--color-gray-500);
+  --color-tone-600: var(--color-gray-600);
+  --color-tone-700: var(--color-gray-700);
+  --color-tone-800: var(--color-gray-800);
+  --color-tone-900: var(--color-gray-900);
+  --color-tone-950: var(--color-gray-950);
+  --color-neutral-tone-50: var(--color-neutral-50);
+  --color-neutral-tone-100: var(--color-neutral-100);
+  --color-neutral-tone-200: var(--color-neutral-200);
+  --color-neutral-tone-300: var(--color-neutral-300);
+  --color-neutral-tone-400: var(--color-neutral-400);
+  --color-neutral-tone-500: var(--color-neutral-500);
+  --color-neutral-tone-600: var(--color-neutral-600);
+  --color-neutral-tone-700: var(--color-neutral-700);
+  --color-neutral-tone-800: var(--color-neutral-800);
+  --color-neutral-tone-900: var(--color-neutral-900);
+  --color-neutral-tone-950: var(--color-neutral-950);
+  --color-accent-50: var(--color-blue-50);
+  --color-accent-100: var(--color-blue-100);
+  --color-accent-200: var(--color-blue-200);
+  --color-accent-300: var(--color-blue-300);
+  --color-accent-400: var(--color-blue-400);
+  --color-accent-500: var(--color-blue-500);
+  --color-accent-600: var(--color-blue-600);
+  --color-accent-700: var(--color-blue-700);
+  --color-accent-800: var(--color-blue-800);
+  --color-accent-900: var(--color-blue-900);
+  --color-accent-950: var(--color-blue-950);
+  --color-danger-50: var(--color-red-50);
+  --color-danger-100: var(--color-red-100);
+  --color-danger-200: var(--color-red-200);
+  --color-danger-300: var(--color-red-300);
+  --color-danger-400: var(--color-red-400);
+  --color-danger-500: var(--color-red-500);
+  --color-danger-600: var(--color-red-600);
+  --color-danger-700: var(--color-red-700);
+  --color-danger-800: var(--color-red-800);
+  --color-danger-900: var(--color-red-900);
+  --color-danger-950: var(--color-red-950);
+  --color-success-50: var(--color-green-50);
+  --color-success-100: var(--color-green-100);
+  --color-success-200: var(--color-green-200);
+  --color-success-300: var(--color-green-300);
+  --color-success-400: var(--color-green-400);
+  --color-success-500: var(--color-green-500);
+  --color-success-600: var(--color-green-600);
+  --color-success-700: var(--color-green-700);
+  --color-success-800: var(--color-green-800);
+  --color-success-900: var(--color-green-900);
+  --color-success-950: var(--color-green-950);
+  --color-warning-50: var(--color-orange-50);
+  --color-warning-100: var(--color-orange-100);
+  --color-warning-200: var(--color-orange-200);
+  --color-warning-300: var(--color-orange-300);
+  --color-warning-400: var(--color-orange-400);
+  --color-warning-500: var(--color-orange-500);
+  --color-warning-600: var(--color-orange-600);
+  --color-warning-700: var(--color-orange-700);
+  --color-warning-800: var(--color-orange-800);
+  --color-warning-900: var(--color-orange-900);
+  --color-warning-950: var(--color-orange-950);
+}
+
 /* Runtime-composed utilities: useChakraProps (src/components/ui/ui-utils.ts)
    builds some class names at runtime from Chakra-style props, e.g.
    `border-${color}` for borderColor="blue.500". Tailwind only generates CSS
    for class strings it can see in source files at build time, so classes that
-   never appear as a literal (bare `border-blue-500` does not — only its
-   `focus:border-blue-500` variant does) silently don't exist. Safelist the
+   never appear as a literal (bare `border-accent-500` does not — only its
+   `focus:border-accent-500` variant does) silently don't exist. Safelist the
    tokens that can be produced dynamically but never occur literally. */
-@source inline("border-transparent border-blue-500");
+@source inline("border-transparent border-accent-500");
 
 /* Class-based dark mode: next-themes toggles the `dark` class on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -21,11 +90,11 @@
 }
 
 body {
-  @apply bg-white text-gray-900;
+  @apply text-tone-900 bg-white;
 }
 
 .dark body {
-  @apply bg-gray-950 text-gray-100;
+  @apply bg-tone-950 text-tone-100;
 }
 
 [data-scope="progress"][data-part="root"][data-striped="true"]
@@ -40,22 +109,22 @@ body {
 }
 
 .markdown-prose {
-  @apply text-base leading-8 break-words text-gray-700 dark:text-gray-300;
+  @apply text-tone-700 dark:text-tone-300 text-base leading-8 break-words;
 
   & > * + * {
     @apply mt-5;
   }
   & h2 {
-    @apply mt-10 text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100;
+    @apply text-tone-900 dark:text-tone-100 mt-10 text-2xl font-semibold tracking-tight;
   }
   & h3,
   & h4,
   & h5,
   & h6 {
-    @apply mt-8 text-xl font-semibold text-gray-900 dark:text-gray-100;
+    @apply text-tone-900 dark:text-tone-100 mt-8 text-xl font-semibold;
   }
   & a {
-    @apply text-blue-600 underline underline-offset-4 dark:text-blue-400;
+    @apply text-accent-600 dark:text-accent-400 underline underline-offset-4;
   }
   & a:focus-visible {
     @apply rounded-sm outline-2 outline-offset-4;
@@ -67,13 +136,13 @@ body {
     @apply list-decimal space-y-2 pl-6;
   }
   & blockquote {
-    @apply border-l-2 border-gray-300 pl-5 italic dark:border-gray-700;
+    @apply border-tone-300 dark:border-tone-700 border-l-2 pl-5 italic;
   }
   & pre {
-    @apply overflow-x-auto rounded-lg bg-gray-100 p-4 text-sm dark:bg-gray-900;
+    @apply bg-tone-100 dark:bg-tone-900 overflow-x-auto rounded-lg p-4 text-sm;
   }
   & code {
-    @apply rounded bg-gray-100 px-1 py-0.5 text-sm dark:bg-gray-900;
+    @apply bg-tone-100 dark:bg-tone-900 rounded px-1 py-0.5 text-sm;
   }
   & pre code {
     @apply bg-transparent p-0;
@@ -85,13 +154,13 @@ body {
     @apply block w-full overflow-x-auto text-left text-sm leading-6;
   }
   & th {
-    @apply border-b border-gray-300 px-3 py-2 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100;
+    @apply border-tone-300 text-tone-900 dark:border-tone-700 dark:text-tone-100 border-b px-3 py-2 font-semibold;
   }
   & td {
-    @apply border-b border-gray-200 px-3 py-2 align-top dark:border-gray-800;
+    @apply border-tone-200 dark:border-tone-800 border-b px-3 py-2 align-top;
   }
   & hr {
-    @apply my-8 border-gray-200 dark:border-gray-800;
+    @apply border-tone-200 dark:border-tone-800 my-8;
   }
 }
 

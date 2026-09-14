@@ -124,7 +124,7 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
     <Box className="relative" h="full">
       <Link
         aria-label={post.title}
-        className="group flex h-full flex-col gap-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
+        className="group focus-visible:ring-accent-500/50 flex h-full flex-col gap-2 rounded-lg focus-visible:ring-2 focus-visible:outline-none"
         params={{ postId: String(post.id) }}
         to="/posts/$postId"
         {...(searchParams ? { search: searchParams } : {})}
@@ -135,7 +135,7 @@ function PostCardComponent({ post, searchParams }: PostListProps) {
           }}
           aspectRatio="16 / 9"
           borderRadius="lg"
-          className="bg-gray-100 dark:bg-gray-900"
+          className="bg-tone-100 dark:bg-tone-900"
           overflow="hidden"
           transitionDuration="200ms"
           transitionProperty="filter"

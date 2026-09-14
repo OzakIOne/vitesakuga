@@ -139,13 +139,10 @@ export function Video({ url, bypass, frameRate, ref }: VideoProps) {
         }}
       >
         <video
+          className="h-full w-full"
           ref={videoRef}
           slot="media"
           src={bypass ? url : assetUrl(url)}
-          style={{
-            height: "100%",
-            width: "100%",
-          }}
           suppressHydrationWarning
         />
         <MediaPlaybackRateMenu

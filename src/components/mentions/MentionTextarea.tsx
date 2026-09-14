@@ -142,7 +142,7 @@ export function MentionTextarea({
       {isOpen && (
         <ul
           aria-label="User suggestions"
-          className="absolute right-0 bottom-full left-0 z-10 mb-1 max-h-56 overflow-y-auto rounded border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+          className="border-tone-200 dark:border-tone-700 dark:bg-tone-900 absolute right-0 bottom-full left-0 z-10 mb-1 max-h-56 overflow-y-auto rounded border bg-white shadow-lg"
           id={listId}
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- custom ARIA listbox: ul/li carry the listbox role for the mention dropdown (avatars + active-descendant nav); a native datalist/select cannot render this inside a multiline textarea widget
           role="listbox"
@@ -150,7 +150,7 @@ export function MentionTextarea({
           {users.map((user, index) => (
             <li
               aria-selected={index === activeIndex}
-              className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="hover:bg-tone-100 dark:hover:bg-tone-800 flex cursor-pointer items-center gap-2 px-3 py-2"
               id={`${listId}-option-${index}`}
               key={user.id}
               // onMouseDown (not onClick) so the textarea keeps focus and
@@ -181,7 +181,7 @@ export function MentionTextarea({
           ))}
           <li
             aria-hidden="true"
-            className="flex items-center gap-1 border-t px-3 py-1.5 text-xs text-gray-400"
+            className="text-tone-400 flex items-center gap-1 border-t px-3 py-1.5 text-xs"
           >
             <LuAtSign aria-hidden="true" /> Type to search users
           </li>

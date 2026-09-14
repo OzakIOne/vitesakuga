@@ -5,7 +5,7 @@ import { LuChevronDown, LuChevronUp } from "react-icons/lu";
 import { cn, useChakraProps, type ChakraStyleProps } from "./ui-utils";
 
 const TRIGGER_BASE =
-  "flex w-9 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700";
+  "flex w-9 cursor-pointer items-center justify-center rounded-md border border-tone-300 bg-white text-tone-500 shadow-sm transition-colors hover:bg-tone-100 focus-visible:ring-2 focus-visible:ring-accent-500/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-tone-600 dark:bg-tone-800 dark:hover:bg-tone-700";
 
 export const NumberInput = {
   Root: (
@@ -29,7 +29,7 @@ export const NumberInput = {
     return (
       <ArkNumberInput.Label
         className={cn(
-          "mb-1 block text-sm font-medium text-gray-800 dark:text-gray-200",
+          "mb-1 block text-sm font-medium text-tone-800 dark:text-tone-200",
           className,
         )}
         style={style}
@@ -59,7 +59,7 @@ export const NumberInput = {
     return (
       <ArkNumberInput.Input
         className={cn(
-          "min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100",
+          "min-w-0 flex-1 rounded-md border border-tone-300 bg-white px-3 py-2 text-sm text-tone-900 shadow-sm transition-colors focus:border-accent-500 focus:ring-2 focus:ring-accent-500/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-tone-600 dark:bg-tone-800 dark:text-tone-100",
           className,
         )}
         style={style}

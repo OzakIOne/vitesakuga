@@ -36,7 +36,7 @@ export const Route = createLazyFileRoute("/convert")({
 type ActorLike = Pick<AnyActorRef, "getSnapshot" | "subscribe">;
 
 const SELECT_CLASS =
-  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
+  "w-full rounded-md border border-tone-300 bg-white px-3 py-2 text-sm text-tone-900 dark:border-tone-600 dark:bg-tone-800 dark:text-tone-100";
 
 function formatTimestamp(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -219,7 +219,7 @@ function RouteComponent() {
             >
               <FileUpload.HiddenInput />
               <FileUpload.Dropzone>
-                <LuUpload className="mb-2 h-6 w-6 text-gray-500" />
+                <LuUpload className="text-tone-500 mb-2 h-6 w-6" />
                 <FileUpload.DropzoneContent>
                   <Text>Drag and drop files here</Text>
                   <Text color="gray.500" fontSize="sm">
@@ -243,25 +243,17 @@ function RouteComponent() {
               {previewUrl &&
                 (isAudioFile ? (
                   <audio
+                    className="mb-4 w-full"
                     controls
                     preload="metadata"
                     src={previewUrl}
-                    style={{
-                      marginBottom: "1rem",
-                      width: "100%",
-                    }}
                   />
                 ) : (
                   <video
+                    className="mb-4 max-h-64 w-full rounded-lg"
                     controls
                     preload="metadata"
                     src={previewUrl}
-                    style={{
-                      borderRadius: "0.5rem",
-                      marginBottom: "1rem",
-                      maxHeight: "256px",
-                      width: "100%",
-                    }}
                   />
                 ))}
 
@@ -566,24 +558,12 @@ function RouteComponent() {
                     </Text>
                   ) : outputHasVideo ? (
                     <video
+                      className="mt-4 max-h-64 w-full rounded-lg"
                       controls
                       src={downloadUrl}
-                      style={{
-                        borderRadius: "0.5rem",
-                        marginTop: "1rem",
-                        maxHeight: "256px",
-                        width: "100%",
-                      }}
                     />
                   ) : (
-                    <audio
-                      controls
-                      src={downloadUrl}
-                      style={{
-                        marginTop: "1rem",
-                        width: "100%",
-                      }}
-                    />
+                    <audio className="mt-4 w-full" controls src={downloadUrl} />
                   )}
                 </Alert.Description>
               </Alert.Content>

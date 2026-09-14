@@ -96,7 +96,7 @@ export function RolesPanel() {
             size="sm"
           />
           <select
-            className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+            className="border-tone-300 dark:border-tone-600 dark:bg-tone-800 h-8 rounded-md border bg-white px-2 text-sm"
             aria-label="Role"
             defaultValue="uploader"
             name="role"

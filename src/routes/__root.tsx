@@ -125,9 +125,9 @@ export const Route = createRootRouteWithContext<{
 });
 
 const NAV_LINK_CLASS =
-  "rounded px-2 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white";
+  "rounded px-2 py-1 text-sm font-medium text-tone-700 transition-colors hover:bg-tone-100 hover:text-tone-950 focus-visible:ring-2 focus-visible:ring-accent-500/50 focus-visible:outline-none dark:text-tone-300 dark:hover:bg-tone-800 dark:hover:text-white";
 const ACTIVE_NAV_LINK_CLASS =
-  "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300";
+  "bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300";
 
 /**
  * Header inbox link with an unread badge. Polls lightly only while the
@@ -215,7 +215,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <Provider>
           <SkipToContentLink />
-          <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
+          <header className="border-tone-200 dark:border-tone-800 dark:bg-tone-950/95 sticky top-0 z-10 border-b bg-white/95 backdrop-blur">
             <nav aria-label="Main">
               <Center
                 className="min-h-14 flex-wrap px-3 [&>a]:hidden md:[&>a]:inline-flex [&>a:first-child]:inline-flex"

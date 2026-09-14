@@ -232,7 +232,7 @@ export function SearchBox({
                   {tag}
                   <button
                     aria-label={`Remove tag ${tag}`}
-                    className="cursor-pointer rounded transition-colors hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:outline-none"
+                    className="hover:text-danger-500 focus-visible:ring-danger-500/40 cursor-pointer rounded transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     onClick={() => {
                       handleRemoveTag(tag);
                     }}

@@ -218,7 +218,7 @@ function ManagePlaylistContent() {
       direction="column"
       overflow="hidden"
       p={4}
-      style={{ height: "calc(100dvh - 4rem)" }}
+      className="h-[calc(100dvh_-_4rem)]"
     >
       <VStack align="start" gap={2} mb={6}>
         <Heading as="h1" size="2xl">
@@ -380,21 +380,16 @@ function ManagePlaylistContent() {
         )}
       </HStack>
 
-      <Box display="flex" direction="column" flex={1} style={{ minHeight: 0 }}>
+      <Box className="min-h-0" display="flex" direction="column" flex={1}>
         {rows.length === 0 ? (
-          <Box display="flex" flex={1} style={{ minHeight: 0 }}>
+          <Box className="min-h-0" display="flex" flex={1}>
             <EmptyState
               description="Add posts by ID to start building this playlist."
               title="This playlist is empty"
             />
           </Box>
         ) : (
-          <Box
-            display="flex"
-            direction="column"
-            flex={1}
-            style={{ minHeight: 0 }}
-          >
+          <Box className="min-h-0" display="flex" direction="column" flex={1}>
             {hasNextPage && (
               <Text color="gray.500" fontSize="xs" mb={2}>
                 Scroll to the end of the playlist to enable drag &amp; drop

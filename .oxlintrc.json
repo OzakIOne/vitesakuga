@@ -120,9 +120,58 @@
         // rendered through the shared formatter, never formatted inline.
         "anti-slop/no-raw-date-formatting": "error"
       }
+    },
+    {
+      "files": ["src/components/ui/**"],
+      "rules": {
+        // These compatibility primitives intentionally forward Chakra-style
+        // dynamic style props to their DOM elements.
+        "shadcn/no-restyle": "off",
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/require-static-classes": "off",
+        "shadcn/no-inline-styles": "off"
+      }
     }
   ],
   "rules": {
+    "shadcn/no-restyle": [
+      "error",
+      {
+        "allow": ["layout"],
+        "contracts": [
+          { "pattern": "^DialogBackdrop$", "allow": ["layout", "color"] },
+          {
+            "pattern": "^DialogPositioner$",
+            "allow": ["layout", "spacing"]
+          },
+          {
+            "pattern": "^Input$",
+            "allow": ["layout", "spacing", "typography"]
+          },
+          { "pattern": "^Grid$", "allow": ["layout", "spacing"] },
+          { "pattern": "^Image$", "allow": ["layout", "shape", "color"] },
+          { "pattern": "^Box$", "allow": ["layout", "spacing", "color"] },
+          { "pattern": "^Text$", "allow": ["layout", "typography", "color"] },
+          { "pattern": "^Button$", "allow": ["layout", "effects"] },
+          {
+            "pattern": "^AvatarImage$",
+            "allow": ["layout", "shape"]
+          },
+          {
+            "pattern": "^FieldErrorText$",
+            "allow": ["layout", "typography"]
+          },
+          { "pattern": "^Center$", "allow": ["layout", "spacing"] },
+          { "pattern": "^VStack$", "allow": ["layout", "spacing"] }
+        ]
+      }
+    ],
+    "shadcn/no-raw-colors": "error",
+    "shadcn/no-arbitrary-values": ["error", { "allow": ["layout"] }],
+    "shadcn/no-inline-styles": "error",
+    "shadcn/require-static-classes": "error",
+    "shadcn/no-unknown-classes": "error",
+
     "no-void": "off",
     "require-await": "off",
     "func-style": ["error", "declaration", { "allowArrowFunctions": true }],

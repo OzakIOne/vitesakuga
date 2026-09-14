@@ -16,13 +16,13 @@ export function EditorialShell({
   return (
     <div className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
       <header className="mb-12">
-        <p className="mb-3 text-sm font-medium text-blue-600 dark:text-blue-400">
+        <p className="text-accent-600 dark:text-accent-400 mb-3 text-sm font-medium">
           {eyebrow}
         </p>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           {title}
         </h1>
-        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+        <p className="text-tone-600 dark:text-tone-400 mt-4 text-lg">
           {description}
         </p>
       </header>

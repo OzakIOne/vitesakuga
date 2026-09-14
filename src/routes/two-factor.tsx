@@ -85,7 +85,7 @@ function TwoFactorVerifyPage() {
         <div className="text-center">
           <LuShieldCheck
             aria-hidden="true"
-            className="mx-auto mb-4 text-blue-600"
+            className="text-accent-600 mx-auto mb-4"
             size={36}
           />
           <Heading as="h1" size="lg">
@@ -146,7 +146,7 @@ function TwoFactorVerifyPage() {
           </Button>
 
           <button
-            className="w-full text-center text-sm text-blue-600 hover:underline dark:text-blue-400"
+            className="text-accent-600 dark:text-accent-400 w-full text-center text-sm hover:underline"
             onClick={() => {
               setMode(mode === "totp" ? "backup-code" : "totp");
               setCode("");
@@ -161,7 +161,7 @@ function TwoFactorVerifyPage() {
 
           {error && (
             <p
-              className="text-center text-sm text-red-600 dark:text-red-400"
+              className="text-danger-600 dark:text-danger-400 text-center text-sm"
               role="alert"
             >
               {error}

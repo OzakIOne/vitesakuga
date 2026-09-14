@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import { PostCard } from "src/components/PostCard";
 import { Spinner } from "src/components/ui/feedback";
@@ -19,7 +20,10 @@ import { useResponsiveColumns } from "src/lib/posts/useResponsiveColumns";
 const ROW_GAP = 16;
 const PREVIOUS_BUFFER_ROWS = 2;
 const NEXT_BUFFER_ROWS = 10;
-const SCROLL_VIEWPORT = "calc(100dvh - 8rem)";
+
+type CSSVariableProperties = CSSProperties & {
+  [key: `--${string}`]: string | number;
+};
 
 type VirtualPostsGridProps = {
   anchorPostIndex: number | null;
@@ -81,6 +85,9 @@ export function VirtualPostsGrid({
   });
 
   const virtualItems = virtualizer.getVirtualItems();
+  const virtualizerStyle: CSSVariableProperties = {
+    "--virtualizer-height": `${virtualizer.getTotalSize()}px`,
+  };
 
   useLayoutEffect(() => {
     const el = parentRef.current;
@@ -179,9 +186,8 @@ export function VirtualPostsGrid({
       {/* Keyboard users need a focusable element to scroll the virtualized viewport. */}
       <section
         aria-label="Posts"
-        className="overscroll-contain focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
+        className="focus-visible:ring-accent-500/50 h-[calc(100dvh_-_8rem)] overflow-y-auto overscroll-contain focus-visible:ring-2 focus-visible:outline-none"
         ref={parentRef}
-        style={{ height: SCROLL_VIEWPORT, overflowY: "auto" }}
         tabIndex={0}
       >
         {isFetchingPreviousPage && (
@@ -191,28 +197,22 @@ export function VirtualPostsGrid({
         )}
 
         <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            position: "relative",
-            width: "100%",
-          }}
+          className="relative [height:var(--virtualizer-height)] w-full"
+          style={virtualizerStyle}
         >
           {virtualItems.map((virtualRow) => {
             const row = rows[virtualRow.index];
             if (!row) return null;
+            const virtualRowStyle: CSSVariableProperties = {
+              "--virtual-row-offset": `${virtualRow.start}px`,
+            };
             return (
               <div
+                className="absolute top-0 left-0 w-full [transform:translateY(var(--virtual-row-offset))] pb-4"
                 key={virtualRow.key}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{
-                  left: 0,
-                  paddingBottom: ROW_GAP,
-                  position: "absolute",
-                  top: 0,
-                  transform: `translateY(${virtualRow.start}px)`,
-                  width: "100%",
-                }}
+                style={virtualRowStyle}
               >
                 <SimpleGrid columns={columns} gap={4}>
                   {row.map((post) => (

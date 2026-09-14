@@ -51,7 +51,7 @@ function getShortcuts(modKey: string): Shortcut[] {
 
 function KeyBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm dark:bg-gray-800">
+    <span className="bg-tone-100 dark:bg-tone-800 rounded px-1.5 py-0.5 font-mono text-sm">
       {children}
     </span>
   );
@@ -78,7 +78,7 @@ export function KeyboardShortcutsDialog({
             <Dialog.Body>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left dark:border-gray-700">
+                  <tr className="border-tone-200 dark:border-tone-700 border-b text-left">
                     <th className="pb-2 font-medium">Shortcut</th>
                     <th className="pb-2 text-right font-medium">Action</th>
                   </tr>
@@ -86,7 +86,7 @@ export function KeyboardShortcutsDialog({
                 <tbody>
                   {shortcuts.map((shortcut) => (
                     <tr
-                      className="border-b border-gray-100 last:border-0 dark:border-gray-800"
+                      className="border-tone-100 dark:border-tone-800 border-b last:border-0"
                       key={shortcut.id}
                     >
                       <td className="py-2">
