@@ -1,12 +1,12 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 import { VotesFnsContext, defaultVotesFns } from "./votes.fn-context";
 import { usePostVotes, useSetVote } from "./votes.hooks";
 
 vi.mock("src/lib/votes/votes.service", () => ({
+  fetchLikedPosts: vi.fn(),
   fetchPostVotes: vi.fn(),
   removePostVote: vi.fn(),
   setPostVote: vi.fn(),
@@ -49,6 +49,8 @@ const createWrapper = (
   );
 };
 
+const waitFor = vi.waitFor;
+
 describe(useSetVote, () => {
   let queryClient: QueryClient;
   let mockSetPostVote: ReturnType<typeof vi.fn>;
@@ -69,7 +71,7 @@ describe(useSetVote, () => {
       likes: 1,
       userVote: "like",
     });
-    const { result } = renderHook(() => useSetVote(42), {
+    const { result } = await renderHook(() => useSetVote(42), {
       wrapper: createWrapper(queryClient, {
         removePostVote: mockRemovePostVote,
         setPostVote: mockSetPostVote,
@@ -90,7 +92,7 @@ describe(useSetVote, () => {
       likes: 0,
       userVote: null,
     });
-    const { result } = renderHook(() => useSetVote(42), {
+    const { result } = await renderHook(() => useSetVote(42), {
       wrapper: createWrapper(queryClient, {
         removePostVote: mockRemovePostVote,
         setPostVote: mockSetPostVote,
@@ -111,7 +113,7 @@ describe(useSetVote, () => {
       likes: 1,
       userVote: "like",
     });
-    const { result } = renderHook(() => useSetVote(42), {
+    const { result } = await renderHook(() => useSetVote(42), {
       wrapper: createWrapper(queryClient, {
         removePostVote: mockRemovePostVote,
         setPostVote: mockSetPostVote,
@@ -131,7 +133,7 @@ describe(useSetVote, () => {
 
   it("rolls back the cache on error", async () => {
     mockSetPostVote.mockRejectedValueOnce(new Error("DB error"));
-    const { result } = renderHook(() => useSetVote(42), {
+    const { result } = await renderHook(() => useSetVote(42), {
       wrapper: createWrapper(queryClient, {
         removePostVote: mockRemovePostVote,
         setPostVote: mockSetPostVote,
@@ -161,7 +163,7 @@ describe(usePostVotes, () => {
       likes: 5,
       userVote: "like",
     });
-    const { result } = renderHook(() => usePostVotes(42), {
+    const { result } = await renderHook(() => usePostVotes(42), {
       wrapper: createWrapper(queryClient),
     });
 

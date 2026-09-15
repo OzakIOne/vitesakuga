@@ -1,10 +1,17 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, cleanup } from "@testing-library/react";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+import { render } from "vitest-browser-react";
+import { page } from "vitest/browser";
 
 import { MentionTextarea } from "./MentionTextarea";
+
+vi.mock("src/lib/users/users.queries", () => ({
+  mentionSearchQueryOptions: (query: string) => ({
+    queryFn: async () => [],
+    queryKey: ["mention-search", query],
+  }),
+}));
 
 function ControlledMentionTextarea({
   onChange,
@@ -24,7 +31,7 @@ function ControlledMentionTextarea({
   );
 }
 
-const renderComposer = (onChange: (value: string) => void) => {
+const renderComposer = async (onChange: (value: string) => void) => {
   const queryClient = new QueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
@@ -34,18 +41,16 @@ const renderComposer = (onChange: (value: string) => void) => {
 };
 
 describe(MentionTextarea, () => {
-  afterEach(cleanup);
-
-  it("keeps HTML-looking input as literal textarea text while typing", () => {
+  test("keeps HTML-looking input as literal textarea text while typing", async () => {
     const onChange = vi.fn();
     const payload = "<img src=x onerror=alert(1)>";
-    renderComposer(onChange);
+    await renderComposer(onChange);
 
-    const textarea = screen.getByRole("combobox") as HTMLTextAreaElement;
-    fireEvent.change(textarea, { target: { value: payload } });
+    const textarea = page.getByRole("combobox");
+    await textarea.fill(payload);
 
-    expect(textarea.value).toBe(payload);
+    await expect.element(textarea).toHaveValue(payload);
     expect(onChange).toHaveBeenCalledWith(payload);
-    expect(document.querySelector("img")).toBeNull();
+    await expect.element(page.getByRole("img")).not.toBeInTheDocument();
   });
 });

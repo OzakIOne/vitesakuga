@@ -1,10 +1,16 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 import { CommentsFnsContext, defaultCommentsFns } from "./comments.fn-context";
 import { useAddComment, useDeleteComment } from "./comments.hooks";
+
+vi.mock("./comments.service", () => ({
+  addComment: vi.fn(),
+  deleteComment: vi.fn(),
+  fetchComments: vi.fn(),
+  updateComment: vi.fn(),
+}));
 
 vi.mock("src/components/ui/toaster", () => ({
   toaster: {
@@ -37,6 +43,8 @@ const createWrapper = (
   );
 };
 
+const waitFor = vi.waitFor;
+
 describe(useAddComment, () => {
   let queryClient: QueryClient;
   let mockAddComment: ReturnType<typeof vi.fn>;
@@ -50,7 +58,7 @@ describe(useAddComment, () => {
 
   it("calls addComment with the correct payload", async () => {
     mockAddComment.mockResolvedValueOnce({ id: 1 });
-    const { result } = renderHook(() => useAddComment(42, "user-1"), {
+    const { result } = await renderHook(() => useAddComment(42, "user-1"), {
       wrapper: createWrapper(queryClient, { addComment: mockAddComment }),
     });
 
@@ -65,7 +73,7 @@ describe(useAddComment, () => {
   it("invalidates comments query on success", async () => {
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     mockAddComment.mockResolvedValueOnce({ id: 1 });
-    const { result } = renderHook(() => useAddComment(42, "user-1"), {
+    const { result } = await renderHook(() => useAddComment(42, "user-1"), {
       wrapper: createWrapper(queryClient, { addComment: mockAddComment }),
     });
 
@@ -79,7 +87,7 @@ describe(useAddComment, () => {
 
   it("shows error toast on failure", async () => {
     mockAddComment.mockRejectedValueOnce(new Error("DB error"));
-    const { result } = renderHook(() => useAddComment(1, "user-1"), {
+    const { result } = await renderHook(() => useAddComment(1, "user-1"), {
       wrapper: createWrapper(queryClient, { addComment: mockAddComment }),
     });
 
@@ -106,7 +114,7 @@ describe(useDeleteComment, () => {
 
   it("calls deleteComment with the correct payload", async () => {
     mockDeleteComment.mockResolvedValueOnce({ success: true });
-    const { result } = renderHook(() => useDeleteComment(42), {
+    const { result } = await renderHook(() => useDeleteComment(42), {
       wrapper: createWrapper(queryClient, { deleteComment: mockDeleteComment }),
     });
 
@@ -121,7 +129,7 @@ describe(useDeleteComment, () => {
   it("invalidates comments query on success", async () => {
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     mockDeleteComment.mockResolvedValueOnce({ success: true });
-    const { result } = renderHook(() => useDeleteComment(42), {
+    const { result } = await renderHook(() => useDeleteComment(42), {
       wrapper: createWrapper(queryClient, { deleteComment: mockDeleteComment }),
     });
 
@@ -135,7 +143,7 @@ describe(useDeleteComment, () => {
 
   it("shows error toast on failure", async () => {
     mockDeleteComment.mockRejectedValueOnce(new Error("Forbidden"));
-    const { result } = renderHook(() => useDeleteComment(1), {
+    const { result } = await renderHook(() => useDeleteComment(1), {
       wrapper: createWrapper(queryClient, { deleteComment: mockDeleteComment }),
     });
 

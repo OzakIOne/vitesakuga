@@ -1,7 +1,6 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 import {
   useAddPasskey,
@@ -24,7 +23,26 @@ const createMockAuthClient = () => ({
   },
 });
 
+vi.mock("./client", () => ({
+  default: {
+    passkey: {
+      listUserPasskeys: vi.fn(),
+      addPasskey: vi.fn(),
+      updatePasskey: vi.fn(),
+      deletePasskey: vi.fn(),
+    },
+    signIn: {
+      passkey: vi.fn(),
+    },
+  },
+}));
+
+vi.mock("./delete-account", () => ({
+  deleteAccount: vi.fn(),
+}));
+
 vi.mock("@tanstack/react-router", () => ({
+  isRedirect: () => false,
   useNavigate: () => vi.fn(),
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
@@ -33,6 +51,10 @@ vi.mock("src/components/ui/toaster", () => ({
   toaster: {
     create: vi.fn(),
   },
+}));
+
+vi.mock("src/lib/users/users.queries", () => ({
+  usersKeys: { userInfo: ["userInfo"] },
 }));
 
 const createWrapper = (
@@ -49,6 +71,8 @@ const createWrapper = (
     </QueryClientProvider>
   );
 };
+
+const waitFor = vi.waitFor;
 
 describe(usePasskeys, () => {
   let queryClient: QueryClient;
@@ -73,7 +97,7 @@ describe(usePasskeys, () => {
       data: passkeys,
       error: null,
     });
-    const { result } = renderHook(() => usePasskeys(), {
+    const { result } = await renderHook(() => usePasskeys(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -87,7 +111,7 @@ describe(usePasskeys, () => {
       data: null,
       error: null,
     });
-    const { result } = renderHook(() => usePasskeys(), {
+    const { result } = await renderHook(() => usePasskeys(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -100,7 +124,7 @@ describe(usePasskeys, () => {
       data: null,
       error: { message: "Failed to list passkeys" },
     });
-    const { result } = renderHook(() => usePasskeys(), {
+    const { result } = await renderHook(() => usePasskeys(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -125,7 +149,7 @@ describe(useAddPasskey, () => {
       data: { id: "passkey-1" },
       error: null,
     });
-    const { result } = renderHook(() => useAddPasskey(), {
+    const { result } = await renderHook(() => useAddPasskey(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -142,7 +166,7 @@ describe(useAddPasskey, () => {
       data: { id: "passkey-1" },
       error: null,
     });
-    const { result } = renderHook(() => useAddPasskey(), {
+    const { result } = await renderHook(() => useAddPasskey(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -169,7 +193,7 @@ describe(useRenamePasskey, () => {
       data: { id: "passkey-1", name: "New name" },
       error: null,
     });
-    const { result } = renderHook(() => useRenamePasskey(), {
+    const { result } = await renderHook(() => useRenamePasskey(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -199,7 +223,7 @@ describe(useDeletePasskey, () => {
       data: { success: true },
       error: null,
     });
-    const { result } = renderHook(() => useDeletePasskey(), {
+    const { result } = await renderHook(() => useDeletePasskey(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -228,9 +252,12 @@ describe(useSignInWithPasskey, () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    const { result } = renderHook(() => useSignInWithPasskey("/dashboard"), {
-      wrapper: createWrapper(queryClient, mockAuth),
-    });
+    const { result } = await renderHook(
+      () => useSignInWithPasskey("/dashboard"),
+      {
+        wrapper: createWrapper(queryClient, mockAuth),
+      },
+    );
 
     result.current.mutate({});
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -243,7 +270,7 @@ describe(useSignInWithPasskey, () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    const { result } = renderHook(() => useSignInWithPasskey("/"), {
+    const { result } = await renderHook(() => useSignInWithPasskey("/"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 

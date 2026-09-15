@@ -1,7 +1,6 @@
-// @vitest-environment happy-dom
 import { createListCollection } from "@ark-ui/react";
-import { render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { render } from "vitest-browser-react";
 
 import { Combobox } from "./overlay";
 
@@ -10,13 +9,13 @@ afterEach(() => {
 });
 
 describe("Combobox wrapper", () => {
-  it("B8: does not pass conflicting value props to its input", () => {
+  test("B8: does not pass conflicting value props to its input", async () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     const collection = createListCollection({ items: ["MP4"] });
 
-    render(
+    await render(
       <Combobox.Root
         collection={collection}
         inputValue=""

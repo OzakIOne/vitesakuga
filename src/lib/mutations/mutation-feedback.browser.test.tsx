@@ -1,8 +1,7 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 import { UnauthorizedError } from "../errors";
 import {
@@ -32,6 +31,8 @@ const createWrapper = () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 };
+
+const waitFor = vi.waitFor;
 
 describe(errorMessage, () => {
   it("returns the error message when available", () => {
@@ -138,7 +139,7 @@ describe(toastSuccess, () => {
 describe(useMutationWithFeedback, () => {
   it("runs onSuccess and shows the success toast", async () => {
     const onSuccess = vi.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMutationWithFeedback({
           errorFallback: "nope",
@@ -162,7 +163,7 @@ describe(useMutationWithFeedback, () => {
 
   it("runs onError and shows the error toast", async () => {
     const onError = vi.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMutationWithFeedback({
           errorFallback: "fallback",

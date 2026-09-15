@@ -1,7 +1,6 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 import { AuthClientContext } from "./client-context";
 import {
@@ -32,6 +31,10 @@ vi.mock("src/components/ui/toaster", () => ({
   },
 }));
 
+vi.mock("src/lib/users/users.queries", () => ({
+  usersKeys: { userInfo: ["userInfo"] },
+}));
+
 const createWrapper = (
   queryClient: QueryClient,
   authClient: ReturnType<typeof createMockAuthClient>,
@@ -46,6 +49,8 @@ const createWrapper = (
     </QueryClientProvider>
   );
 };
+
+const waitFor = vi.waitFor;
 
 describe(useEnableTwoFactor, () => {
   let queryClient: QueryClient;
@@ -63,7 +68,7 @@ describe(useEnableTwoFactor, () => {
       data: { method: "totp" },
       error: null,
     });
-    const { result } = renderHook(() => useEnableTwoFactor(), {
+    const { result } = await renderHook(() => useEnableTwoFactor(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -81,7 +86,7 @@ describe(useEnableTwoFactor, () => {
       data: { method: "totp" },
       error: null,
     });
-    const { result } = renderHook(() => useEnableTwoFactor(), {
+    const { result } = await renderHook(() => useEnableTwoFactor(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -111,7 +116,7 @@ describe(useDisableTwoFactor, () => {
       data: { status: true },
       error: null,
     });
-    const { result } = renderHook(() => useDisableTwoFactor(), {
+    const { result } = await renderHook(() => useDisableTwoFactor(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -138,7 +143,7 @@ describe(useGenerateBackupCodes, () => {
       data: { backupCodes: ["aaaa-aaaa", "bbbb-bbbb"] },
       error: null,
     });
-    const { result } = renderHook(() => useGenerateBackupCodes(), {
+    const { result } = await renderHook(() => useGenerateBackupCodes(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -167,7 +172,7 @@ describe(useVerifyTotp, () => {
       data: { status: true },
       error: null,
     });
-    const { result } = renderHook(() => useVerifyTotp(), {
+    const { result } = await renderHook(() => useVerifyTotp(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -185,7 +190,7 @@ describe(useVerifyTotp, () => {
       data: { status: true },
       error: null,
     });
-    const { result } = renderHook(() => useVerifyTotp(), {
+    const { result } = await renderHook(() => useVerifyTotp(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -215,7 +220,7 @@ describe(useVerifyBackupCode, () => {
       data: { status: true },
       error: null,
     });
-    const { result } = renderHook(() => useVerifyBackupCode(), {
+    const { result } = await renderHook(() => useVerifyBackupCode(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 

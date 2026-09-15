@@ -1,7 +1,6 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 import {
   useChangePassword,
@@ -36,7 +35,10 @@ vi.mock("./delete-account", () => ({
   deleteAccount: vi.fn(),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+vi.mock("@tanstack/react-router", async () => ({
+  ...(await vi.importActual<typeof import("@tanstack/react-router")>(
+    "@tanstack/react-router",
+  )),
   useNavigate: () => vi.fn(),
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
@@ -45,6 +47,10 @@ vi.mock("src/components/ui/toaster", () => ({
   toaster: {
     create: vi.fn(),
   },
+}));
+
+vi.mock("src/lib/users/users.queries", () => ({
+  usersKeys: { userInfo: ["userInfo"] },
 }));
 
 const createWrapper = (
@@ -62,6 +68,8 @@ const createWrapper = (
   );
 };
 
+const waitFor = vi.waitFor;
+
 describe(useLogin, () => {
   let queryClient: QueryClient;
   let mockAuth: ReturnType<typeof createMockAuthClient>;
@@ -75,7 +83,7 @@ describe(useLogin, () => {
 
   it("calls signIn.email with credentials", async () => {
     mockAuth.signIn.email.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useLogin("/dashboard"), {
+    const { result } = await renderHook(() => useLogin("/dashboard"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -102,7 +110,7 @@ describe(useSignUp, () => {
 
   it("calls signUp.email with user details", async () => {
     mockAuth.signUp.email.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useSignUp("/welcome"), {
+    const { result } = await renderHook(() => useSignUp("/welcome"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -134,7 +142,7 @@ describe("email verification hooks", () => {
 
   it("verifies the signup code", async () => {
     mockAuth.emailOtp.verifyEmail.mockResolvedValueOnce({ data: {} });
-    const { result } = renderHook(() => useVerifyEmail("/welcome"), {
+    const { result } = await renderHook(() => useVerifyEmail("/welcome"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -149,7 +157,7 @@ describe("email verification hooks", () => {
 
   it("resends the signup code", async () => {
     mockAuth.emailOtp.sendVerificationOtp.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useResendEmailVerification(), {
+    const { result } = await renderHook(() => useResendEmailVerification(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -176,7 +184,7 @@ describe(useUpdateProfile, () => {
 
   it("calls updateUser with name, username and image", async () => {
     mockAuth.updateUser.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useUpdateProfile(), {
+    const { result } = await renderHook(() => useUpdateProfile(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -196,7 +204,7 @@ describe(useUpdateProfile, () => {
 
   it("shows error toast on failure", async () => {
     mockAuth.updateUser.mockRejectedValueOnce(new Error("Validation error"));
-    const { result } = renderHook(() => useUpdateProfile(), {
+    const { result } = await renderHook(() => useUpdateProfile(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -211,7 +219,7 @@ describe(useUpdateProfile, () => {
 
   it("shows success toast on success", async () => {
     mockAuth.updateUser.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useUpdateProfile(), {
+    const { result } = await renderHook(() => useUpdateProfile(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -238,7 +246,7 @@ describe(useChangePassword, () => {
 
   it("calls changePassword with old and new password", async () => {
     mockAuth.changePassword.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useChangePassword(), {
+    const { result } = await renderHook(() => useChangePassword(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -254,7 +262,7 @@ describe(useChangePassword, () => {
 
   it("shows error toast on failure", async () => {
     mockAuth.changePassword.mockRejectedValueOnce(new Error("Wrong password"));
-    const { result } = renderHook(() => useChangePassword(), {
+    const { result } = await renderHook(() => useChangePassword(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -271,7 +279,7 @@ describe(useChangePassword, () => {
     mockAuth.changePassword.mockResolvedValueOnce({
       error: { message: "Invalid current password" },
     });
-    const { result } = renderHook(() => useChangePassword(), {
+    const { result } = await renderHook(() => useChangePassword(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -288,7 +296,7 @@ describe(useChangePassword, () => {
 
   it("shows success toast on success", async () => {
     mockAuth.changePassword.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useChangePassword(), {
+    const { result } = await renderHook(() => useChangePassword(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -317,7 +325,7 @@ describe(useDeleteAccount, () => {
     const { deleteAccount } = await import("./delete-account");
     vi.mocked(deleteAccount).mockResolvedValueOnce({ deletedUserId: "u1" });
     mockAuth.signOut.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useDeleteAccount(), {
+    const { result } = await renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -334,7 +342,7 @@ describe(useDeleteAccount, () => {
     const { deleteAccount } = await import("./delete-account");
     vi.mocked(deleteAccount).mockResolvedValueOnce({ deletedUserId: "u1" });
     mockAuth.signOut.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useDeleteAccount(), {
+    const { result } = await renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -349,7 +357,7 @@ describe(useDeleteAccount, () => {
     vi.mocked(deleteAccount).mockRejectedValueOnce(
       new Error("Incorrect password"),
     );
-    const { result } = renderHook(() => useDeleteAccount(), {
+    const { result } = await renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -366,7 +374,7 @@ describe(useDeleteAccount, () => {
     const { deleteAccount } = await import("./delete-account");
     vi.mocked(deleteAccount).mockResolvedValueOnce({ deletedUserId: "u1" });
     mockAuth.signOut.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useDeleteAccount(), {
+    const { result } = await renderHook(() => useDeleteAccount(), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -393,7 +401,7 @@ describe(useSocialLogin, () => {
 
   it("calls signIn.social with provider", async () => {
     mockAuth.signIn.social.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useSocialLogin("/dashboard"), {
+    const { result } = await renderHook(() => useSocialLogin("/dashboard"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 

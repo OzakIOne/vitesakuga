@@ -1,28 +1,10 @@
-// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
 import { AuthClientContext } from "src/lib/auth/client-context";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-react";
+import { page } from "vitest/browser";
 
 import { TwoFactorSection } from "./TwoFactorSection";
-
-// Ark UI's dialog machine observes element size changes; happy-dom does not
-// ship a ResizeObserver, so provide a no-op implementation.
-class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-globalThis.ResizeObserver ??=
-  ResizeObserverStub as unknown as typeof ResizeObserver;
 
 const createMockAuthClient = () => ({
   twoFactor: {
@@ -32,7 +14,18 @@ const createMockAuthClient = () => ({
   },
 });
 
+vi.mock("src/lib/auth/client", () => ({
+  default: {
+    twoFactor: {
+      disable: vi.fn(),
+      enable: vi.fn(),
+      generateBackupCodes: vi.fn(),
+    },
+  },
+}));
+
 vi.mock("@tanstack/react-router", () => ({
+  isRedirect: () => false,
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
 
@@ -40,6 +33,10 @@ vi.mock("src/components/ui/toaster", () => ({
   toaster: {
     create: vi.fn(),
   },
+}));
+
+vi.mock("src/lib/users/users.queries", () => ({
+  usersKeys: { accountSecurity: ["accountSecurity"] },
 }));
 
 const createWrapper = (
@@ -59,9 +56,7 @@ const createWrapper = (
   );
 };
 
-afterEach(() => cleanup());
-
-const renderSection = ({
+const renderSection = async ({
   authClient,
   email = "alice@test.com",
   enabled = false,
@@ -75,7 +70,7 @@ const renderSection = ({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  await render(
     <TwoFactorSection
       email={email}
       enabled={enabled}
@@ -101,19 +96,17 @@ describe("TwoFactorSection enable flow", () => {
       error: null,
     });
 
-    renderSection({ authClient, hasPassword: false });
-    fireEvent.click(screen.getByRole("button", { name: "Enable 2FA" }));
+    await renderSection({ authClient, hasPassword: false });
+    await page.getByRole("button", { name: "Enable 2FA" }).click();
 
-    await waitFor(() =>
+    await vi.waitFor(() =>
       expect(authClient.twoFactor.enable).toHaveBeenCalledWith({
         password: "",
         method: "totp",
       }),
     );
-    await waitFor(() =>
-      expect(screen.getByText("Scan the QR code")).toBeTruthy(),
-    );
-    expect(screen.getByText(/JBSWY3DPEHPK3PXP/)).toBeTruthy();
+    await expect.element(page.getByText("Scan the QR code")).toBeVisible();
+    await expect.element(page.getByText(/JBSWY3DPEHPK3PXP/)).toBeVisible();
   });
 
   it("shows the error and a retry when TOTP setup fails for passwordless users", async () => {
@@ -123,13 +116,13 @@ describe("TwoFactorSection enable flow", () => {
       error: { message: "TOTP setup failed" },
     });
 
-    renderSection({ authClient, hasPassword: false });
-    fireEvent.click(screen.getByRole("button", { name: "Enable 2FA" }));
+    await renderSection({ authClient, hasPassword: false });
+    await page.getByRole("button", { name: "Enable 2FA" }).click();
 
-    await waitFor(() =>
-      expect(screen.getByText("TOTP setup failed")).toBeTruthy(),
-    );
-    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    await expect.element(page.getByText("TOTP setup failed")).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "Try again" }))
+      .toBeVisible();
   });
 
   it("asks for the password first when the user has one", async () => {
@@ -144,31 +137,25 @@ describe("TwoFactorSection enable flow", () => {
       error: null,
     });
 
-    renderSection({ authClient, hasPassword: true });
-    fireEvent.click(screen.getByRole("button", { name: "Enable 2FA" }));
+    await renderSection({ authClient, hasPassword: true });
+    await page.getByRole("button", { name: "Enable 2FA" }).click();
 
-    const dialog = await waitFor(() => screen.getByRole("dialog"));
-    await waitFor(() =>
-      expect(
-        within(dialog).getByText(/Enter your password to confirm/),
-      ).toBeTruthy(),
-    );
+    const dialog = page.getByRole("dialog");
+    await expect.element(dialog).toBeVisible();
+    await expect
+      .element(dialog.getByText(/Enter your password to confirm/))
+      .toBeVisible();
 
-    fireEvent.change(
-      within(dialog).getByPlaceholderText("Enter your password"),
-      { target: { value: "secret" } },
-    );
-    fireEvent.submit(document.getElementById("enable-2fa") as HTMLFormElement);
+    await dialog.getByPlaceholder("Enter your password").fill("secret");
+    await page.getByRole("button", { name: "Continue" }).click();
 
-    await waitFor(() =>
+    await vi.waitFor(() =>
       expect(authClient.twoFactor.enable).toHaveBeenCalledWith({
         password: "secret",
         method: "totp",
       }),
     );
-    await waitFor(() =>
-      expect(screen.getByText("Scan the QR code")).toBeTruthy(),
-    );
+    await expect.element(page.getByText("Scan the QR code")).toBeVisible();
   });
 });
 
@@ -180,23 +167,22 @@ describe("TwoFactorSection disable flow", () => {
       error: null,
     });
 
-    renderSection({ authClient, enabled: true, hasPassword: false });
-    fireEvent.click(screen.getByRole("button", { name: "Disable 2FA" }));
+    await renderSection({ authClient, enabled: true, hasPassword: false });
+    await page.getByRole("button", { name: "Disable 2FA" }).click();
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
+    await expect
+      .element(
+        page.getByText(
           "Your account will only be protected by your GitHub or Google sign-in. Confirm to turn off two-factor authentication.",
         ),
-      ).toBeTruthy(),
-    );
+      )
+      .toBeVisible();
 
-    fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Disable 2FA",
-      }),
-    );
-    await waitFor(() =>
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Disable 2FA" })
+      .click();
+    await vi.waitFor(() =>
       expect(authClient.twoFactor.disable).toHaveBeenCalledWith({
         password: "",
       }),
@@ -210,17 +196,15 @@ describe("TwoFactorSection disable flow", () => {
       error: null,
     });
 
-    renderSection({ authClient, enabled: true, hasPassword: true });
-    fireEvent.click(screen.getByRole("button", { name: "Disable 2FA" }));
+    await renderSection({ authClient, enabled: true, hasPassword: true });
+    await page.getByRole("button", { name: "Disable 2FA" }).click();
 
-    const dialog = await waitFor(() => screen.getByRole("dialog"));
-    fireEvent.change(
-      within(dialog).getByPlaceholderText("Enter your password"),
-      { target: { value: "secret" } },
-    );
-    fireEvent.submit(document.getElementById("disable-2fa") as HTMLFormElement);
+    const dialog = page.getByRole("dialog");
+    await expect.element(dialog).toBeVisible();
+    await dialog.getByPlaceholder("Enter your password").fill("secret");
+    await dialog.getByRole("button", { name: "Disable 2FA" }).click();
 
-    await waitFor(() =>
+    await vi.waitFor(() =>
       expect(authClient.twoFactor.disable).toHaveBeenCalledWith({
         password: "secret",
       }),
@@ -236,28 +220,27 @@ describe("TwoFactorSection backup codes flow", () => {
       error: null,
     });
 
-    renderSection({ authClient, enabled: true, hasPassword: false });
-    fireEvent.click(screen.getByRole("button", { name: "Backup codes" }));
+    await renderSection({ authClient, enabled: true, hasPassword: false });
+    await page.getByRole("button", { name: "Backup codes" }).click();
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
+    await expect
+      .element(
+        page.getByText(
           "Generate a fresh set of backup codes. Your current codes will stop working immediately.",
         ),
-      ).toBeTruthy(),
-    );
+      )
+      .toBeVisible();
 
-    fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Generate new codes",
-      }),
-    );
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Generate new codes" })
+      .click();
 
-    await waitFor(() =>
+    await vi.waitFor(() =>
       expect(authClient.twoFactor.generateBackupCodes).toHaveBeenCalledWith({
         password: "",
       }),
     );
-    await waitFor(() => expect(screen.getByText("new-aaaa")).toBeTruthy());
+    await expect.element(page.getByText("new-aaaa")).toBeVisible();
   });
 });
