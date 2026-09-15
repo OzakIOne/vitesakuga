@@ -9,6 +9,7 @@ nub exec vitest run                 # all unit/integration tests
 nub exec vitest run path/to/test.ts # one test file
 nub run test:deployment             # deployment monitor/rollback decisions
 nub run test                        # Vitest watch mode
+nub run test:browser                # Browser Mode component tests
 nub run test:ee                     # Playwright e2e suite
 ```
 
@@ -21,7 +22,7 @@ exercise the same authentication path as the test server.
 
 ## Current verification
 
-On **2026-09-13**, `nub exec vitest run --maxWorkers=1` passed **699 tests in 76 test files**.
+On **2026-09-15**, `nub exec vitest run --maxWorkers=1` passed **696 tests in 74 test files**. The Browser Mode pilot passed **3 tests in 2 files** with `nub run test:browser`.
 The full Playwright suite passed **58/58 tests in 15 files** (`nub run test:ee`).
 These are point-in-time results; rerun the commands after code or dependency
 changes.
@@ -29,6 +30,17 @@ changes.
 The deployment monitor and rollback command construction are covered by the
 focused `test:deployment` check. Its pure decision helpers run without
 Cloudflare or Wrangler credentials.
+
+## Browser Mode
+
+Component tests that exercise the real browser DOM use Vitest Browser Mode with
+Chromium and `vitest-browser-react`. They use the `*.browser.test.tsx` suffix
+and run separately with `nub run test:browser`; the regular Vitest command
+continues to cover Node, service, and hook tests.
+
+Browser Mode is intended for component behavior and browser APIs, not as a
+replacement for the Playwright end-to-end suite. Tests that only need React
+hook state or server behavior should remain in the Node project.
 
 The e2e specs currently cover authentication, comments, conversion, account
 deletion, hydration, mentions, passkeys, playlists, shortcuts, toasts, 2FA,
