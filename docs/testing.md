@@ -22,7 +22,7 @@ exercise the same authentication path as the test server.
 
 ## Current verification
 
-On **2026-09-15**, `nub exec vitest run --maxWorkers=1` passed **696 tests in 74 test files**. The Browser Mode pilot passed **3 tests in 2 files** with `nub run test:browser`.
+On **2026-09-15**, `nub exec vitest run --maxWorkers=1` passed **611 tests in 62 test files**. Browser Mode passed **88 tests in 14 files** with `nub run test:browser` (**699 Vitest tests total**).
 The full Playwright suite passed **58/58 tests in 15 files** (`nub run test:ee`).
 These are point-in-time results; rerun the commands after code or dependency
 changes.

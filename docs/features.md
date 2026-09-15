@@ -162,7 +162,7 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 État vérifié le **2026-09-11**.
 
-- **Vitest** : `nub exec vitest run --maxWorkers=1` — **696/696 tests passés dans 74 fichiers** lors de la vérification du 2026-09-15. Le pilote Browser Mode ajoute **3 tests dans 2 fichiers** via `nub run test:browser`. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
+- **Vitest** : `nub exec vitest run --maxWorkers=1` — **611/611 tests passés dans 62 fichiers** lors de la vérification du 2026-09-15. Browser Mode ajoute **88 tests dans 14 fichiers** via `nub run test:browser`, soit **699 tests** au total. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
 - **Playwright** : `nub run test:ee` avec Postgres local + RustFS — **58/58 tests passés dans 15 fichiers** lors de la vérification du 2026-09-11. L'inventaire actuel contient 15 fichiers `e2e/*.spec.ts`.
 - **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts et raccourcis clavier.
 - **Couverture unitaire/service** : recherche et filtres numériques, pagination, posts, tags, utilisateurs, commentaires, mentions, playlists, votes, rapports, notifications, modération, suggestions, révisions vidéo/GC, points, rate limiting, stockage, auth et server-function boundary.
