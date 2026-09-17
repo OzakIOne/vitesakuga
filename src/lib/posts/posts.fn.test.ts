@@ -938,7 +938,7 @@ describe("PostsService.upload", () => {
 
     expect(post.id).toBeGreaterThan(0);
     // The stored key is the promoted one, out of the staging namespace.
-    expect(post.videoKey).toMatch(/^videos\/user-1\/[a-f0-9-]+\.mp4$/);
+    expect(post.videoKey).toMatch(/^media\/video\/[A-Za-z0-9_-]+\/\d{4}\.mp4$/);
     expect(post.videoKey).not.toBe(pendingKey);
     expect(post.title).toBe("Uploaded Post");
   });
@@ -1056,6 +1056,10 @@ describe("PostsService.createVideoUploadUrl", () => {
 
     expect(result.key).toMatch(/^videos\/_pending\/user-1\/[a-f0-9-]+\.mp4$/);
     expect(result.contentType).toBe("video/mp4");
+    expect(result.requiredHeaders).toEqual({
+      "content-type": "video/mp4",
+      "if-none-match": "*",
+    });
     expect(result.url).toContain(result.key);
     expect(result.url).toContain("X-Amz-Signature=");
   });
@@ -1069,6 +1073,8 @@ describe("PostsService.update", () => {
     const error = await runEffect(
       Effect.flip(
         PostsService.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
           postId,
           title: "Hacked",
           description: "Bad",
@@ -1090,6 +1096,8 @@ describe("PostsService.update", () => {
     const error = await runEffect(
       Effect.flip(
         PostsService.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
           postId,
           title: "Hacked",
           description: "Bad",
@@ -1110,6 +1118,8 @@ describe("PostsService.update", () => {
 
     const result = await runEffect(
       PostsService.update({
+        expectedVersion: 0,
+        operationKey: "test-update",
         postId,
         title: "Updated",
         description: "New description",
@@ -1131,6 +1141,8 @@ describe("PostsService.update", () => {
     const error = await runEffect(
       Effect.flip(
         PostsService.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
           postId,
           title: "Updated",
           description: "New description",
@@ -1152,6 +1164,8 @@ describe("PostsService.update", () => {
 
     await runEffect(
       PostsService.update({
+        expectedVersion: 0,
+        operationKey: "test-update",
         postId,
         title: "Tagged",
         description: "Content",
@@ -1183,6 +1197,8 @@ describe("PostsService.update", () => {
 
     await runEffect(
       PostsService.update({
+        expectedVersion: 0,
+        operationKey: "test-update",
         postId,
         title: "Repeated tags",
         description: "Content",
@@ -1210,6 +1226,8 @@ describe("PostsService.update", () => {
     const error = await runEffect(
       Effect.flip(
         PostsService.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
           postId,
           title: "Should roll back",
           description: "Updated description",
@@ -1278,13 +1296,13 @@ describe("PostsService.upload (image posts)", () => {
     // Keys keep the original file extension under the uploader's namespace,
     // in upload order.
     expect(imageRows[0]?.storageKey).toMatch(
-      /^images\/user-1\/[a-f0-9-]+\.png$/,
+      /^media\/image\/[A-Za-z0-9_-]+\/\d{4}\.png$/,
     );
     expect(imageRows[1]?.storageKey).toMatch(
-      /^images\/user-1\/[a-f0-9-]+\.jpg$/,
+      /^media\/image\/[A-Za-z0-9_-]+\/\d{4}\.jpg$/,
     );
     expect(imageRows[2]?.storageKey).toMatch(
-      /^images\/user-1\/[a-f0-9-]+\.webp$/,
+      /^media\/image\/[A-Za-z0-9_-]+\/\d{4}\.webp$/,
     );
 
     // Image posts carry the reserved "image" media tag, not "video".
@@ -1388,22 +1406,22 @@ describe("PostsService.upload (image posts)", () => {
         let imageUploadCalls = 0;
         return {
           ...storage,
-          uploadImage: (userId: string, file: File) => {
+          putImage: (key: string, file: File) => {
             imageUploadCalls += 1;
             if (imageUploadCalls > 1) {
               return Effect.fail(
                 new StorageError({
                   cause: "simulated storage outage",
-                  key: `images/${userId}/simulated-failure.png`,
+                  key,
                   message: "Simulated image upload failure",
                   operation: "upload",
                 }),
               );
             }
             return Effect.gen(function* () {
-              const { key } = yield* storage.uploadImage(userId, file);
+              const stored = yield* storage.putImage(key, file);
               uploadedKeys.push(key);
-              return { key };
+              return stored;
             });
           },
         };

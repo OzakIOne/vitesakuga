@@ -74,6 +74,8 @@ export function useVideoProcessing(): VideoProcessingState &
   const { thumbnails, selectedThumbnailIndex } = thumbnailState;
 
   const mediaInfoPromiseRef = useRef<Promise<MediaInfo<"JSON">> | null>(null);
+  const generationRef = useRef(0);
+  const processingAbortRef = useRef<AbortController | null>(null);
   // Latest thumbnail list for the unmount cleanup: the cleanup must run only
   // when the component unmounts, not on every thumbnails change — revoking
   // per change kills blob URLs still displayed in the grid.
@@ -97,6 +99,8 @@ export function useVideoProcessing(): VideoProcessingState &
 
   useEffect(
     () => () => {
+      processingAbortRef.current?.abort();
+      generationRef.current += 1;
       void mediaInfoPromiseRef.current?.then((mi) => mi.close());
       mediaInfoPromiseRef.current = null;
     },
@@ -121,21 +125,39 @@ export function useVideoProcessing(): VideoProcessingState &
       return;
     }
 
-    // The current thumbnails are replaced below; revoke their object URLs so
-    // they do not leak (the unmount cleanup only sees the final list).
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    processingAbortRef.current?.abort();
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+    const isCurrent = () =>
+      generationRef.current === generation && !controller.signal.aborted;
+
+    // The current media is replaced below; revoke object URLs so replaced
+    // previews and thumbnails do not leak or remain usable.
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     for (const t of thumbnailState.thumbnails) {
       URL.revokeObjectURL(t.url);
     }
+    setPreviewUrl(null);
     setVideoFile(file);
     setVideoMetadata(undefined);
     setFrameRate(null);
     dispatchThumbnails({ type: "set", thumbnails: [] });
 
     try {
-      const parsedData = await analyzeVideo(file, await getMediaInfo());
+      const parsedData = await analyzeVideo(
+        file,
+        await getMediaInfo(),
+        controller.signal,
+      );
+      if (!isCurrent()) return;
       setFrameRate(parsedData?.FrameRate ?? null);
       setVideoMetadata(parsedData);
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error("MediaInfo analysis failed:", error);
       toaster.create({
         description: "Video metadata could not be read from this file.",
@@ -146,9 +168,14 @@ export function useVideoProcessing(): VideoProcessingState &
     }
 
     try {
-      const generated = await generateAutoThumbnails(file);
+      const generated = await generateAutoThumbnails(file, controller.signal);
+      if (!isCurrent()) {
+        generated.forEach((thumbnail) => URL.revokeObjectURL(thumbnail.url));
+        return;
+      }
       dispatchThumbnails({ type: "set", thumbnails: generated });
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error("Thumbnail generation failed:", error);
       toaster.create({
         description:
@@ -174,9 +201,24 @@ export function useVideoProcessing(): VideoProcessingState &
       throw new Error(`Invalid current time: ${currentTime}`);
     }
 
-    const generated = await generateThumbnails(videoFile, [currentTime]);
-    if (generated.length > 0) {
-      dispatchThumbnails({ type: "append", generated });
+    const generation = generationRef.current;
+    const controller = processingAbortRef.current ?? new AbortController();
+    try {
+      const generated = await generateThumbnails(
+        videoFile,
+        [currentTime],
+        controller.signal,
+      );
+      if (generationRef.current !== generation || controller.signal.aborted) {
+        generated.forEach((thumbnail) => URL.revokeObjectURL(thumbnail.url));
+        return;
+      }
+      if (generated.length > 0) {
+        dispatchThumbnails({ type: "append", generated });
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      throw error;
     }
   };
 
@@ -185,6 +227,8 @@ export function useVideoProcessing(): VideoProcessingState &
   };
 
   const clearFile = () => {
+    processingAbortRef.current?.abort();
+    generationRef.current += 1;
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }

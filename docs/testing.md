@@ -55,3 +55,12 @@ to inspect the current discovered test list without running it.
   cleanup hooks.
 - Keep e2e setup failures visible; do not convert an unavailable local service
   into a passing or silently skipped test.
+- Lifecycle tests should cover concurrent operation claims, terminal replay,
+  fingerprint conflicts, fences, crash/reconciliation states, durable delete
+  tombstones, and optimistic `posts.version` conflicts. PGlite proves
+  transactional logic; use isolated PostgreSQL plus RustFS for
+  connection/concurrency and storage-order guarantees.
+- Mutation tests must verify that a retry reuses the same operation key, does
+  not increment a post version twice, does not duplicate revisions or edit
+  applications, and does not repeat post-approval side effects after a
+  terminal replay.

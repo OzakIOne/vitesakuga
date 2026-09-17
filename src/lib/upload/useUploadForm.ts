@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   safeParseStrictIssues,
@@ -40,6 +40,7 @@ type UseUploadFormParams = {
 };
 
 type UploadFormValues = {
+  operationKey: string;
   chapterNumber: number | undefined;
   description: string;
   episodeNumber: number | undefined;
@@ -133,6 +134,18 @@ export function useUploadForm(
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const uploadGenerationRef = useRef(0);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+      uploadGenerationRef.current += 1;
+      uploadAbortRef.current?.abort();
+    },
+    [],
+  );
 
   const uploadPostMutation = useMutationWithFeedback({
     errorFallback: "There was an error uploading your post.",
@@ -156,6 +169,7 @@ export function useUploadForm(
   // form with the draft the post was built from, and the autosave would then
   // re-persist that draft right after a successful upload cleared it.
   const emptyValues: UploadFormValues = {
+    operationKey: crypto.randomUUID(),
     chapterNumber: undefined,
     description: "",
     episodeNumber: undefined,
@@ -174,6 +188,7 @@ export function useUploadForm(
 
   const defaultValues: UploadFormValues = {
     ...emptyValues,
+    operationKey: draft?.operationKey ?? emptyValues.operationKey,
     chapterNumber: draft?.chapterNumber,
     description: draft?.description ?? "",
     relatedPostId: draft?.relatedPostId,
@@ -276,6 +291,16 @@ export function useUploadForm(
   };
 
   const submitVideoPost = async (): Promise<boolean> => {
+    const generation = uploadGenerationRef.current + 1;
+    uploadGenerationRef.current = generation;
+    uploadAbortRef.current?.abort();
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+    const isCurrent = () =>
+      isMountedRef.current &&
+      uploadGenerationRef.current === generation &&
+      !controller.signal.aborted;
+
     if (thumbnail) {
       form.setFieldValue("thumbnail", thumbnail);
     }
@@ -301,19 +326,26 @@ export function useUploadForm(
 
     setIsUploadingVideo(true);
     try {
-      const { contentType, key, url } = await createVideoUploadUrl({
-        data: { fileName: videoFile.name },
+      const { key, requiredHeaders, url } = await createVideoUploadUrl({
+        data: {
+          fileName: videoFile.name,
+          operationKey: form.state.values.operationKey,
+        },
       });
+      if (!isCurrent()) return false;
       const response = await fetch(url, {
         body: videoFile,
-        headers: { "Content-Type": contentType },
+        headers: requiredHeaders,
         method: "PUT",
+        signal: controller.signal,
       });
       if (!response.ok) {
         throw new Error(`Storage upload failed with status ${response.status}`);
       }
+      if (!isCurrent()) return false;
       form.setFieldValue("videoKey", key);
     } catch (error) {
+      if (controller.signal.aborted || !isCurrent()) return false;
       toastError(
         "Upload failed",
         error,
@@ -321,9 +353,11 @@ export function useUploadForm(
       );
       return false;
     } finally {
-      setIsUploadingVideo(false);
+      if (isMountedRef.current && uploadGenerationRef.current === generation) {
+        setIsUploadingVideo(false);
+      }
     }
-    return true;
+    return isCurrent();
   };
 
   const submit = async () => {

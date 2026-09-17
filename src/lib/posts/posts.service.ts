@@ -1,5 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Exit, Layer, Option, Schema } from "effect";
+import {
+  Clock,
+  Context,
+  DateTime,
+  Effect,
+  Exit,
+  Layer,
+  Option,
+  Schema,
+} from "effect";
 import {
   sql,
   type Expression,
@@ -13,7 +22,11 @@ import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import type { DB } from "../db/kysely";
-import type { postSourceSchema, PostWithVotes } from "../db/schema";
+import type {
+  MediaOperationResult,
+  postSourceSchema,
+  PostWithVotes,
+} from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import {
   SqlError,
@@ -30,13 +43,30 @@ import {
 } from "../errors";
 import { asPostId, PostId } from "../ids";
 import {
+  FingerprintInputError,
+  operationRequestFingerprint,
+} from "../lifecycle/fingerprint";
+import {
+  finishOperationInTransaction,
+  LifecycleService,
+  updatePostWithVersionInTransaction,
+  LifecycleServiceLive,
+  type LifecycleError,
+} from "../lifecycle/lifecycle.service";
+import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
 import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
-import { videoContentType } from "../storage/content-type";
-import { pendingVideoPrefix } from "../storage/keys";
+import { imageContentType, videoContentType } from "../storage/content-type";
+import {
+  imageObjectKey,
+  pendingVideoObjectKey,
+  pendingVideoPrefix,
+  thumbnailObjectKey,
+  videoObjectKey,
+} from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { isUploadedVideoValid } from "../storage/upload-policy";
 import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
@@ -67,6 +97,28 @@ const FOLLOWED_TAGS_WINDOW_DAYS = 14;
 const UNDER_SEEN_WINDOW_DAYS = 30;
 const UNDER_SEEN_MAX_LIKES = 5;
 
+const fileDigest = (file: File): Effect.Effect<string, FingerprintInputError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      return `sha256:${Array.from(new Uint8Array(digest), (value) =>
+        value.toString(16).padStart(2, "0"),
+      ).join("")}`;
+    },
+    catch: (cause) =>
+      new FingerprintInputError({
+        message: `Failed to fingerprint media file: ${String(cause)}`,
+      }),
+  });
+
+type PostUpdateChanges = {
+  description: string;
+  relatedPostId?: number | null;
+  source?: string | null;
+  title: string;
+};
+
 const numericFilterExpression = (filter: NumericSearchFilter) => {
   const comparison = sql.raw(filter.operator);
   const value = filter.value;
@@ -86,8 +138,7 @@ const numericFilterExpression = (filter: NumericSearchFilter) => {
 };
 
 // oxlint-disable effecttsgo/global-date -- calendar-day boundaries use the server's local timezone so "today"/"this week" match user expectations; Effect DateTime has no local-midnight equivalent
-const computeStartDate = (dateRange: "today" | "week" | "month") => {
-  const now = new Date();
+const computeStartDate = (dateRange: "today" | "week" | "month", now: Date) => {
   if (dateRange === "today") {
     return new Date(now.setHours(0, 0, 0, 0));
   }
@@ -102,7 +153,8 @@ const computeStartDate = (dateRange: "today" | "week" | "month") => {
 // `posts/discovery.ts`, so every experiment can explain its ranking inputs to
 // the user. Points are intentionally not part of any quality or rank score.
 // oxlint-disable-next-line effecttsgo/global-date -- discovery windows are server-local calendar-relative instants, matching the existing feed date filters
-const computeDaysAgo = (days: number) => new Date(Date.now() - days * DAY_MS);
+const computeDaysAgo = (days: number, now: Date) =>
+  new Date(now.valueOf() - days * DAY_MS);
 
 const voteCountExpression = (vote: "like" | "dislike", createdAfter?: Date) =>
   createdAfter === undefined
@@ -142,6 +194,7 @@ type PostDetailResult = {
     title: string;
     videoKey: string | null;
     videoMetadata: Schema.Schema.Type<typeof VideoMetadataSchema>;
+    version: number;
     volumeNumber: number | null;
   };
   images: string[];
@@ -173,6 +226,9 @@ export class PostsService extends Context.Service<
     readonly fetchDetail: (
       postId: PostId,
     ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
+    readonly fetchDetailVersion: (
+      postId: PostId,
+    ) => Effect.Effect<number, SqlError | PostNotFoundError>;
     readonly upload: (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) => Effect.Effect<
@@ -183,7 +239,9 @@ export class PostsService extends Context.Service<
       | UnauthorizedError
       | SessionFetchError
       | ValidationError
-      | RowParseError,
+      | RowParseError
+      | FingerprintInputError
+      | LifecycleError,
       SessionService
     >;
     readonly createVideoUploadUrl: (
@@ -192,6 +250,7 @@ export class PostsService extends Context.Service<
       {
         readonly contentType: string;
         readonly key: string;
+        readonly requiredHeaders: Readonly<Record<string, string>>;
         readonly url: string;
       },
       StorageError | UnauthorizedError | SessionFetchError,
@@ -208,7 +267,9 @@ export class PostsService extends Context.Service<
       | SqlError
       | SqlNoFirstResult
       | RowParseError
-      | ValidationError,
+      | ValidationError
+      | FingerprintInputError
+      | import("../lifecycle/lifecycle.service").LifecycleError,
       SessionService
     >;
     readonly getByTag: (
@@ -219,6 +280,7 @@ export class PostsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
+    const lifecycle = yield* LifecycleService;
     const points = yield* PointsService;
 
     const validateRelatedPost = Effect.fn("PostsService.validateRelatedPost")(
@@ -268,6 +330,7 @@ export class PostsService extends Context.Service<
       } = data;
       const parsedSearch = parseSearchQuery(data.q);
       const { excludedTags, text: q } = parsedSearch;
+      const now = new Date(yield* Clock.currentTimeMillis);
       const sessions = yield* SessionService;
 
       let query = db.selectFrom("posts").selectAll("posts");
@@ -334,7 +397,7 @@ export class PostsService extends Context.Service<
         query = query.where(
           "posts.createdAt",
           ">=",
-          computeStartDate(dateRange),
+          computeStartDate(dateRange, now),
         );
       }
 
@@ -342,7 +405,7 @@ export class PostsService extends Context.Service<
         query = query.where(numericFilterExpression(filter));
       }
 
-      const recentVotingStart = computeDaysAgo(7);
+      const recentVotingStart = computeDaysAgo(7, now);
       const recentLikes = voteCountExpression("like", recentVotingStart);
       const recentDislikes = voteCountExpression("dislike", recentVotingStart);
       const allTimeLikes = voteCountExpression("like");
@@ -352,7 +415,7 @@ export class PostsService extends Context.Service<
           query = query.where(
             "posts.createdAt",
             ">=",
-            computeDaysAgo(FOLLOWED_TAGS_WINDOW_DAYS),
+            computeDaysAgo(FOLLOWED_TAGS_WINDOW_DAYS, now),
           );
           break;
         case "most-liked":
@@ -370,7 +433,7 @@ export class PostsService extends Context.Service<
             .where(
               "posts.createdAt",
               ">=",
-              computeDaysAgo(UNDER_SEEN_WINDOW_DAYS),
+              computeDaysAgo(UNDER_SEEN_WINDOW_DAYS, now),
             )
             .where(sql<boolean>`${allTimeLikes} <= ${UNDER_SEEN_MAX_LIKES}`);
           break;
@@ -473,7 +536,7 @@ export class PostsService extends Context.Service<
 
       if (dateRange !== "all") {
         popularTagsPredicates.push((eb) =>
-          eb("posts.createdAt", ">=", computeStartDate(dateRange)),
+          eb("posts.createdAt", ">=", computeStartDate(dateRange, now)),
         );
       }
 
@@ -579,6 +642,7 @@ export class PostsService extends Context.Service<
             "posts.volumeNumber",
             "posts.sourceType",
             "posts.thumbnailKey",
+            "posts.version",
             "user.id as userId",
             "user.name as userName",
             "user.image as userImage",
@@ -652,6 +716,7 @@ export class PostsService extends Context.Service<
           source: postWithUser.source,
           thumbnailKey: postWithUser.thumbnailKey,
           title: postWithUser.title,
+          version: postWithUser.version,
           videoKey: postWithUser.videoKey,
           videoMetadata: parse(VideoMetadataSchema)(postWithUser.videoMetadata),
           seasonNumber: postWithUser.seasonNumber,
@@ -680,6 +745,69 @@ export class PostsService extends Context.Service<
       );
 
       const userId = user.id;
+      const operationKey = data.operationKey ?? crypto.randomUUID();
+      const fileDigests = [
+        ...(data.images === undefined
+          ? []
+          : yield* Effect.forEach(data.images, (file, index) =>
+              fileDigest(file).pipe(
+                Effect.map((digest) => ({ digest, slot: `image:${index}` })),
+              ),
+            )),
+        ...(data.thumbnail === undefined
+          ? []
+          : [
+              {
+                digest: yield* fileDigest(data.thumbnail),
+                slot: "thumbnail",
+              },
+            ]),
+      ];
+      const requestFingerprint = yield* operationRequestFingerprint({
+        fileDigests,
+        operationKind: "post-create",
+        payload: {
+          description: data.description,
+          relatedPostId: data.relatedPostId ?? null,
+          source: data.source ?? null,
+          tags: data.tags.map((tag) => ({
+            id: tag.id ?? null,
+            name: tag.name,
+          })),
+          title: data.title,
+          videoKey: data.videoKey ?? null,
+        },
+        userId,
+      });
+      const claim = yield* lifecycle.claimOperation({
+        kind: "post-create",
+        operationKey,
+        requestFingerprint,
+        userId,
+      });
+      if (claim.outcome === "replayed") {
+        if (claim.result?.postId === undefined) {
+          return yield* new ValidationError({
+            message: "Completed upload has no post result",
+          });
+        }
+        const replayed = yield* db.executeTakeFirstOrError(
+          db
+            .selectFrom("posts")
+            .selectAll()
+            .where("id", "=", claim.result.postId),
+        );
+        return yield* Effect.try({
+          try: () => parse(postsSelectSchema)(replayed),
+          catch: (error) =>
+            new RowParseError({
+              message: "There was an error processing the replay result",
+              cause: error,
+            }),
+        });
+      }
+
+      const claimFence = claim.fence;
 
       const {
         title,
@@ -702,10 +830,15 @@ export class PostsService extends Context.Service<
       );
 
       let finalVideoKey: string | null = null;
+      let videoObserved: {
+        contentLength: number;
+        contentType: string;
+        fingerprint: string;
+        etag: string;
+      } | null = null;
 
-      // Only keys from the caller's own staging namespace are acceptable:
-      // presigned PUTs land under `videos/_pending/{userId}/` and are
-      // promoted to their final key below, after validation.
+      // Only keys from the caller's own deterministic staging namespace are
+      // acceptable. The final object identity is derived from operationId.
       if (videoKey !== undefined) {
         if (!videoKey.startsWith(pendingVideoPrefix(userId))) {
           return yield* Effect.fail(
@@ -734,43 +867,110 @@ export class PostsService extends Context.Service<
           );
         }
 
-        // Promote the validated upload out of the staging namespace so only
-        // confirmed objects live under `videos/{userId}/`; anything abandoned
-        // in staging expires via the bucket lifecycle rule.
-        const { key: promotedVideoKey } = yield* storage
-          .finalizeVideoUpload(videoKey)
-          .pipe(
-            Effect.mapError(
-              (error) =>
-                new ValidationError({
-                  cause: error,
-                  message: `Video upload could not be promoted: ${error.message}`,
-                }),
-            ),
+        const stagingEtag = head.etag;
+        if (stagingEtag === null) {
+          return yield* Effect.fail(
+            new ValidationError({ message: "Video upload has no stable ETag" }),
           );
-        finalVideoKey = promotedVideoKey;
+        }
+        const extension = videoKey.split(".").pop() ?? "mp4";
+        finalVideoKey = videoObjectKey(claim.operationId, extension);
+        videoObserved = {
+          contentLength: head.contentLength,
+          contentType: head.contentType,
+          fingerprint: `etag:${stagingEtag}`,
+          etag: stagingEtag,
+        };
       }
 
-      // Rollback list: every stored object is deleted if any later step
-      // fails, so storage stays in sync with the DB. The promoted video key
-      // was validated before this point, images/thumbnails upload below.
       const uploadedKeys: string[] = [];
-      if (finalVideoKey !== null) {
-        uploadedKeys.push(finalVideoKey);
+      function* prepareAndReady(
+        key: string,
+        kind: "video" | "image" | "thumbnail",
+        contentLength: number,
+        contentType: string,
+        fingerprint: string,
+      ) {
+        const reservation = yield* lifecycle.reserveObject({
+          contentLength,
+          contentType,
+          fence: claimFence,
+          fingerprint,
+          key,
+          kind,
+          operationId: claim.operationId,
+          userId,
+        });
+        yield* lifecycle.markPreparing({
+          key,
+          fence: reservation.object.fence,
+          operationId: claim.operationId,
+        });
+        return reservation.object.fence;
       }
 
       const outcome = yield* Effect.gen(function* () {
         let thumbnailKey: string;
         const imageKeys: string[] = [];
 
+        if (finalVideoKey !== null && videoObserved !== null) {
+          const fence = yield* prepareAndReady(
+            finalVideoKey,
+            "video",
+            videoObserved.contentLength,
+            videoObserved.contentType,
+            videoObserved.fingerprint,
+          );
+          const copied = yield* storage.copyVideoIfMatch(
+            // SAFETY: videoKey is defined in this branch because the enclosing condition checks videoKey !== undefined.
+            videoKey as string,
+            videoObserved.etag,
+            finalVideoKey,
+          );
+          uploadedKeys.push(copied.key);
+          yield* lifecycle.markReady({
+            key: finalVideoKey,
+            fence,
+            operationId: claim.operationId,
+            observed: {
+              contentLength: videoObserved.contentLength,
+              contentType: videoObserved.contentType,
+              fingerprint: videoObserved.fingerprint,
+            },
+          });
+        }
+
         if (data.images !== undefined && data.images.length > 0) {
-          for (const image of data.images) {
-            const { key } = yield* storage.uploadImage(userId, image);
+          for (const [index, image] of data.images.entries()) {
+            const key = imageObjectKey(
+              claim.operationId,
+              index,
+              image.name.split(".").pop() ?? "png",
+            );
+            const extension = image.name.split(".").pop() ?? "png";
+            const contentType = imageContentType(extension);
+            const fingerprint = yield* fileDigest(image);
+            const fence = yield* prepareAndReady(
+              key,
+              "image",
+              image.size,
+              contentType,
+              fingerprint,
+            );
+            const stored = yield* storage.putImage(key, image);
+            yield* lifecycle.markReady({
+              key,
+              fence,
+              operationId: claim.operationId,
+              observed: {
+                contentLength: image.size,
+                contentType,
+                fingerprint: stored.fingerprint,
+              },
+            });
             uploadedKeys.push(key);
             imageKeys.push(key);
           }
-          // The first image doubles as the card thumbnail so grids and
-          // playlists keep working without knowing about post_images.
           thumbnailKey = imageKeys[0] ?? "";
         } else {
           if (data.thumbnail === undefined) {
@@ -778,9 +978,28 @@ export class PostsService extends Context.Service<
               new ValidationError({ message: "Thumbnail is required" }),
             );
           }
-          const thumb = yield* storage.uploadThumbnail(userId, data.thumbnail);
-          thumbnailKey = thumb.key;
-          uploadedKeys.push(thumbnailKey);
+          const key = thumbnailObjectKey(claim.operationId);
+          const fingerprint = yield* fileDigest(data.thumbnail);
+          const fence = yield* prepareAndReady(
+            key,
+            "thumbnail",
+            data.thumbnail.size,
+            "image/jpeg",
+            fingerprint,
+          );
+          const stored = yield* storage.putThumbnail(key, data.thumbnail);
+          yield* lifecycle.markReady({
+            key,
+            fence,
+            operationId: claim.operationId,
+            observed: {
+              contentLength: data.thumbnail.size,
+              contentType: "image/jpeg",
+              fingerprint: stored.fingerprint,
+            },
+          });
+          thumbnailKey = key;
+          uploadedKeys.push(key);
         }
 
         const newPost = yield* db.transaction().execute((trx) =>
@@ -842,6 +1061,25 @@ export class PostsService extends Context.Service<
             ];
             yield* resolveAndLinkTags(trx, postId, effectiveTags);
 
+            yield* finishOperationInTransaction(
+              trx,
+              {
+                fence: claimFence,
+                operationId: claim.operationId,
+                result: (() => {
+                  const result: MediaOperationResult = {
+                    imageKeys,
+                    postId,
+                    thumbnailKey,
+                    state: "created",
+                    ...(finalVideoKey !== null && { videoKey: finalVideoKey }),
+                  };
+                  return result;
+                })(),
+              },
+              yield* DateTime.nowAsDate,
+            );
+
             yield* Effect.logInfo("Tags linked to post").pipe(
               Effect.annotateLogs({
                 postId: String(postId),
@@ -895,7 +1133,16 @@ export class PostsService extends Context.Service<
         );
 
         const ext = data.fileName.split(".").pop() ?? "";
-        return yield* storage.presignVideoUpload(user.id, ext);
+        const key = pendingVideoObjectKey(
+          user.id,
+          data.operationKey ?? crypto.randomUUID(),
+          ext,
+        );
+        return yield* storage.presignDeterministicVideoUpload(
+          user.id,
+          key,
+          videoContentType(ext),
+        );
       },
     );
 
@@ -959,6 +1206,24 @@ export class PostsService extends Context.Service<
       };
     });
 
+    const fetchDetailVersion = Effect.fn("PostsService.fetchDetailVersion")(
+      function* (postId: PostId) {
+        const row = yield* db.executeTakeFirstOption(
+          db
+            .selectFrom("posts")
+            .select(["id", "version"])
+            .where("id", "=", postId),
+        );
+        if (Option.isNone(row)) {
+          return yield* new PostNotFoundError({
+            message: `Post ${postId} not found`,
+            postId,
+          });
+        }
+        return row.value.version;
+      },
+    );
+
     const update = Effect.fn("PostsService.update")(function* (
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
     ) {
@@ -968,6 +1233,20 @@ export class PostsService extends Context.Service<
       );
 
       const { postId, title, description, source, relatedPostId, tags } = data;
+      const requestFingerprint = yield* operationRequestFingerprint({
+        fileDigests: [],
+        operationKind: "post-update",
+        payload: {
+          description,
+          postId,
+          relatedPostId: relatedPostId ?? null,
+          source: source ?? null,
+          tags: tags.map((tag) => ({ id: tag.id ?? null, name: tag.name })),
+          title,
+        },
+        userId: user.id,
+        version: data.expectedVersion,
+      });
 
       yield* Effect.logInfo("Post update started").pipe(
         Effect.annotateLogs({
@@ -999,14 +1278,41 @@ export class PostsService extends Context.Service<
 
       yield* validateRelatedPost({ postId, relatedPostId });
 
+      const claim = yield* lifecycle.claimOperation({
+        kind: "post-update",
+        operationKey: data.operationKey,
+        requestFingerprint,
+        userId: user.id,
+      });
+
+      if (claim.outcome === "replayed") {
+        const replayedPost = yield* db.executeTakeFirstOrError(
+          db.selectFrom("posts").selectAll().where("id", "=", postId),
+        );
+        return yield* Effect.try({
+          try: () => parse(postsSelectSchema)(replayedPost),
+          catch: (error) =>
+            new RowParseError({
+              message: "There was an error processing the replay result",
+              cause: error,
+            }),
+        });
+      }
+
+      const changes: PostUpdateChanges = { description, title };
+      if (relatedPostId !== undefined) changes.relatedPostId = relatedPostId;
+      if (source !== undefined) changes.source = source;
+
       const updatedPost = yield* db.transaction().execute((trx) =>
         Effect.gen(function* () {
+          yield* updatePostWithVersionInTransaction(trx, {
+            changes,
+            expectedVersion: data.expectedVersion,
+            ownerUserId: user.id,
+            postId,
+          });
           const updatedPost = yield* trx.executeTakeFirstOrError(
-            trx
-              .updateTable("posts")
-              .set({ description, relatedPostId, source, title })
-              .where("id", "=", postId)
-              .returningAll(),
+            trx.selectFrom("posts").selectAll().where("id", "=", postId),
           );
 
           // Tag links are rebuilt wholesale: delete-then-relink. Reserved media
@@ -1033,6 +1339,16 @@ export class PostsService extends Context.Service<
             { name: imageRow ? "image" : "video" },
           ]);
 
+          yield* finishOperationInTransaction(
+            trx,
+            {
+              fence: claim.fence,
+              operationId: claim.operationId,
+              result: { postId, state: "updated" },
+            },
+            yield* DateTime.nowAsDate,
+          );
+
           return updatedPost;
         }),
       );
@@ -1058,6 +1374,7 @@ export class PostsService extends Context.Service<
       fetchRandomPost,
       fetchSeriesHub,
       fetchDetail,
+      fetchDetailVersion,
       upload,
       createVideoUploadUrl,
       getByTag,
@@ -1085,6 +1402,13 @@ export class PostsService extends Context.Service<
       return yield* svc.fetchDetail(postId);
     },
   );
+
+  static readonly fetchDetailVersion = Effect.fn(
+    "PostsService.fetchDetailVersion",
+  )(function* (postId: PostId) {
+    const svc = yield* PostsService;
+    return yield* svc.fetchDetailVersion(postId);
+  });
 
   static readonly fetchSeriesHub = Effect.fn("PostsService.fetchSeriesHub")(
     function* (data: Schema.Schema.Type<typeof seriesHubSchema>) {
@@ -1184,7 +1508,10 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
 export const PostsServiceLive = Layer.effect(
   PostsService,
   PostsService.make,
-).pipe(Layer.provideMerge(PointsServiceLive));
+).pipe(
+  Layer.provideMerge(PointsServiceLive),
+  Layer.provideMerge(LifecycleServiceLive),
+);
 
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator(parseStrict(searchPostsBaseSchema))
@@ -1211,6 +1538,17 @@ export const fetchSeriesHub = createServerFn({ strict: { output: false } })
       PostsServiceLive,
       baseLayerFactories.db,
     )(PostsService.fetchSeriesHub),
+  );
+
+export const fetchPostDetailVersion = createServerFn({
+  strict: { output: false },
+})
+  .validator(parse(Schema.Number))
+  .handler(
+    createHandler(
+      PostsServiceLive,
+      baseLayerFactories.db,
+    )((postId: number) => PostsService.fetchDetailVersion(asPostId(postId))),
   );
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })

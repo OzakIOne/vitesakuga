@@ -2,6 +2,13 @@ import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { makeStorageKeyTracker } from "../db/test-utils";
+import { imageContentType, videoContentType } from "./content-type";
+import {
+  imageObjectKey,
+  pendingVideoObjectKey,
+  thumbnailObjectKey,
+  videoObjectKey,
+} from "./keys";
 import { StorageModule } from "./storage.module";
 import type { StorageError } from "./storage.module";
 
@@ -43,6 +50,20 @@ beforeEach(() => {
 afterEach(() => tracked.tracker.cleanup(), 60_000);
 
 describe("StorageModule", () => {
+  describe("canonical content types", () => {
+    it.each([
+      [".MP4", "video/mp4"],
+      [" MKV ", "video/x-matroska"],
+      [".PNG", "image/png"],
+      [" JPEG ", "image/jpeg"],
+    ] as const)("maps %s to %s", (extension, expected) => {
+      const actual = expected.startsWith("video/")
+        ? videoContentType(extension)
+        : imageContentType(extension);
+      expect(actual).toBe(expected);
+    });
+  });
+
   describe("uploadVideo", () => {
     it("returns a key with videos/ prefix and user ID", async () => {
       const file = new File(["test content"], "clip.mp4", {
@@ -318,5 +339,171 @@ describe("StorageModule", () => {
       expect(new Set(keys)).toEqual(new Set(uploaded));
       expect(keys).toHaveLength(totalCount);
     }, 60_000);
+  });
+
+  describe("deterministic lifecycle primitives", () => {
+    it("hashes image bytes before a non-overwriting PUT and safely replays it", async () => {
+      const key = imageObjectKey("storage-operation", 0, "png");
+      const file = new File(["image bytes"], "image.png", {
+        type: "image/png",
+      });
+      const first = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.putImage(key, file);
+        }),
+      );
+      const second = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.putImage(key, file);
+        }),
+      );
+      expect(first).toEqual(second);
+      expect(first.fingerprint).toMatch(/^sha256:[0-9a-f]{64}$/);
+      const head = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(key);
+        }),
+      );
+      expect(head.metadataFingerprint).toBe(first.fingerprint);
+      expect(head.etag).toBe(first.etag);
+      expect(head.contentLength).toBe("image bytes".length);
+      expect(head.contentType).toBe("image/png");
+
+      const conflict = await runTest(
+        Effect.flip(
+          Effect.gen(function* () {
+            const storage = yield* StorageModule;
+            return yield* storage.putImage(
+              key,
+              new File(["different bytes"], "image.png", { type: "image/png" }),
+            );
+          }),
+        ),
+      );
+      expect(conflict._tag).toBe("StorageError");
+      expect(conflict.operation).toBe("upload");
+    });
+
+    it("hashes thumbnails and keeps the server content type", async () => {
+      const key = thumbnailObjectKey("storage-thumbnail-operation");
+      const result = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.putThumbnail(
+            key,
+            new File(["thumbnail bytes"], "thumb.png", { type: "text/html" }),
+          );
+        }),
+      );
+      const head = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(key);
+        }),
+      );
+      expect(result.fingerprint).toMatch(/^sha256:[0-9a-f]{64}$/);
+      expect(head.metadataFingerprint).toBe(result.fingerprint);
+      expect(head.contentType).toBe("image/jpeg");
+    });
+
+    it("keeps equal content fingerprints while operation-derived keys differ", async () => {
+      const file = new File(["same image"], "image.png", { type: "image/png" });
+      const first = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.putImage(
+            imageObjectKey("same-content-operation-a", 0, "png"),
+            file,
+          );
+        }),
+      );
+      const second = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.putImage(
+            imageObjectKey("same-content-operation-b", 0, "png"),
+            file,
+          );
+        }),
+      );
+      expect(first.fingerprint).toBe(second.fingerprint);
+      expect(first.key).not.toBe(second.key);
+    });
+
+    it("presigns only deterministic staging keys and promotes with a pinned ETag", async () => {
+      const sourceKey = pendingVideoObjectKey(
+        "storage-video-user",
+        "storage-video-operation",
+        "mp4",
+      );
+      const staged = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.presignDeterministicVideoUpload(
+            "storage-video-user",
+            sourceKey,
+            "video/mp4",
+          );
+        }),
+      );
+      expect(staged.requiredHeaders).toEqual({
+        "content-type": "video/mp4",
+        "if-none-match": "*",
+      });
+      const response = await fetch(staged.url, {
+        body: new File(["video bytes"], "clip.mp4", { type: "video/mp4" }),
+        headers: staged.requiredHeaders,
+        method: "PUT",
+      });
+      expect(response.ok).toBe(true);
+
+      const sourceHead = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(sourceKey);
+        }),
+      );
+      expect(sourceHead.etag).not.toBeNull();
+      const finalKey = videoObjectKey("storage-video-operation", "mp4");
+      const copied = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.copyVideoIfMatch(
+            sourceKey,
+            sourceHead.etag!,
+            finalKey,
+          );
+        }),
+      );
+      const replay = await runTest(
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.copyVideoIfMatch(
+            sourceKey,
+            sourceHead.etag!,
+            finalKey,
+          );
+        }),
+      );
+      expect(copied.key).toBe(finalKey);
+      expect(replay).toEqual(copied);
+
+      const invalid = await runTest(
+        Effect.flip(
+          Effect.gen(function* () {
+            const storage = yield* StorageModule;
+            return yield* storage.presignDeterministicVideoUpload(
+              "storage-video-user",
+              "media/video/not-a-staging-key/0000.mp4",
+              "video/mp4",
+            );
+          }),
+        ),
+      );
+      expect(invalid.operation).toBe("presign");
+    });
   });
 });

@@ -63,6 +63,9 @@ const PAYLOAD: PostEditPayload = {
   title: "Improved title",
 };
 
+const approve = (editId: number, operationKey = crypto.randomUUID()) =>
+  PostEditsService.approve({ editId, operationKey });
+
 describe("PostEditsService.propose", () => {
   it("lets an uploader suggest an edit on someone else's post", async () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);
@@ -181,7 +184,7 @@ describe("PostEditsService.approve", () => {
     ctx.mockGetSession.mockResolvedValueOnce(
       makeAuthSession({ id: "mod-1", role: "moderator" }),
     );
-    const result = await ctx.runEffect(PostEditsService.approve(editId));
+    const result = await ctx.runEffect(approve(editId));
     expect(result.applied).toBe(true);
 
     const post = await db
@@ -243,16 +246,14 @@ describe("PostEditsService.approve", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "peer-b", role: "uploader" }),
     );
-    const firstVote = await ctx.runEffect(PostEditsService.approve(editId));
+    const firstVote = await ctx.runEffect(approve(editId));
     expect(firstVote.applied).toBe(false);
 
     // The suggester cannot vote on their own suggestion.
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "peer-a", role: "uploader" }),
     );
-    const selfError = await ctx.runEffect(
-      Effect.flip(PostEditsService.approve(editId)),
-    );
+    const selfError = await ctx.runEffect(Effect.flip(approve(editId)));
     expect(selfError._tag).toBe("ForbiddenError");
     expect(selfError.message).toBe(
       "You cannot approve or reject your own edit suggestion — wait for peer review.",
@@ -263,7 +264,7 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "peer-c", role: "uploader" }),
     );
     await insertUser(db, { id: "peer-c", role: "uploader" });
-    const secondVote = await ctx.runEffect(PostEditsService.approve(editId));
+    const secondVote = await ctx.runEffect(approve(editId));
     expect(secondVote.applied).toBe(true);
 
     const appliedEdit = await editRow(db, editId);
@@ -285,9 +286,7 @@ describe("PostEditsService.approve", () => {
     );
     ctx.mockGetSession.mockResolvedValue(null);
 
-    const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.approve(editId)),
-    );
+    const error = await ctx.runEffect(Effect.flip(approve(editId)));
     expect(error._tag).toBe("UnauthorizedError");
     expect(error.message).toBe(
       "You must be logged in to review edit suggestions",
@@ -303,9 +302,7 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "mod-x", role: "moderator" }),
     );
 
-    const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.approve(9999)),
-    );
+    const error = await ctx.runEffect(Effect.flip(approve(9999)));
     expect(error._tag).toBe("EditNotFoundError");
     if (error._tag !== "EditNotFoundError") {
       throw new Error(`Expected EditNotFoundError, got ${error._tag}`);
@@ -338,9 +335,7 @@ describe("PostEditsService.approve", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-9", role: "moderator" }),
     );
-    const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.approve(editId)),
-    );
+    const error = await ctx.runEffect(Effect.flip(approve(editId)));
     expect(error._tag).toBe("EditNotFoundError");
     if (error._tag !== "EditNotFoundError") {
       throw new Error(`Expected EditNotFoundError, got ${error._tag}`);
@@ -372,7 +367,7 @@ describe("PostEditsService.approve", () => {
       ctx.mockGetSession.mockResolvedValue(
         makeAuthSession({ id: "mod-6", role: "moderator" }),
       );
-      applyResult = await ctx.runEffect(PostEditsService.approve(editId));
+      applyResult = await ctx.runEffect(approve(editId));
     } finally {
       await sql`ALTER TABLE points_ledger ADD COLUMN points integer NOT NULL DEFAULT 0`.execute(
         db,
@@ -420,21 +415,19 @@ describe("PostEditsService.approve", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "peer-7", role: "uploader" }),
     );
-    const firstVote = await ctx.runEffect(PostEditsService.approve(editId));
+    const firstVote = await ctx.runEffect(approve(editId));
     expect(firstVote.applied).toBe(false);
 
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-7", role: "moderator" }),
     );
-    const applied = await ctx.runEffect(PostEditsService.approve(editId));
+    const applied = await ctx.runEffect(approve(editId));
     expect(applied.applied).toBe(true);
 
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "peer-7", role: "uploader" }),
     );
-    const lateError = await ctx.runEffect(
-      Effect.flip(PostEditsService.approve(editId)),
-    );
+    const lateError = await ctx.runEffect(Effect.flip(approve(editId)));
     expect(lateError._tag).toBe("EditAlreadyResolvedError");
     if (lateError._tag !== "EditAlreadyResolvedError") {
       throw new Error(
@@ -468,8 +461,8 @@ describe("PostEditsService.approve", () => {
         makeAuthSession({ id: "peer-b", role: "uploader" }),
       );
     const results = await Promise.all([
-      ctx.runEffect(PostEditsService.approve(editId)),
-      ctx.runEffect(PostEditsService.approve(editId)),
+      ctx.runEffect(approve(editId)),
+      ctx.runEffect(approve(editId)),
     ]);
     expect(results.filter((result) => result.applied)).toHaveLength(1);
     expect((await editRow(ctx.db, editId)).status).toBe("approved");
@@ -503,7 +496,7 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "owner-decision", role: "novice" }),
     );
     const results = await Promise.all([
-      ctx.runEffect(Effect.exit(PostEditsService.approve(editId))),
+      ctx.runEffect(Effect.exit(approve(editId))),
       ctx.runEffect(Effect.exit(PostEditsService.reject(editId))),
     ]);
     expect(results.filter((result) => result._tag === "Success")).toHaveLength(
@@ -540,9 +533,7 @@ describe("PostEditsService.approve", () => {
       ctx.mockGetSession.mockResolvedValueOnce(
         makeAuthSession({ id: "owner-rollback", role: "novice" }),
       );
-      expect(
-        (await ctx.runFailure(PostEditsService.approve(editId)))._tag,
-      ).toBe("SqlError");
+      expect((await ctx.runFailure(approve(editId)))._tag).toBe("SqlError");
       expect((await editRow(ctx.db, editId)).status).toBe("pending");
       const post = await ctx.db
         .selectFrom("posts")
@@ -586,7 +577,7 @@ describe("PostEditsService.approve", () => {
       ctx.mockGetSession.mockResolvedValueOnce(
         makeAuthSession({ id: "owner-notify", role: "novice" }),
       );
-      expect(await ctx.runEffect(PostEditsService.approve(editId))).toEqual({
+      expect(await ctx.runEffect(approve(editId))).toEqual({
         applied: true,
       });
       expect((await editRow(ctx.db, editId)).status).toBe("approved");
@@ -621,7 +612,7 @@ describe("PostEditsService.approve", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "admin-3", role: "admin" }),
     );
-    await ctx.runEffect(PostEditsService.approve(editId));
+    await ctx.runEffect(approve(editId));
 
     const error = await ctx.runEffect(
       Effect.flip(PostEditsService.reject(editId)),
@@ -720,7 +711,7 @@ describe("PostEditsService.listForPost", () => {
       makeAuthSession({ id: "second-voter", role: "uploader" }),
     );
     await insertUser(db, { id: "second-voter", role: "uploader" });
-    await ctx.runEffect(PostEditsService.approve(editId));
+    await ctx.runEffect(approve(editId));
 
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "third-voter", role: "uploader" }),

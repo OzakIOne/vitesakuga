@@ -1,5 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
+import {
+  Clock,
+  Context,
+  DateTime,
+  Effect,
+  Layer,
+  Option,
+  Schema,
+} from "effect";
 
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { isStaffRole } from "../auth/roles";
@@ -23,6 +31,13 @@ import {
   ValidationError,
 } from "../errors";
 import { type PostId, asPostId } from "../ids";
+import { operationRequestFingerprint } from "../lifecycle/fingerprint";
+import {
+  LifecycleService,
+  LifecycleServiceLive,
+  finishOperationInTransaction,
+  updatePostWithVersionInTransaction,
+} from "../lifecycle/lifecycle.service";
 import {
   NotificationsService,
   NotificationsServiceLive,
@@ -77,6 +92,7 @@ export class PostEditsService extends Context.Service<
 
     /** Proposes field changes on someone else's post (uploader-only). */
     readonly propose: (input: {
+      operationKey?: string;
       payload: PostEditPayload;
       postId: number;
     }) => Effect.Effect<
@@ -87,7 +103,9 @@ export class PostEditsService extends Context.Service<
       | SqlError
       | SqlNoFirstResult
       | UnauthorizedError
-      | ValidationError,
+      | ValidationError
+      | import("../lifecycle/fingerprint").FingerprintInputError
+      | import("../lifecycle/lifecycle.service").LifecycleError,
       SessionService
     >;
 
@@ -95,9 +113,10 @@ export class PostEditsService extends Context.Service<
      * Votes on a pending suggestion. Staff and the post owner apply it
      * immediately; otherwise a second uploader approval applies it.
      */
-    readonly approve: (
-      editId: number,
-    ) => Effect.Effect<
+    readonly approve: (input: {
+      editId: number;
+      operationKey: string;
+    }) => Effect.Effect<
       { applied: boolean },
       | EditAlreadyResolvedError
       | EditNotFoundError
@@ -105,7 +124,9 @@ export class PostEditsService extends Context.Service<
       | PostNotFoundError
       | SessionFetchError
       | SqlError
-      | UnauthorizedError,
+      | UnauthorizedError
+      | import("../lifecycle/fingerprint").FingerprintInputError
+      | import("../lifecycle/lifecycle.service").LifecycleError,
       SessionService
     >;
 
@@ -132,6 +153,7 @@ export class PostEditsService extends Context.Service<
 >()("PostEditsService", {
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
+    const lifecycle = yield* LifecycleService;
     const points = yield* PointsService;
     const notifications = yield* NotificationsService;
 
@@ -160,6 +182,7 @@ export class PostEditsService extends Context.Service<
         trx
           .selectFrom("post_edits")
           .select([
+            "basePostVersion",
             "createdAt",
             "id",
             "payload",
@@ -248,6 +271,7 @@ export class PostEditsService extends Context.Service<
       });
 
     const propose = Effect.fn("PostEditsService.propose")(function* (input: {
+      operationKey?: string;
       payload: PostEditPayload;
       postId: number;
     }) {
@@ -279,6 +303,33 @@ export class PostEditsService extends Context.Service<
       }
 
       const post = postOption.value;
+      const operationKey =
+        input.operationKey ?? `post-${input.postId}-${user.id}`;
+      const requestFingerprint = yield* operationRequestFingerprint({
+        fileDigests: [],
+        operationKind: "edit-apply",
+        payload: {
+          payload: input.payload,
+          postId: input.postId,
+          phase: "propose",
+        },
+        userId: user.id,
+        version: post.version,
+      });
+      const claim = yield* lifecycle.claimOperation({
+        kind: "edit-apply",
+        operationKey: `propose:${operationKey}`,
+        requestFingerprint,
+        userId: user.id,
+      });
+      if (claim.outcome === "replayed") {
+        if (claim.result?.postId !== input.postId) {
+          return yield* new ValidationError({
+            message: "Lifecycle replay did not contain a valid edit result",
+          });
+        }
+        return { editId: claim.result.state ? Number(claim.result.state) : 0 };
+      }
       const previousPayload = Schema.decodeUnknownSync(
         postEditPreviousPayloadSchema,
       )({
@@ -291,17 +342,32 @@ export class PostEditsService extends Context.Service<
         title: post.title,
         volumeNumber: post.volumeNumber,
       });
-      const created = yield* db.executeTakeFirstOrError(
-        db
-          .insertInto("post_edits")
-          .values({
-            payload: input.payload,
-            postId: input.postId,
-            previous_payload: previousPayload,
-            status: "pending",
-            suggestedBy: user.id,
-          })
-          .returning("id"),
+      const created = yield* db.transaction().execute((trx) =>
+        Effect.gen(function* () {
+          const created = yield* trx.executeTakeFirstOrError(
+            trx
+              .insertInto("post_edits")
+              .values({
+                basePostVersion: post.version,
+                payload: input.payload,
+                postId: input.postId,
+                previous_payload: previousPayload,
+                status: "pending",
+                suggestedBy: user.id,
+              })
+              .returning("id"),
+          );
+          yield* finishOperationInTransaction(
+            trx,
+            {
+              fence: claim.fence,
+              operationId: claim.operationId,
+              result: { postId: input.postId, state: String(created.id) },
+            },
+            new Date(yield* Clock.currentTimeMillis),
+          );
+          return created;
+        }),
       );
 
       yield* Effect.logInfo("Edit suggestion proposed").pipe(
@@ -314,10 +380,27 @@ export class PostEditsService extends Context.Service<
       return { editId: created.id };
     });
 
-    const approve = Effect.fn("PostEditsService.approve")(function* (
-      editId: number,
-    ) {
+    const approve = Effect.fn("PostEditsService.approve")(function* (input: {
+      editId: number;
+      operationKey: string;
+    }) {
+      const editId = input.editId;
       const user = yield* requireSignedIn();
+      const claimFingerprint = yield* operationRequestFingerprint({
+        fileDigests: [],
+        operationKind: "edit-apply",
+        payload: { editId, phase: "approve" },
+        userId: user.id,
+      });
+      const claim = yield* lifecycle.claimOperation({
+        kind: "edit-apply",
+        operationKey: input.operationKey,
+        requestFingerprint: claimFingerprint,
+        userId: user.id,
+      });
+      if (claim.outcome === "replayed") {
+        return { applied: claim.result?.state === "applied" };
+      }
       // Lock before reading status or votes; approve and reject serialize on
       // the same suggestion. Content and decision commit together.
       const decision = yield* db.transaction().execute((trx) =>
@@ -381,12 +464,11 @@ export class PostEditsService extends Context.Service<
           }
           const now = yield* DateTime.now;
           const resolvedAt = DateTime.toDate(now);
-          yield* trx.execute(
-            trx
-              .updateTable("posts")
-              .set(patch)
-              .where("id", "=", context.edit.postId),
-          );
+          yield* updatePostWithVersionInTransaction(trx, {
+            changes: patch,
+            expectedVersion: context.edit.basePostVersion,
+            postId: context.edit.postId,
+          });
           yield* trx.execute(
             trx
               .updateTable("post_edits")
@@ -397,6 +479,15 @@ export class PostEditsService extends Context.Service<
               })
               .where("id", "=", editId)
               .where("status", "=", "pending"),
+          );
+          yield* finishOperationInTransaction(
+            trx,
+            {
+              fence: claim.fence,
+              operationId: claim.operationId,
+              result: { postId: context.edit.postId, state: "applied" },
+            },
+            resolvedAt,
           );
 
           return { applied: true as const, context };
@@ -530,18 +621,22 @@ export class PostEditsService extends Context.Service<
   }),
 }) {
   static readonly propose = Effect.fn("PostEditsService.propose")(
-    function* (input: { payload: PostEditPayload; postId: number }) {
+    function* (input: {
+      operationKey?: string;
+      payload: PostEditPayload;
+      postId: number;
+    }) {
       const svc = yield* PostEditsService;
       return yield* svc.propose(input);
     },
   );
 
-  static readonly approve = Effect.fn("PostEditsService.approve")(function* (
-    editId: number,
-  ) {
-    const svc = yield* PostEditsService;
-    return yield* svc.approve(editId);
-  });
+  static readonly approve = Effect.fn("PostEditsService.approve")(
+    function* (input: { editId: number; operationKey: string }) {
+      const svc = yield* PostEditsService;
+      return yield* svc.approve(input);
+    },
+  );
 
   static readonly reject = Effect.fn("PostEditsService.reject")(function* (
     editId: number,
@@ -564,6 +659,7 @@ export const PostEditsServiceLive = Layer.effect(
 ).pipe(
   Layer.provideMerge(PointsServiceLive),
   Layer.provideMerge(NotificationsServiceLive),
+  Layer.provideMerge(LifecycleServiceLive),
 );
 
 export const proposeEdit = createServerFn({ method: "POST" })
@@ -581,7 +677,9 @@ export const approveEdit = createServerFn({ method: "POST" })
     createHandler(
       PostEditsServiceLive,
       baseLayerFactories.auth,
-    )((input: { editId: number }) => PostEditsService.approve(input.editId)),
+    )((input: { editId: number; operationKey: string }) =>
+      PostEditsService.approve(input),
+    ),
   );
 
 export const rejectEdit = createServerFn({ method: "POST" })

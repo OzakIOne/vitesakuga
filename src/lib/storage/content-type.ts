@@ -15,8 +15,11 @@ const VIDEO_CONTENT_TYPES = [
 
 const VIDEO_CONTENT_TYPE_LOOKUP = new Map<string, string>(VIDEO_CONTENT_TYPES);
 
+const canonicalExtension = (ext: string): string =>
+  ext.trim().replace(/^\./, "").toLowerCase();
+
 export const videoContentType = (ext: string): string =>
-  VIDEO_CONTENT_TYPE_LOOKUP.get(ext.toLowerCase()) ??
+  VIDEO_CONTENT_TYPE_LOOKUP.get(canonicalExtension(ext)) ??
   "application/octet-stream";
 
 const IMAGE_CONTENT_TYPES = [
@@ -30,5 +33,5 @@ const IMAGE_CONTENT_TYPES = [
 const IMAGE_CONTENT_TYPE_LOOKUP = new Map<string, string>(IMAGE_CONTENT_TYPES);
 
 export const imageContentType = (ext: string): string =>
-  IMAGE_CONTENT_TYPE_LOOKUP.get(ext.toLowerCase()) ??
+  IMAGE_CONTENT_TYPE_LOOKUP.get(canonicalExtension(ext)) ??
   "application/octet-stream";

@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 
 import { PostId } from "../../ids";
 import type { userInsertSchema, userSelectSchema } from "./auth.schema";
@@ -34,6 +34,9 @@ export const postsSelectSchema = Schema.Struct({
   thumbnailKey: Schema.String,
   title: Schema.String,
   userId: Schema.String,
+  // The migration defaults legacy rows to zero; the decoder default keeps
+  // old driver fixtures/read paths compatible during the rollout.
+  version: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(0))),
   videoKey: Schema.NullOr(Schema.String),
   videoMetadata: Schema.Json,
   volumeNumber: Schema.NullOr(Schema.Number),
@@ -53,6 +56,7 @@ export const postsInsertSchema = Schema.Struct({
   thumbnailKey: Schema.String,
   title: Schema.String,
   userId: Schema.String,
+  version: Schema.optionalKey(Schema.Number),
   videoKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
   videoMetadata: Schema.Json,
   volumeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),

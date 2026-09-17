@@ -13,8 +13,10 @@ This document outlines the conventions and best practices for database interacti
 ## Kysely Client
 
 - Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over the pool from `pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`)
-- `DB` type derived from Drizzle schema definitions via `Kyselify`
+- `DB` type derived from Drizzle schema definitions via `Kyselify`; `posts.version` and `post_edits.basePostVersion` support optimistic concurrency checks
 - Effect wrapper via `KyselyDB` context tag in `src/lib/db/context.ts` — all domain services inject this
+- `media_operations` and `media_objects` form the durable lifecycle registry. Mutations claim a user-scoped operation key, persist a request fingerprint and fence, and replay terminal results. Object deletion uses durable `deleting`/`deleted` tombstones; remote storage I/O happens only after the database transition commits.
+- Lifecycle integration lives in `src/lib/lifecycle/lifecycle.service.ts`; use its transaction helpers to combine post/reference writes with operation completion and version CAS in one short database transaction. Never hold that transaction open during R2/RustFS calls.
 - EffectKysely utility (`src/lib/effect/effect.utils.ts`) adapts Kysely queries into Effect programs with `SqlError` and `SqlNoFirstResult` tagged errors
 
 ## Drizzle Schemas
@@ -23,7 +25,7 @@ This document outlines the conventions and best practices for database interacti
 - Barrel re-export from `src/lib/db/schema/index.ts`
 - Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
-- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `tagFollows`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, and `videoRevisions`
+- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `tagFollows`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, `videoRevisions`, `mediaOperations`, and `mediaObjects`
 
 ## Effect Layer Pattern
 

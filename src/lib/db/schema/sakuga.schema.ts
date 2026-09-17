@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  check,
   index,
   integer,
   json,
@@ -79,6 +81,7 @@ export const posts = pgTable(
     userId: text()
       .references(() => user.id)
       .notNull(),
+    version: integer().notNull().default(0),
     videoKey: text(),
     videoMetadata: json().$type<string>().notNull(),
     volumeNumber: integer(),
@@ -350,6 +353,7 @@ export const notifications = pgTable(
 export const postEdits = pgTable(
   "post_edits",
   {
+    basePostVersion: integer().notNull().default(0),
     createdAt: timestamp().defaultNow().notNull(),
     id: serial().primaryKey(),
     payload: json().$type<string>().notNull(),
@@ -407,4 +411,116 @@ export const videoRevisions = pgTable(
     videoMetadata: json().$type<unknown>().notNull(),
   },
   (t) => [index("video_revisions_post_idx").on(t.postId)],
+);
+
+// Durable coordination for media writes. Operation keys are scoped to the
+// authenticated user; requestFingerprint is a server-computed canonical
+// request identity, never a raw payload. Rows are intentionally retained so a
+// retry can replay the original result after a response loss.
+export type MediaOperationKind =
+  | "post-create"
+  | "post-update"
+  | "video-replace"
+  | "video-restore"
+  | "edit-apply";
+
+export type MediaOperationStatus =
+  | "in-progress"
+  | "completed"
+  | "conflict"
+  | "failed"
+  | "unknown";
+
+export type MediaOperationResult = Readonly<{
+  readonly postId?: number;
+  readonly videoKey?: string;
+  readonly imageKeys?: ReadonlyArray<string>;
+  readonly thumbnailKey?: string;
+  readonly state?: string;
+}>;
+
+export type MediaObjectKind = "video" | "image" | "thumbnail";
+
+export type MediaObjectState =
+  | "reserved"
+  | "preparing"
+  | "ready"
+  | "unknown"
+  | "deleting"
+  | "deleted";
+
+export const mediaOperations = pgTable(
+  "media_operations",
+  {
+    completedAt: timestamp(),
+    createdAt: timestamp().defaultNow().notNull(),
+    failureCode: text(),
+    fence: integer().notNull().default(1),
+    id: text().primaryKey(),
+    kind: text().$type<MediaOperationKind>().notNull(),
+    operationKey: text().notNull(),
+    requestFingerprint: text().notNull(),
+    result: json().$type<MediaOperationResult | null>(),
+    status: text()
+      .$type<MediaOperationStatus>()
+      .notNull()
+      .default("in-progress"),
+    updatedAt: timestamp().defaultNow().notNull(),
+    userId: text()
+      .references(() => user.id)
+      .notNull(),
+  },
+  (t) => [
+    check(
+      "media_operations_status_check",
+      sql`"status" IN ('in-progress', 'completed', 'conflict', 'failed', 'unknown')`,
+    ),
+    check("media_operations_fence_check", sql`"fence" > 0`),
+    uniqueIndex("media_operations_user_key_unique").on(
+      t.userId,
+      t.operationKey,
+    ),
+    index("media_operations_status_updated_idx").on(t.status, t.updatedAt),
+    index("media_operations_user_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+// Object tombstones are never deleted. In particular, this table deliberately
+// has no cascading foreign keys: account anonymisation must not erase the
+// durable evidence that a physical key is permanently unavailable.
+export const mediaObjects = pgTable(
+  "media_objects",
+  {
+    contentLength: integer().notNull(),
+    contentType: text().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    deletingCommittedAt: timestamp(),
+    fence: integer().notNull(),
+    fingerprint: text().notNull(),
+    key: text().primaryKey(),
+    kind: text().$type<MediaObjectKind>().notNull(),
+    operationId: text()
+      .references(() => mediaOperations.id)
+      .notNull(),
+    state: text().$type<MediaObjectState>().notNull().default("reserved"),
+    updatedAt: timestamp().defaultNow().notNull(),
+    userId: text()
+      .references(() => user.id)
+      .notNull(),
+  },
+  (t) => [
+    check(
+      "media_objects_kind_check",
+      sql`"kind" IN ('video', 'image', 'thumbnail')`,
+    ),
+    check(
+      "media_objects_state_check",
+      sql`"state" IN ('reserved', 'preparing', 'ready', 'unknown', 'deleting', 'deleted')`,
+    ),
+    check("media_objects_fence_check", sql`"fence" > 0`),
+    check("media_objects_content_length_check", sql`"contentLength" >= 0`),
+    index("media_objects_operation_idx").on(t.operationId),
+    index("media_objects_state_updated_idx").on(t.state, t.updatedAt),
+    index("media_objects_user_idx").on(t.userId, t.createdAt),
+  ],
 );

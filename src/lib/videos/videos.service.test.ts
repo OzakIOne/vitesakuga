@@ -8,7 +8,7 @@ import {
   makeServiceTestLayer,
   type ServiceTestContext,
 } from "../db/test-utils";
-import { PENDING_VIDEOS_PREFIX } from "../storage/keys";
+import { mediaObjectKey, PENDING_VIDEOS_PREFIX } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { REVISION_RETENTION_DAYS, DAY_MS } from "./videos.config";
 import { VideosService, VideosServiceLive } from "./videos.service";
@@ -76,6 +76,37 @@ const stageVideo = async (
   return staged.key;
 };
 
+const insertReadyVideoObject = async (
+  db: Kysely<DB>,
+  args: { key: string; operationId: string; userId: string },
+) => {
+  await db
+    .insertInto("media_operations")
+    .values({
+      id: args.operationId,
+      kind: "video-replace",
+      operationKey: `seed-${args.operationId}`,
+      requestFingerprint: `seed-${args.operationId}`,
+      status: "completed",
+      userId: args.userId,
+    })
+    .execute();
+  await db
+    .insertInto("media_objects")
+    .values({
+      contentLength: 1,
+      contentType: "video/mp4",
+      fence: 1,
+      fingerprint: "sha256:" + "a".repeat(64),
+      key: args.key,
+      kind: "video",
+      operationId: args.operationId,
+      state: "ready",
+      userId: args.userId,
+    })
+    .execute();
+};
+
 describe("VideosService.replace", () => {
   it("swaps the video, archives the old one and keeps likes/comments", async () => {
     const ctx = await makeServiceTestLayer(VideosServiceLive);
@@ -109,7 +140,12 @@ describe("VideosService.replace", () => {
     const pendingVideoKey = await stageVideo(ctx, "author-1");
 
     const result = await ctx.runEffect(
-      VideosService.replace({ pendingVideoKey, postId }),
+      VideosService.replace({
+        expectedVersion: 0,
+        operationKey: `replace-${postId}`,
+        pendingVideoKey,
+        postId,
+      }),
     );
 
     // Post row keeps its id/likes/comments; only the key changed.
@@ -161,6 +197,8 @@ describe("VideosService.replace", () => {
     const foreignKeyError = await ctx.runEffect(
       Effect.flip(
         VideosService.replace({
+          expectedVersion: 0,
+          operationKey: "foreign",
           pendingVideoKey: "videos/_pending/someone-else/evil.mp4",
           postId,
         }),
@@ -175,6 +213,8 @@ describe("VideosService.replace", () => {
     const intruderError = await ctx.runEffect(
       Effect.flip(
         VideosService.replace({
+          expectedVersion: 0,
+          operationKey: "intruder",
           pendingVideoKey: "videos/_pending/intruder-2/nope.mp4",
           postId,
         }),
@@ -201,9 +241,14 @@ describe("VideosService.replace", () => {
     const pendingVideoKey = await stageVideo(ctx, "mod-3");
 
     const result = await ctx.runEffect(
-      VideosService.replace({ pendingVideoKey, postId }),
+      VideosService.replace({
+        expectedVersion: 0,
+        operationKey: `replace-${postId}`,
+        pendingVideoKey,
+        postId,
+      }),
     );
-    expect(result.videoKey).toMatch(/^videos\/mod-3\//);
+    expect(result.videoKey).toMatch(/^media\/video\//);
   });
 });
 
@@ -226,11 +271,21 @@ describe("VideosService.listRevisions", () => {
     );
     const pendingVideoKeyA = await stageVideo(ctx, "mod-4", "a.mp4");
     await ctx.runEffect(
-      VideosService.replace({ pendingVideoKey: pendingVideoKeyA, postId }),
+      VideosService.replace({
+        expectedVersion: 0,
+        operationKey: `replace-a-${postId}`,
+        pendingVideoKey: pendingVideoKeyA,
+        postId,
+      }),
     );
     const pendingVideoKeyB = await stageVideo(ctx, "mod-4", "b.mp4");
     await ctx.runEffect(
-      VideosService.replace({ pendingVideoKey: pendingVideoKeyB, postId }),
+      VideosService.replace({
+        expectedVersion: 1,
+        operationKey: `replace-b-${postId}`,
+        pendingVideoKey: pendingVideoKeyB,
+        postId,
+      }),
     );
 
     mockGetSession.mockResolvedValue(
@@ -248,7 +303,7 @@ describe("VideosService.listRevisions", () => {
     expect(revisions).toHaveLength(2);
     // Newest first: the second replacement archived the first staged video,
     // the oldest entry holds the post's original object.
-    expect(revisions[0]!.videoKey).toMatch(/^videos\/mod-4\//);
+    expect(revisions[0]!.videoKey).toMatch(/^media\/video\//);
     expect(revisions[1]!.videoKey).toBe("videos/author-4/v.mp4");
     expect(
       new Date(revisions[0]!.createdAt) >= new Date(revisions[1]!.createdAt),
@@ -263,31 +318,56 @@ describe("VideosService.restore", () => {
     const { db, mockGetSession } = ctx;
     await insertUser(db, { id: "author-5", role: "novice" });
     await insertUser(db, { id: "mod-5", role: "moderator" });
-    const originalVideoKey = await ctx.runEffect(
+    const originalVideoKey = mediaObjectKey(
+      "11111111-1111-4111-8111-111111111111",
+      "video",
+      0,
+      "mp4",
+    );
+    const sourceKey = await stageVideo(ctx, "author-5", "original.mp4");
+    await ctx.runEffect(
       Effect.gen(function* () {
         const storage = yield* StorageModule;
-        return yield* storage.uploadVideo(
-          "author-5",
-          new File(["original video bytes"], "original.mp4", {
-            type: "video/mp4",
-          }),
+        const head = yield* storage.headFile(sourceKey);
+        yield* storage.copyVideoIfMatch(
+          sourceKey,
+          head.etag!,
+          originalVideoKey,
         );
       }),
     );
-    const postId = await insertVideoPost(db, "author-5", originalVideoKey.key);
+    await insertReadyVideoObject(db, {
+      key: originalVideoKey,
+      operationId: "11111111-1111-4111-8111-111111111111",
+      userId: "author-5",
+    });
+    const postId = await insertVideoPost(db, "author-5", originalVideoKey);
 
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-5", role: "moderator" }),
     );
     const pendingVideoKey = await stageVideo(ctx, "mod-5");
-    await ctx.runEffect(VideosService.replace({ pendingVideoKey, postId }));
+    await ctx.runEffect(
+      VideosService.replace({
+        expectedVersion: 0,
+        operationKey: `replace-${postId}`,
+        pendingVideoKey,
+        postId,
+      }),
+    );
 
     // Author cannot restore (novice).
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "author-5", role: "novice" }),
     );
     const restoreError = await ctx.runEffect(
-      Effect.flip(VideosService.restore(1)),
+      Effect.flip(
+        VideosService.restore({
+          expectedVersion: 1,
+          operationKey: "restore-forbidden",
+          revisionId: 1,
+        }),
+      ),
     );
     expect(restoreError._tag).toBe("ForbiddenError");
 
@@ -295,7 +375,13 @@ describe("VideosService.restore", () => {
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-5", role: "moderator" }),
     );
-    const result = await ctx.runEffect(VideosService.restore(1));
+    const result = await ctx.runEffect(
+      VideosService.restore({
+        expectedVersion: 1,
+        operationKey: "restore-original",
+        revisionId: 1,
+      }),
+    );
     expect(result.restored).toBe(true);
 
     const post = await db
@@ -303,7 +389,7 @@ describe("VideosService.restore", () => {
       .select("videoKey")
       .where("id", "=", postId)
       .executeTakeFirstOrThrow();
-    expect(post.videoKey).toBe(originalVideoKey.key);
+    expect(post.videoKey).toBe(originalVideoKey);
 
     // The upgraded video got archived in turn → still 2 revisions.
     const revisions = await db
@@ -325,12 +411,23 @@ describe("VideosService.restore", () => {
       "author-6",
       "videos/author-6/current.mp4",
     );
+    const missingKey = mediaObjectKey(
+      "66666666-6666-4666-8666-666666666666",
+      "video",
+      0,
+      "mp4",
+    );
+    await insertReadyVideoObject(db, {
+      key: missingKey,
+      operationId: "66666666-6666-4666-8666-666666666666",
+      userId: "author-6",
+    });
     const revision = await db
       .insertInto("video_revisions")
       .values({
         postId,
         replacedBy: "mod-6",
-        videoKey: "videos/author-6/missing.mp4",
+        videoKey: missingKey,
         videoMetadata: "{}",
       })
       .returning("id")
@@ -340,7 +437,13 @@ describe("VideosService.restore", () => {
       makeAuthSession({ id: "mod-6", role: "moderator" }),
     );
     const error = await ctx.runEffect(
-      Effect.flip(VideosService.restore(revision.id)),
+      Effect.flip(
+        VideosService.restore({
+          expectedVersion: 0,
+          operationKey: "restore-missing",
+          revisionId: revision.id,
+        }),
+      ),
     );
 
     expect(error._tag).toBe("StorageError");
@@ -474,7 +577,7 @@ describe("VideosService.gc", () => {
     expect(preview.orphanKeys).toEqual([orphanKey]);
   });
 
-  it("run purges expired rows without reports and keeps reported ones", async () => {
+  it("previews legacy objects but never auto-deletes or purges them", async () => {
     // Orphan analysis lists the whole `videos/` namespace; parallel workers
     // share the bucket, so the listing is scoped to keys this test created —
     // otherwise gcRun would observe (and delete) other workers' objects.
@@ -574,23 +677,19 @@ describe("VideosService.gc", () => {
     );
     const result = await ctx.runEffect(VideosService.gcRun());
 
-    // Exactly one seeded revision was purgeable (clean, expired, unreported)
-    // and one real orphan object was in scope; nothing else is.
-    expect(result.purgedRevisions).toBe(1);
-    expect(result.deletedKeys).toBe(2);
+    // Legacy revisions and legacy orphan objects are previewed but never
+    // auto-deleted.
+    expect(result.purgedRevisions).toBe(0);
+    expect(result.deletedKeys).toBe(0);
 
-    // Both deleted keys were real objects and are really gone from RustFS.
-    for (const key of [purgeTargetKey, orphanKey]) {
+    for (const key of [purgeTargetKey, keptKey, orphanKey]) {
       const head = await ctx.runEffect(
-        Effect.flip(
-          Effect.gen(function* () {
-            const storage = yield* StorageModule;
-            return yield* storage.headFile(key);
-          }),
-        ),
+        Effect.gen(function* () {
+          const storage = yield* StorageModule;
+          return yield* storage.headFile(key);
+        }),
       );
-      expect(head._tag).toBe("StorageError");
-      expect(head.operation).toBe("head");
+      expect(Number(head.contentLength)).toBeGreaterThan(0);
     }
 
     const kept = await ctx.runEffect(
@@ -604,7 +703,7 @@ describe("VideosService.gc", () => {
       .selectFrom("video_revisions")
       .selectAll()
       .execute();
-    expect(remaining.map((r) => r.videoKey)).toEqual([keptKey]);
+    expect(remaining.map((r) => r.videoKey)).toEqual([purgeTargetKey, keptKey]);
   });
 
   it("does not purge a revision when deleting its object fails", async () => {

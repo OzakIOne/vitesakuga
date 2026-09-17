@@ -150,10 +150,14 @@ describe("updatePostInputSchema", () => {
     source: undefined,
     tags: [],
     title: "qwe",
+    expectedVersion: 0,
+    operationKey: "test-update",
   };
 
   it("should validate correct inputs", () => {
     const input = {
+      expectedVersion: 0,
+      operationKey: "test-update",
       description: "description",
       postId: 1,
       relatedPostId: 2,

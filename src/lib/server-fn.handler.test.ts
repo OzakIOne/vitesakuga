@@ -42,6 +42,18 @@ describe("server-fn failure boundary", () => {
   // NOTE: the boundary tests intentionally use `rejects` — they assert the
   // WIRE contract (what the promise rethrows across the TanStack Start
   // transport), where an `Effect.flip` runner does not apply.
+  it("propagates an aborted request signal to the Effect runner", async () => {
+    const controller = new AbortController();
+    const handler = createHandler(Layer.empty, () =>
+      Promise.resolve(Layer.empty),
+    )((_data: string) => Effect.never);
+
+    controller.abort();
+    await expect(
+      handler({ data: "x" }, controller.signal),
+    ).rejects.toBeDefined();
+  });
+
   it("passes successful results through untouched", async () => {
     const handler = makeHandler(Effect.succeed("payload:abc"));
     await expect(handler({ data: "abc" })).resolves.toBe("payload:abc");

@@ -122,6 +122,7 @@ type PostsTable = {
   thumbnailKey: string;
   title: string;
   userId: string;
+  version: Generated<number>;
   videoKey: string | null;
   videoMetadata: string;
   volumeNumber: number | null;
@@ -226,6 +227,7 @@ type VideoRevisionsTable = {
 };
 
 type PostEditsTable = {
+  basePostVersion: Generated<number>;
   id: Generated<number>;
   postId: number;
   suggestedBy: string;
@@ -255,6 +257,53 @@ type PostEditsTable = {
   resolvedAt: Date | null;
   resolvedBy: string | null;
   createdAt: Generated<Date>;
+};
+
+type MediaOperationsTable = {
+  completedAt: Date | null;
+  createdAt: Generated<Date>;
+  failureCode: string | null;
+  fence: Generated<number>;
+  id: string;
+  kind:
+    | "post-create"
+    | "post-update"
+    | "video-replace"
+    | "video-restore"
+    | "edit-apply";
+  operationKey: string;
+  requestFingerprint: string;
+  result: {
+    readonly postId?: number;
+    readonly videoKey?: string;
+    readonly imageKeys?: ReadonlyArray<string>;
+    readonly thumbnailKey?: string;
+    readonly state?: string;
+  } | null;
+  status: "in-progress" | "completed" | "conflict" | "failed" | "unknown";
+  updatedAt: Generated<Date>;
+  userId: string;
+};
+
+type MediaObjectsTable = {
+  contentLength: number;
+  contentType: string;
+  createdAt: Generated<Date>;
+  deletingCommittedAt: Date | null;
+  fence: number;
+  fingerprint: string;
+  key: string;
+  kind: "video" | "image" | "thumbnail";
+  operationId: string;
+  state:
+    | "reserved"
+    | "preparing"
+    | "ready"
+    | "unknown"
+    | "deleting"
+    | "deleted";
+  updatedAt: Generated<Date>;
+  userId: string;
 };
 
 type PostEditApprovalsTable = {
@@ -300,6 +349,8 @@ export type DB = {
   video_revisions: VideoRevisionsTable;
   promotion_reviews: PromotionReviewsTable;
   notifications: NotificationsTable;
+  media_operations: MediaOperationsTable;
+  media_objects: MediaObjectsTable;
   tags: TagsTable;
   playlists: PlaylistsTable;
   saved_searches: SavedSearchesTable;

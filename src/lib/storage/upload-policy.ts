@@ -11,4 +11,7 @@ export const isUploadedVideoValid = (
 ): boolean =>
   head.contentLength > 0 &&
   head.contentLength <= MAX_VIDEO_SIZE_BYTES &&
-  head.contentType === expectedContentType;
+  head.contentType === expectedContentType &&
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- UploadedFileHead is the storage adapter boundary; validate the nullable provider ETag before use.
+  typeof head.etag === "string" &&
+  head.etag.length > 0;

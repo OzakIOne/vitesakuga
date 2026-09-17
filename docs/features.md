@@ -80,6 +80,8 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - Génération locale de vignettes vidéo, sélection de thumbnail et métadonnées via mediainfo.js. Les images enregistrent leurs dimensions et utilisent la première image comme thumbnail.
 - Métadonnées : titre, description, URL source, saison/épisode (vidéo) ou volume/chapitre (image), type de source, tags, post lié.
 - Les références de post lié doivent désigner un post existant différent du post en cours. Les identifiants de tags sont vérifiés côté serveur contre leur nom avant association.
+- Les mutations rejouables conservent une clé d'opération stable par intention utilisateur. Une réponse réseau perdue peut donc être rejouée sans créer de doublon ; une demande différente avec la même clé est rejetée.
+- Les mises à jour de posts, suggestions approuvées et remplacements/restaurations vidéo utilisent une version attendue. Une modification concurrente obsolète produit un conflit rechargeable au lieu d'écraser silencieusement le contenu récent.
 - Brouillon persistant côté client (`useUploadDraft`).
 - Vidéos : URL présignée S3 → PUT direct vers Cloudflare R2 (prod) ou RustFS (local), namespace `videos/_pending/{userId}/`, puis validation et promotion côté serveur.
 - Images et thumbnails transitent par le serveur et sont validées par extension, taille et type de contenu.

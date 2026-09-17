@@ -8,6 +8,7 @@ import {
 import type { Tag } from "../posts/posts.schema";
 
 export type UploadDraftData = {
+  operationKey: string;
   title: string;
   description: string;
   source: string | undefined;
@@ -29,9 +30,11 @@ type UseUploadDraftReturn = {
 const DRAFT_STORAGE_KEY = "upload-draft";
 
 export function useUploadDraft(): UseUploadDraftReturn {
-  const [draft] = useState<UploadDraftData | null>(() =>
-    readStoredDraft<UploadDraftData>(DRAFT_STORAGE_KEY),
-  );
+  const [draft] = useState<UploadDraftData | null>(() => {
+    const stored = readStoredDraft<UploadDraftData>(DRAFT_STORAGE_KEY);
+    if (stored?.operationKey) return stored;
+    return stored ? { ...stored, operationKey: crypto.randomUUID() } : null;
+  });
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -40,6 +43,7 @@ export function useUploadDraft(): UseUploadDraftReturn {
     clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
       writeStoredDraft(DRAFT_STORAGE_KEY, {
+        operationKey: values.operationKey,
         description: values.description ?? "",
         relatedPostId: values.relatedPostId,
         source: values.source,

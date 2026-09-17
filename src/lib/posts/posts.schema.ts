@@ -96,6 +96,15 @@ const RelatedPostId = PostId.pipe(
   Schema.check(Schema.isGreaterThanOrEqualTo(0)),
 );
 
+const uploadOperationKey = Schema.String.pipe(
+  Schema.check(
+    Schema.isPattern(/^[A-Za-z0-9_-]{1,128}$/, {
+      message:
+        "Operation key must contain only letters, numbers, underscores or dashes",
+    }),
+  ),
+);
+
 const VIDEO_EXTENSION_PATTERN = /\.(mp4|avi|mov|wmv|flv|mkv)$/i;
 
 const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp)$/i;
@@ -166,6 +175,7 @@ const PostSourceUploadSchema = Schema.optional(
 );
 
 const SharedUploadFields = {
+  operationKey: Schema.optionalKey(uploadOperationKey),
   animeTitle: Schema.optional(sanitizeString(Schema.String)),
   // Chapter/volume identify manga image posts; season/episode identify
   // anime video posts. Both stay optional either way.
@@ -232,10 +242,18 @@ export const createVideoUploadUrlSchema = Schema.Struct({
       }),
     ),
   ),
+  operationKey: Schema.optionalKey(uploadOperationKey),
 });
 
 export const updatePostInputSchema = Schema.Struct({
   description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  expectedVersion: Schema.Number.pipe(
+    Schema.check(Schema.isGreaterThanOrEqualTo(0)),
+  ),
+  operationKey: Schema.String.pipe(
+    Schema.check(Schema.isMinLength(1)),
+    Schema.check(Schema.isMaxLength(200)),
+  ),
   postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
   relatedPostId: Schema.optional(RelatedPostId),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),

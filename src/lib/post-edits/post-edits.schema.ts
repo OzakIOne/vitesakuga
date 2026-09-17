@@ -77,11 +77,17 @@ export const decodePostEditPayload = (raw: {
 }): PostEditPayload => Schema.decodeUnknownSync(postEditPayloadSchema)(raw);
 
 export const proposeEditSchema = Schema.Struct({
+  operationKey: Schema.String,
   payload: postEditPayloadSchema,
   postId: PostId,
 });
 
-export const editIdSchema = Schema.Struct({ editId: Schema.Number });
+export const editIdSchema = Schema.Struct({
+  editId: Schema.Number,
+  operationKey: Schema.String,
+});
+
+export type PostEditOperationInput = Schema.Schema.Type<typeof editIdSchema>;
 
 export const fetchPostEditsSchema = Schema.Struct({
   postId: PostId,

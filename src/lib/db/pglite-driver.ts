@@ -17,10 +17,50 @@ import type {
   TransactionSettings,
 } from "kysely";
 
+import { SqlError, type SqlTransactionOutcome } from "../effect/effect.utils";
+
+type TransactionHook = () => void | Promise<void>;
+
+export type PGliteDriverHooks = {
+  /** Targeted fault injection for transaction-driver tests. */
+  readonly executeQuery?: (
+    compiledQuery: CompiledQuery,
+  ) => void | Promise<void>;
+  readonly beginTransaction?: TransactionHook;
+  readonly commitTransaction?: TransactionHook;
+  readonly rollbackTransaction?: TransactionHook;
+  readonly releaseConnection?: (
+    outcome: SqlTransactionOutcome | undefined,
+  ) => void | Promise<void>;
+};
+
+type TransactionState = {
+  commitAttempted: boolean;
+  outcome: SqlTransactionOutcome;
+};
+
+const makeTransactionError = (
+  cause: unknown,
+  stage: "begin" | "commit" | "rollback" | "release",
+  outcome: SqlTransactionOutcome,
+) =>
+  new SqlError({
+    cause,
+    message: `[transaction:${stage}] ${
+      cause instanceof Error ? cause.message : String(cause)
+    }`,
+    outcome,
+    stage,
+  });
+
 class PGliteConnection implements DatabaseConnection {
-  constructor(private pg: PGlite) {}
+  constructor(
+    private pg: PGlite,
+    private executeQueryHook?: PGliteDriverHooks["executeQuery"],
+  ) {}
 
   async executeQuery<R>(compiledQuery: CompiledQuery): Promise<QueryResult<R>> {
+    await this.executeQueryHook?.(compiledQuery);
     const result = await this.pg.query(compiledQuery.sql, [
       ...compiledQuery.parameters,
     ]);
@@ -40,12 +80,15 @@ class PGliteConnection implements DatabaseConnection {
 
 class PGliteDriver implements Driver {
   #pg: PGlite;
+  #hooks: PGliteDriverHooks;
   #connection: PGliteConnection | null = null;
   #available: Promise<void> = Promise.resolve();
   #release: (() => void) | undefined;
+  #transactions = new WeakMap<DatabaseConnection, TransactionState>();
 
-  constructor(pg: PGlite) {
+  constructor(pg: PGlite, hooks: PGliteDriverHooks = {}) {
     this.#pg = pg;
+    this.#hooks = hooks;
   }
 
   async init(): Promise<void> {}
@@ -59,30 +102,90 @@ class PGliteDriver implements Driver {
     await previous;
     this.#release = next.resolve;
     if (!this.#connection) {
-      this.#connection = new PGliteConnection(this.#pg);
+      this.#connection = new PGliteConnection(
+        this.#pg,
+        this.#hooks.executeQuery,
+      );
     }
     return this.#connection;
   }
 
   async beginTransaction(
-    _connection: DatabaseConnection,
+    connection: DatabaseConnection,
     settings: TransactionSettings,
   ): Promise<void> {
-    validateTransactionSettings(settings);
-    await this.#pg.query("BEGIN");
+    try {
+      validateTransactionSettings(settings);
+      const state: TransactionState = {
+        commitAttempted: false,
+        outcome: "unknown",
+      };
+      this.#transactions.set(connection, state);
+      await this.#hooks.beginTransaction?.();
+      await this.#pg.query("BEGIN");
+      state.outcome = "not-committed";
+    } catch (cause) {
+      const state = this.#transactions.get(connection);
+      if (state) {
+        state.outcome = "unknown";
+      }
+      throw makeTransactionError(cause, "begin", "unknown");
+    }
   }
 
-  async commitTransaction(_connection: DatabaseConnection): Promise<void> {
-    await this.#pg.query("COMMIT");
+  async commitTransaction(connection: DatabaseConnection): Promise<void> {
+    const state = this.#transactions.get(connection);
+    if (state) {
+      state.commitAttempted = true;
+    }
+    try {
+      await this.#hooks.commitTransaction?.();
+      await this.#pg.query("COMMIT");
+      if (state) {
+        state.outcome = "commit-confirmed";
+      }
+    } catch (cause) {
+      if (state) {
+        state.outcome = "unknown";
+      }
+      throw makeTransactionError(cause, "commit", "unknown");
+    }
   }
 
-  async rollbackTransaction(_connection: DatabaseConnection): Promise<void> {
-    await this.#pg.query("ROLLBACK");
+  async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
+    const state = this.#transactions.get(connection);
+    try {
+      await this.#hooks.rollbackTransaction?.();
+      await this.#pg.query("ROLLBACK");
+      if (state) {
+        // A rejected COMMIT may have reached the server. A subsequent
+        // successful ROLLBACK cannot prove that the commit was absent.
+        state.outcome = state.commitAttempted
+          ? "unknown"
+          : "rollback-confirmed";
+      }
+    } catch (cause) {
+      if (state) {
+        state.outcome = "unknown";
+      }
+      throw makeTransactionError(cause, "rollback", "unknown");
+    }
   }
 
-  async releaseConnection(_connection: DatabaseConnection): Promise<void> {
-    this.#release?.();
+  async releaseConnection(connection: DatabaseConnection): Promise<void> {
+    const release = this.#release;
+    const outcome = this.#transactions.get(connection)?.outcome;
     this.#release = undefined;
+    try {
+      await this.#hooks.releaseConnection?.(outcome);
+    } catch (cause) {
+      throw makeTransactionError(cause, "release", outcome ?? "unknown");
+    } finally {
+      // Re-open the single-connection gate only after release cleanup has
+      // settled, even when that cleanup rejects.
+      release?.();
+      this.#transactions.delete(connection);
+    }
   }
 
   async destroy(): Promise<void> {
@@ -92,13 +195,15 @@ class PGliteDriver implements Driver {
 
 export class PGliteDialect implements Dialect {
   #pg: PGlite;
+  #hooks: PGliteDriverHooks;
 
-  constructor(pg: PGlite) {
+  constructor(pg: PGlite, hooks: PGliteDriverHooks = {}) {
     this.#pg = pg;
+    this.#hooks = hooks;
   }
 
   createDriver(): Driver {
-    return new PGliteDriver(this.#pg);
+    return new PGliteDriver(this.#pg, this.#hooks);
   }
 
   createQueryCompiler(): QueryCompiler {

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 
 import { requirePermission, type PolicyError } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
@@ -95,10 +95,10 @@ export class PromotionsService extends Context.Service<
         forbiddenMessage: "Only moderators can review promotion candidates.",
       });
 
-    const isOldEnough = (createdAt: Date): boolean =>
+    const isOldEnough = (createdAt: Date, now: number): boolean =>
       // SAFETY: createdAt comes from Postgres timestamps; valueOf() is finite
       // for every row we insert, so subtraction cannot produce NaN here.
-      Date.now() - new Date(createdAt).valueOf() >= MIN_ACCOUNT_AGE_MS;
+      now - new Date(createdAt).valueOf() >= MIN_ACCOUNT_AGE_MS;
 
     const reviewsForUsers = (userIds: ReadonlyArray<string>) =>
       db.execute(
@@ -143,6 +143,7 @@ export class PromotionsService extends Context.Service<
     const queue = Effect.fn("PromotionsService.queue")(function* () {
       yield* gateStaff();
 
+      const now = yield* Clock.currentTimeMillis;
       const rows: ReadonlyArray<QueueRow> = yield* db.execute(
         db
           .selectFrom("user")
@@ -162,7 +163,7 @@ export class PromotionsService extends Context.Service<
       const eligible = rows.filter(
         (row) =>
           Number(row.totalPoints ?? 0) >= PROMOTION_RULES.minPoints &&
-          isOldEnough(row.createdAt),
+          isOldEnough(row.createdAt, now),
       );
       if (eligible.length === 0) {
         return [];

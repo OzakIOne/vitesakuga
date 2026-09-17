@@ -1,4 +1,3 @@
-// oxlint-disable effecttsgo/async-function -- this module implements Kysely's `Driver` and `DatabaseConnection` interfaces, whose methods must return Promises that Kysely awaits; converting them to Effect would break interface conformance
 import {
   Pool as NeonPool,
   type NeonQueryFunction,
@@ -20,9 +19,28 @@ import {
   type QueryResult,
 } from "kysely";
 
+// oxlint-disable effecttsgo/async-function -- this module implements Kysely's `Driver` and `DatabaseConnection` interfaces, whose methods must return Promises that Kysely awaits; converting them to Effect would break interface conformance
+import { SqlError, type SqlTransactionOutcome } from "../effect/effect.utils";
+
 type NeonClient = NeonQueryFunction<false, true>;
 
 type WriteCommand = "INSERT" | "UPDATE" | "DELETE" | "MERGE";
+
+type TransactionStage = "begin" | "commit" | "rollback" | "release";
+
+const makeTransactionError = (
+  cause: unknown,
+  stage: TransactionStage,
+  outcome: SqlTransactionOutcome,
+) =>
+  new SqlError({
+    cause,
+    message: `[transaction:${stage}] ${
+      cause instanceof Error ? cause.message : String(cause)
+    }`,
+    outcome,
+    stage,
+  });
 
 const isWriteCommand = (command: string | undefined): command is WriteCommand =>
   command === "INSERT" ||
@@ -62,6 +80,7 @@ class NeonTransactionConnection implements DatabaseConnection {
   readonly #connectionString: string;
   #pool: NeonPool | null = null;
   #client: PoolClient | null = null;
+  #outcome: SqlTransactionOutcome = "unknown";
 
   constructor(neonClient: NeonClient, connectionString: string) {
     this.#neon = neonClient;
@@ -94,16 +113,23 @@ class NeonTransactionConnection implements DatabaseConnection {
 
   async beginTransaction(): Promise<void> {
     const pool = new NeonPool({ connectionString: this.#connectionString });
-    let client: PoolClient;
+    let client: PoolClient | undefined;
     try {
       client = await pool.connect();
       await client.query("BEGIN");
-    } catch (error) {
+    } catch (cause) {
+      try {
+        client?.release();
+      } catch {
+        // The BEGIN failure is already the primary error; pool shutdown is the
+        // final best-effort cleanup for a client whose state is unknown.
+      }
       await pool.end().catch(() => undefined);
-      throw error;
+      throw makeTransactionError(cause, "begin", "unknown");
     }
     this.#pool = pool;
     this.#client = client;
+    this.#outcome = "not-committed";
   }
 
   async commitTransaction(): Promise<void> {
@@ -117,17 +143,44 @@ class NeonTransactionConnection implements DatabaseConnection {
   async #finish(sqlCommand: "COMMIT" | "ROLLBACK"): Promise<void> {
     const client = this.#client;
     const pool = this.#pool;
-    this.#client = null;
-    this.#pool = null;
     if (!client || !pool) return;
+
+    let commandFailure: SqlError | undefined;
     try {
       await client.query(sqlCommand);
+      this.#outcome =
+        sqlCommand === "COMMIT" ? "commit-confirmed" : "rollback-confirmed";
+    } catch (cause) {
+      // A rejected COMMIT may have reached the server. Never report that as a
+      // rollback or as a safe retry: the transaction outcome is unknown.
+      this.#outcome = "unknown";
+      commandFailure = makeTransactionError(
+        cause,
+        sqlCommand === "COMMIT" ? "commit" : "rollback",
+        "unknown",
+      );
     } finally {
-      try {
-        client.release();
-      } finally {
-        await pool.end().catch(() => undefined);
-      }
+      this.#client = null;
+      this.#pool = null;
+    }
+
+    let releaseFailure: unknown;
+    try {
+      client.release();
+    } catch (cause) {
+      releaseFailure = cause;
+    }
+    try {
+      await pool.end();
+    } catch (cause) {
+      releaseFailure ??= cause;
+    }
+
+    if (commandFailure) {
+      throw commandFailure;
+    }
+    if (releaseFailure !== undefined) {
+      throw makeTransactionError(releaseFailure, "release", this.#outcome);
     }
   }
 }

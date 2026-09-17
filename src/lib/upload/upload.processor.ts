@@ -11,12 +11,15 @@ export type GeneratedThumbnail = {
 
 export const getImageDimensions = async (
   file: File,
+  signal?: AbortSignal,
 ): Promise<{ width: number; height: number }> => {
+  throwIfAborted(signal);
   const image = new Image();
   const url = URL.createObjectURL(file);
   try {
     image.src = url;
     await image.decode();
+    throwIfAborted(signal);
     return { width: image.naturalWidth, height: image.naturalHeight };
   } finally {
     URL.revokeObjectURL(url);
@@ -63,12 +66,26 @@ export function buildFormData<T extends object>(values: T) {
   return formData;
 }
 
+export function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error
+      ? signal.reason
+      : new DOMException("The operation was aborted", "AbortError");
+  }
+}
+
 export async function analyzeVideo(
   file: File,
   mediaInfo: MediaInfo<"JSON">,
+  signal?: AbortSignal,
 ): Promise<VideoMetadata> {
+  throwIfAborted(signal);
   const makeReadChunkFn = makeReadChunk(file);
-  const rawResult = await mediaInfo.analyzeData(file.size, makeReadChunkFn);
+  const readChunk = async (chunkSize: number, offset: number) => {
+    throwIfAborted(signal);
+    return makeReadChunkFn(chunkSize, offset);
+  };
+  const rawResult = await mediaInfo.analyzeData(file.size, readChunk);
   const parsed: MediaInfoResult = JSON.parse(rawResult);
   const videoTrack = parsed.media?.track.find((el) => el["@type"] === "Video");
   return parse(VideoMetadataSchema)(videoTrack);
@@ -77,7 +94,9 @@ export async function analyzeVideo(
 export async function generateThumbnails(
   videoFile: File,
   timestamps: number[],
+  signal?: AbortSignal,
 ): Promise<GeneratedThumbnail[]> {
+  throwIfAborted(signal);
   const { Input, ALL_FORMATS, BlobSource, CanvasSink } =
     await import("mediabunny");
   const input = new Input({
@@ -101,6 +120,7 @@ export async function generateThumbnails(
   const results: GeneratedThumbnail[] = [];
 
   for await (const result of sink.canvasesAtTimestamps(timestamps)) {
+    throwIfAborted(signal);
     if (!result) {
       continue;
     }
@@ -137,7 +157,9 @@ export async function generateThumbnails(
 
 export async function generateAutoThumbnails(
   videoFile: File,
+  signal?: AbortSignal,
 ): Promise<GeneratedThumbnail[]> {
+  throwIfAborted(signal);
   const { Input, ALL_FORMATS, BlobSource } = await import("mediabunny");
   const input = new Input({
     formats: ALL_FORMATS,
@@ -164,5 +186,5 @@ export async function generateAutoThumbnails(
     (t) => startTimestamp + t * (endTimestamp - startTimestamp),
   );
 
-  return generateThumbnails(videoFile, timestamps);
+  return generateThumbnails(videoFile, timestamps, signal);
 }

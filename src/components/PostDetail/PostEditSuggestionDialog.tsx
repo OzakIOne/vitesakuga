@@ -123,7 +123,10 @@ export function PostEditSuggestionDialog({
       setError((current) => current ?? "Make at least one change first.");
       return;
     }
-    submitSuggestion.mutate(payload, { onSuccess: onCancel });
+    submitSuggestion.mutate(
+      { operationKey: crypto.randomUUID(), payload },
+      { onSuccess: onCancel },
+    );
   };
 
   return (

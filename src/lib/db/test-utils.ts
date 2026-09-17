@@ -169,11 +169,27 @@ const journalStorageService = (
       storage
         .uploadVideo(userId, file)
         .pipe(Effect.tap(({ key }) => recordCreated(key))),
+    putImage: (key, file) =>
+      storage
+        .putImage(key, file)
+        .pipe(Effect.tap(({ key: createdKey }) => recordCreated(createdKey))),
+    putThumbnail: (key, file) =>
+      storage
+        .putThumbnail(key, file)
+        .pipe(Effect.tap(({ key: createdKey }) => recordCreated(createdKey))),
     // A presigned PUT writes bytes straight from the test to RustFS without
     // passing through this module, so the staged key is journaled here.
     presignVideoUpload: (userId, ext) =>
       storage
         .presignVideoUpload(userId, ext)
+        .pipe(Effect.tap(({ key }) => recordCreated(key))),
+    presignDeterministicVideoUpload: (userId, key, contentType) =>
+      storage
+        .presignDeterministicVideoUpload(userId, key, contentType)
+        .pipe(Effect.tap(({ key: createdKey }) => recordCreated(createdKey))),
+    copyVideoIfMatch: (sourceKey, sourceEtag, finalKey) =>
+      storage
+        .copyVideoIfMatch(sourceKey, sourceEtag, finalKey)
         .pipe(Effect.tap(({ key }) => recordCreated(key))),
     finalizeVideoUpload: (pendingKey) =>
       storage

@@ -99,6 +99,12 @@ The optional base-layer factory is not a third `createHandler` argument; it is s
 - Some simple validators are inlined (e.g., `parse(Schema.Number)(input)` for single params)
 - FormData uploads require manual parsing before Effect Schema validation (see `uploadPost` in `posts.service.ts`)
 
+## Durable mutation contracts
+
+Mutations that can be retried after an uncertain network response carry a client-owned `operationKey`. The caller generates it once per user intent and keeps it in the mutation variables so React Query retries reuse the same key. The server derives a canonical request fingerprint after authentication and validation; a reused key with different input is a conflict, while a terminal operation replays its stored result.
+
+Post edits, video replacement/restoration, and post updates also use optimistic concurrency. The server compares `expectedVersion` (or the persisted edit base version) atomically with `posts.version` and increments it in the same transaction as related rows. Stale writes return a typed conflict instead of silently overwriting newer content. Database lifecycle transitions and operation completion must use the helpers in `src/lib/lifecycle/lifecycle.service.ts`; storage calls remain outside the database transaction.
+
 ## Auth Middleware
 
 - Auth-protected mutations use `baseLayerFactories.auth` from `src/lib/server-fn.handler.ts`, which resolves `makeAuthLayer` from `src/lib/db/layer-factories.server`

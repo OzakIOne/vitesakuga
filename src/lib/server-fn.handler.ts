@@ -97,7 +97,7 @@ export const createHandler =
   >(
     effect: (data: TParams) => Effect.Effect<A, E, R>,
   ) =>
-  ({ data }: { data: TParams }): Promise<A> => {
+  ({ data }: { data: TParams }, signal?: AbortSignal): Promise<A> => {
     // Generated up front so every failure — typed, defect or construction —
     // can be correlated with the generic error message the client receives.
     // oxlint-disable-next-line effecttsgo/crypto-random-uuid -- debug IDs must be unpredictable and collision-free per isolate; Effect's Random is Math.random-based (the storage adapter keeps the same trade-off for object keys)
@@ -114,8 +114,11 @@ export const createHandler =
       return yield* effect(data).pipe(Effect.provide(layer));
     });
 
+    const requestSignal = signal ?? new AbortController().signal;
+
     return Effect.runPromise(
       guarded.pipe(
+        Effect.interruptible,
         // Defects bypass the failure channel entirely; fold them into it as
         // plain Errors so the single logging + sanitization below applies.
         Effect.catchDefect((defect) =>
@@ -132,6 +135,7 @@ export const createHandler =
         ),
         Effect.mapError((error) => toClientSafeError(error, debugId)),
       ),
+      { signal: requestSignal },
     );
   };
 

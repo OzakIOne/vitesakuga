@@ -7,6 +7,8 @@ import { isUploadedVideoValid } from "./upload-policy";
 const validHead: UploadedFileHead = {
   contentLength: 1024,
   contentType: "video/mp4",
+  etag: '"video-etag"',
+  metadataFingerprint: null,
 };
 
 describe("isUploadedVideoValid", () => {
@@ -36,5 +38,11 @@ describe("isUploadedVideoValid", () => {
 
   it("rejects a content type that does not match the signed extension", () => {
     expect(isUploadedVideoValid(validHead, "text/html")).toBe(false);
+  });
+
+  it("rejects a HEAD response without a real store ETag", () => {
+    expect(
+      isUploadedVideoValid({ ...validHead, etag: null }, "video/mp4"),
+    ).toBe(false);
   });
 });

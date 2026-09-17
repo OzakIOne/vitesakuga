@@ -10,8 +10,10 @@ export function useProposeEdit(postId: number) {
   return useMutationWithFeedback({
     errorFallback: "Could not submit your edit suggestion.",
     errorTitle: "Edit suggestion failed",
-    mutationFn: async (payload: PostEditPayload) =>
-      proposeEdit({ data: { payload, postId } }),
+    mutationFn: async (input: {
+      operationKey: string;
+      payload: PostEditPayload;
+    }) => proposeEdit({ data: { ...input, postId } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: postEditsKeys.post(postId),
@@ -27,7 +29,8 @@ export function useApprovePostEdit(postId: number) {
   return useMutationWithFeedback({
     errorFallback: "Could not approve this suggestion.",
     errorTitle: "Suggestion approval failed",
-    mutationFn: async (editId: number) => approveEdit({ data: { editId } }),
+    mutationFn: async (input: { editId: number; operationKey: string }) =>
+      approveEdit({ data: input }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({

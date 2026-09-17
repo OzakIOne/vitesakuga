@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { FileUploadData } from "../posts/posts.schema";
-import { buildFormData, makeReadChunk } from "./upload.processor";
+import {
+  buildFormData,
+  makeReadChunk,
+  throwIfAborted,
+} from "./upload.processor";
 
 const thumb = new File(["t"], "t.jpg", { type: "image/jpeg" });
 
@@ -78,6 +82,21 @@ describe(buildFormData, () => {
 
     expect(formData.has("relatedPostId")).toBe(false);
     expect(formData.has("videoMetadata")).toBe(false);
+  });
+});
+
+describe(throwIfAborted, () => {
+  it("throws an AbortError for an aborted signal", () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    expect(() => throwIfAborted(controller.signal)).toThrowError(
+      expect.objectContaining({ name: "AbortError" }),
+    );
+  });
+
+  it("does nothing for an active signal", () => {
+    expect(() => throwIfAborted(new AbortController().signal)).not.toThrow();
   });
 });
 

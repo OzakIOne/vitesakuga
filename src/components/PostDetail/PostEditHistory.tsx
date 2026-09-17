@@ -139,7 +139,12 @@ function HistoryEntry({
             <Button
               disabled={busy}
               loading={approve.isPending}
-              onClick={() => approve.mutate(entry.id)}
+              onClick={() =>
+                approve.mutate({
+                  editId: entry.id,
+                  operationKey: crypto.randomUUID(),
+                })
+              }
               size="xs"
             >
               Approve

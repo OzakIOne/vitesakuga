@@ -121,14 +121,17 @@ export function PostDetailDisplay({
     errorFallback: "Failed to update post",
     errorTitle: "Error updating post",
     mutationFn: async (data: {
-      title: string;
       description: string;
+      operationKey: string;
       source: string | undefined;
       tags: { id?: number; name: string }[];
+      title: string;
     }) =>
       updatePost({
         data: {
           description: data.description,
+          expectedVersion: post.version,
+          operationKey: data.operationKey,
           postId: post.id,
           relatedPostId: post.relatedPostId ?? undefined,
           source: data.source,
@@ -163,6 +166,7 @@ export function PostDetailDisplay({
     }
     updatePostMutation.mutate({
       description: descriptionDraft,
+      operationKey: `post-update:${post.id}:${post.version}:${crypto.randomUUID()}`,
       source: sourceDraft.trim() || undefined,
       tags: tagsDraft,
       title: trimmedTitle,
