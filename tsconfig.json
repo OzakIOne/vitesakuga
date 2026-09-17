@@ -16,8 +16,6 @@
     "resolveJsonModule": true,
     // Do not put verbatimModuleSyntax to true, it can result in server bundles leaking into client bundles
     "verbatimModuleSyntax": false,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
 
     "exactOptionalPropertyTypes": true,
