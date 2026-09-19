@@ -1,8 +1,14 @@
 import { execSync } from "node:child_process";
 
+import { S3Client } from "@aws-sdk/client-s3";
 import { Data, Duration, Effect, Schedule } from "effect";
 
+import { ensureTestBucket } from "./e2e/test-bucket";
+
 const RUSTFS_ENDPOINT = "http://localhost:9000";
+const RUSTFS_ACCESS_KEY = "rustfsadmin";
+const RUSTFS_SECRET_KEY = "rustfsadmin";
+const TEST_BUCKET = "e2e-test";
 
 class CommandError extends Data.TaggedError("CommandError")<{
   readonly command: string;
@@ -72,4 +78,22 @@ const ensureRustFS = Effect.gen(function* () {
   yield* waitForHealth;
 });
 
+const ensureTestBucketReady = Effect.gen(function* () {
+  const client = new S3Client({
+    endpoint: RUSTFS_ENDPOINT,
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: RUSTFS_ACCESS_KEY,
+      secretAccessKey: RUSTFS_SECRET_KEY,
+    },
+    forcePathStyle: true,
+  });
+
+  yield* ensureTestBucket(client, TEST_BUCKET).pipe(
+    Effect.ensuring(Effect.sync(() => client.destroy())),
+  );
+  yield* Effect.log(`Bucket "${TEST_BUCKET}" ready`);
+});
+
 await Effect.runPromise(ensureRustFS);
+await Effect.runPromise(ensureTestBucketReady);

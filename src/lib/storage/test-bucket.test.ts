@@ -1,4 +1,8 @@
-import { DeleteBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteBucketCommand,
+  HeadBucketCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Effect } from "effect";
 import { expect, it } from "vitest";
 
@@ -41,6 +45,17 @@ it("fails setup when S3 rejects the credentials", async () => {
     expect(error).toBeInstanceOf(Error);
     if (!(error instanceof Error)) throw new Error("Expected an S3 failure");
     expect(error.name).toBe("SignatureDoesNotMatch");
+  } finally {
+    client.destroy();
+  }
+});
+
+it("keeps the shared integration bucket available", async () => {
+  const client = clientFor("rustfsadmin");
+  try {
+    await expect(
+      client.send(new HeadBucketCommand({ Bucket: "e2e-test" })),
+    ).resolves.toMatchObject({ $metadata: { httpStatusCode: 200 } });
   } finally {
     client.destroy();
   }
