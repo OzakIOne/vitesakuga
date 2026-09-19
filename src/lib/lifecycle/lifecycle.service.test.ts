@@ -164,11 +164,12 @@ describe("LifecycleService operation claims", () => {
   });
 
   it("uses the Effect clock for lifecycle timestamps", async () => {
-    // PGlite's timestamp-without-time-zone columns round-trip in the local
-    // database timezone; seed the clock one local offset ahead of the expected
-    // UTC instant so the persisted timestamp remains deterministic.
+    // PGlite's timestamp-without-time-zone columns round-trip through the
+    // process timezone, so derive the persisted instant from that timezone.
     const fixedMillis = Date.parse("2025-01-02T04:04:05.678Z");
-    const expectedMillis = Date.parse("2025-01-02T03:04:05.678Z");
+    const timezoneOffsetMillis =
+      new Date(fixedMillis).getTimezoneOffset() * 60_000;
+    const expectedMillis = fixedMillis + timezoneOffsetMillis;
     const claim = await Effect.runPromise(
       Effect.gen(function* () {
         yield* TestClock.setTime(fixedMillis);
