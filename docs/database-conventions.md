@@ -16,6 +16,7 @@ This document outlines the conventions and best practices for database interacti
 - `DB` type derived from Drizzle schema definitions via `Kyselify`; `posts.version` and `post_edits.basePostVersion` support optimistic concurrency checks
 - Effect wrapper via `KyselyDB` context tag in `src/lib/db/context.ts` — all domain services inject this
 - `media_operations` and `media_objects` form the durable lifecycle registry. Mutations claim a user-scoped operation key, persist a request fingerprint and fence, and replay terminal results. Object deletion uses durable `deleting`/`deleted` tombstones; remote storage I/O happens only after the database transition commits.
+- Lifecycle timestamps in these tables use PostgreSQL `timestamp with time zone` and represent instants. Pass and compare JavaScript `Date` values directly; never compensate for the process timezone with manual offsets.
 - Lifecycle integration lives in `src/lib/lifecycle/lifecycle.service.ts`; use its transaction helpers to combine post/reference writes with operation completion and version CAS in one short database transaction. Never hold that transaction open during R2/RustFS calls.
 - EffectKysely utility (`src/lib/effect/effect.utils.ts`) adapts Kysely queries into Effect programs with `SqlError` and `SqlNoFirstResult` tagged errors
 

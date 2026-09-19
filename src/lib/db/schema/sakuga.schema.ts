@@ -452,8 +452,8 @@ export type MediaObjectState =
 export const mediaOperations = pgTable(
   "media_operations",
   {
-    completedAt: timestamp(),
-    createdAt: timestamp().defaultNow().notNull(),
+    completedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
     failureCode: text(),
     fence: integer().notNull().default(1),
     id: text().primaryKey(),
@@ -465,7 +465,7 @@ export const mediaOperations = pgTable(
       .$type<MediaOperationStatus>()
       .notNull()
       .default("in-progress"),
-    updatedAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
     userId: text()
       .references(() => user.id)
       .notNull(),
@@ -493,8 +493,8 @@ export const mediaObjects = pgTable(
   {
     contentLength: integer().notNull(),
     contentType: text().notNull(),
-    createdAt: timestamp().defaultNow().notNull(),
-    deletingCommittedAt: timestamp(),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    deletingCommittedAt: timestamp({ withTimezone: true }),
     fence: integer().notNull(),
     fingerprint: text().notNull(),
     key: text().primaryKey(),
@@ -503,7 +503,7 @@ export const mediaObjects = pgTable(
       .references(() => mediaOperations.id)
       .notNull(),
     state: text().$type<MediaObjectState>().notNull().default("reserved"),
-    updatedAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
     userId: text()
       .references(() => user.id)
       .notNull(),

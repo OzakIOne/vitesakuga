@@ -164,12 +164,7 @@ describe("LifecycleService operation claims", () => {
   });
 
   it("uses the Effect clock for lifecycle timestamps", async () => {
-    // PGlite's timestamp-without-time-zone columns round-trip through the
-    // process timezone, so derive the persisted instant from that timezone.
     const fixedMillis = Date.parse("2025-01-02T04:04:05.678Z");
-    const timezoneOffsetMillis =
-      new Date(fixedMillis).getTimezoneOffset() * 60_000;
-    const expectedMillis = fixedMillis + timezoneOffsetMillis;
     const claim = await Effect.runPromise(
       Effect.gen(function* () {
         yield* TestClock.setTime(fixedMillis);
@@ -182,8 +177,8 @@ describe("LifecycleService operation claims", () => {
         Effect.provide(Layer.merge(TestClock.layer(), context.testLayer)),
       ),
     );
-    expect(claim.operation.createdAt).toEqual(new Date(expectedMillis));
-    expect(claim.operation.updatedAt).toEqual(new Date(expectedMillis));
+    expect(claim.operation.createdAt).toEqual(new Date(fixedMillis));
+    expect(claim.operation.updatedAt).toEqual(new Date(fixedMillis));
   });
 
   it("reserves a deterministic object and reuses its row on retry", async () => {
