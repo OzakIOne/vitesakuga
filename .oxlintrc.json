@@ -15,7 +15,8 @@
     "promise",
     "node",
     "import",
-    "vitest"
+    "vitest",
+    "effecttsgo"
   ],
   "jsPlugins": [
     "@tanstack/eslint-plugin-query",

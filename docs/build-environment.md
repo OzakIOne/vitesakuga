@@ -88,10 +88,8 @@ client-facing `VITE_E2E_MODE` flag.
 
 ## Cloudflare dev runner compatibility
 
-The project intentionally pins `nitro@3.0.260610-beta` with Vite 8.2.x. The
-newer `nitro@3.0.260903-beta` development runner sends React's CommonJS entry
-through the Workerd module evaluator without `module`, which makes
-`nub run dev` fail with `ReferenceError: module is not defined`. The pinned
-combination keeps Cloudflare development emulation and passes both the dev
-server smoke check and the deployable build. Do not update Nitro alone until
-that upstream incompatibility is fixed.
+The project pins `nitro@3.0.260610-beta` while using Vite 8.3.x. Updating to
+`nitro@3.0.260903-beta` still makes `nub run dev` fail with
+`ReferenceError: module is not defined` when the Workerd module evaluator loads
+React's CommonJS entry. Keep the pinned Nitro version until an upgrade passes
+the dev-server smoke check as well as the deployable build.

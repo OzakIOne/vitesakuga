@@ -26,6 +26,7 @@ export type TrimRange = { start: number; end: number };
 
 export const DEFAULT_COPY_OPTIONS = {
   boundaryPolicy: "expand",
+  boundaryTolerance: Number.POSITIVE_INFINITY,
   mode: "preferred",
   shiftTolerance: 0,
 } satisfies Required<ConversionCopyOptions>;
