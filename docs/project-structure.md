@@ -24,8 +24,7 @@ src/
 │   ├── users/        # User and contributor profiles
 │   ├── videos/       # Video and metadata UI
 │   └── votes/        # Post vote controls
-├── db/           # Legacy migration folder (see note below)
-├── lib/          # Core feature modules, services, and infrastructure
+├── lib/              # Core feature modules, services, and infrastructure
 │   ├── assets/   # Asset URL builder (R2 public URLs)
 │   ├── auth/     # Better Auth configuration, middleware, hooks, schemas
 │   ├── comments/      # Comments, mentions, queries, hooks, and tests
@@ -52,12 +51,12 @@ src/
 │   ├── users/        # Users: service, queries, schemas, tests
 │   ├── videos/       # Video replacement and storage garbage collection
 │   └── votes/        # Post votes: service, hooks, queries, schemas, tests
-├── routes/       # TanStack Router file-based routes
-├── styles/       # Global CSS (Tailwind v4 entry point)
-└── utils/        # Utility functions (SEO meta tags)
+├── routes/           # TanStack Router file-based routes
+├── styles/           # Global CSS (Tailwind v4 entry point)
+└── utils/            # Utility functions (SEO meta tags)
 ```
 
-> Drizzle Kit migrations are generated in the repo-root `drizzle/` directory (timestamped folders, per `drizzle.config.ts`). The old `src/db/` area is not part of the active migration workflow.
+> Drizzle Kit writes the active migration chain to the repo-root `drizzle/` directory (timestamped folders, per `drizzle.config.ts`). `src/lib/db/` holds schemas, connection layers, and test helpers.
 
 **Key files at `src/lib/` root:**
 

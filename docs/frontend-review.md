@@ -263,17 +263,17 @@ user-submitted video — any policy or DMCA surface.
 
 Confirmed pairs where a light utility is hardcoded and never inverted:
 
-| File                                   | Line | Control                                                  |
-| -------------------------------------- | ---- | -------------------------------------------------------- |
-| `src/components/ui/overlay.tsx`        | 777  | `Slider.Thumb`                                           |
-| `src/components/ui/field.tsx`          | 203  | `Checkbox.Control`                                       |
-| `src/routes/convert.lazy.tsx`          | 39   | `SELECT_CLASS` (also `border-gray-300`, `text-gray-900`) |
-| `src/routes/account.tsx`               | 333  | avatar preview panel                                     |
-| `src/components/auth/TwoFactorSection.tsx`  | 335  | QR code panel                                            |
-| `src/components/ui/password-input.tsx` | 72   | reveal button (`text-gray-700`, `hover:bg-gray-100`)     |
-| `src/components/ui/overlay.tsx`        | 868  | file-remove button (`hover:bg-gray-100`)                 |
-| `src/components/ui/toaster.tsx`        | 78   | toast dismiss (`hover:bg-gray-100 hover:text-gray-700`)  |
-| `src/routes/notifications.tsx`         | 96   | unread row (`bg="gray.50"`)                              |
+| File                                       | Line | Control                                                  |
+| ------------------------------------------ | ---- | -------------------------------------------------------- |
+| `src/components/ui/overlay.tsx`            | 777  | `Slider.Thumb`                                           |
+| `src/components/ui/field.tsx`              | 203  | `Checkbox.Control`                                       |
+| `src/routes/convert.lazy.tsx`              | 39   | `SELECT_CLASS` (also `border-gray-300`, `text-gray-900`) |
+| `src/routes/account.tsx`                   | 333  | avatar preview panel                                     |
+| `src/components/auth/TwoFactorSection.tsx` | 335  | QR code panel                                            |
+| `src/components/ui/password-input.tsx`     | 72   | reveal button (`text-gray-700`, `hover:bg-gray-100`)     |
+| `src/components/ui/overlay.tsx`            | 868  | file-remove button (`hover:bg-gray-100`)                 |
+| `src/components/ui/toaster.tsx`            | 78   | toast dismiss (`hover:bg-gray-100 hover:text-gray-700`)  |
+| `src/routes/notifications.tsx`             | 96   | unread row (`bg="gray.50"`)                              |
 
 The first five are surfaces — the two shared form primitives plus three one-off
 panels — so the checkbox, slider, and select are visibly white-on-dark for every

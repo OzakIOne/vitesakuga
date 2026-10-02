@@ -5,11 +5,11 @@ import { PlaylistAddModal } from "src/components/playlists/PlaylistAddModal";
 import { Post } from "src/components/posts/Post";
 import { PostEditHistory } from "src/components/posts/PostDetail/PostEditHistory";
 import { PostEditSuggestionDialog } from "src/components/posts/PostDetail/PostEditSuggestionDialog";
-import { ReportDialog } from "src/components/reports/ReportDialog";
 import {
   MoreFromSeriesPanel,
   SeriesNavigationPanel,
 } from "src/components/posts/SeriesHub";
+import { ReportDialog } from "src/components/reports/ReportDialog";
 import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";

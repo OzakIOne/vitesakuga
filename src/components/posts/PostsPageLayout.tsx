@@ -10,13 +10,13 @@ import type {
   VideoMetadata,
 } from "src/lib/posts/posts.schema";
 
-import { DiscoverySummary } from "./DiscoverySummary";
-import { DiscoveryViewSelector } from "./DiscoveryViewSelector";
+import { SearchBox } from "../search/SearchBox";
 import { PopularTagsSection } from "../tags/PopularTagsSection";
 import type { PopularTag } from "../tags/PopularTagsSection";
-import { PostFilters } from "./PostFilters";
-import { SearchBox } from "../search/SearchBox";
 import { VideoMetadataList } from "../videos/VideoMetadataList";
+import { DiscoverySummary } from "./DiscoverySummary";
+import { DiscoveryViewSelector } from "./DiscoveryViewSelector";
+import { PostFilters } from "./PostFilters";
 
 type RegisteredRoutes =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
