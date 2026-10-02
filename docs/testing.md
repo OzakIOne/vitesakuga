@@ -22,12 +22,14 @@ default on 5432. The suites are separate from Vitest. The local server uses Nitr
 `node-server` preset and disables the Turnstile requirement so the browser tests
 exercise the same authentication path as the test server.
 
-## Current verification
+## Last recorded verification
 
-On **2026-09-15**, `nub exec vitest run --maxWorkers=1` passed **611 tests in 62 test files**. Browser Mode passed **88 tests in 14 files** with `nub run test:browser` (**699 Vitest tests total**).
-The full Playwright suite passed **58/58 tests in 15 files** (`nub run test:ee`).
-These are point-in-time results; rerun the commands after code or dependency
-changes.
+On **2026-09-15**, `nub exec vitest run --maxWorkers=1` passed **611 tests in
+62 files**. Browser Mode passed **88 tests in 14 files** with
+`nub run test:browser` (**699 Vitest tests total**). The latest recorded full
+Playwright run was **2026-10-02**, with **58/58 tests in 15 files** passing via
+`nub run test:ee`. These are point-in-time results; rerun the commands after
+code or dependency changes.
 
 The deployment monitor and rollback command construction are covered by the
 focused `test:deployment` check. Its pure decision helpers run without
@@ -44,10 +46,11 @@ Browser Mode is intended for component behavior and browser APIs, not as a
 replacement for the Playwright end-to-end suite. Tests that only need React
 hook state or server behavior should remain in the Node project.
 
-The e2e specs currently cover authentication, comments, conversion, account
-deletion, hydration, mentions, passkeys, playlists, shortcuts, toasts, 2FA,
-uploads, and votes. Use `nub exec playwright test --config=e2e/playwright.config.ts --list`
-to inspect the current discovered test list without running it.
+The recorded e2e coverage includes authentication, comments, conversion,
+account deletion, accessibility regressions, hydration, mentions, passkeys,
+playlists, shortcuts, toasts, 2FA, uploads, and votes. Use
+`nub exec playwright test --config=e2e/playwright.config.ts --list` to inspect
+the current discovered test list without running it.
 
 ## Test conventions
 

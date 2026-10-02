@@ -19,7 +19,7 @@ Vitesakuga has not launched and has no production users or production data. Revi
 
 ## Package Manager
 
-**Never use npm or pnpm. Always use `nub`** (`nub install`, `nub add`, `nub run <script>`, `nub exec <bin>`). npm and pnpm are forbidden in this project. `nub` respects the existing `pnpm-lock.yaml` and resolves the right Node version from `package.json#engines`.
+**Never use npm or pnpm. Always use `nub`** (`nub install`, `nub add`, `nub run <script>`, `nub exec <bin>`). npm and pnpm are forbidden in this project. `nub` respects the existing `pnpm-lock.yaml` and resolves the Node.js 26 runtime declared by the project; do not install Node globally for this repository.
 
 ## Build, Lint, and Test Commands
 
@@ -32,12 +32,12 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - dev: `APP_ENV=development NODE_ENV=development vite dev --mode development --host` (dev stage)
 - dev:local: `APP_ENV=test NODE_ENV=test DATABASE_DRIVER=local vite dev --mode test --host` (`.env.test`, Docker Postgres + rustfs)
 - dev:prod: `APP_ENV=production NODE_ENV=production vite dev --mode production` (`.env.production`, prod infra)
-- docker:up / docker:down (aliases dcu / dcd): local Docker stack
+- dcu / dcd: start / stop the local Docker stack
 - format: oxfmt --write .
 - format:check: oxfmt --check .
 - lint: oxlint . --fix
 - lint:check: oxlint . --type-check --type-aware
-- server: vite preview (builds `.dev.vars` from `.env` first)
+- server: preview the existing Vite build output with `vite preview`
 - start: nub .output/server/index.mjs
 - test: vitest -w
 - test:ee: playwright test --config=e2e/playwright.config.ts
@@ -189,6 +189,12 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
 
 ## Agent skills
+
+Some repository skills are reusable guides written for other projects or
+library versions. Treat this file and the linked project docs as authoritative
+for ViteSakuga; verify examples against the installed dependencies and nearby
+code before applying them. In particular, `.agents/skills/xstate-v5` is a
+generic v5 guide while this project currently depends on XState 6 alpha.
 
 ### Issue tracker
 

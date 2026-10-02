@@ -1,10 +1,11 @@
 # Security Audit — ViteSakuga
 
-This document keeps the security findings from the 2026-08-21 audit as a
-current status record. It is not a substitute for a fresh audit; verify claims
+This document preserves findings from the audit performed on 2026-08-21. The
+table records a 2026-09-12 review, with selected references checked again on
+2026-10-02; this is not a fresh, comprehensive security audit. Verify claims
 against the current code before relying on them.
 
-## Current status — 2026-09-12
+## Status recorded 2026-09-12; selected checks 2026-10-02
 
 | Finding                                            | Status                                  | Current evidence / follow-up                                                                                                                                                                                                                                                                                |
 | -------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -16,14 +17,14 @@ against the current code before relying on them.
 | M3 — Dependency advisories                         | **Recheck when dependencies change**    | Runtime-facing dependency upgrades landed, but the audit's dependency counts are historical. Run the repository's current dependency audit rather than copying the old count.                                                                                                                               |
 | M4 — Email verification not required               | **Fixed**                               | New accounts must use an approved provider domain and complete a Better Auth email OTP before a session is created. OTPs are hashed, expire after 10 minutes, and allow five attempts. Delivery is configured through Resend.                                                                               |
 | M5 — Search wildcard / input amplification         | **Fixed**                               | Search wildcards are escaped and shared limits cap query length, tag count, and tag length (`src/lib/search/search-limits.ts`, `src/lib/posts/posts.schema.ts`, `src/lib/users/users.schema.ts`).                                                                                                           |
-| M6 — Comment Markdown/XSS and tracking images      | **Mitigated**                           | Comment input is sanitized at the server schema boundary; the TanStack Markdown renderer keeps raw HTML disabled, filters unsafe link protocols, escapes mention labels, and suppresses images. Regression coverage is in `src/components/mentions/CommentContent.test.tsx`, `src/components/mentions/MentionTextarea.test.tsx`, `src/lib/comments/comments.schema.test.ts`, and `src/lib/mentions/markdown.test.ts`. |
+| M6 — Comment Markdown/XSS and tracking images      | **Mitigated**                           | Comment input is sanitized at the server schema boundary; the TanStack Markdown renderer keeps raw HTML disabled, filters unsafe link protocols, escapes mention labels, and suppresses images. Regression coverage is in `src/components/mentions/CommentContent.browser.test.tsx`, `src/components/mentions/MentionTextarea.browser.test.tsx`, `src/lib/comments/comments.schema.test.ts`, and `src/lib/mentions/markdown.test.ts`. |
 | L1 — Spoofable forwarded IP in fallback limiter    | **Accepted with deployment constraint** | Cloudflare's `cf-connecting-ip` takes precedence in deployment; the in-memory fallback is for local/test use and must not be treated as a production distributed limiter.                                                                                                                                   |
-| L2 — Local Docker ports exposed on all interfaces  | **Local hardening follow-up**           | Review `docker-compose.yml` before using the local stack on an untrusted network; default local credentials are not production credentials.                                                                                                                                                                 |
+| L2 — Local Docker ports exposed on all interfaces  | **Mitigated (checked 2026-10-02)**       | `docker-compose.yml` binds the local service ports to `127.0.0.1`. Preserve loopback binding if the compose configuration changes; default local credentials are not production credentials.                                                                                                                |
 | L3 — Non-production CSP allowances                 | **Accepted for development**            | Non-production CSP allows inline scripts and user-supplied HTTPS images for framework and profile-image behavior. Production uses a hash allowlist for scripts.                                                                                                                                             |
 | L4 — Orphaned presigned uploads                    | **Fixed**                               | Pending video objects use `videos/_pending/`, are promoted only after validation, and expire through the R2 lifecycle rule in `infra/alchemy.run.ts`.                                                                                                                                                       |
 | L5 — Weak password policy                          | **Fixed**                               | Minimum length and character-class checks are enforced server-side in `src/lib/auth/index.ts` through `src/lib/auth/password-policy.ts`.                                                                                                                                                                    |
 
-## Current controls
+## Controls recorded at the last review
 
 - Better Auth sessions are fetched with request headers and cookie caching is disabled for session reads.
 - Mutating services require authentication and apply ownership or role/permission checks.
@@ -41,14 +42,14 @@ against the current code before relying on them.
   unpredictable UUIDs. Image/video extensions and content types are derived or
   checked server-side.
 
-## Open decisions before launch
+## Open decisions recorded 2026-09-12
 
 1. Provision and verify the Resend sender domain, API key, and `EMAIL_FROM`
    before the first production deployment. Confirm SPF, DKIM, DMARC, bounce
    handling, and the provider allow-list against product policy.
 2. Re-run dependency and infrastructure audits against the versions actually
    installed at release time.
-3. Review local Docker bind addresses and credentials for the intended developer
-   workflow.
+3. Keep local Docker ports bound to loopback when the compose configuration
+   changes; use local credentials only for development.
 4. Revisit accepted CSP and fallback-rate-limiter tradeoffs if the deployment
    topology changes.

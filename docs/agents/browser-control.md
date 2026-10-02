@@ -16,8 +16,9 @@ Agent (LLM) → Browser Control CLI → local relay → Browser Control extensio
 
 ## Install and commands
 
-Browser Control is a repository dev dependency. The installed CLI currently
-reports **v0.5.1**. Invoke it through the project toolchain:
+Browser Control is a repository dev dependency; its installed version follows
+the project lockfile. Query that version and invoke it through the project
+toolchain:
 
 ```bash
 nub exec browser-control --version

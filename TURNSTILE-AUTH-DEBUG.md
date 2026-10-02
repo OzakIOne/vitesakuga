@@ -1,5 +1,9 @@
 # Debug : Cloudflare Turnstile + Auth en dev local
 
+> Note historique : ce document conserve le diagnostic initial. La configuration
+> de la clé publique a depuis changé ; voir la section de configuration actuelle
+> en fin de page avant de modifier l'environnement.
+
 ## Contexte
 
 Lancement de `nub run dev` (stage **dev**, `.env`). Le login/signup échouait avec plusieurs erreurs console en cascade.
@@ -150,18 +154,22 @@ rejetée (`Missing CAPTCHA response`) sans message utilisateur clair.
 | `src/routes/(auth)/signup.tsx` | idem signup                                                                                    |
 | `package.json`                 | scripts `dev` / `dev:local` : `VITE_TURNSTILE_REQUIRED=0`                                      |
 | `.env`                         | `VITE_TURNSTILE_REQUIRED=1` pour le build déployé dev                                          |
-| `.env.production`              | `VITE_TURNSTILE_REQUIRED=1` (+ TODO : `VITE_TURNSTILE_SITEKEY` manquant)                       |
+| `.env.production`              | `VITE_TURNSTILE_REQUIRED=1` ; le TODO de sitekey a été remplacé par son provisionnement runtime via Alchemy |
 | `.env.example`                 | documentation du flag                                                                          |
 
-## Action requise
+## Action requise au moment du diagnostic
 
-**Redémarrer le serveur dev** (valeurs `.env` chargées au démarrage) : `nub run dev`.
+À l'époque, il fallait redémarrer le serveur dev (les valeurs `.env` sont
+chargées au démarrage) : `nub run dev`.
 
-## À surveiller (prod)
+## Configuration actuelle
 
-- `.env.production` doit garder la **vraie origine** de prod + le **vrai sitekey/secret Turnstile**.
-- `.env.production` ne contient **pas** `VITE_TURNSTILE_SITEKEY` : tant que le
-  sitekey prod n'y est pas ajouté, le client ne monte aucun widget alors que le
-  worker vérifie le captcha → tout login prod est rejeté (`Missing CAPTCHA
-response`). À corriger avant/au premier déploiement prod.
-- Login OAuth local (GitHub/Google) : les redirect URIs sont enregistrés pour `sakuga-dev.ozaki.one`, donc le social login en local peut manquer (le login mot de passe est OK).
+- Alchemy provisionne `TURNSTILE_SITEKEY` et `TURNSTILE_SECRET` pour le Worker.
+  Le client récupère la clé publique depuis `/api/turnstile`; elle n'a pas à être
+  copiée dans `.env.production` comme `VITE_TURNSTILE_SITEKEY`.
+- `VITE_TURNSTILE_REQUIRED` contrôle si les formulaires montent le widget. Les
+  scripts locaux désactivent cette exigence pour les tests; les stages déployés
+  l'activent quand Turnstile est provisionné.
+- Note historique : les redirect URIs OAuth examinés alors couvraient
+  `sakuga-dev.ozaki.one`, pas `localhost`. Vérifier la configuration du
+  fournisseur avant de tester OAuth local.
