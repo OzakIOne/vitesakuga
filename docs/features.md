@@ -85,7 +85,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - Brouillon persistant côté client (`useUploadDraft`).
 - Vidéos : URL présignée S3 → PUT direct vers Cloudflare R2 (prod) ou RustFS (local), namespace `videos/_pending/{userId}/`, puis validation et promotion côté serveur.
 - Images et thumbnails transitent par le serveur et sont validées par extension, taille et type de contenu.
-- Fichiers : `src/routes/upload.lazy.tsx`, `src/lib/upload/*`, `src/lib/storage/*`, `src/lib/posts/posts.schema.ts`, `src/lib/posts/posts.service.ts`.
+- Fichiers : `src/features/upload/upload-page.tsx`, `src/routes/upload.lazy.tsx`, `src/lib/upload/*`, `src/lib/storage/*`, `src/lib/posts/posts.schema.ts`, `src/lib/posts/posts.service.ts`.
 
 ### Convertisseur vidéo navigateur (`/convert`)
 
@@ -94,7 +94,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - Découpage par plage début/fin avec aperçu local et remise à zéro du découpage.
 - Pour les sorties passthrough, copie préférée ou forcée, tolérance de décalage des timestamps et politique de bordure (extension ou réduction de la plage) ; le transcodage reste le repli lorsque nécessaire.
 - Qualité CRF, progression et téléchargement.
-- Machine à états XState : `src/routes/-convert.machine.ts`, `src/routes/convert.tsx`, `src/routes/convert.lazy.tsx`.
+- Page et machine à états XState : `src/features/convert/convert-page.tsx`, `src/features/convert/convert-machine.ts` et `src/features/convert/convert-machine.test.ts`, `src/routes/convert.tsx` et `src/routes/convert.lazy.tsx`.
 
 ## Interaction communautaire
 
@@ -129,7 +129,7 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 - **Captcha Cloudflare Turnstile** en production lorsqu'il est provisionné.
 - **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Resend ; `RESEND_API_KEY` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.
-- **Compte** (`/account`) : profil, pseudo, changement de mot de passe et suppression avec anonymisation ; le contenu public reste attribué à « Deleted user ».
+- **Compte** (`/account`) : profil, pseudo, changement de mot de passe et suppression avec anonymisation ; le contenu public reste attribué à « Deleted user ». Écran : `src/features/account/account-page.tsx`.
 - **Rôles et permissions** : `novice → uploader → moderator → admin`, appliqués par les policies Effect — `src/lib/auth/roles.ts`, `src/lib/auth/policy.ts`, `src/lib/auth/ownership.ts`.
 
 ## Espace admin / staff

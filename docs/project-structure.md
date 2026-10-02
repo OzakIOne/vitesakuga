@@ -24,6 +24,10 @@ src/
 │   ├── users/        # User and contributor profiles
 │   ├── videos/       # Video and metadata UI
 │   └── votes/        # Post vote controls
+├── features/         # Route-level screens and feature-owned UI/state
+│   ├── account/      # Account settings page
+│   ├── convert/      # Converter page and XState machine
+│   └── upload/       # Post upload page
 ├── lib/              # Core feature modules, services, and infrastructure
 │   ├── assets/   # Asset URL builder (R2 public URLs)
 │   ├── auth/     # Better Auth configuration, middleware, hooks, schemas
@@ -68,7 +72,9 @@ src/
 
 ## File Structure Conventions
 
-- `src/routes/` — TanStack Router file-based route structure (flat layout group `(auth)/`)
+- `src/routes/` — TanStack Router file-based route structure (flat layout group `(auth)/`); keep route configuration and loaders here
+- `src/features/<feature>/` — route-level screens, feature-owned UI, and state machines
+- `src/features/<feature>/*.test.{ts,tsx}` — tests colocated with feature-specific UI and state
 - `src/components/<domain>/` — domain-owned React components and colocated browser tests
 - `src/components/ui/` — shared UI primitives
 - `src/components/form/` — shared form fields

@@ -1,9 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
 
-// Same credentials as the webServer env in playwright.config.ts.
-const DATABASE_URL =
-  "postgresql://user:password@localhost:5432/sakuga?sslmode=disable";
+import { E2E_DATABASE_URL as DATABASE_URL } from "./test-database";
 
 // Dedicated bypass identity (cookie value "bypass-oauth", see
 // src/lib/auth/session.effect.ts) seeded WITHOUT a credential account, so the

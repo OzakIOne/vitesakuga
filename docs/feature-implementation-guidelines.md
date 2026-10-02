@@ -7,6 +7,7 @@ This document provides guidelines for implementing new features within the ViteS
 ## When Adding Features
 
 - **New routes**: Add to `src/routes/` with `createFileRoute()` pattern. Route group directories use parentheses (e.g., `(auth)/`).
+- **Route screens**: Keep file-based route configuration in `src/routes/`; place substantial screens, feature-owned UI, and state machines in `src/features/<feature>/`.
 - **Auth changes**: Modify Better Auth config in `src/lib/auth/index.ts`. Update `src/routes/__root.tsx` `beforeLoad` for session fetching. Use `makeAuthLayer` in `createHandler` for protected server functions.
 - **Data fetching**: Use `beforeLoad` for critical session data, TanStack Query `queryOptions` factories (in `*.queries.ts`) for non-blocking data. TanStack DB collections (in `src/lib/db/collections.ts`) for reactive client-side stores.
 - **Styling**: Use Ark UI v5 (headless) + Tailwind CSS v4 in `src/components/`.

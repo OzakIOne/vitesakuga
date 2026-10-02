@@ -14,8 +14,8 @@ import {
   normalizeTrimRange,
   type OutputFormat,
   SUPPORTED_OUTPUTS,
-} from "../routes/-convert.machine";
-import type { TrimRange } from "../routes/-convert.machine";
+} from "./convert-machine";
+import type { TrimRange } from "./convert-machine";
 
 describe(normalizeTrimRange, () => {
   it("clamps a valid range to the media duration", () => {

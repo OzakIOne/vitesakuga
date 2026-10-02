@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+import { E2E_DATABASE_URL, E2E_POSTGRES_PORT } from "./test-database";
+
 const CI = process.env["CI"];
 
 export default defineConfig({
@@ -61,8 +63,8 @@ export default defineConfig({
         // but is distinct so the e2e auth bypass in session.effect.ts stays
         // unreachable from `nub run dev:local`.
         DATABASE_DRIVER: "e2e",
-        DATABASE_URL:
-          "postgresql://user:password@localhost:5432/sakuga?sslmode=disable",
+        DATABASE_URL: E2E_DATABASE_URL,
+        VITESAKUGA_E2E_POSTGRES_PORT: E2E_POSTGRES_PORT,
         CLOUDFLARE_ACCESS_KEY: "rustfsadmin",
         CLOUDFLARE_BUCKET: "e2e-test",
         CLOUDFLARE_R2: "http://localhost:9000",

@@ -2,9 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { hashPassword } from "better-auth/crypto";
 import { Client } from "pg";
 
-// Same credentials as the webServer env in playwright.config.ts.
-const DATABASE_URL =
-  "postgresql://user:password@localhost:5432/sakuga?sslmode=disable";
+import { E2E_DATABASE_URL as DATABASE_URL } from "./test-database";
 
 // The auth bypass session (see src/lib/auth/session.effect.ts) authenticates
 // as this user. The suite deletes this account, so every row it seeds is

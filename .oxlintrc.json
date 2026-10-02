@@ -115,7 +115,7 @@
       }
     },
     {
-      "files": ["src/components/**", "src/routes/**"],
+      "files": ["src/components/**", "src/features/**", "src/routes/**"],
       "rules": {
         // Dates cross server-function boundaries as ISO strings and must be
         // rendered through the shared formatter, never formatted inline.

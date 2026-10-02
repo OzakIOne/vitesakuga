@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Data, Duration, Effect, Schedule } from "effect";
 
 import { ensureTestBucket } from "./test-bucket";
+import { E2E_DATABASE_URL, E2E_POSTGRES_PORT } from "./test-database";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RUSTFS_ENDPOINT = "http://localhost:9000";
@@ -16,12 +17,16 @@ class CommandError extends Data.TaggedError("CommandError")<{
   readonly message: string;
 }> {}
 
-const exec = (cmd: string, options: { cwd?: string } = {}) =>
+const exec = (
+  cmd: string,
+  options: { cwd?: string; env?: typeof process.env } = {},
+) =>
   Effect.try({
     try: () =>
       execSync(cmd, {
         cwd: options.cwd,
         encoding: "utf-8",
+        env: options.env,
         stdio: "pipe",
       }).trim(),
     catch: () =>
@@ -92,7 +97,13 @@ const createBucket = Effect.gen(function* () {
 
 const ensurePostgres = Effect.gen(function* () {
   yield* Effect.log("Checking local Postgres...");
-  yield* exec("docker compose up -d postgres", { cwd: REPO_ROOT }).pipe(
+  yield* exec("docker compose up -d postgres", {
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      VITESAKUGA_E2E_POSTGRES_PORT: E2E_POSTGRES_PORT,
+    },
+  }).pipe(
     Effect.catch((error) =>
       Effect.fail(
         new CommandError({
@@ -111,10 +122,14 @@ const migrateDatabase = Effect.gen(function* () {
   yield* Effect.retry(
     Effect.gen(function* () {
       yield* Effect.sleep(Duration.seconds(1));
-      yield* exec(
-        "DATABASE_URL='postgresql://user:password@localhost:5432/sakuga?sslmode=disable' nub e2e/migrate-local.mjs",
-        { cwd: REPO_ROOT },
-      ).pipe(Effect.catch(() => Effect.fail("migrations not ready")));
+      yield* exec("nub e2e/migrate-local.mjs", {
+        cwd: REPO_ROOT,
+        env: {
+          ...process.env,
+          DATABASE_URL: E2E_DATABASE_URL,
+          VITESAKUGA_E2E_POSTGRES_PORT: E2E_POSTGRES_PORT,
+        },
+      }).pipe(Effect.catch(() => Effect.fail("migrations not ready")));
     }),
     Schedule.recurs(30),
   ).pipe(

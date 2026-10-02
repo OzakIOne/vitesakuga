@@ -267,8 +267,8 @@ Confirmed pairs where a light utility is hardcoded and never inverted:
 | ------------------------------------------ | ---- | -------------------------------------------------------- |
 | `src/components/ui/overlay.tsx`            | 777  | `Slider.Thumb`                                           |
 | `src/components/ui/field.tsx`              | 203  | `Checkbox.Control`                                       |
-| `src/routes/convert.lazy.tsx`              | 39   | `SELECT_CLASS` (also `border-gray-300`, `text-gray-900`) |
-| `src/routes/account.tsx`                   | 333  | avatar preview panel                                     |
+| `src/features/convert/convert-page.tsx`    | 39   | `SELECT_CLASS` (also `border-gray-300`, `text-gray-900`) |
+| `src/features/account/account-page.tsx`    | 333  | avatar preview panel                                     |
 | `src/components/auth/TwoFactorSection.tsx` | 335  | QR code panel                                            |
 | `src/components/ui/password-input.tsx`     | 72   | reveal button (`text-gray-700`, `hover:bg-gray-100`)     |
 | `src/components/ui/overlay.tsx`            | 868  | file-remove button (`hover:bg-gray-100`)                 |
@@ -300,7 +300,7 @@ dark mode, inverting the feature: the background plus bold weight
 prop at the call site in favour of an explicit
 `bg-gray-100 dark:bg-gray-800` pair.
 
-The same gap is already being hand-patched: `upload.lazy.tsx:855-875` styles the
+The same gap is already being hand-patched: `src/features/upload/upload-page.tsx:845-865` styles the
 image-validation box with `bg="red.50"` plus a manual `className="dark:bg-red-950/30"`,
 because there is no token variant to inherit. The box then mixes a dark-aware
 `Text color="red.700"` (which resolves through `TEXT_DARK_VARIANTS` to
@@ -310,7 +310,7 @@ token maps started drifting in the first place (item 14).
 
 **Update (2026-09-10).** The same gap covers section dividers: four components
 draw a top rule with `border-t border-gray-200` and no dark counterpart —
-`src/routes/account.tsx:387`, `src/routes/account.tsx:479`,
+`src/features/account/account-page.tsx:363`, `src/features/account/account-page.tsx:455`,
 `src/components/auth/PasskeysSection.tsx:53`,
 `src/components/auth/TwoFactorSection.tsx:229`. `app.css:73-75` already pairs
 `border-gray-200` with `dark:border-gray-800` for `.markdown-prose hr`, so
@@ -339,8 +339,8 @@ background is ≈4.3:1, which misses AA for text by a hair. `Slider.Track` is
 worse than a miss: `bg-gray-200` against `gray-950` is ≈13:1 while the
 `bg-blue-600` range on top of it is ≈4.2:1, so the _unfilled_ part of the
 slider is the high-contrast one and the track reads backwards. Slider and
-Combobox are both live (`convert.lazy.tsx:284`, `upload.lazy.tsx:421-429`), and
-the converter's progress track (`convert.lazy.tsx:64`) has the same inversion
+Combobox are both live (`src/features/convert/convert-page.tsx:274`, `src/features/upload/upload-page.tsx:411-419`), and
+the converter's progress track (`src/features/convert/convert-page.tsx:54`) has the same inversion
 (item 68). The password meter inverts too: its unfilled segments are
 `bg-gray-200`, so the empty part of the meter is the brightest element in the
 control while the `bg-green-500` / `bg-orange-500` / `bg-red-500` fill is barely
@@ -375,7 +375,7 @@ tokens; the app uses more, and two of the covered ones are wrong.
   `SearchBox.tsx:201`, `PostsResultsState.tsx:36,92,114`. `fg.subtle`
   (`ui-utils.ts:53`) has the correct ordering (`neutral-500` / `neutral-400`)
   and is the pattern to copy.
-- `gray.400` used as a raw token (`account.tsx:231`, `two-factor.tsx:160`) is
+- `gray.400` used as a raw token (`src/features/account/account-page.tsx:207`, `two-factor.tsx:160`) is
   ≈2.6:1 on white, and has no `TEXT_DARK_VARIANTS` entry to correct it in dark
   mode either.
 
@@ -392,7 +392,7 @@ the semantic `fg.*` tokens over raw shades so there is one place to get right.
 Pair with item 29 so the table cannot silently drift back.
 
 **Update (2026-09-10).** Two call sites already hand-patch the table — but
-redundantly. `src/routes/account.tsx:483-491` adds
+redundantly. `src/features/account/account-page.tsx:459-467` adds
 `className="dark:text-gray-400"` on top of `color="gray.500"`, and
 `:493-496` adds `className="dark:text-red-300"` on top of
 `color="red.700"`; `TEXT_DARK_VARIANTS` (`ui-utils.ts:72-82`) already
@@ -413,13 +413,13 @@ override, so the page title is an `h2` and the document contains no `h1` at all.
 Routes whose only page title is an implicit `h2`:
 
 - `src/routes/notifications.tsx:72` — the only heading on the page.
-- `src/routes/convert.lazy.tsx:195` — the page title; `:234` is a real `h2`.
-- `src/routes/account.tsx:226` — the profile name, followed by genuine `h2`s at
+- `src/features/convert/convert-page.tsx:185` — the page title; `:234` is a real `h2`.
+- `src/features/account/account-page.tsx:202` — the profile name, followed by genuine `h2`s at
   `:240`, `:253`, `:388`, and `:480`.
 - `src/routes/two-factor.tsx:82`.
 
 Two more routes render no heading element at all: `src/routes/users.index.tsx`
-(a card grid plus a spinner) and `src/routes/upload.lazy.tsx` (no `Heading` and
+(a card grid plus a spinner) and `src/features/upload/upload-page.tsx` (no `Heading` and
 no raw `h1`–`h6`).
 
 The section labels that stay at `h2` — `SearchBox.tsx:149`,
@@ -432,7 +432,7 @@ explicitly: `index.tsx:25`, `posts/index.tsx:75`, `posts/tags/$tag.tsx:55`,
 
 **Why it matters.** Screen-reader heading navigation and the document outline both
 start one level too deep, and search engines read the page title as a
-sub-section. `upload.lazy.tsx` is the weakest page in the set: it is a primary
+sub-section. `src/features/upload/upload-page.tsx` is the weakest page in the set: it is a primary
 flow with no heading and (item 5) no metadata.
 
 **Fix.** Either default `Heading` to `h1` and make callers opt down, or require
@@ -464,31 +464,31 @@ Two conventions exist in the codebase, and only one of them works:
   `src/routes/(auth)/signup.tsx:110,198,221,244,288`. The rendered `/login`
   confirms it: `for="email"` beside `id="email"`, and the same for the password.
 - `Field.Label htmlFor="…"` — overrides the machine value outright. Used 8 times:
-  `account.tsx:109`, `SavedSearchDialogs.tsx:87`, `PostDetailDisplay.tsx:188,202`,
+  `src/features/account/account-page.tsx:107`, `SavedSearchDialogs.tsx:87`, `PostDetailDisplay.tsx:188,202`,
   `PostEditSuggestionDialog.tsx:155,167,179,202`.
 
 29 of the 37 `Field.Label` uses in `src/` set no `htmlFor`; 7 of those inherit a
 working id from `Field.Root` (the auth screens above), so 22 emit a `for` that
 resolves to nothing:
 
-- `src/routes/account.tsx:96,269,292,315,405,425` — six of the page's seven
+- `src/features/account/account-page.tsx:94,245,268,291,381,401` — six of the page's seven
   labels.
 - `src/components/auth/TwoFactorSection.tsx:310,374,513,609`.
 - `src/routes/two-factor.tsx:92` and `src/components/auth/PasskeysSection.tsx:209`.
 - `src/routes/account_.playlists.$playlistId.tsx:257`.
-- `src/routes/upload.lazy.tsx:407,568,582,614,718`, plus `:69`
+- `src/features/upload/upload-page.tsx:397,558,572,604,708`, plus `:69`
   (`MetaNumberField`, four call sites) and the three fields built by
-  `src/components/form/FieldText.tsx:29` (`upload.lazy.tsx:363,379,393`).
+  `src/components/form/FieldText.tsx:29` (`src/features/upload/upload-page.tsx:353,369,383`).
 - `src/components/posts/PostDetail/PostDetailDisplay.tsx:217` (Tags) and
   `src/components/search/SearchBox.tsx:207` (the rendered example above).
 
 Two variants of the miss:
 
-- Controls that also pass `id={field.name}` (`account.tsx:269`, `:405`) are
+- Controls that also pass `id={field.name}` (`src/features/account/account-page.tsx:245`, `:405`) are
   named, but under a name no label references: the machine id is an unrelated
   generated string, so the field looks deliberately wired and is not.
 - Controls with no `id` fall back to the placeholder for their accessible name
-  (`account.tsx:315` "Enter your display name", `PasskeysSection.tsx:209`
+  (`src/features/account/account-page.tsx:291` "Enter your display name", `PasskeysSection.tsx:209`
   "e.g. MacBook Touch ID"), or to an `aria-label` that restates the visible label
   in different words (`TwoFactorSection.tsx:374` "6-digit code" against
   "6-digit verification code"). `account_.playlists.$playlistId.tsx:257` is the
@@ -542,8 +542,8 @@ even during a background refetch.
 
 **Consequence.** The pending UI is whatever the nearest `Suspense` boundary
 supplies, and here that is nothing. None of the five routes sets a
-`pendingComponent` — the only two in the app are `convert.lazy.tsx:29` and
-`upload.lazy.tsx:50` — and `src/router.tsx:33` sets no
+`pendingComponent` — the only two in the app are `src/routes/convert.lazy.tsx:8` and
+`src/routes/upload.lazy.tsx:8` — and `src/router.tsx:33` sets no
 `defaultPendingComponent`, so the root fallback resolves to `null`:
 `renderPending` returns `null` when neither is set, and the root boundary
 renders it (`node_modules/@tanstack/react-router/dist/esm/Match.js:17-20` and
@@ -715,7 +715,7 @@ redirect — and leave `toStandardSchemaV1Strict` to the callers that want it.
 `decoding` default, and `loading="lazy"` appears nowhere in `src/`. No caller
 passes `width`/`height` either, so the decoded bitmap has no reserved space. Only
 two call sites give the box an aspect ratio (`PostImageGallery.tsx:124`,
-`upload.lazy.tsx:798`); everywhere else the element grows when the image arrives.
+`src/features/upload/upload-page.tsx:788`); everywhere else the element grows when the image arrives.
 Virtualized feeds are protected by unmounting, but every non-virtualized surface
 eagerly loads all thumbnails: playlist tables (`PlaylistPostsTable.tsx:188`), the
 playlist index/liked pages, contributor profiles, and the upload preview strip.
@@ -770,8 +770,8 @@ The prop name drifted with them. `Button` accepts both `colorScheme` and
 `colorPalette` (`button.tsx:76-77`) and prefers `colorPalette` (`:98`), while
 `IconButton` in the same file prefers `colorScheme` (`:193`) — so passing both
 resolves two ways inside one module. Call sites split the same way: 13 uses of
-`colorScheme` across 6 files (`convert.lazy.tsx` 4, `SeriesHub.tsx` 3,
-`Comments.tsx` 2, `PostsPageLayout.tsx` 2, `upload.lazy.tsx` 1,
+`colorScheme` across 6 files (`src/features/convert/convert-page.tsx` 4, `SeriesHub.tsx` 3,
+`Comments.tsx` 2, `PostsPageLayout.tsx` 2, `src/features/upload/upload-page.tsx` 1,
 `DiscoverySummary.tsx` 1) against 45 of `colorPalette`.
 
 **Fix.** One shared palette module consumed by all three, matching the intent
@@ -1001,7 +1001,7 @@ user needs: the delete-passkey warning
 (`src/components/auth/PasskeysSection.tsx:154-160`), the disable-two-factor warning
 (`src/components/auth/TwoFactorSection.tsx:504-528`), the remove-posts-from-playlist
 warning (`src/routes/account_.playlists.$playlistId.tsx:322-328`), and the
-delete-account warning (`src/routes/account.tsx:80-85`). The fix is a sweep over
+delete-account warning (`src/features/account/account-page.tsx:78-83`). The fix is a sweep over
 the dialog call sites, not a one-line change in `Comments.tsx`.
 
 ### 33. `dark:text-gray-500` is a dark variant that changes nothing — `S`
@@ -1064,14 +1064,14 @@ default — and Ark/Zag add none: `@zag-js/avatar`'s `getImageProps()` returns n
 as an unlabelled `<img>`.
 
 Call sites missing it: `src/components/users/User.tsx:21`,
-`src/components/users/ContributorProfile.tsx:43`, `src/routes/account.tsx:219`, and the
-live preview at `account.tsx:340`. The two that get it right pass the user's name
+`src/components/users/ContributorProfile.tsx:43`, `src/features/account/account-page.tsx:195`, and the
+live preview at `src/features/account/account-page.tsx:316`. The two that get it right pass the user's name
 — `src/components/mentions/MentionTextarea.tsx:170` and
 `src/components/comments/Comments.tsx:192`.
 
 `User.tsx:15-32` is the clearest miss: the whole card is a `Link` to
 `/users/$id`, the accessible name comes from the adjacent name text, and the
-avatar is decorative but unlabelled rather than `alt=""`. `account.tsx:221` is a
+avatar is decorative but unlabelled rather than `alt=""`. `src/features/account/account-page.tsx:197` is a
 second bug in the same area — `<Avatar.Fallback />` is passed no `name`, so when
 the image is absent or fails the avatar is an empty grey circle.
 
@@ -1161,11 +1161,11 @@ gap (`ui-utils.ts:185`): a hover or pressed `borderColor` maps straight to a
   `account_.playlists.index.tsx:41,130`, `playlists.index.tsx:68`,
   `users.$id.playlists.index.tsx:64`,
   `account_.playlists.$playlistId.tsx:251,368`,
-  `users.$id.playlists.$playlistId.tsx:109`, `convert.lazy.tsx:316`,
+  `users.$id.playlists.$playlistId.tsx:109`, `src/features/convert/convert-page.tsx:306`,
   `ContributorProfile.tsx:77,106`.
 - Surfaces: `SavedSearchDialogs.tsx:206`, `PlaylistAddModal.tsx:193` (`gray.100`).
 - Selection state, the two where the colour carries meaning: `SeriesHub.tsx:130`
-  (`orange.300`) and `upload.lazy.tsx:787` (`blue.500` marks the default
+  (`orange.300`) and `src/features/upload/upload-page.tsx:777` (`blue.500` marks the default
   thumbnail).
 
 **Fix.** Give `mapBorderColor` a dark table the way `mapColor` has one — the
@@ -1195,7 +1195,7 @@ Two smaller gaps in the same panel:
   neither `TEXT_DARK_VARIANTS` nor `TEXT_LIGHT_OVERRIDES` (`ui-utils.ts:72-87`),
   so the same shade is used in both themes: correct on `gray-950` (≈5.3:1) but
   ≈3.8:1 on the light surface, below AA for 14px text. The equivalent message
-  elsewhere is rendered through `Alert` (`convert.lazy.tsx:520-560`), which
+  elsewhere is rendered through `Alert` (`src/features/convert/convert-page.tsx:510-550`), which
   themes itself; item 27 is the same family of gap.
 - Success and failure are both plain `fontSize="sm"` copy (`:95-105`), with no
   toast and no distinct treatment, so the only feedback after an irreversible
@@ -1286,7 +1286,7 @@ renders this table outside the dialog: `PostsPageLayout.tsx:194-221` maps
 (`:196`) and value printed raw (`:219`), including its own copy of the
 `Encoded_Library_Settings` "View Settings" popover (`:198-217`, against
 `VideoMetadataDialog.tsx:53-72`). `posts/$postId.tsx:58` passes
-`videoMetadata={post.videoMetadata}` to it and `upload.lazy.tsx:663` passes
+`videoMetadata={post.videoMetadata}` to it and `src/features/upload/upload-page.tsx:653` passes
 `metadata={video.videoMetadata}` to the dialog, so both surfaces show the same
 rows from the same stored value: the raw-key, unit-less-value defect above ships
 on the post detail page too, and the fix has to reach both. The copies have
@@ -1337,7 +1337,7 @@ Two related asymmetries:
 
 - `Alert` already exists with `status="error"`/`"success"` variants
   (`src/components/ui/feedback.tsx:190-212`), and it is what the rest of the app
-  uses for exactly this (`convert.lazy.tsx:516,537`,
+  uses for exactly this (`src/features/convert/convert-page.tsx:506,527`,
   `PostEditSuggestionDialog.tsx:250`). It also sets `role="alert"` or
   `role="status"` per status, so the outcome is announced; a bare `Text` is not.
 - `useSetUserRole` (`src/lib/moderation/moderation.hooks.ts:100-111`) is the only
@@ -1432,12 +1432,12 @@ it shows none.
 
 **Root cause.** `passwordForm` declares a form-level validator,
 `validators: { onChange: toStandardSchemaV1Strict(passwordSchema) }`
-(`src/routes/account.tsx:201-203`) — the same construct the profile form uses
+(`src/features/account/account-page.tsx:177-179`) — the same construct the profile form uses
 (`:186-188`). Its rule is `StrongPassword` (`src/lib/auth/auth.schemas.ts:49-62`:
 `MIN_PASSWORD_LENGTH` plus `assessPassword` strength), and TanStack Form does
 distribute the resulting errors into each field's `meta.errors`
 (`node_modules/.store/@tanstack+form-core@1.33.5/node_modules/@tanstack/form-core/dist/esm/FormApi.js:220-290`).
-`FieldInfo` is imported (`account.tsx:6`) and used by all three profile fields
+`FieldInfo` is imported (`src/features/account/account-page.tsx:4`) and used by all three profile fields
 (`:284`, `:307`, `:347`) and by neither password field: each of the two controls
 is a `Field.Root` / `Field.Label` pair around a `PasswordInput` and nothing else
 (`:404-418`, `:424-438`).
@@ -1448,7 +1448,7 @@ clause) and never surfaces the strength rule; the strength rule reaches the UI
 only as a disabled button. TanStack Form makes `canSubmit` validity-driven once
 a field has been touched (`FormApi.js:1147`), a field is touched by
 `handleBlur` (`…/form-core/dist/esm/FieldApi.js:531-537`) — which both controls
-call (`account.tsx:411`, `:431`) — and validation only runs after that
+call (`src/features/account/account-page.tsx:387`, `:431`) — and validation only runs after that
 (`FieldApi.js:461`), so the greyed button is a real, message-less error state.
 
 **Fix.** Render `FieldInfo` for both password fields, and — per item 21 — move it
@@ -1460,7 +1460,7 @@ do.
 
 ### 54. The post-type Video/Image toggle never exposes which one is selected — `S`
 
-**Observed.** `src/routes/upload.lazy.tsx:580-606` renders a "Post type"
+**Observed.** `src/features/upload/upload-page.tsx:570-596` renders a "Post type"
 `Field.Label` above two buttons. The active one is drawn with
 `variant="solid"` and the inactive with `variant="outline"` (`:590`, `:600`), so
 a screen reader announces two buttons, "Video" and "Image", with no indication of
@@ -1468,7 +1468,7 @@ which is current.
 
 **Root cause.** The pair conveys state through the visual `variant` alone;
 `aria-pressed` is absent, although it is the convention the codebase already uses
-for the same pattern in eight other places: `upload.lazy.tsx:682`,
+for the same pattern in eight other places: `src/features/upload/upload-page.tsx:672`,
 `account_.playlists.index.tsx:198`, `account_.playlists.$playlistId.tsx:224`,
 `TagFollowButton.tsx:21`, `PostVoteButtons.tsx:43,57`, `PostFilters.tsx:48`,
 `DiscoveryViewSelector.tsx:45`. `Button` defaults to `type="button"` and spreads
@@ -1559,9 +1559,9 @@ tells assistive technology nothing and loses the user's place:
 - the label is `loadingText ?? children` (`:145`), so unless the call site
   passes `loadingText` the accessible name is identical before and after the
   click. Exactly one `Button` in `src/` passes it
-  (`convert.lazy.tsx:505-506`); the other 25 keep the visible label —
-  `(auth)/login.tsx`, `account.tsx` (×3), `account_.playlists.index.tsx`,
-  `account_.playlists.$playlistId.tsx` (×3), `upload.lazy.tsx`,
+  (`src/features/convert/convert-page.tsx:495-496`); the other 25 keep the visible label —
+  `(auth)/login.tsx`, `src/features/account/account-page.tsx` (×3), `account_.playlists.index.tsx`,
+  `account_.playlists.$playlistId.tsx` (×3), `src/features/upload/upload-page.tsx`,
   `notifications.tsx`, `Comments.tsx` (×2), `PlaylistAddModal.tsx`,
   `ReportDialog.tsx`, `SavedSearchDialogs.tsx` (×2), `PasskeysSection.tsx`, and
   the four `admin/*` panels;
@@ -1596,7 +1596,7 @@ for the two primitives beside it:
 - `Alert.Root` (`:193-197`) hardcodes all four status panels with **no** dark
   variant: `border-red-200 bg-red-50 text-red-800` for error, then the same shape
   in green, blue, and orange. `app.css:28` paints the page `gray-950`, so on
-  every alert path — `convert.lazy.tsx:516`, `convert.lazy.tsx:537` (success),
+  every alert path — `src/features/convert/convert-page.tsx:506`, `src/features/convert/convert-page.tsx:527` (success),
   and `PostEditSuggestionDialog.tsx:250` — the panel is a near-white block
   (`bg-red-50` is `#fef2f2`) with a light border, brighter than anything else on
   the page. Unlike item 9's notification row the text stays readable, because the
@@ -1867,8 +1867,8 @@ news/wiki/help set of item 59.
 `Heading as="h2" size="md"` is meant to produce — except that `Heading` pins
 `fontWeight: "bold"` (`src/components/ui/typography.tsx:48`), so these two
 sections are `font-semibold` while every sibling section heading in
-`account.tsx` (`:226`, `:240`, `:253`, `:388`, `:480`) is bold. The
-`account.tsx` flow is otherwise consistent, so the weight difference is
+`src/features/account/account-page.tsx` (`:226`, `:240`, `:253`, `:388`, `:480`) is bold. The
+`src/features/account/account-page.tsx` flow is otherwise consistent, so the weight difference is
 visible once item 1 restores the sizes.
 
 Because of item 1 the primitive currently renders no size class at all
@@ -1887,33 +1887,33 @@ size and weight.
 
 ### 67. The converter's result preview picks its element from the container, so WebM and MKV results play as audio — `S`
 
-**Observed.** `src/routes/convert.lazy.tsx:558-576` chooses the result player
+**Observed.** `src/features/convert/convert-page.tsx:548-566` chooses the result player
 with `output?.container === "mp4" ? <video …> : <audio …>`,
-`SUPPORTED_OUTPUTS` (`src/routes/-convert.machine.ts:89-107`) has five entries
+`SUPPORTED_OUTPUTS` (`src/features/convert/convert-machine.ts:89-107`) has five entries
 across `mp4`, `webm`, and `mkv`, and the WebM/MKV entries are offered to video
 inputs — the combobox annotates them with
 `isPassthroughCompatible(format, inputVideoCodec)`
-(`convert.lazy.tsx:438-446`).
+(`src/features/convert/convert-page.tsx:428-436`).
 
 **Why it matters.** A video converted to WebM or MKV is previewed in an
 `<audio controls>` element: there is no picture, so the user cannot check the
 conversion, and the only evidence it worked is the file name. The element should
 follow whether the _result_ has a video track, not the container string. The
 page's other preview already uses a different rule —
-`convert.lazy.tsx:240` branches on `isAudioFile` (`:101`, from the input MIME
+`src/features/convert/convert-page.tsx:230` branches on `isAudioFile` (`:101`, from the input MIME
 type) — so two previews answer the same question two ways, and neither consults
 the track layout the machine already computed.
 
 **Fix.** Branch on the output's tracks rather than the container. The machine
-knows both sides (`inputVideoCodec`, `src/routes/-convert.machine.ts:252-254`,
-and `output.videoCodec`, `convert.lazy.tsx:467`), so render `<video>`
+knows both sides (`inputVideoCodec`, `src/features/convert/convert-machine.ts:252-254`,
+and `output.videoCodec`, `src/features/convert/convert-page.tsx:457`), so render `<video>`
 whenever the result keeps video and `<audio>` only for audio-only results.
 MKV deserves its own note in the copy as well: browsers do not play it at all,
 so a download-only result would be more honest than an empty player.
 
 ### 68. The converter's progress bar is named after its own value, and the `striped` prop it is given does nothing — `S`
 
-**Observed.** `ConversionProgress` (`src/routes/convert.lazy.tsx:55-69`) holds
+**Observed.** `ConversionProgress` (`src/features/convert/convert-page.tsx:45-59`) holds
 the app's only `Progress.Root`:
 
 ```tsx
@@ -1940,20 +1940,20 @@ the app's only `Progress.Root`:
   `aria-label="42%"` beside `aria-valuenow="42"` — the number twice, and
   nothing that says what is progressing.
 - **The visible label is not attached to the bar.** `Progress: 42%` is a plain
-  `Text` in the surrounding `Box` (`convert.lazy.tsx:63`), not
+  `Text` in the surrounding `Box` (`src/features/convert/convert-page.tsx:53`), not
   `Progress.Label`/`Progress.ValueText` (`feedback.tsx:147-164`). `ValueText` is
   the part Zag gives `aria-live="polite"` (`progress.connect.mjs:78-83`), and it
   is also the part that formats the percentage for display
   (`@ark-ui/react/dist/components/progress/progress-value-text.js:15`), so the
   hand-rolled paragraph gets neither. `aria-valuenow` is the machine's raw
-  float while the paragraph rounds (`convert.lazy.tsx:63`), so the two can
+  float while the paragraph rounds (`src/features/convert/convert-page.tsx:53`), so the two can
   disagree by a fraction.
 - **`striped` is accepted and dropped.** `Progress.Root` destructures
   `striped: _striped` and forwards only the rest (`feedback.tsx:137-146`), and
   nothing implements stripes: Zag's anatomy has no striped part
   (`progress.anatomy.mjs:3-12`) and Ark's `Progress.Root` only splits the known
   machine props (`progress-root.js:12-24`). The prop is inert, and
-  `convert.lazy.tsx:64` is its only use in the app.
+  `src/features/convert/convert-page.tsx:54` is its only use in the app.
 
 **Why it matters.** A conversion is the longest wait in the product, and the
 only bar that reports it announces the number and nothing else. It is also the
@@ -2102,7 +2102,7 @@ these two maps.
 
 ### 73. The account and two-factor pages are a header taller than the viewport — `S`
 
-**Observed.** `account.tsx:213` and `two-factor.tsx:74` open with the same
+**Observed.** `src/features/account/account-page.tsx:189` and `two-factor.tsx:74` open with the same
 shell, `<Box className="flex min-h-dvh flex-col items-center px-4 py-16 sm:px-8">`,
 inside the root layout's `<main className="pt-16">` (`__root.tsx:495`) — the
 4rem the absolutely-positioned header reserves (`__root.tsx:210-218`).
@@ -2115,7 +2115,7 @@ flex, so the shell's own `py-16` stacks on `pt-16` and the first element sits
 
 **Why it matters.** Two of the app's full-page forms open with a dead
 8rem gap and a scrollbar with nothing to scroll to. Every other full-height
-surface compensates for the header: `index.tsx:22` and `convert.lazy.tsx:190`
+surface compensates for the header: `index.tsx:22` and `src/features/convert/convert-page.tsx:180`
 use `minH="calc(100vh - 4rem)"`, `account_.playlists.$playlistId.tsx:201` uses
 `calc(100dvh - 4rem)`, `VirtualPostsGrid.tsx:21` uses `calc(100dvh - 8rem)`,
 and `safelist.ts:103` pins `min-h-[calc(100vh-4rem)]`. The `(auth)` routes
@@ -2300,7 +2300,7 @@ description entered over several lines reads as one run-on paragraph.
 
 Both controls that capture the field accept multiple lines, so the loss is
 reachable: the upload form's description input is a textarea
-(`src/routes/upload.lazy.tsx:380`, `asTextarea`), and the post page's inline
+(`src/features/upload/upload-page.tsx:370`, `asTextarea`), and the post page's inline
 edit uses `<Textarea>` (`src/components/posts/PostDetail/PostDetailDisplay.tsx:189`).
 `posts.description` is a plain `text().notNull()` column
 (`src/lib/db/schema/sakuga.schema.ts:65`), decoded through `sanitizeString`
@@ -2343,7 +2343,7 @@ but nothing reacts to a resolved navigation. `src/` contains exactly two
 `.focus()` calls — the skip link (`SkipToContentLink.tsx:5`) and the search
 shortcut (`GlobalShortcuts.tsx:10`) — and its only `aria-live` attributes are
 component-scoped status text (`FieldInfo.tsx:29`,
-`PostsResultsState.tsx:60`, `upload.lazy.tsx:857`). There is no
+`PostsResultsState.tsx:60`, `src/features/upload/upload-page.tsx:847`). There is no
 `router.subscribe("onResolved")` or equivalent effect, so after a navigation
 focus stays on the control that was activated and the new page is never
 announced.
@@ -2368,7 +2368,7 @@ stealing focus would be worse than leaving it.
 ### 83. A post's recorded source URL is never rendered — `S`
 
 **Observed.** `posts.source` is captured at upload
-(`src/routes/upload.lazy.tsx:391-398`, labelled "Source URL"), edited from the
+(`src/features/upload/upload-page.tsx:381-388`, labelled "Source URL"), edited from the
 post page (`src/components/posts/PostDetail/PostDetailDisplay.tsx:202-213`), proposed
 through the edit-suggestion dialog
 (`src/components/posts/PostDetail/PostEditSuggestionDialog.tsx:188`), constrained to
@@ -2443,12 +2443,12 @@ Ten names the layer emits are in neither it nor any other literal:
   which is every loading, empty, and error state it draws.
 - `mt-6` and `pt-4` — the two rule-separated blocks of the contributor profile,
   `src/components/users/ContributorProfile.tsx:77,106`; `pt-4` also separates the
-  converter's episode list, `src/routes/convert.lazy.tsx:316`.
+  converter's episode list, `src/features/convert/convert-page.tsx:306`.
 - `pb-0` — `src/routes/users.$id.tsx:119`, `<Box p={4} pb={0}>`. This is the one
   that asks to _remove_ space, so the last block keeps the 1rem of bottom
   padding the prop exists to cancel: `p-4` is safelisted and `pb-0` is not.
 - `mr-2` — the badge in `src/components/posts/DiscoverySummary.tsx:18`; `ml-2` — the
-  converter's field row, `src/routes/convert.lazy.tsx:550`.
+  converter's field row, `src/features/convert/convert-page.tsx:540`.
 - `min-w-4` — the unread-count pill, `src/routes/__root.tsx:147`, which falls
   back to a `px={1}`-wide capsule instead of the intended 1rem minimum.
 - `min-h-[300px]` — the admin panel's centered state block,
@@ -2629,7 +2629,7 @@ boundary, not this one. The fallback is dead: the route paints
 the identical mistake on `/` (`index.tsx:29-33`, whose `useSuspenseQuery` on
 `:15` has already suspended `Home`), and item 51 covers the missing pending
 state from the other side: neither `pendingComponent` in the app
-(`convert.lazy.tsx:29`, `upload.lazy.tsx:50`) is on these routes, so nothing
+(`src/routes/convert.lazy.tsx:8`, `src/routes/upload.lazy.tsx:8`) is on these routes, so nothing
 renders in the gap.
 
 **Fix.** Either delete both dead boundaries, or move the suspending read into a
