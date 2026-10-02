@@ -1,8 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { PopularTagsSection } from "src/components/tags/PopularTagsSection";
 import { SearchBox } from "src/components/search/SearchBox";
+import { PopularTagsSection } from "src/components/tags/PopularTagsSection";
 import { Box, Flex } from "src/components/ui/layout";
+import { Heading } from "src/components/ui/typography";
 import { tagsQueryGetPopularTags } from "src/lib/tags/tags.queries";
 import { seo } from "src/utils/seo";
 
@@ -29,6 +30,9 @@ function Home() {
       p={4}
       pt={{ base: 16, md: 24 }}
     >
+      <Heading as="h1" mb={6} size="3xl">
+        Find the moment you remember.
+      </Heading>
       <SearchBox placeholder="One piece..." showTitle={false} />
       <Box maxW="md" mt={4} w="full">
         <PopularTagsSection tags={popularTags.data} />

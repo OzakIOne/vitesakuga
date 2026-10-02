@@ -62,6 +62,10 @@ browser pass verified the responsive dark-theme `/users`, `/posts`, and filtered
 empty-search layouts, their accessibility trees, and the absence of browser
 console errors or warnings.
 
+**Update (2026-10-02).** The B5 Playwright regression test found that `/` no
+longer rendered the page-level heading recorded in finding 34. `Home` now shows
+`Find the moment you remember.` as its `h1`; the focused B5 test passes.
+
 **Priority.** `P0` user-visible correctness bug that undermines a shared
 primitive. `P1` significant UX/SEO/a11y gap that affects many pages. `P2`
 consistency, performance, or polish with a clear win. `P3` exploratory or
@@ -426,7 +430,7 @@ The section labels that stay at `h2` — `SearchBox.tsx:149`,
 `PopularTagsSection.tsx:19`, `PostsPageLayout.tsx:79,106,185`,
 `PostsResultsState.tsx:91,113` — are legitimately sub-headings, so the default is
 only wrong for page titles. The routes that get it right pass `as="h1"`
-explicitly: `index.tsx:25`, `posts/index.tsx:75`, `posts/tags/$tag.tsx:55`,
+explicitly: `index.tsx:33`, `posts/index.tsx:75`, `posts/tags/$tag.tsx:55`,
 `playlists.index.tsx:54`, the four playlist detail routes, `Post.tsx:51`,
 `SeriesHub.tsx:67`, and `ContributorProfile.tsx:47`.
 
