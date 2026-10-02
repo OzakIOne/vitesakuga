@@ -47,7 +47,7 @@ const createWrapper = (
     <QueryClientProvider client={queryClient}>
       <AuthClientContext.Provider
         value={
-          authClient as unknown as typeof import("../lib/auth/client").default
+          authClient as unknown as typeof import("../../lib/auth/client").default
         }
       >
         {children}

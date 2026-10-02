@@ -9,7 +9,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { PostCard } from "src/components/PostCard";
+import { PostCard } from "src/components/posts/PostCard";
 import { Spinner } from "src/components/ui/feedback";
 import { Box, SimpleGrid, Stack } from "src/components/ui/layout";
 import type { PostWithVotes } from "src/lib/db/schema";

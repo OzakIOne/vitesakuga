@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Schema } from "effect";
-import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { PostsResultsState } from "src/components/PostsResultsState";
-import { TagFollowButton } from "src/components/TagFollowButton";
+import { PostsPageLayout } from "src/components/posts/PostsPageLayout";
+import { PostsResultsState } from "src/components/posts/PostsResultsState";
+import { TagFollowButton } from "src/components/tags/TagFollowButton";
 import { Box, HStack } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
-import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
+import { VirtualPostsGrid } from "src/components/posts/VirtualPostsGrid";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";

@@ -3,12 +3,12 @@ import { Schema } from "effect";
 import {
   POST_DATE_RANGE_LABELS,
   POST_SORT_LABELS,
-} from "src/components/PostFilters";
-import { PostsPageLayout } from "src/components/PostsPageLayout";
-import { PostsResultsState } from "src/components/PostsResultsState";
+} from "src/components/posts/PostFilters";
+import { PostsPageLayout } from "src/components/posts/PostsPageLayout";
+import { PostsResultsState } from "src/components/posts/PostsResultsState";
 import { Box } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
-import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
+import { VirtualPostsGrid } from "src/components/posts/VirtualPostsGrid";
 import { DISCOVERY_VIEW_INFO } from "src/lib/posts/discovery";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";

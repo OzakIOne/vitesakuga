@@ -8,10 +8,22 @@ This document details the expected project structure and file conventions within
 
 ```
 src/
-├── components/   # Reusable React components
-│   ├── form/     # Form field components (TanStack Form + Ark UI)
-│   ├── PostDetail/ # Post-specific display/edit components
-│   └── ui/       # UI primitives (provider, color-mode, toaster, etc.)
+├── components/       # Domain-owned components and shared React UI
+│   ├── admin/        # Staff panels
+│   ├── auth/         # Passkeys and two-factor settings
+│   ├── comments/     # Post comments
+│   ├── form/         # Form field components (TanStack Form + Ark UI)
+│   ├── mentions/     # Mention rendering and input
+│   ├── playlists/    # Playlist UI
+│   ├── posts/        # Post, discovery, series, and detail UI
+│   │   └── PostDetail/
+│   ├── reports/      # Post report dialog
+│   ├── search/       # Search box and saved-search dialogs
+│   ├── tags/         # Tag UI
+│   ├── ui/           # UI primitives (provider, color-mode, toaster, etc.)
+│   ├── users/        # User and contributor profiles
+│   ├── videos/       # Video and metadata UI
+│   └── votes/        # Post vote controls
 ├── db/           # Legacy migration folder (see note below)
 ├── lib/          # Core feature modules, services, and infrastructure
 │   ├── assets/   # Asset URL builder (R2 public URLs)
@@ -58,6 +70,9 @@ src/
 ## File Structure Conventions
 
 - `src/routes/` — TanStack Router file-based route structure (flat layout group `(auth)/`)
+- `src/components/<domain>/` — domain-owned React components and colocated browser tests
+- `src/components/ui/` — shared UI primitives
+- `src/components/form/` — shared form fields
 - `src/lib/<feature>/<feature>.service.ts` — Effect service with embedded TanStack server functions
 - `src/lib/<feature>/<feature>.schema.ts` — Effect Schema for validation
 - `src/lib/<feature>/<feature>.queries.ts` — TanStack Query `queryOptions` factories

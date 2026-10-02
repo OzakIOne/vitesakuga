@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "src/components/EmptyState";
 import { CardGridSkeleton } from "src/components/LoadingSkeletons";
 import { Heading } from "src/components/ui/typography";
-import { User } from "src/components/User";
+import { User } from "src/components/users/User";
 import { fetchUsers } from "src/lib/users/users.service";
 import { seo } from "src/utils/seo";
 

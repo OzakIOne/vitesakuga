@@ -12,11 +12,11 @@ import type {
 
 import { DiscoverySummary } from "./DiscoverySummary";
 import { DiscoveryViewSelector } from "./DiscoveryViewSelector";
-import { PopularTagsSection } from "./PopularTagsSection";
-import type { PopularTag } from "./PopularTagsSection";
+import { PopularTagsSection } from "../tags/PopularTagsSection";
+import type { PopularTag } from "../tags/PopularTagsSection";
 import { PostFilters } from "./PostFilters";
-import { SearchBox } from "./SearchBox";
-import { VideoMetadataList } from "./VideoMetadataList";
+import { SearchBox } from "../search/SearchBox";
+import { VideoMetadataList } from "../videos/VideoMetadataList";
 
 type RegisteredRoutes =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];

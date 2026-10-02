@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { IoLogoGithub } from "react-icons/io";
-import { PasskeySignInButton } from "src/components/PasskeySignInButton";
+import { PasskeySignInButton } from "src/components/auth/PasskeySignInButton";
 import { Button } from "src/components/ui/button";
 import { EmailAutocomplete } from "src/components/ui/email-autocomplete";
 import { Alert } from "src/components/ui/feedback";

@@ -29,8 +29,8 @@ import { Combobox, FileUpload } from "src/components/ui/overlay";
 import { TagInput } from "src/components/ui/tag-input";
 import { toaster } from "src/components/ui/toaster";
 import { Heading, Text } from "src/components/ui/typography";
-import { Video, type VideoRef } from "src/components/Video";
-import { VideoMetadataDialog } from "src/components/VideoMetadataDialog";
+import { Video, type VideoRef } from "src/components/videos/Video";
+import { VideoMetadataDialog } from "src/components/videos/VideoMetadataDialog";
 import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
 import {
   getImageFileValidationError,

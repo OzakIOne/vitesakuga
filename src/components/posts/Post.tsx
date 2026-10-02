@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { PostImageGallery } from "src/components/PostImageGallery";
-import { PostVoteButtons } from "src/components/PostVoteButtons";
+import { PostImageGallery } from "src/components/posts/PostImageGallery";
+import { PostVoteButtons } from "src/components/votes/PostVoteButtons";
 import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Box, HStack, Stack, VStack } from "src/components/ui/layout";
@@ -9,8 +9,8 @@ import { formatEpisodeInfo } from "src/lib/posts/episode-info";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 import { formatDateUtc } from "src/utils/date-format";
 
-import { User } from "./User";
-import { Video } from "./Video";
+import { User } from "../users/User";
+import { Video } from "../videos/Video";
 
 export function Post({
   post,

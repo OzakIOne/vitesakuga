@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { PopularTagsSection } from "src/components/PopularTagsSection";
-import { SearchBox } from "src/components/SearchBox";
+import { PopularTagsSection } from "src/components/tags/PopularTagsSection";
+import { SearchBox } from "src/components/search/SearchBox";
 import { Box, Flex } from "src/components/ui/layout";
 import { tagsQueryGetPopularTags } from "src/lib/tags/tags.queries";
 import { seo } from "src/utils/seo";

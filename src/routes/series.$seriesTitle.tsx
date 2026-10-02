@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { SeriesHub } from "src/components/SeriesHub";
+import { SeriesHub } from "src/components/posts/SeriesHub";
 import { Box } from "src/components/ui/layout";
 import { seriesHubQuery } from "src/lib/posts/posts.queries";
 import { seo } from "src/utils/seo";

@@ -120,7 +120,7 @@ The second option is more local and keeps `fontWeight` on the style-prop path.
 
 **Related.** `src/components/ui/ui-utils.ts:693-696` gives `textStyle` the same
 `text-${v}` treatment, so it is also a font-size token, not a Chakra text style.
-`src/components/User.tsx:25` relies on that (`textStyle="sm"` → `text-sm`) — it
+`src/components/users/User.tsx:25` relies on that (`textStyle="sm"` → `text-sm`) — it
 works only by coincidence and should be `fontSize="sm"`.
 
 ---
@@ -134,7 +134,7 @@ picking a tag — or clearing one with the chip's × — leaves the result list
 unchanged. Only the query field applies: its Enter/Search path and its 500 ms
 debouncer both navigate.
 
-**Root cause.** `src/components/SearchBox.tsx` keeps tags in a draft state that is
+**Root cause.** `src/components/search/SearchBox.tsx` keeps tags in a draft state that is
 written to the URL only by `applyDraftToUrl` (`:108-121`). The two handlers that
 exist for direct tag interaction never touch it:
 
@@ -145,7 +145,7 @@ Neither calls `navigate` nor arms the debouncer, so the change stays in componen
 state. Every other write path in the same file does navigate (`applyImmediately`
 → `applyDraftToUrl`, and the saved-search Apply at `:189-197`).
 
-**Why the tests miss it.** `src/components/SearchBox.test.tsx` covers only the read
+**Why the tests miss it.** `src/components/search/SearchBox.browser.test.tsx` covers only the read
 direction — "shows the applied query and tags from the URL" (`:87`) and "snaps the
 tag chips back to the applied tags on Back/Forward navigation" (`:116`). Nothing
 drives `onValueChange` or the × button. `rg 'tags=' e2e/` finds no end-to-end
@@ -165,7 +165,7 @@ query's intermediate values instead of leaving the page.
 `:189-197`) omit `replace: true`. Because the query debouncer (`:123-131`) fires
 `applyDraftToUrl` after every 500 ms pause, each pause adds a history entry. The
 file's own test — "B1: snaps the field back to the applied query on Back/Forward
-navigation" (`src/components/SearchBox.test.tsx:94`) — exercises exactly this
+navigation" (`src/components/search/SearchBox.browser.test.tsx:94`) — exercises exactly this
 surface.
 
 The codebase already has the idiom: `replace: true` is used at
@@ -269,7 +269,7 @@ Confirmed pairs where a light utility is hardcoded and never inverted:
 | `src/components/ui/field.tsx`          | 203  | `Checkbox.Control`                                       |
 | `src/routes/convert.lazy.tsx`          | 39   | `SELECT_CLASS` (also `border-gray-300`, `text-gray-900`) |
 | `src/routes/account.tsx`               | 333  | avatar preview panel                                     |
-| `src/components/TwoFactorSection.tsx`  | 335  | QR code panel                                            |
+| `src/components/auth/TwoFactorSection.tsx`  | 335  | QR code panel                                            |
 | `src/components/ui/password-input.tsx` | 72   | reveal button (`text-gray-700`, `hover:bg-gray-100`)     |
 | `src/components/ui/overlay.tsx`        | 868  | file-remove button (`hover:bg-gray-100`)                 |
 | `src/components/ui/toaster.tsx`        | 78   | toast dismiss (`hover:bg-gray-100 hover:text-gray-700`)  |
@@ -311,8 +311,8 @@ token maps started drifting in the first place (item 14).
 **Update (2026-09-10).** The same gap covers section dividers: four components
 draw a top rule with `border-t border-gray-200` and no dark counterpart —
 `src/routes/account.tsx:387`, `src/routes/account.tsx:479`,
-`src/components/PasskeysSection.tsx:53`,
-`src/components/TwoFactorSection.tsx:229`. `app.css:73-75` already pairs
+`src/components/auth/PasskeysSection.tsx:53`,
+`src/components/auth/TwoFactorSection.tsx:229`. `app.css:73-75` already pairs
 `border-gray-200` with `dark:border-gray-800` for `.markdown-prose hr`, so
 the convention exists; these are the only hardcoded light borders left on the
 account page, and on `gray-950` they read as bright rules.
@@ -348,7 +348,7 @@ brighter than the dark card behind it (`signup.tsx:259`).
 
 ### 10. `PostCard` links to the same post three times — `S`
 
-`src/components/PostCard.tsx` wraps the thumbnail (`:129`), the title (`:160`),
+`src/components/posts/PostCard.tsx` wraps the thumbnail (`:129`), the title (`:160`),
 and the entire metadata block (`:181`) in three independent `Link`s to the same
 `/posts/$postId`. For mouse users the hit areas are inconsistent and the card
 looks clickable via `cursor: pointer` on the outer `VStack` but is not; for
@@ -473,14 +473,14 @@ resolves to nothing:
 
 - `src/routes/account.tsx:96,269,292,315,405,425` — six of the page's seven
   labels.
-- `src/components/TwoFactorSection.tsx:310,374,513,609`.
-- `src/routes/two-factor.tsx:92` and `src/components/PasskeysSection.tsx:209`.
+- `src/components/auth/TwoFactorSection.tsx:310,374,513,609`.
+- `src/routes/two-factor.tsx:92` and `src/components/auth/PasskeysSection.tsx:209`.
 - `src/routes/account_.playlists.$playlistId.tsx:257`.
 - `src/routes/upload.lazy.tsx:407,568,582,614,718`, plus `:69`
   (`MetaNumberField`, four call sites) and the three fields built by
   `src/components/form/FieldText.tsx:29` (`upload.lazy.tsx:363,379,393`).
-- `src/components/PostDetail/PostDetailDisplay.tsx:217` (Tags) and
-  `src/components/SearchBox.tsx:207` (the rendered example above).
+- `src/components/posts/PostDetail/PostDetailDisplay.tsx:217` (Tags) and
+  `src/components/search/SearchBox.tsx:207` (the rendered example above).
 
 Two variants of the miss:
 
@@ -795,8 +795,8 @@ transitions/animations, rather than per-component opt-ins.
 
 ### 16. Filter groups are unlabelled button clusters — `S`
 
-`src/components/PostFilters.tsx:84-116` and
-`src/components/DiscoveryViewSelector.tsx:28-62` render a bold `Text` label above a
+`src/components/posts/PostFilters.tsx:84-116` and
+`src/components/posts/DiscoveryViewSelector.tsx:28-62` render a bold `Text` label above a
 `Stack` of `aria-pressed` buttons. The label is not programmatically associated,
 so the grouping is visual only.
 
@@ -813,21 +813,21 @@ drop the attribute for the common case.
 
 ### 18. Video player has theme-independent chrome and forced mute — `S`
 
-`src/components/Video.tsx:118` hardcodes `muted` on the `<video>`, so audio can
+`src/components/videos/Video.tsx:118` hardcodes `muted` on the `<video>`, so audio can
 never be enabled and the player has no unmute affordance. The frame-step buttons
 at `:143` and `:154` use `border-white`, which is invisible against the light
 theme.
 
 ### 19. `Post` action row can overflow — `S`
 
-`src/components/Post.tsx:70` is a non-wrapping `<HStack gap={2}>` that can hold
+`src/components/posts/Post.tsx:70` is a non-wrapping `<HStack gap={2}>` that can hold
 five controls (`Edit Post` / `Suggest an edit`, vote pair, `Add to playlist`,
 `Report`). In the narrow left column of `PostsPageLayout` this will push content
 out rather than wrapping.
 
 ### 20. `sidebarCards` is rendered into the DOM twice — `S`
 
-`src/components/PostsPageLayout.tsx:75` builds the sidebar subtree once and
+`src/components/posts/PostsPageLayout.tsx:75` builds the sidebar subtree once and
 injects it at both `:168` (mobile collapsible) and `:176` (desktop block). Both
 are always mounted; `display: none` only hides one. This doubles the DOM for the
 tallest part of the page, duplicates any ids/labels inside the subtree, and
@@ -879,7 +879,7 @@ Two ids are hardcoded rather than instance-scoped: `listId = "mention-suggestion
 `aria-activedescendant` resolve through `listId`, so a second `MentionTextarea`
 on the same page (a reply box or an edit form) would emit duplicate ids and have
 assistive technology bind to the first composer's listbox instead of its own. Only
-`src/components/Comments.tsx:296` renders the component today, so this is latent
+`src/components/comments/Comments.tsx:296` renders the component today, so this is latent
 rather than live — cheap to fix now and confusing to debug later.
 
 **Fix.** Use `border-neutral-200 dark:border-neutral-700` (or the `borderColor`
@@ -887,7 +887,7 @@ prop), and derive both ids from `useId()`.
 
 ### 28. The playlist table's inline `display` styles contradict its own comment — `S`
 
-`src/components/PlaylistPostsTable.tsx:456` reads "display:grid strips native
+`src/components/playlists/PlaylistPostsTable.tsx:456` reads "display:grid strips native
 table semantics; explicit roles restore them", and the markup does override
 display three times: `style={{ display: "grid" }}` on the `<table>` (`:460`), the
 `<thead>` (`:465`), and the `<tbody>` (`:497`), with every row a `display: flex`
@@ -978,7 +978,7 @@ is the log volume and the rule that argue for removing it.
 
 ### 32. The delete-confirm dialog is not linked to its message — `S`
 
-`src/components/Comments.tsx:103-108` renders the confirmation copy as a plain
+`src/components/comments/Comments.tsx:103-108` renders the confirmation copy as a plain
 `<p>` inside `Dialog.Body` rather than `Dialog.Description`, so zag never emits
 `aria-describedby` on the content element and "Are you sure you want to delete
 this comment? This action cannot be undone." is not announced as the dialog's
@@ -998,8 +998,8 @@ An `onSuccess`-only call site is the success path, not the absence of one.
 `Dialog.Body` renders its copy as a plain element, so no dialog but that one
 gets an `aria-describedby`. The confirmations that carry text a screen-reader
 user needs: the delete-passkey warning
-(`src/components/PasskeysSection.tsx:154-160`), the disable-two-factor warning
-(`src/components/TwoFactorSection.tsx:504-528`), the remove-posts-from-playlist
+(`src/components/auth/PasskeysSection.tsx:154-160`), the disable-two-factor warning
+(`src/components/auth/TwoFactorSection.tsx:504-528`), the remove-posts-from-playlist
 warning (`src/routes/account_.playlists.$playlistId.tsx:322-328`), and the
 delete-account warning (`src/routes/account.tsx:80-85`). The fix is a sweep over
 the dialog call sites, not a one-line change in `Comments.tsx`.
@@ -1063,11 +1063,11 @@ default — and Ark/Zag add none: `@zag-js/avatar`'s `getImageProps()` returns n
 `alt`. Every avatar rendered without an explicit `alt` therefore reaches the DOM
 as an unlabelled `<img>`.
 
-Call sites missing it: `src/components/User.tsx:21`,
-`src/components/ContributorProfile.tsx:43`, `src/routes/account.tsx:219`, and the
+Call sites missing it: `src/components/users/User.tsx:21`,
+`src/components/users/ContributorProfile.tsx:43`, `src/routes/account.tsx:219`, and the
 live preview at `account.tsx:340`. The two that get it right pass the user's name
 — `src/components/mentions/MentionTextarea.tsx:170` and
-`src/components/Comments.tsx:192`.
+`src/components/comments/Comments.tsx:192`.
 
 `User.tsx:15-32` is the clearest miss: the whole card is a `Link` to
 `/users/$id`, the accessible name comes from the adjacent name text, and the
@@ -1101,8 +1101,8 @@ TanStack Router's own component
 (`@tanstack/react-router/dist/esm/CatchBoundary.js`), built from inline `style`
 objects — a `<strong>Something went wrong!</strong>`, a raw `<button>` with
 `border: 1px solid currentColor`, and a red-bordered `<pre>` holding
-`error.message` (shown by default outside production). `src/components/UserError.tsx`
-and `src/components/PostError.tsx` are six-line pass-throughs to it, wired up as
+`error.message` (shown by default outside production). `src/components/users/UserError.tsx`
+and `src/components/posts/PostError.tsx` are six-line pass-throughs to it, wired up as
 `errorComponent` on `users.$id.tsx:25` and `posts/$postId.tsx:20`, so a failed
 route render falls back to a bold "Something went wrong!" above an unstyled
 toggle button.
@@ -1117,7 +1117,7 @@ than inline styles.
 `AGENTS.md` states the React 19 rule explicitly — "use ref as a prop instead of
 `React.forwardRef`" — but four components still wrap themselves in it:
 
-- `src/components/Video.tsx:42` — `forwardRef<VideoRef, VideoProps>`.
+- `src/components/videos/Video.tsx:42` — `forwardRef<VideoRef, VideoProps>`.
 - `src/components/ui/password-input.tsx:26` — `forwardRef<HTMLInputElement, …>`.
 - `src/components/ui/password-input.tsx:132` — `forwardRef<HTMLDivElement, …>`.
 - `src/components/ui/color-mode.tsx:77` — `forwardRef<HTMLButtonElement, …>`.
@@ -1207,7 +1207,7 @@ The rest of this surface is item 30.
 
 ### 42. A failed saved-search load renders the empty state — `S`
 
-`SavedSearchesDialog` (`src/components/SavedSearchDialogs.tsx:158-165`) branches
+`SavedSearchesDialog` (`src/components/search/SavedSearchDialogs.tsx:158-165`) branches
 on `isPending` and `length === 0` only, and derives its rows from
 `const savedSearches = savedSearchesQuery.data ?? []` (`:137`). A rejected fetch
 is therefore indistinguishable from an empty list: the dialog shows "You have no
@@ -1260,7 +1260,7 @@ map the enum to a label at the point the chip is created.
 
 ### 45. Media Info prints raw MediaInfo keys and unit-less values — `S`
 
-`src/components/VideoMetadataDialog.tsx:48-79` renders `Object.entries(metadata)`
+`src/components/videos/VideoMetadataDialog.tsx:48-79` renders `Object.entries(metadata)`
 straight into a `DataList`, using each object key as the row label. Those keys are
 the stored MediaInfo identifiers (`src/lib/posts/posts.schema.ts:15-34`) and are
 mixed technical names: `BitDepth`, `BitRate`, `ChromaSubsampling`, `CodecID`,
@@ -1315,7 +1315,7 @@ lookup needs an explicit guard rather than a cast).
 **Note (2026-09-10), completeness of the family.** A fourth site, on the account
 page: the passkey card prints the credential's transport tokens as copy —
 `passkey.transports.replaceAll(",", ", ")`
-(`src/components/PasskeysSection.tsx:107-109`). `transports` is the stored
+(`src/components/auth/PasskeysSection.tsx:107-109`). `transports` is the stored
 string from `@better-auth/passkey` (`transports?: string`,
 `dist/index-B7Y0IgKK.d.mts:201`) holding the WebAuthn transport names the
 browser reported — `usb`, `nfc`, `ble`, `internal`, `hybrid`,
@@ -1669,7 +1669,7 @@ drift inside the shortcuts dialog.
 
 ### 60. The search box's syntax hint duplicates the wiki and is the least readable text on the screen — `S`
 
-**Observed.** `src/components/SearchBox.tsx:201-205` renders one line —
+**Observed.** `src/components/search/SearchBox.tsx:201-205` renders one line —
 `Advanced filters: width:>1000, height:=800, height:<800, likes:>10,
 video_width:=1920, -movies` — as `Text color="fg.muted" fontSize="xs"` with each
 operator in a `<code>` chip. Nothing in it links to the page that documents the
@@ -1697,7 +1697,7 @@ the single source for the examples.
 
 ### 62. The post grids scroll inside a container the keyboard cannot reach — `S`
 
-**Observed.** `src/components/VirtualPostsGrid.tsx:178-181` renders the feed's
+**Observed.** `src/components/posts/VirtualPostsGrid.tsx:178-181` renders the feed's
 viewport as a bare `<div ref={parentRef} style={{ height: SCROLL_VIEWPORT,
 overflowY: "auto" }}>`: no `tabIndex`, no `role`, no accessible name.
 `SCROLL_VIEWPORT` is `calc(100dvh - 8rem)` (`:21`), so the grid gets a scrollbar
@@ -1855,8 +1855,8 @@ together.
 
 ### 66. Two account sections and the signup heading bypass `Heading` — `S`
 
-**Observed.** `src/components/PasskeysSection.tsx:56` and
-`src/components/TwoFactorSection.tsx:232` both render
+**Observed.** `src/components/auth/PasskeysSection.tsx:56` and
+`src/components/auth/TwoFactorSection.tsx:232` both render
 `<h2 className="text-lg font-semibold">`, and `src/routes/(auth)/signup.tsx:92`
 renders `<h1 className="text-xl font-bold">Check your email</h1>`. Those two
 `<h2>`s are the only literal headings in `src/components/`, and
@@ -1968,9 +1968,9 @@ site and the primitive — nothing implements it and the project is pre-launch.
 
 ### 69. The post page's two section titles are styled paragraphs — `S`
 
-**Observed.** `src/components/Comments.tsx:59` renders
+**Observed.** `src/components/comments/Comments.tsx:59` renders
 `<Text fontSize="xl" fontWeight="bold" mb={4}>Comments</Text>`, and
-`src/components/PostDetail/PostEditHistory.tsx:155` renders the same shape
+`src/components/posts/PostDetail/PostEditHistory.tsx:155` renders the same shape
 (`mb={3}`) for "Edit history". `Text` defaults to `as="p"`
 (`src/components/ui/typography.tsx:29`), so neither is a heading element.
 
@@ -1979,7 +1979,7 @@ site and the primitive — nothing implements it and the project is pre-launch.
 `text-balance`, which a two-word title does not notice.
 
 **Why it matters.** The post page has a working heading outline for the panels
-around them: the post title is an `h1` (`src/components/Post.tsx:51`) and the
+around them: the post title is an `h1` (`src/components/posts/Post.tsx:51`) and the
 series panels are `h2`/`h3` (`SeriesHub.tsx:177`, `:202`, rendered at
 `PostDetailDisplay.tsx:298-299`). Heading navigation therefore reaches the
 series panels but skips "Comments" (`PostDetailDisplay.tsx:312`) and "Edit
@@ -1996,7 +1996,7 @@ right size and weight.
 ### 70. The comments list has no empty state — `S`
 
 **Observed.** `CommentsContent` renders `{comments?.map(…)}` and nothing else
-under the composer (`src/components/Comments.tsx:69-80`). The rows come from
+under the composer (`src/components/comments/Comments.tsx:69-80`). The rows come from
 `useSuspenseQuery`, so the array is always present and the optional chain is
 redundant; a post with no comments shows the "Comments" title, the composer,
 and then blank space.
@@ -2024,13 +2024,13 @@ bordered `Box` the series and playlist empty states use.
 **Observed.** `PostVoteButtons` renders at full strength for signed-out
 visitors and only explains itself after a click: `handleVote` early-returns into
 an error toast — title "Login required", description "Log in to vote on posts.",
-`type: "error"` (`src/components/PostVoteButtons.tsx:26-33`) — while the two
+`type: "error"` (`src/components/votes/PostVoteButtons.tsx:26-33`) — while the two
 buttons it belongs to are ordinary enabled `Button`s carrying `aria-pressed`
 (`:38-62`), and `Post.tsx:81` renders them unconditionally beside the
 owner-only "Edit Post" / "Suggest an edit" pair. The tag page's equivalent
 affordance answers the same condition up front: `TagFollowButton` returns
 `<Button disabled>Sign in to follow</Button>`
-(`src/components/TagFollowButton.tsx:11-15`), `DiscoveryViewSelector` disables
+(`src/components/tags/TagFollowButton.tsx:11-15`), `DiscoveryViewSelector` disables
 the locked view, suffixes its label with "(sign in required)", and prints
 "Sign in to unlock followed-tag discovery." beneath the strip
 (`DiscoveryViewSelector.tsx:39,43,47,79`), and the saved-search dialog offers a
@@ -2055,7 +2055,7 @@ do for the same visitor.
 
 **Observed.** `ContributorProfile` lays its five stat tiles out with
 `<SimpleGrid columns={{ base: 2, sm: 3, lg: 5 }}>`
-(`src/components/ContributorProfile.tsx:66`). `SimpleGrid` turns each breakpoint
+(`src/components/users/ContributorProfile.tsx:66`). `SimpleGrid` turns each breakpoint
 into a class name by string building — `` `grid-cols-${n}` `` prefixed with
 `sm:`/`lg:` (`src/components/ui/layout.tsx:124-133,147-162`) — so the element
 needs `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`. Neither `sm:grid-cols-3` nor
@@ -2258,7 +2258,7 @@ instance keeps just the latest call.
 
 `src/routes/posts/index.tsx:88-96` wraps its grid in `PostsResultsState`,
 which owns all three non-happy states: `isPending && !hasLoadedPosts` renders
-a `Spinner` and "Loading posts..." (`src/components/PostsResultsState.tsx:79-86`),
+a `Spinner` and "Loading posts..." (`src/components/posts/PostsResultsState.tsx:79-86`),
 `error && !hasLoadedPosts` renders "Could not load posts" with Retry and Clear
 filters (`:88-103`), and `resultCount === 0` renders "No posts found" with a
 clear-filters action (`:105-121`).
@@ -2268,7 +2268,7 @@ The tag feed renders the same grid without it.
 `Box border="1px"`, and the hook result is destructured at `:24-41` without
 `error`, `isPending`, `retry`, or `firstPage` — `usePostsInfiniteScroll`
 computes them and the route drops them. `PostsPageLayout` adds nothing: it only
-renders `children` (`src/components/PostsPageLayout.tsx:236`).
+renders `children` (`src/components/posts/PostsPageLayout.tsx:236`).
 
 So on `/posts/tags/<tag>`:
 
@@ -2291,7 +2291,7 @@ and navigates to `/posts/`.
 
 ### 78. Multi-line post descriptions and comments collapse into one paragraph — `S`
 
-`src/components/Post.tsx:105-109` renders the body as
+`src/components/posts/Post.tsx:105-109` renders the body as
 `<Text className="break-words" mb={4}>{post.description}</Text>`, and `Text`
 (`src/components/ui/typography.tsx:28-40`) sets no `white-space`: it maps style
 props to classes and emits a plain `<p>`. Newlines in the description are
@@ -2301,7 +2301,7 @@ description entered over several lines reads as one run-on paragraph.
 Both controls that capture the field accept multiple lines, so the loss is
 reachable: the upload form's description input is a textarea
 (`src/routes/upload.lazy.tsx:380`, `asTextarea`), and the post page's inline
-edit uses `<Textarea>` (`src/components/PostDetail/PostDetailDisplay.tsx:189`).
+edit uses `<Textarea>` (`src/components/posts/PostDetail/PostDetailDisplay.tsx:189`).
 `posts.description` is a plain `text().notNull()` column
 (`src/lib/db/schema/sakuga.schema.ts:65`), decoded through `sanitizeString`
 (`src/lib/posts/posts.schema.ts:61-67`), whose only constraint is `MinLen3`
@@ -2312,7 +2312,7 @@ so the newlines are stored and only lost at render.
 The codebase already has the right shape: `VideoMetadataDialog.tsx:65` and
 `PostsPageLayout.tsx:210` render the same kind of free text with
 `whitespace-pre-wrap break-words`. The card variant is deliberately
-single-line (`src/components/PostCard.tsx:185-187` sets `lineClamp={1}`), so
+single-line (`src/components/posts/PostCard.tsx:185-187` sets `lineClamp={1}`), so
 only the detail page needs the change.
 
 **Fix.** Add `whitespace-pre-wrap` to the description `Text` in
@@ -2369,9 +2369,9 @@ stealing focus would be worse than leaving it.
 
 **Observed.** `posts.source` is captured at upload
 (`src/routes/upload.lazy.tsx:391-398`, labelled "Source URL"), edited from the
-post page (`src/components/PostDetail/PostDetailDisplay.tsx:202-213`), proposed
+post page (`src/components/posts/PostDetail/PostDetailDisplay.tsx:202-213`), proposed
 through the edit-suggestion dialog
-(`src/components/PostDetail/PostEditSuggestionDialog.tsx:188`), constrained to
+(`src/components/posts/PostDetail/PostEditSuggestionDialog.tsx:188`), constrained to
 an http(s) URL by `HttpsUrl` (`src/lib/posts/posts.schema.ts:75-77,161`),
 selected by the detail query (`src/lib/posts/posts.service.ts:548`), and mapped
 into the loader's `post` (`:627`). `docs/features.md:78` lists "URL source"
@@ -2439,15 +2439,15 @@ Ten names the layer emits are in neither it nor any other literal:
 - `py-6` — `Container py={6}` at `src/routes/admin.tsx:49` and
   `src/routes/notifications.tsx:70`. No padding class survives, so those two
   pages lose their vertical inset entirely rather than 1.5rem of it.
-- `p-8` — the results-state panel, `src/components/PostsResultsState.tsx:59`,
+- `p-8` — the results-state panel, `src/components/posts/PostsResultsState.tsx:59`,
   which is every loading, empty, and error state it draws.
 - `mt-6` and `pt-4` — the two rule-separated blocks of the contributor profile,
-  `src/components/ContributorProfile.tsx:77,106`; `pt-4` also separates the
+  `src/components/users/ContributorProfile.tsx:77,106`; `pt-4` also separates the
   converter's episode list, `src/routes/convert.lazy.tsx:316`.
 - `pb-0` — `src/routes/users.$id.tsx:119`, `<Box p={4} pb={0}>`. This is the one
   that asks to _remove_ space, so the last block keeps the 1rem of bottom
   padding the prop exists to cancel: `p-4` is safelisted and `pb-0` is not.
-- `mr-2` — the badge in `src/components/DiscoverySummary.tsx:18`; `ml-2` — the
+- `mr-2` — the badge in `src/components/posts/DiscoverySummary.tsx:18`; `ml-2` — the
   converter's field row, `src/routes/convert.lazy.tsx:550`.
 - `min-w-4` — the unread-count pill, `src/routes/__root.tsx:147`, which falls
   back to a `px={1}`-wide capsule instead of the intended 1rem minimum.
@@ -2455,7 +2455,7 @@ Ten names the layer emits are in neither it nor any other literal:
   `src/routes/admin.tsx:77`. The safelist carries `min-h-[200px]`,
   `min-h-[400px]`, and `min-h-[600px]` (`:100-102`) but not this one, so the
   block collapses to its content instead of holding the height it asks for.
-- `gap-0` — `src/components/ContributorProfile.tsx:18,79`,
+- `gap-0` — `src/components/users/ContributorProfile.tsx:18,79`,
   `src/components/admin/ReportsPanel.tsx:42`,
   `src/components/admin/SuggestionsPanel.tsx:71`,
   `src/components/admin/PromotionQueuePanel.tsx:59` and
@@ -2512,11 +2512,11 @@ entry cannot rescue it — there is no valid spelling of it.
 Two call sites pass such a value:
 
 - `minH="16rem"` on the results-state panel
-  (`src/components/PostsResultsState.tsx:58`), the box behind every loading,
+  (`src/components/posts/PostsResultsState.tsx:58`), the box behind every loading,
   empty, and error state. With the declaration dropped it collapses to its
   content height instead of holding 16rem.
 - `minW="6rem"` on the label column of the edit-history field list
-  (`src/components/PostDetail/PostEditHistory.tsx:49`, one label/value `HStack`
+  (`src/components/posts/PostDetail/PostEditHistory.tsx:49`, one label/value `HStack`
   per changed field), which no longer reserves the gutter that lines the values
   up into a column.
 
@@ -2574,7 +2574,7 @@ naming rather than user-facing language.
 ### 44. The discovery summary exposes internal ranking signals as user copy — `S`
 
 Item 25 covers the selector copy; the panel below it is more explicit.
-`src/components/DiscoverySummary.tsx:28-38` renders `info.signals` and
+`src/components/posts/DiscoverySummary.tsx:28-38` renders `info.signals` and
 `info.timeWindow` under the bold labels "Signals:" and "Time window:". Those
 strings in `src/lib/posts/discovery.ts:11-56` read like ranking-spec notes
 rather than user-facing prose:

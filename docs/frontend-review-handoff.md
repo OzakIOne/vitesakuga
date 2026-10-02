@@ -62,7 +62,7 @@ Le registre détaillé et son statut sont dans
 
 - `src/components/ConfirmationDialog.tsx`
 - `src/components/RoutePending.tsx`
-- `src/components/VideoMetadataList.tsx`
+- `src/components/videos/VideoMetadataList.tsx`
 - `src/lib/router/not-found.ts`
 - `src/lib/router/route-params.ts`
 - `src/lib/posts/video-metadata.ts`

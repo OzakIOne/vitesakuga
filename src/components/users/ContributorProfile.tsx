@@ -5,10 +5,10 @@ import { PROMOTION_RULES } from "src/lib/promotions/promotions.config";
 import type { ContributorProfile as ContributorProfileData } from "src/lib/users/users.schema";
 import { formatDateUtc } from "src/utils/date-format";
 
-import { Badge } from "./ui/feedback";
-import { Box, HStack, SimpleGrid, Stack, VStack } from "./ui/layout";
-import { Avatar, Card, Image } from "./ui/media";
-import { Heading, Text } from "./ui/typography";
+import { Badge } from "../ui/feedback";
+import { Box, HStack, SimpleGrid, Stack, VStack } from "../ui/layout";
+import { Avatar, Card, Image } from "../ui/media";
+import { Heading, Text } from "../ui/typography";
 
 type ContributorProfileProps = {
   profile: ContributorProfileData;

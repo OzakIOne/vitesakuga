@@ -1,15 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useReducer, useState } from "react";
-import { Comments } from "src/components/Comments";
-import { PlaylistAddModal } from "src/components/PlaylistAddModal";
-import { Post } from "src/components/Post";
-import { PostEditHistory } from "src/components/PostDetail/PostEditHistory";
-import { PostEditSuggestionDialog } from "src/components/PostDetail/PostEditSuggestionDialog";
-import { ReportDialog } from "src/components/ReportDialog";
+import { Comments } from "src/components/comments/Comments";
+import { PlaylistAddModal } from "src/components/playlists/PlaylistAddModal";
+import { Post } from "src/components/posts/Post";
+import { PostEditHistory } from "src/components/posts/PostDetail/PostEditHistory";
+import { PostEditSuggestionDialog } from "src/components/posts/PostDetail/PostEditSuggestionDialog";
+import { ReportDialog } from "src/components/reports/ReportDialog";
 import {
   MoreFromSeriesPanel,
   SeriesNavigationPanel,
-} from "src/components/SeriesHub";
+} from "src/components/posts/SeriesHub";
 import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";

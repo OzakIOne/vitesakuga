@@ -6,8 +6,8 @@ import {
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useCallback, useContext, useMemo, useState } from "react";
 import { EmptyState } from "src/components/EmptyState";
-import { PlaylistPostsTable } from "src/components/PlaylistPostsTable";
-import type { PlaylistPostTableRow } from "src/components/PlaylistPostsTable";
+import { PlaylistPostsTable } from "src/components/playlists/PlaylistPostsTable";
+import type { PlaylistPostTableRow } from "src/components/playlists/PlaylistPostsTable";
 import { Button, CloseButton } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";

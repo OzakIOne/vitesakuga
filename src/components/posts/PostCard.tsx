@@ -9,8 +9,8 @@ import {
   LuThumbsDown,
   LuThumbsUp,
 } from "react-icons/lu";
-import { PlaylistAddModal } from "src/components/PlaylistAddModal";
-import { ReportDialog } from "src/components/ReportDialog";
+import { PlaylistAddModal } from "src/components/playlists/PlaylistAddModal";
+import { ReportDialog } from "src/components/reports/ReportDialog";
 import { IconButton } from "src/components/ui/button";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";

@@ -6,9 +6,9 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { Schema } from "effect";
-import { ContributorProfile } from "src/components/ContributorProfile";
+import { ContributorProfile } from "src/components/users/ContributorProfile";
 import { NotFound } from "src/components/NotFound";
-import { PostsPageLayout } from "src/components/PostsPageLayout";
+import { PostsPageLayout } from "src/components/posts/PostsPageLayout";
 import { Box } from "src/components/ui/layout";
 import {
   TABS_LIST_BASE,
@@ -16,8 +16,8 @@ import {
   TABS_TRIGGER_SELECTED,
 } from "src/components/ui/tabs";
 import { cn } from "src/components/ui/ui-utils";
-import { UserErrorComponent } from "src/components/UserError";
-import { VirtualPostsGrid } from "src/components/VirtualPostsGrid";
+import { UserErrorComponent } from "src/components/users/UserError";
+import { VirtualPostsGrid } from "src/components/posts/VirtualPostsGrid";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { rethrowRouteDataError } from "src/lib/router/not-found";

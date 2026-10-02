@@ -7,11 +7,11 @@ import {
   type SeriesNavigation,
 } from "src/lib/posts/series-hubs";
 
-import { EmptyState } from "./EmptyState";
+import { EmptyState } from "../EmptyState";
 import { PostCard } from "./PostCard";
-import { Badge } from "./ui/feedback";
-import { Box, Grid, HStack, Stack, VStack } from "./ui/layout";
-import { Heading, Text } from "./ui/typography";
+import { Badge } from "../ui/feedback";
+import { Box, Grid, HStack, Stack, VStack } from "../ui/layout";
+import { Heading, Text } from "../ui/typography";
 
 type SeriesHubData = Awaited<ReturnType<typeof fetchSeriesHub>>;
 
