@@ -1,8 +1,8 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
+import { SqlError, type EffectTransaction } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
-import { SqlError, type EffectTransition } from "../effect/effect.utils";
 import { startOfLocalDay } from "./local-day";
 import { POINTS_RULES, type PointAction } from "./points.config";
 
@@ -24,7 +24,7 @@ export type AwardOutcome =
   | { readonly kind: "daily-cap-reached" };
 
 type PointsQueryExecutor = Pick<
-  EffectTransition<DB>,
+  EffectTransaction<DB>,
   "executeTakeFirstOrUndefined" | "selectFrom"
 >;
 
@@ -102,7 +102,7 @@ export class PointsService extends Context.Service<
       const rule = POINTS_RULES[input.action];
       const now = yield* Clock.currentTimeMillis;
 
-      const outcome = yield* db.transaction().execute((trx) =>
+      const outcome = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           // Serialize awards for one user so concurrent cap checks cannot all
           // observe the same pre-insert count.

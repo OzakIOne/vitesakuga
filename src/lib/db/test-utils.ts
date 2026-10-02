@@ -11,12 +11,12 @@ import { AuthService, makeAuthService } from "../auth/context";
 import type { AuthSessionProvider } from "../auth/context";
 import { RequestHeadersService } from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
-import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
 import { makeRustFSStorageLayer } from "../storage/storage.adapter";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { KyselyDB } from "./context";
+import { makeFromKysely } from "./effect-kysely";
 import type { DB } from "./kysely";
 import { PGliteDialect } from "./pglite-driver";
 

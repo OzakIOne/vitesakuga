@@ -5,13 +5,13 @@ import { UpdateObject } from "kysely";
 import { ensureOwned } from "../auth/ownership";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import type { DB } from "../db/kysely";
-import { toIsoTimestamp } from "../db/schema/timestamp";
 import {
   SqlError,
   SqlNoFirstResult,
-  type EffectTransition,
-} from "../effect/effect.utils";
+  type EffectTransaction,
+} from "../db/effect-kysely";
+import type { DB } from "../db/kysely";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
@@ -284,7 +284,7 @@ export class PlaylistsService extends Context.Service<
 
     /** Next sequential position for appending to a playlist. */
     const nextPosition = Effect.fn("PlaylistsService.nextPosition")(function* (
-      trx: EffectTransition<DB>,
+      trx: EffectTransaction<DB>,
       playlistId: PlaylistId,
     ) {
       const maxResults = yield* trx.execute(
@@ -305,7 +305,7 @@ export class PlaylistsService extends Context.Service<
      */
     const resequencePositions = Effect.fn(
       "PlaylistsService.resequencePositions",
-    )(function* (trx: EffectTransition<DB>, playlistId: PlaylistId) {
+    )(function* (trx: EffectTransaction<DB>, playlistId: PlaylistId) {
       const remaining = yield* trx.execute(
         trx
           .selectFrom("playlist_posts")
@@ -413,7 +413,7 @@ export class PlaylistsService extends Context.Service<
         onSome: () => Effect.succeed(undefined),
       });
 
-      const inserted = yield* db.transaction().execute((trx) =>
+      const inserted = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           yield* trx.executeTakeFirstOrError(
             trx
@@ -465,7 +465,7 @@ export class PlaylistsService extends Context.Service<
     ) {
       yield* requireOwnedPlaylist(data.playlistId);
 
-      yield* db.transaction().execute((trx) =>
+      yield* db.transaction((trx) =>
         Effect.gen(function* () {
           yield* trx.execute(
             trx
@@ -488,7 +488,7 @@ export class PlaylistsService extends Context.Service<
 
       const uniqueIds = [...new Set(data.postIds)];
 
-      return yield* db.transaction().execute((trx) =>
+      return yield* db.transaction((trx) =>
         Effect.gen(function* () {
           yield* trx.executeTakeFirstOrError(
             trx
@@ -559,7 +559,7 @@ export class PlaylistsService extends Context.Service<
 
         const uniqueIds = [...new Set(data.postIds)];
 
-        return yield* db.transaction().execute((trx) =>
+        return yield* db.transaction((trx) =>
           Effect.gen(function* () {
             const toRemove = yield* trx.execute(
               trx
@@ -618,7 +618,7 @@ export class PlaylistsService extends Context.Service<
         });
       }
 
-      yield* db.transaction().execute((trx) =>
+      yield* db.transaction((trx) =>
         Effect.gen(function* () {
           for (const item of data.items) {
             yield* trx.execute(

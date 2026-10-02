@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
 
+import type { EffectKysely } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
-import type { EffectKysely } from "../effect/effect.utils";
 
 export function mapPopularTags(
   t: { id: number; name: string; postCount: number | bigint | string }[],

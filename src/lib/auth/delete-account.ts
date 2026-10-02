@@ -3,8 +3,8 @@ import { verifyPassword } from "better-auth/crypto";
 import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
 import { KyselyDB } from "../db/context";
+import { makeSqlError, type SqlError } from "../db/effect-kysely";
 import { DELETED_USER_NAME } from "../db/schema";
-import { SqlError } from "../effect/effect.utils";
 import { parseStrict } from "../effect/schema.utils";
 import { ForbiddenError, UnauthorizedError } from "../errors";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
@@ -78,9 +78,10 @@ export class DeleteAccountService extends Context.Service<
                 password: providedPassword,
               }),
             catch: (cause) =>
-              new SqlError({
+              makeSqlError({
                 cause,
                 message: "Failed to verify password",
+                operation: "verifyPassword",
               }),
           });
 
@@ -96,7 +97,7 @@ export class DeleteAccountService extends Context.Service<
         const anonymizedAt = yield* DateTime.nowAsDate;
         const placeholderEmail = `deleted-${userId}@deleted.local`;
 
-        yield* db.transaction().execute((trx) =>
+        yield* db.transaction((trx) =>
           Effect.gen(function* () {
             yield* trx.execute(
               trx

@@ -5,9 +5,9 @@ import { postsSelectSchema, type PostWithVotes } from "src/lib/db/schema";
 
 import { RoleSchema, roleAtLeast, type Role } from "../auth/roles";
 import { KyselyDB } from "../db/context";
+import { SqlError } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import { SqlError } from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { RowParseError, UserNotFoundError } from "../errors";
 import { computePagination } from "../pagination/pagination";

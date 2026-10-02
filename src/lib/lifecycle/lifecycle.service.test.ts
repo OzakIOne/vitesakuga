@@ -432,7 +432,7 @@ describe("LifecycleService operation claims", () => {
     const finished = await context.runEffect(
       Effect.gen(function* () {
         const db = yield* KyselyDB;
-        return yield* db.transaction().execute((trx) =>
+        return yield* db.transaction((trx) =>
           Effect.gen(function* () {
             yield* markPreparingInTransaction(trx, reserveInput, new Date());
             yield* markReadyInTransaction(trx, reserveInput, new Date());

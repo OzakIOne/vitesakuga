@@ -14,13 +14,13 @@ import { isStaffRole } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import type { AuthenticatedUser } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import type { DB } from "../db/kysely";
-import { toIsoTimestamp } from "../db/schema/timestamp";
 import {
-  type EffectTransition,
+  type EffectTransaction,
   SqlError,
   SqlNoFirstResult,
-} from "../effect/effect.utils";
+} from "../db/effect-kysely";
+import type { DB } from "../db/kysely";
+import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
 import {
   EditAlreadyResolvedError,
@@ -169,7 +169,7 @@ export class PostEditsService extends Context.Service<
     const loadPostOwner = (
       postId: number,
       executor: Pick<
-        EffectTransition<DB>,
+        EffectTransaction<DB>,
         "executeTakeFirstOption" | "selectFrom"
       > = db,
     ) =>
@@ -177,7 +177,7 @@ export class PostEditsService extends Context.Service<
         executor.selectFrom("posts").selectAll().where("id", "=", postId),
       );
 
-    const loadEdit = (editId: number, trx: EffectTransition<DB>) =>
+    const loadEdit = (editId: number, trx: EffectTransaction<DB>) =>
       trx.executeTakeFirstOption(
         trx
           .selectFrom("post_edits")
@@ -196,7 +196,7 @@ export class PostEditsService extends Context.Service<
 
     const approvalsFor = (
       editId: number,
-      executor: Pick<EffectTransition<DB>, "execute" | "selectFrom"> = db,
+      executor: Pick<EffectTransaction<DB>, "execute" | "selectFrom"> = db,
     ) =>
       executor.execute(
         executor
@@ -215,7 +215,7 @@ export class PostEditsService extends Context.Service<
     const resolveDecisionContext = (
       editId: number,
       user: AuthenticatedUser,
-      trx: EffectTransition<DB>,
+      trx: EffectTransaction<DB>,
     ) =>
       Effect.gen(function* () {
         const role = getUserRole(user);
@@ -342,7 +342,7 @@ export class PostEditsService extends Context.Service<
         title: post.title,
         volumeNumber: post.volumeNumber,
       });
-      const created = yield* db.transaction().execute((trx) =>
+      const created = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           const created = yield* trx.executeTakeFirstOrError(
             trx
@@ -403,7 +403,7 @@ export class PostEditsService extends Context.Service<
       }
       // Lock before reading status or votes; approve and reject serialize on
       // the same suggestion. Content and decision commit together.
-      const decision = yield* db.transaction().execute((trx) =>
+      const decision = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           const context = yield* resolveDecisionContext(editId, user, trx);
 
@@ -529,7 +529,7 @@ export class PostEditsService extends Context.Service<
       editId: number,
     ) {
       const user = yield* requireSignedIn();
-      const context = yield* db.transaction().execute((trx) =>
+      const context = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           const context = yield* resolveDecisionContext(editId, user, trx);
           if (!context.isStaffOrOwner) {

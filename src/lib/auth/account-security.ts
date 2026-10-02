@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer } from "effect";
 
 import { KyselyDB } from "../db/context";
-import { SqlError } from "../effect/effect.utils";
+import { SqlError } from "../db/effect-kysely";
 import { UnauthorizedError } from "../errors";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { SessionFetchError, SessionService } from "./session.effect";

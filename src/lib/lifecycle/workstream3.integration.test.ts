@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { startWorkstream3Harness } from "../../../scripts/workstream3-harness";
 import { KyselyDB } from "../db/context";
-import { makeFromKysely } from "../effect/effect.utils";
+import { makeFromKysely } from "../db/effect-kysely";
 import { imageObjectKey } from "../storage/keys";
 import { makeRustFSStorageLayerAt } from "../storage/storage.adapter";
 import { StorageModule } from "../storage/storage.module";

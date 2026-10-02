@@ -21,6 +21,11 @@ import { ensureOwnedOrStaff } from "../auth/ownership";
 import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import {
+  SqlError,
+  SqlNoFirstResult,
+  type EffectTransaction,
+} from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
 import type {
   MediaOperationResult,
@@ -28,11 +33,6 @@ import type {
   PostWithVotes,
 } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import {
-  SqlError,
-  SqlNoFirstResult,
-  type EffectTransition,
-} from "../effect/effect.utils";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
   ForbiddenError,
@@ -1002,7 +1002,7 @@ export class PostsService extends Context.Service<
           uploadedKeys.push(key);
         }
 
-        const newPost = yield* db.transaction().execute((trx) =>
+        const newPost = yield* db.transaction((trx) =>
           Effect.gen(function* () {
             const newPost = yield* trx.executeTakeFirstOrError(
               trx
@@ -1303,7 +1303,7 @@ export class PostsService extends Context.Service<
       if (relatedPostId !== undefined) changes.relatedPostId = relatedPostId;
       if (source !== undefined) changes.source = source;
 
-      const updatedPost = yield* db.transaction().execute((trx) =>
+      const updatedPost = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           yield* updatePostWithVersionInTransaction(trx, {
             changes,
@@ -1448,7 +1448,7 @@ export class PostsService extends Context.Service<
 
 const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   db: Pick<
-    EffectTransition<DB>,
+    EffectTransaction<DB>,
     "execute" | "executeTakeFirstOrError" | "insertInto" | "selectFrom"
   >,
   postId: PostId,

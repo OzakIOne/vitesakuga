@@ -3,8 +3,8 @@ import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import { SqlError } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 

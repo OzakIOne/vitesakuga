@@ -5,13 +5,13 @@ import { ensureOwnedOrStaff } from "../auth/ownership";
 import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import {
   commentInsertSchema,
   commentUpdateSchema,
   commentsSelectSchema,
 } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
 import {
   CommentNotFoundError,

@@ -4,7 +4,7 @@ import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 import { requirePermission, type PolicyError } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import { SqlError } from "../effect/effect.utils";
+import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
 import {
   PromotionAlreadyReviewedError,
@@ -236,7 +236,7 @@ export class PromotionsService extends Context.Service<
 
       // Re-check eligibility and consume the novice state atomically: two
       // moderators may approve the same stale queue entry at the same time.
-      const total = yield* db.transaction().execute((trx) =>
+      const total = yield* db.transaction((trx) =>
         Effect.gen(function* () {
           const target = yield* trx.executeTakeFirstOption(
             trx

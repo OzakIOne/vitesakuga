@@ -3,6 +3,11 @@ import type { Selectable } from "kysely";
 import { sql } from "kysely";
 
 import { KyselyDB } from "../db/context";
+import {
+  SqlError,
+  SqlNoFirstResult,
+  type EffectTransaction,
+} from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
 import type {
   MediaObjectKind,
@@ -11,11 +16,6 @@ import type {
   MediaOperationResult,
   MediaOperationStatus,
 } from "../db/schema/sakuga.schema";
-import {
-  SqlError,
-  SqlNoFirstResult,
-  type EffectTransition,
-} from "../effect/effect.utils";
 import {
   isDeterministicMediaKey,
   type DeterministicMediaKind,
@@ -292,7 +292,7 @@ export type LifecycleError =
   | StorageError;
 
 /** The transaction shape accepted by the integration helpers below. */
-export type LifecycleTransaction = EffectTransition<DB>;
+export type LifecycleTransaction = EffectTransaction<DB>;
 
 const isTerminalStatus = (status: MediaOperationStatus): boolean =>
   status === "completed" || status === "conflict" || status === "failed";
@@ -1271,27 +1271,27 @@ export class LifecycleService extends Context.Service<
       function* (input: ClaimOperationInput) {
         yield* validateClaimInput(input);
         const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db
-          .transaction()
-          .execute((trx) => claimInTransaction(trx, input, now));
+        return yield* db.transaction((trx) =>
+          claimInTransaction(trx, input, now),
+        );
       },
     );
 
     const reserveObject = Effect.fn("LifecycleService.reserveObject")(
       function* (input: ReserveObjectInput) {
         const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db
-          .transaction()
-          .execute((trx) => reserveInTransaction(trx, input, now));
+        return yield* db.transaction((trx) =>
+          reserveInTransaction(trx, input, now),
+        );
       },
     );
 
     const markPreparing = Effect.fn("LifecycleService.markPreparing")(
       function* (input: ObjectFenceInput) {
         const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db
-          .transaction()
-          .execute((trx) => markPreparingInTransaction(trx, input, now));
+        return yield* db.transaction((trx) =>
+          markPreparingInTransaction(trx, input, now),
+        );
       },
     );
 
@@ -1299,27 +1299,27 @@ export class LifecycleService extends Context.Service<
       input: MarkReadyInput,
     ) {
       const now = new Date(yield* Clock.currentTimeMillis);
-      return yield* db
-        .transaction()
-        .execute((trx) => markReadyInTransaction(trx, input, now));
+      return yield* db.transaction((trx) =>
+        markReadyInTransaction(trx, input, now),
+      );
     });
 
     const adoptObject = Effect.fn("LifecycleService.adoptObject")(function* (
       input: AdoptObjectInput,
     ) {
       const now = new Date(yield* Clock.currentTimeMillis);
-      return yield* db
-        .transaction()
-        .execute((trx) => adoptInTransaction(trx, input, now));
+      return yield* db.transaction((trx) =>
+        adoptInTransaction(trx, input, now),
+      );
     });
 
     const finishOperation = Effect.fn("LifecycleService.finishOperation")(
       function* (input: FinishOperationInput) {
         yield* validateOperationResult(input.result);
         const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db
-          .transaction()
-          .execute((trx) => finishInTransaction(trx, input, now));
+        return yield* db.transaction((trx) =>
+          finishInTransaction(trx, input, now),
+        );
       },
     );
 
@@ -1328,9 +1328,9 @@ export class LifecycleService extends Context.Service<
         yield* validateFailureInput(input);
         yield* validateOperationResult(input.result);
         const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db
-          .transaction()
-          .execute((trx) => failInTransaction(trx, input, now));
+        return yield* db.transaction((trx) =>
+          failInTransaction(trx, input, now),
+        );
       },
     );
 
@@ -1338,36 +1338,34 @@ export class LifecycleService extends Context.Service<
       input: BeginDeleteInput,
     ) {
       const now = new Date(yield* Clock.currentTimeMillis);
-      return yield* db
-        .transaction()
-        .execute((trx) => beginDeleteInTransaction(trx, input, now));
+      return yield* db.transaction((trx) =>
+        beginDeleteInTransaction(trx, input, now),
+      );
     });
 
     const completeDelete = Effect.fn("LifecycleService.completeDelete")(
       function* (input: ObjectFenceInput) {
         const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db
-          .transaction()
-          .execute((trx) => completeDeleteInTransaction(trx, input, now));
+        return yield* db.transaction((trx) =>
+          completeDeleteInTransaction(trx, input, now),
+        );
       },
     );
 
     const updatePostWithVersion = Effect.fn(
       "LifecycleService.updatePostWithVersion",
     )(function* (input: UpdatePostWithVersionInput) {
-      return yield* db
-        .transaction()
-        .execute((trx) => postVersionUpdateInTransaction(trx, input));
+      return yield* db.transaction((trx) =>
+        postVersionUpdateInTransaction(trx, input),
+      );
     });
 
     const compareAndIncrementPostVersion = Effect.fn(
       "LifecycleService.compareAndIncrementPostVersion",
     )(function* (input: CompareAndIncrementPostVersionInput) {
-      return yield* db
-        .transaction()
-        .execute((trx) =>
-          compareAndIncrementPostVersionInTransaction(trx, input),
-        );
+      return yield* db.transaction((trx) =>
+        compareAndIncrementPostVersionInTransaction(trx, input),
+      );
     });
 
     const reconcileNonTerminal = Effect.fn(
@@ -1418,9 +1416,9 @@ export class LifecycleService extends Context.Service<
         const head = yield* storage.headFile(row.key).pipe(Effect.exit);
         if (Exit.isFailure(head)) {
           quarantinedKeys.push(row.key);
-          yield* db
-            .transaction()
-            .execute((trx) => quarantineInTransaction(trx, fenceInput, now));
+          yield* db.transaction((trx) =>
+            quarantineInTransaction(trx, fenceInput, now),
+          );
           continue;
         }
         const metadataFingerprint = head.value.metadataFingerprint;
@@ -1429,9 +1427,9 @@ export class LifecycleService extends Context.Service<
           (head.value.etag === null ? "" : `etag:${head.value.etag}`);
         if (observedFingerprint.length === 0) {
           quarantinedKeys.push(row.key);
-          yield* db
-            .transaction()
-            .execute((trx) => quarantineInTransaction(trx, fenceInput, now));
+          yield* db.transaction((trx) =>
+            quarantineInTransaction(trx, fenceInput, now),
+          );
           continue;
         }
         const adopted = yield* adoptObject({
@@ -1446,9 +1444,9 @@ export class LifecycleService extends Context.Service<
           adoptedKeys.push(row.key);
         } else {
           quarantinedKeys.push(row.key);
-          yield* db
-            .transaction()
-            .execute((trx) => quarantineInTransaction(trx, fenceInput, now));
+          yield* db.transaction((trx) =>
+            quarantineInTransaction(trx, fenceInput, now),
+          );
         }
       }
 

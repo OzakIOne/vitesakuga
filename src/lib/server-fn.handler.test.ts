@@ -2,7 +2,7 @@ import { Context, Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
 import { SessionFetchError } from "./auth/session.effect";
-import { SqlError } from "./effect/effect.utils";
+import { makeSqlError, SqlError } from "./db/effect-kysely";
 import {
   ForbiddenError,
   PostNotFoundError,
@@ -106,9 +106,10 @@ describe("server-fn failure boundary", () => {
     [
       "SqlError",
       () =>
-        new SqlError({
+        makeSqlError({
           cause: "select * from user",
           message: "relation does not exist",
+          operation: "test",
         }),
     ],
     [
@@ -191,7 +192,11 @@ describe("server-fn failure boundary", () => {
       Layer.effect(
         BoundaryProbe,
         Effect.fail(
-          new SqlError({ cause: "secret ddl", message: "migration failed" }),
+          makeSqlError({
+            cause: "secret ddl",
+            message: "migration failed",
+            operation: "test",
+          }),
         ),
       ),
       () => Promise.resolve(Layer.empty),

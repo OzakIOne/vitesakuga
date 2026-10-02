@@ -7,8 +7,8 @@ import { roleAtLeast } from "../auth/roles";
 import { SessionService } from "../auth/session.effect";
 import { SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
-import { SqlError, SqlNoFirstResult } from "../effect/effect.utils";
 import {
   ForbiddenError,
   PostNotFoundError,
@@ -368,7 +368,7 @@ export class VideosService extends Context.Service<
 
       // Revision, post CAS, media readiness and operation completion commit
       // together. The remote copy is intentionally outside this transaction.
-      yield* db.transaction().execute((trx) =>
+      yield* db.transaction((trx) =>
         Effect.gen(function* () {
           yield* markReadyInTransaction(
             trx,
@@ -537,7 +537,7 @@ export class VideosService extends Context.Service<
         });
       }
       yield* storage.headFile(revisionKey);
-      yield* db.transaction().execute((trx) =>
+      yield* db.transaction((trx) =>
         Effect.gen(function* () {
           if (post.videoKey !== null) {
             yield* trx.executeTakeFirstOrError(

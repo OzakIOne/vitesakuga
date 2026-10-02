@@ -8,11 +8,11 @@ import {
   makeAuthService,
 } from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
-import { makeFromKysely } from "../effect/effect.utils";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
 import { envInfra } from "../env/infra";
 import { KyselyDB } from "./context";
+import { makeFromKysely } from "./effect-kysely";
 
 const LOG_LAYER = withMinimumLogLevel("Debug");
 

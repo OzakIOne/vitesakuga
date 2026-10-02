@@ -3,7 +3,7 @@ import { Context, Effect, Layer, Option } from "effect";
 
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import { SqlError } from "../effect/effect.utils";
+import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
 import { PostNotFoundError, UnauthorizedError } from "../errors";
 import { PostId } from "../ids";

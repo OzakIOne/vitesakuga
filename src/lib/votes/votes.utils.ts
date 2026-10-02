@@ -1,8 +1,8 @@
 import { Effect, Schema } from "effect";
 
+import type { EffectKysely } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
 import { postWithVotesSelectSchema } from "../db/schema";
-import type { EffectKysely } from "../effect/effect.utils";
 import { parse } from "../effect/schema.utils";
 import { RowParseError } from "../errors";
 
