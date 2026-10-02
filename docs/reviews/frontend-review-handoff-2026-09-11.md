@@ -1,5 +1,9 @@
 # Passation — correction de la revue frontend
 
+> **Passation historique archivée le 2026-10-02.** Consulter l’[index actuel](../frontend-review.md)
+> et l’[audit détaillé](./frontend-review-2026-10-02.md). Les informations
+> ci-dessous décrivent l’état de la passation au 2026-09-11.
+
 **Date :** 2026-09-11  
 **Dépôt :** `/Users/clementcouriol/dev/vitesakuga`  
 **Branche :** `master` (`2` commits devant `origin/master` au moment de la
@@ -13,8 +17,9 @@ Vérifier les constats de la revue frontend, corriger les problèmes réellement
 fonctionnels ou logiques, et conserver une liste explicite des améliorations
 restantes plutôt que d'appliquer aveuglément chaque suggestion de design.
 
-Le registre détaillé et son statut sont dans
-[`docs/frontend-review.md`](./frontend-review.md).
+L’index actuel est dans [`docs/frontend-review.md`](../frontend-review.md) ;
+l’audit détaillé est archivé dans
+[`docs/reviews/frontend-review-2026-10-02.md`](./frontend-review-2026-10-02.md).
 
 ## Résultat
 
@@ -150,7 +155,8 @@ inclus dans un commit.
 
 ## Reprise recommandée
 
-1. Lire `docs/frontend-review.md` et ce fichier.
+1. Lire `docs/frontend-review.md` et l’audit archivé
+   `docs/reviews/frontend-review-2026-10-02.md`.
 2. Examiner `git diff` par domaine, puis séparer soigneusement les commits sans
    écraser les modifications utilisateur préexistantes.
 3. Rejouer TypeScript, lint, Vitest et les e2e concernés après chaque séparation.
