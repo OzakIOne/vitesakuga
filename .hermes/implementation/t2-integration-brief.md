@@ -1,5 +1,9 @@
 # Contrat d’intégration T2 — `t2-lifecycle-opid-cas-v1`
 
+> Brief de conception historique, rédigé avant l’implémentation. En cas d’écart,
+> le code actuel et [`docs/database-conventions.md`](../../docs/database-conventions.md)
+> décrivent le contrat en vigueur.
+
 ## Décision et invariants
 
 Le registre durable protège les crashes; il complète, ne remplace pas, T1. Aucune transaction DB ne doit entourer un appel R2. Toute opération qui écrit, adopte ou supprime un objet géré passe par le registre.

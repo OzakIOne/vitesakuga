@@ -1,5 +1,10 @@
 # Effect v4 — exploration revue des tâches 1, 2, 3, 4 et 6
 
+> Historical exploration based on the dependency versions installed on
+> 2026-09-16. Effect is now pinned at 4.0.0; current source and
+> [`docs/server-functions-api.md`](../../docs/server-functions-api.md) describe
+> the implemented design.
+
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task, seulement après une nouvelle autorisation. Ce document clôt l’exploration et la revue, pas l’implémentation.
 
 **Goal:** Choisir les changements utiles et leurs garanties vérifiables, sans migration générale de framework.

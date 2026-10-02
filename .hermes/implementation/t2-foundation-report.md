@@ -1,5 +1,10 @@
 # T2 foundation contract
 
+> Historical implementation report. Its schema and lifecycle details describe
+> the T2 implementation snapshot; verify current behavior against the source
+> and [`docs/database-conventions.md`](../../docs/database-conventions.md)
+> before using this as an implementation reference.
+
 ## Durable database state
 
 - `posts.version` is a non-null integer defaulting to `0`.

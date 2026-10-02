@@ -1,5 +1,11 @@
 # T1 implementation report
 
+> Historical implementation report. The repository has since added durable
+> media lifecycle handling; use current source and
+> [`docs/server-functions-api.md`](../../docs/server-functions-api.md) for the
+> present transaction bridge contract. The test results below describe this
+> implementation run only.
+
 ## Outcome
 
 Corrected the transaction bridge after review rejection. Caller interruption now
