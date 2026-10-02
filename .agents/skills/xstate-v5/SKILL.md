@@ -5,6 +5,11 @@ description: Design, implement, review, and migrate XState v5 state machines and
 
 # XState v5
 
+> **ViteSakuga repository note (checked 2026-10-02):** this reusable guide is
+> specific to XState v5. The project currently declares XState 6 alpha and
+> `@xstate/react` 7 alpha, so verify APIs against the installed package and
+> nearby project code before applying these examples.
+
 Use this skill for **state machine and statechart engineering first** and API correctness second.
 
 This skill is **v5-only**. When examples, blog posts, answers, or local code smell v4-ish, translate them rather than mixing versions. Prefer local repo code and official v5 docs over generic memory.
