@@ -50,7 +50,7 @@ export default Alchemy.Stack(
       repository,
       environment,
       name: "CLOUDFLARE_API_TOKEN",
-      value: yield* Config.redacted("CLOUDFLARE_API_TOKEN"),
+      value: yield* Config.Redacted("CLOUDFLARE_API_TOKEN"),
     });
 
     yield* GitHub.Variable(
@@ -60,7 +60,7 @@ export default Alchemy.Stack(
         repository,
         environment,
         name: "CLOUDFLARE_ACCOUNT_ID",
-        value: yield* Config.string("CLOUDFLARE_ACCOUNT_ID"),
+        value: yield* Config.String("CLOUDFLARE_ACCOUNT_ID"),
       },
     );
 
@@ -69,7 +69,7 @@ export default Alchemy.Stack(
       repository,
       environment,
       name: "CLOUDFLARE_WORKER_NAME",
-      value: Config.string("CLOUDFLARE_WORKER_NAME").pipe(
+      value: Config.String("CLOUDFLARE_WORKER_NAME").pipe(
         Config.withDefault(configuration.workerName),
       ),
     });
@@ -79,7 +79,7 @@ export default Alchemy.Stack(
       repository,
       environment,
       name: "HEALTHCHECK_URL",
-      value: Config.string("HEALTHCHECK_URL").pipe(
+      value: Config.String("HEALTHCHECK_URL").pipe(
         Config.withDefault(configuration.healthcheckUrl),
       ),
     });

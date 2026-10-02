@@ -102,10 +102,10 @@ export class SessionService extends Context.Service<
       // never set that var, and NODE_ENV defaults to "production" there
       // (infra/alchemy.run.ts), so the bypass can never activate outside e2e —
       // even for dev-mode builds that report MODE=development.
-      const databaseDriver = yield* Config.string("DATABASE_DRIVER").pipe(
+      const databaseDriver = yield* Config.String("DATABASE_DRIVER").pipe(
         Effect.orElseSucceed(() => ""),
       );
-      const nodeEnv = yield* Config.string("NODE_ENV").pipe(
+      const nodeEnv = yield* Config.String("NODE_ENV").pipe(
         Effect.orElseSucceed(() => ""),
       );
       const isE2E = databaseDriver === "e2e" && nodeEnv !== "production";

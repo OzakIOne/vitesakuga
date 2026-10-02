@@ -63,27 +63,27 @@ const decodeWith = <S extends Schema.ConstraintDecoder<unknown>>(
 // ---- Server environment ----
 
 const serverEnvConfig = Config.all({
-  BETTER_AUTH_SECRET: Config.string("BETTER_AUTH_SECRET"),
-  CLOUDFLARE_ACCESS_KEY: Config.string("CLOUDFLARE_ACCESS_KEY"),
-  CLOUDFLARE_BUCKET: Config.string("CLOUDFLARE_BUCKET"),
-  CLOUDFLARE_R2: Config.string("CLOUDFLARE_R2"),
-  CLOUDFLARE_SECRET_KEY: Config.string("CLOUDFLARE_SECRET_KEY"),
-  DATABASE_URL: Config.string("DATABASE_URL"),
-  GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
-  GITHUB_CLIENT_SECRET: Config.string("GITHUB_CLIENT_SECRET"),
-  GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
-  GOOGLE_CLIENT_SECRET: Config.string("GOOGLE_CLIENT_SECRET"),
-  RESEND_API_KEY: Config.string("RESEND_API_KEY").pipe(Config.withDefault("")),
-  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
-  EMAIL_FROM: Config.string("EMAIL_FROM").pipe(Config.withDefault("")),
-  NODE_ENV: Config.string("NODE_ENV"),
-  TURNSTILE_SECRET: Config.string("TURNSTILE_SECRET").pipe(
+  BETTER_AUTH_SECRET: Config.String("BETTER_AUTH_SECRET"),
+  CLOUDFLARE_ACCESS_KEY: Config.String("CLOUDFLARE_ACCESS_KEY"),
+  CLOUDFLARE_BUCKET: Config.String("CLOUDFLARE_BUCKET"),
+  CLOUDFLARE_R2: Config.String("CLOUDFLARE_R2"),
+  CLOUDFLARE_SECRET_KEY: Config.String("CLOUDFLARE_SECRET_KEY"),
+  DATABASE_URL: Config.String("DATABASE_URL"),
+  GITHUB_CLIENT_ID: Config.String("GITHUB_CLIENT_ID"),
+  GITHUB_CLIENT_SECRET: Config.String("GITHUB_CLIENT_SECRET"),
+  GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: Config.String("GOOGLE_CLIENT_SECRET"),
+  RESEND_API_KEY: Config.String("RESEND_API_KEY").pipe(Config.withDefault("")),
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.String("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
+  EMAIL_FROM: Config.String("EMAIL_FROM").pipe(Config.withDefault("")),
+  NODE_ENV: Config.String("NODE_ENV"),
+  TURNSTILE_SECRET: Config.String("TURNSTILE_SECRET").pipe(
     Config.withDefault(""),
   ),
-  TURNSTILE_SITEKEY: Config.string("TURNSTILE_SITEKEY").pipe(
+  TURNSTILE_SITEKEY: Config.String("TURNSTILE_SITEKEY").pipe(
     Config.withDefault(""),
   ),
-  VITE_BASE_URL: Config.string("VITE_BASE_URL"),
+  VITE_BASE_URL: Config.String("VITE_BASE_URL"),
 });
 
 const serverEnvSchema = (requireOAuth: boolean) =>
@@ -164,19 +164,19 @@ type ClientEnvSource = Readonly<{
 }>;
 
 const clientEnvConfig = Config.all({
-  BASE_URL: Config.string("BASE_URL"),
-  DEV: Config.boolean("DEV"),
-  MODE: Config.string("MODE"),
-  PROD: Config.boolean("PROD"),
-  SSR: Config.boolean("SSR"),
-  VITE_BASE_URL: Config.string("VITE_BASE_URL"),
-  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.string("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
+  BASE_URL: Config.String("BASE_URL"),
+  DEV: Config.Boolean("DEV"),
+  MODE: Config.String("MODE"),
+  PROD: Config.Boolean("PROD"),
+  SSR: Config.Boolean("SSR"),
+  VITE_BASE_URL: Config.String("VITE_BASE_URL"),
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.String("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   // Public Google OAuth client ID. Empty unless Google social login has been
   // provisioned; the login/signup Google button only renders when set.
-  VITE_GOOGLE_CLIENT_ID: Config.string("VITE_GOOGLE_CLIENT_ID").pipe(
+  VITE_GOOGLE_CLIENT_ID: Config.String("VITE_GOOGLE_CLIENT_ID").pipe(
     Config.withDefault(""),
   ),
-  VITE_TURNSTILE_SITEKEY: Config.string("VITE_TURNSTILE_SITEKEY").pipe(
+  VITE_TURNSTILE_SITEKEY: Config.String("VITE_TURNSTILE_SITEKEY").pipe(
     Config.withDefault(""),
   ),
   // "1" in stages where Better Auth verifies the captcha token server-side
@@ -184,7 +184,7 @@ const clientEnvConfig = Config.all({
   // with NODE_ENV=production). Local `nub run dev` / `dev:local` scripts
   // override it to "0" so the widget is not mounted and forms submit without
   // waiting on a challenge the server would ignore anyway.
-  VITE_TURNSTILE_REQUIRED: Config.string("VITE_TURNSTILE_REQUIRED").pipe(
+  VITE_TURNSTILE_REQUIRED: Config.String("VITE_TURNSTILE_REQUIRED").pipe(
     Config.withDefault(""),
   ),
 });

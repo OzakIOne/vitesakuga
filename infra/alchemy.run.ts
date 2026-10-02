@@ -26,7 +26,7 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const stage = yield* Stage;
     const stageConfiguration = getDeploymentStageConfig(stage);
-    const accountId = yield* Config.string("CLOUDFLARE_ACCOUNT_ID");
+    const accountId = yield* Config.String("CLOUDFLARE_ACCOUNT_ID");
 
     yield* Effect.logInfo(
       `Initializing Alchemy deployment for stage "${stage}" (bucket: ${stageConfiguration.bucketName}, app: ${stageConfiguration.appDomain})...`,
@@ -168,26 +168,26 @@ export default Alchemy.Stack(
         },
       },
       env: {
-        BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
+        BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
         CLOUDFLARE_ACCOUNT_ID: accountId,
-        CLOUDFLARE_ACCESS_KEY: Config.redacted("CLOUDFLARE_ACCESS_KEY"),
+        CLOUDFLARE_ACCESS_KEY: Config.Redacted("CLOUDFLARE_ACCESS_KEY"),
         CLOUDFLARE_BUCKET: stageConfiguration.bucketName,
         CLOUDFLARE_R2: `https://${accountId}.eu.r2.cloudflarestorage.com`,
         VITE_CLOUDFLARE_R2_PUBLIC_URL: stageConfiguration.mediaUrl,
-        CLOUDFLARE_SECRET_KEY: Config.redacted("CLOUDFLARE_SECRET_KEY"),
+        CLOUDFLARE_SECRET_KEY: Config.Redacted("CLOUDFLARE_SECRET_KEY"),
         DATABASE_URL:
           appBranch === undefined
-            ? Config.redacted("DATABASE_URL")
+            ? Config.Redacted("DATABASE_URL")
             : appBranch.pooledConnectionUri,
-        GITHUB_CLIENT_ID: Config.string("GITHUB_CLIENT_ID"),
-        GITHUB_CLIENT_SECRET: Config.redacted("GITHUB_CLIENT_SECRET"),
-        GOOGLE_CLIENT_ID: Config.string("GOOGLE_CLIENT_ID"),
-        GOOGLE_CLIENT_SECRET: Config.redacted("GOOGLE_CLIENT_SECRET"),
-        EMAIL_FROM: Config.string("EMAIL_FROM").pipe(
+        GITHUB_CLIENT_ID: Config.String("GITHUB_CLIENT_ID"),
+        GITHUB_CLIENT_SECRET: Config.Redacted("GITHUB_CLIENT_SECRET"),
+        GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID"),
+        GOOGLE_CLIENT_SECRET: Config.Redacted("GOOGLE_CLIENT_SECRET"),
+        EMAIL_FROM: Config.String("EMAIL_FROM").pipe(
           Config.withDefault(`noreply@${stageConfiguration.appDomain}`),
         ),
-        RESEND_API_KEY: Config.redacted("RESEND_API_KEY"),
-        NODE_ENV: Config.string("NODE_ENV").pipe(
+        RESEND_API_KEY: Config.Redacted("RESEND_API_KEY"),
+        NODE_ENV: Config.String("NODE_ENV").pipe(
           Config.withDefault("production"),
         ),
         // Cloudflare Rate Limiting binding (edge, per-IP). Consumed in the
@@ -210,7 +210,7 @@ export default Alchemy.Stack(
 
     // Cloudflare Access: the app is only reachable by the owner's email.
     // Set CLOUDFLARE_ACCESS_EMAIL in the stage env file.
-    const ownerEmail = yield* Config.string("CLOUDFLARE_ACCESS_EMAIL");
+    const ownerEmail = yield* Config.String("CLOUDFLARE_ACCESS_EMAIL");
     const allowOwner = yield* Cloudflare.Access.Policy("AllowOwner", {
       name: `Allow owner (${stage})`,
       decision: "allow",
