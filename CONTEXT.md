@@ -4,7 +4,7 @@ Terms used consistently across the codebase. Update this file when new concepts 
 
 ## Core Entities
 
-**Post** — A video upload with title, description, source URL, tags, related post reference, and video/thumbnail file keys stored in R2. Owned by a User.
+**Post** — A video or ordered image-gallery upload with title, description, source URL, tags, related-post reference, and media stored in R2. Images are recorded in `post_images`; the first image supplies the gallery thumbnail. Owned by a User.
 
 **Tag** — A label attached to Posts via the `post_tags` junction table. Has a unique name and a creation timestamp. Tags are resolved by name on upload (upsert).
 
@@ -22,7 +22,7 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **Presigned Upload** — `createVideoUploadUrl` server fn mints a 15-min presigned PUT scoped to `videos/_pending/{userId}/{uuid}.{ext}` with a server-pinned Content-Type. The browser PUTs the file, then hands the staging key to `uploadPost`. Size/type are verified at confirm against the stored object (`headFile` + `upload-policy.ts`), which **promotes** it to its final key (`finalizeVideoUpload`: copy out of `_pending/`, best-effort staging delete) before any DB write.
 
-**Staging Namespace & GC** — Anything left under `videos/_pending/` is garbage by definition and expires after 48 h via an R2 bucket lifecycle rule (`infra/alchemy.run.ts`) — closing the orphan window where a video was PUT but its confirm never ran.
+**Staging Namespace & GC** — Unconfirmed direct video uploads use `videos/_pending/`; the R2 lifecycle rule in `infra/alchemy.run.ts` expires staged objects after 48 hours. Durable media-operation and media-object rows track accepted work and reconcile uncertain outcomes, so bucket expiry is not the source of truth for operation state.
 
 **Thumbnail Validation** — Thumbnails transit the Worker and are validated server-side in the confirm validator: `.jpe?g` extension + ≤5 MB + JPEG magic bytes (`file-validation.ts`); stored Content-Type forced to `image/jpeg`.
 
@@ -38,7 +38,7 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Post Detail
 
-**Post Detail** — The full post view combining: post data (title, content, video key, source, related post), user info (name, image), tags, comments, and vote counts. Fetched via `fetchPostDetail`.
+**Post Detail** — The full post view combining post metadata and media (video or ordered image gallery), user info, tags, comments, votes, edit suggestions/history, and related-post navigation. The server data is fetched through `PostsService.fetchDetail`.
 
 **Related Post** — An optional reference from one Post to another. Stored as `relatedPostId` integer on the posts table.
 
@@ -54,7 +54,7 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Search & Pagination
 
-**Post Search** — Server-side filtering by query string (title/content ilike), tags (junction table join), date range (today/week/month/all), and sort order (newest/oldest). Returns paginated posts (with vote counts) plus popular tags.
+**Post Search** — Server-side filtering by text, included and excluded tags, date range, sort order, discovery view, and numeric image/video dimensions or like count. Returns paginated posts (with vote counts) plus popular tags. See the supported query syntax in [`docs/features.md`](docs/features.md).
 
 **Popular Tags** — Aggregation query: top-10 tags by tagged-post count among a filtered post set. Centralized in `fetchPopularTagsForPosts(db, predicates)` (`src/lib/tags/tags.utils.ts`); callers express scope as predicates over the joined `posts` table (post search, by-tag page, user profiles). `TagsService.popular` deliberately builds its own leftJoin variant so zero-count tags appear.
 
@@ -82,7 +82,9 @@ Stage env files (`.env` for dev, `.env.production` for prod) provide secrets and
 local overrides. The shared stage map in `src/lib/env/stage-config.ts` derives
 bucket names, domains, CORS, Worker storage bindings, and deployable client URLs
 for both Alchemy and Vite. Client `VITE_*` vars are baked into the bundle at
-build time, so each stage still needs its own build script. Build scripts set
+build time, so each stage still needs its own build script. The public Turnstile
+sitekey is the runtime exception: Alchemy binds it to the Worker and
+`/api/turnstile` serves it to the auth forms. Build scripts set
 `APP_ENV` (which env file nub loads: `development`→`.env`, `test`→`.env.test`,
 `production`→`.env.production`) and `NODE_ENV` (React runtime) independently —
 nub keys its env-file mode off `APP_ENV`, not `NODE_ENV`.
@@ -98,7 +100,7 @@ See [docs/build-environment.md](./docs/build-environment.md) for the full explan
 
 ## Storage
 
-**StorageModule** — Effect service wrapping object-storage operations in `src/lib/storage/storage.module.ts`. Interface defines `uploadVideo(userId, file)`, `uploadThumbnail(userId, file)`, `deleteFile(key)`, `headFile(key)`, `presignVideoUpload(userId, ext)`, `finalizeVideoUpload(pendingKey)`. Tagged error: `StorageError` (operations: upload/delete/presign/head/finalize). One S3-protocol adapter in `storage.adapter.ts`, parametrized by an `S3Connection` config (`bucket`, `endpoint`, `credentials`, `forcePathStyle`): `StorageLive` is the production Cloudflare R2 configuration, `makeRustFSStorageLayer()` the local rustfs one used by dev/tests. Key helpers (pending namespace) in `keys.ts`; content-type derivation from whitelisted extensions in `content-type.ts`; confirm-time size/content-type policy in `upload-policy.ts`.
+**StorageModule** — Effect service wrapping video, thumbnail, and gallery-image storage in `src/lib/storage/storage.module.ts`. Besides direct uploads and presigned staging, it supports lifecycle-reserved image/thumbnail writes, deterministic video copies, finalization, and read-only key listing for admin audits. `StorageLive` uses Cloudflare R2; the same S3-protocol adapter targets local RustFS in dev/tests. Durable operation/object ownership and deletion fences live in `src/lib/lifecycle/`; see [`docs/database-conventions.md`](docs/database-conventions.md) for those guarantees.
 
 ## Pagination
 

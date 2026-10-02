@@ -146,7 +146,7 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 
 ## API (server functions)
 
-Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passent par des server functions TanStack Start et le bridge Effect `src/lib/server-fn.handler.ts` :
+Les routes HTTP applicatives se limitent à Better Auth (`/api/auth/$`) et à la configuration publique Turnstile (`/api/turnstile`). Les opérations métier passent par des server functions TanStack Start et le bridge Effect `src/lib/server-fn.handler.ts` :
 
 - **Posts** : recherche, détail, hub de série, upload, URL vidéo présignée, mise à jour — `src/lib/posts/posts.service.ts`
 - **Recherches sauvegardées** : sauvegarder, lister et supprimer les recherches personnelles — `src/lib/saved-searches/saved-searches.service.ts`
@@ -162,11 +162,11 @@ Il n'y a pas de route REST applicative hors `/api/auth/$`. Les opérations passe
 
 ## Tests
 
-État vérifié le **2026-09-11**.
+Les commandes, résultats datés et périmètres de couverture sont maintenus dans
+[Testing](testing.md), pour éviter de dupliquer des décomptes qui vieillissent.
+La suite couvre notamment :
 
-- **Vitest** : `nub exec vitest run --maxWorkers=1` — **611/611 tests passés dans 62 fichiers** lors de la vérification du 2026-09-15. Browser Mode ajoute **88 tests dans 14 fichiers** via `nub run test:browser`, soit **699 tests** au total. `nub run test` lance Vitest en mode watch. La configuration limite le parallélisme à quatre workers (`vitest.config.ts`).
-- **Playwright** : `nub run test:ee` avec Postgres local + RustFS — **58/58 tests passés dans 15 fichiers** lors de la vérification du 2026-09-11. L'inventaire actuel contient 15 fichiers `e2e/*.spec.ts`.
-- **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts et raccourcis clavier.
+- **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts, raccourcis clavier et régressions d'accessibilité.
 - **Couverture unitaire/service** : recherche et filtres numériques, pagination, posts, tags, utilisateurs, commentaires, mentions, playlists, votes, rapports, notifications, modération, suggestions, révisions vidéo/GC, points, rate limiting, stockage, auth et server-function boundary.
 - **Manques e2e principaux** : parcours feed/recherche → détail, pages accueil/tag/utilisateur/playlists publiques, inbox notifications, soumission de signalement, panneaux admin et upload d'image.
 

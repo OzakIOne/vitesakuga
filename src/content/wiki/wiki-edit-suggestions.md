@@ -18,4 +18,7 @@ The post’s edit history shows pending, applied, and rejected suggestions. When
 
 ## What you cannot edit through suggestions
 
-Media keys (video or thumbnail swaps) and tag relinking have their own pipelines and are intentionally out of scope for edit suggestions.
+Video replacements and tag changes are not part of peer-reviewed edit
+suggestions. Owners can edit tags directly; video replacement is a separate
+service workflow and currently has no dedicated public screen. For other
+problems, use the report action or contact staff.

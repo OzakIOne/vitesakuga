@@ -2,7 +2,9 @@
 
 Ideas grounded in the current ViteSakuga product: a Sakugabooru-style archive for animation clips and manga panels, with strong search, upload tooling, community review, playlists, and staff workflows.
 
-This list was prepared from `docs/features.md`, `CONTEXT.md`, the current routes/services, and the existing README TODOs. Priority is relative product value and implementation leverage, not a fixed roadmap.
+Reviewed against the product and source on **2026-10-02**. Shipped ideas point to
+[`docs/features.md`](features.md); the remaining items are proposals, not a
+committed roadmap. Priority is relative product value, not a delivery promise.
 
 ## Product direction
 
@@ -10,49 +12,39 @@ ViteSakuga already has much of the hard foundation: typed Effect services, direc
 
 ## Highest-leverage ideas
 
-### 1. Public wiki-edit workflow — P0
+### 1. Post edit-suggestion workflow — shipped
 
-The edit-suggestion service, approval rules, notifications, and history already exist, but users cannot submit suggestions from the post page.
-
-Smallest useful version:
-
-- Add a `Suggest an edit` action to post details.
-- Show a field-level diff before submission.
-- Let uploaders and eligible contributors approve or reject suggestions.
-- Show pending, applied, and rejected history on the post.
-- Notify the suggester when a decision is made.
-
-This turns the existing wiki model into a visible community feature and improves metadata quality without giving every user direct write access.
+Post details now expose edit proposals with field-level previews, approval and
+rejection rules, decision notifications, and proposal history. See the
+suggestion entry in [`docs/features.md`](features.md). A future improvement
+could make the review experience easier to discover for eligible contributors.
 
 ### 2. Safe video replacement for uploaders — P0
 
-Video revisions, restore, retention, and storage garbage collection are already implemented server-side. Add the owner-facing replacement screen.
+Video replacement, revision history, staff restore, retention, and storage
+garbage collection are implemented server-side. There is no dedicated public
+replacement screen yet; decide whether an owner-facing UI is still wanted
+before investing in one. See [`docs/features.md`](features.md).
 
 The flow should validate and preview the new file, preserve the post identity and discussion, make the revision visible, and provide staff rollback. A replacement should not silently alter title, tags, episode information, votes, or comments.
 
-### 3. Multi-image posts and manga galleries — P0
+### 3. Multi-image posts and manga galleries — shipped
 
-`post_images` already stores ordered images and the server schema supports up to five, while the current upload UI exposes one image.
+Posts support up to ten ordered images, with per-image validation, a reorderable
+gallery, and the first image used as the thumbnail. See the upload entry in
+[`docs/features.md`](features.md). Keep keyboard and narrow-screen behavior in
+the ongoing accessibility checks.
 
-Add multi-file selection, thumbnail/reorder controls, per-image validation, and a detail-page gallery with keyboard navigation. Preserve the first image as the default thumbnail. This completes an existing data-model promise and makes the manga/panel use case substantially better.
+### 4. Series and episode hubs — shipped
 
-### 4. Series and episode hubs — P1
-
-Posts already carry `animeTitle`, `sourceType`, season, episode, volume, chapter, and a related-post link. Use those fields to build an archive view instead of leaving them as isolated labels.
-
-Possible experience:
-
-- A series page grouped by season and episode.
-- Previous/next episode navigation from post detail.
-- A chapter or volume view for manga posts.
-- A “more from this series” panel using the same search/filter primitives.
-- Clear handling for incomplete or conflicting metadata.
-
-This is a natural differentiator for an archive: users can study a sequence, not only browse individual clips.
+Series hubs group episode and manga posts and retain incomplete or conflicting
+metadata for review instead of silently dropping those posts. See
+[`docs/features.md`](features.md) and the series metadata entries in
+[`CONTEXT.md`](../CONTEXT.md).
 
 ### 5. Duplicate and quality triage — P1
 
-Reports and moderation queues exist, and the README already calls out duplicate detection and low-quality reporting. Start with explainable signals rather than an opaque classifier.
+Reports and moderation queues exist. Start with explainable signals rather than an opaque classifier.
 
 MVP signals could include exact file hash, duration, dimensions, codec, and a perceptual thumbnail or frame signature. Surface “possible duplicate” candidates to uploaders and moderators, with links to compare both posts. Add report reasons for duplicate, broken media, misleading metadata, and low quality.
 
@@ -60,17 +52,20 @@ Keep the final decision human-controlled. A similarity score should create a rev
 
 ## Discovery and archive value
 
-### 6. Saved searches, followed tags, and followed users — P1
+### 6. Followed users and subscription notifications — partial
 
-Search state already lives in URL parameters, tags and users are queryable, and notifications already have an inbox. Let signed-in users save a search or follow a tag/user, then notify them about new matching posts.
+Saved searches and followed tags already exist. Following users and notifying
+subscribers about new matching posts remain unimplemented; the existing inbox
+does not yet provide notification preferences for these subscriptions.
 
 Start with in-app notifications and a small limit on active subscriptions. Add email later only if notification preferences and unsubscribe behavior are clear.
 
-### 7. Intentional discovery feeds — P1
+### 7. Intentional discovery feeds — shipped
 
-Add opt-in views such as `Trending`, `Most liked this week`, `New from followed tags`, `Under-seen gems`, and `Random study queue`. Keep the current chronological feed as the stable default.
-
-The points ledger and vote counts can support early ranking experiments, but ranking should be transparent: show the time window and the signals used. Avoid making points a proxy for content quality without moderation safeguards.
+The opt-in `Trending`, `Most liked this week`, `New from followed tags`,
+`Under-seen gems`, and `Random study queue` views are implemented. They show the
+window and ranking signals and leave the chronological feed available. See
+[`docs/features.md`](features.md).
 
 ### 8. Canonical tags, aliases, and tag wiki pages — P1
 
@@ -86,7 +81,10 @@ Useful details include a visible timestamp, one-click copy of the current frame 
 
 ### 10. RSS and lightweight public feeds — P2
 
-There is no application REST API today, but public posts, tags, users, and playlists are already well-defined. Add read-only RSS/Atom feeds for the newest posts, a tag, a user, and a public playlist.
+There is no public content REST API or RSS/Atom feed. The existing `/api/auth/$`
+and `/api/turnstile` routes serve authentication and public captcha
+configuration. Add read-only feeds for newest posts, a tag, a user, and a
+public playlist if external subscriptions become a product need.
 
 This is a low-surface-area way to make the archive followable without committing to a large public API. Add caching, pagination limits, and explicit handling for private or deleted content.
 
@@ -120,7 +118,7 @@ Keep private security data and raw moderation history out of the public view. Sh
 
 ### 14. Local image enhancement tool — P2
 
-The README mentions a WASM image upscaler. If pursued, make it an opt-in, browser-only tool for manga panels: compare original and enhanced output, download the result, and never overwrite the archived original automatically.
+No image-enhancement tool exists today. If pursued, make it an opt-in, browser-only tool for manga panels: compare original and enhanced output, download the result, and never overwrite the archived original automatically.
 
 Treat this as a utility around the archive, not as an automatic upload transformation. Bundle size, browser support, and processing time need explicit limits.
 
@@ -132,9 +130,12 @@ The admin queues cover reports, suggestions, promotions, roles, and storage, but
 
 Make queue state explicit: open, in review, resolved, dismissed, or escalated. This reduces repeated investigation and makes staff decisions easier to explain.
 
-### 16. Accessibility and media resilience pass — P0 before launch
+### 16. Accessibility and media resilience pass — before launch
 
-The README already lists accessibility as unfinished. Make it a product milestone: keyboard-complete upload and gallery flows, visible focus, reduced-motion behavior, meaningful labels, captions for controls, error recovery, and usable layouts at narrow widths.
+The October 2026 frontend review records fixes for its audited accessibility
+findings. Keep a focused pre-launch check for keyboard operation, visible focus,
+reduced motion, meaningful labels, error recovery, and narrow layouts; track any
+new findings in the current review index at [`docs/frontend-review.md`](frontend-review.md).
 
 Also test broken thumbnails, slow storage, unsupported codecs, partially completed uploads, and empty search results. The app’s archive value depends on users being able to inspect media reliably.
 
@@ -149,9 +150,9 @@ Alongside that decision, add notification preferences for mentions, edit suggest
 
 ## Suggested sequence
 
-1. Ship the public edit-suggestion UI, video replacement UI, multi-image posts, and the accessibility/media-resilience pass.
-2. Add series/episode hubs and duplicate-quality triage to improve archive quality and navigation.
-3. Add saved searches/follows, intentional discovery feeds, and canonical tags once notification preferences are in place.
-4. Add batch upload, timestamped notes, public feeds, and optional contributor/reputation features as the core archive gets daily use.
+1. Decide whether an owner-facing video replacement UI is needed; replacement itself is already supported by the service.
+2. Consider duplicate/quality triage and canonical tag management to improve archive quality.
+3. Add followed-user subscriptions and notification preferences if users need those discovery loops.
+4. Consider batch upload, timestamped notes, public feeds, and contributor history as product needs emerge.
 
 The common thread: expose existing domain capabilities first, then add discovery loops that reward careful curation without making moderation or ranking opaque.

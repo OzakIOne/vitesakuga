@@ -14,7 +14,9 @@ Tags are how the archive stays searchable. A post with precise tags is easy to f
 
 ## Correcting tags later
 
-Posts are not frozen. If a post was tagged poorly, [suggest a wiki edit](/wiki/wiki-edit-suggestions) on the post detail page — tag relinking has its own pipeline, and your suggestion will route through review.
+Post owners can edit their tags directly from the post page. Tag changes are
+not part of the peer-reviewed [edit suggestion](/wiki/wiki-edit-suggestions)
+workflow. If you do not own the post, report the problem or contact the staff.
 
 ## Following tags
 

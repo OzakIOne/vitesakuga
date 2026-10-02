@@ -1,36 +1,16 @@
 # ViteSakuga
 
-Cloning a mvp of sakugabooru but with mainly typescript and good libs
+ViteSakuga is a community archive for animation clips and manga pages. It
+combines searchable posts, upload and conversion tools, series hubs, playlists,
+community edits, moderation, and account security.
 
-- [ ] better style Video (fix tailwind class not working)
-- [x] add shortcut keys to navigate to /user /tag /post toggle filters / seek next/previous frame / next/previous post / focus search
-  - [media chrome keyboard shortcuts](https://www.media-chrome.org/docs/en/keyboard-shortcuts)
-- [x] advanced post search filters (server-side numeric filters for dimensions and likes)
-- [x] consolidate post schemas and server functions around Effect services
-- [x] passkey / TOTP
-- [x] github login
-  - [x] google login
-    - [ ] add test to this login, make it undependant of each service if possible
-- [x] captcha ?
-- [ ] better auth sentinel?
-- [ ] auto video duplication finder or vvv
-  - [ ] video duplication vote or vvv
-    - [ ] report video system (low quality, duplicate, ???)
-- [x] support manga images share beautiful pannels
-- [x] detailed episode informations (when upload, put episode / season info)
-- [x] user roles, uploader, verified
-- [ ] WASM (or not) browser client side image upscaler
-- [ ] accessibility check
-- [ ] advance filter (exclude words, post with minimum of likes, width, height)
-
-## Secondary
-
-- [ ] ? add post ranking
+See [the feature catalogue](docs/features.md) for current behavior and
+[product ideas](docs/ideas.md) for the remaining backlog.
 
 ## Dev
 
 ```bash
-git clone https://github.com/ozakione/vitesakuga
+jj git clone https://github.com/ozakione/vitesakuga
 cd vitesakuga
 nub install
 cp .env.example .env
@@ -52,7 +32,7 @@ nub exec varlock load --format json
 nub run dev
 ```
 
-The project pins `nitro@3.0.260610-beta` with Vite 8.2.x. The newer
+The project pins `nitro@3.0.260610-beta` with Vite 8.3.x. The newer
 `nitro@3.0.260903-beta` development runner sends React's CommonJS entry
 through the local Workerd evaluator without the `module` global, causing
 `nub run dev` to fail with `ReferenceError: module is not defined`. The pinned
@@ -88,7 +68,7 @@ React/bundle runtime), and Vite `--mode` (bakes `import.meta.env.MODE`).
 | `build`                                             | production build                                                                      | prod                        | `production` / `production` / `.env.production`   | `production`      |
 | `build:dev`                                         | dev-site build (production React runtime + dev-stage `.env`, decoupled via `APP_ENV`) | dev                         | `development` / `production` / `.env`             | `development`     |
 | `start`                                             | run built Node server                                                                 | prod                        | —                                                 | —                 |
-| `server`                                            | preview built Worker (wrangler, generates `.dev.vars` from `.env`)                    | dev                         | `production`                                      | —                 |
+| `server`                                            | preview the existing Vite build output (`vite preview`)                                | build's stage               | —                                                 | —                 |
 | `wrangler:dev` / `wrangler:preview`                 | dev / preview through Wrangler Pages                                                  | dev                         | `development` / `.env`                            | `development` / — |
 | `db` / `db:dev` / `db:local` / `db:prod`            | drizzle-kit CLI (stage via `STAGE=`)                                                  | dev / local / prod          | `.env` / `.env` / `.env.test` / `.env.production` | —                 |
 | `infra:dev`                                         | Alchemy dev                                                                           | dev (alchemy `dev`)         | `.env`                                            | —                 |
@@ -96,7 +76,7 @@ React/bundle runtime), and Vite `--mode` (bakes `import.meta.env.MODE`).
 | `infra:deploy:prod`                                 | builds (prod) → guard → Alchemy deploy                                                | prod (alchemy `production`) | `.env.production`                                 | —                 |
 | `infra:destroy` / `infra:destroy:prod`              | Alchemy destroy                                                                       | dev / prod                  | `.env` / `.env.production`                        | —                 |
 | `test:deployment`                                   | focused deployment monitor and rollback checks                                        | —                           | —                                                 | —                 |
-| `docker:up` / `docker:down` (aliases `dcu` / `dcd`) | local Docker stack (Postgres, rustfs, lightpanda, otelite)                            | local                       | `.env.test`                                       | —                 |
+| `dcu` / `dcd`                                       | start / stop local Docker stack (Postgres, rustfs, lightpanda, otelite)                | local                       | `.env.test`                                       | —                 |
 
 Deployment safety logic has a focused check in addition to the full Vitest
 run:
@@ -129,7 +109,7 @@ This project uses **Alchemy** to automate the creation of Cloudflare R2 buckets.
 ### 1. Prerequisites
 
 - A [Cloudflare Account](https://dash.cloudflare.com/)
-- [Node.js](https://nodejs.org/) installed
+- [`jj`](https://martinvonz.github.io/jj/) and [Nub](https://github.com/ozakione/nub) installed; Nub resolves the Node.js 26 runtime declared by the project
 - Cloudflare **Account ID** (found on your dashboard)
 - Cloudflare **API Token** with `R2 Edit` permissions
 
