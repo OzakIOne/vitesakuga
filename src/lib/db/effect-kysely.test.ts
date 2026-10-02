@@ -4,9 +4,9 @@ import { TestClock } from "effect/testing";
 import { Kysely, sql } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { DB } from "../db/kysely";
-import { PGliteDialect, type PGliteDriverHooks } from "../db/pglite-driver";
-import { makeFromKysely, SqlError } from "./effect.utils";
+import { makeFromKysely, SqlError } from "./effect-kysely";
+import type { DB } from "./kysely";
+import { PGliteDialect, type PGliteDriverHooks } from "./pglite-driver";
 
 const createdPgs: PGlite[] = [];
 
@@ -40,7 +40,7 @@ describe("makeFromKysely", () => {
     expect(second).toBe(first);
 
     const rows = await Effect.runPromise(
-      second.transaction().execute((trx) =>
+      second.transaction((trx) =>
         Effect.gen(function* () {
           yield* trx.execute(
             sql`create table playlist_posts (id serial primary key)`,
@@ -55,13 +55,13 @@ describe("makeFromKysely", () => {
   });
 
   describe("execute failure paths", () => {
-    it("maps a SQL failure to SqlError with cause preserved and the compiled SQL in the message", async () => {
+    it("classifies a SQL failure and preserves its cause and query text", async () => {
       const kysely = await createKysely();
       const db = makeFromKysely(kysely);
       const query = kysely.selectFrom("tags").selectAll();
       const compiledSql = query.compile().sql;
 
-      const error = (await flipFailure(db.execute(query))) as SqlError;
+      const error = await flipFailure(db.execute(query));
 
       expect(error._tag).toBe("SqlError");
       expect(error).toBeInstanceOf(SqlError);
@@ -69,6 +69,7 @@ describe("makeFromKysely", () => {
       expect(error.cause).toMatchObject({
         message: expect.stringContaining("tags"),
       });
+      expect(error.reason.cause).toBe(error.cause);
       expect(error.message).toContain(compiledSql);
       expect(error.message).toContain("[execute]");
     });
@@ -79,7 +80,7 @@ describe("makeFromKysely", () => {
       const query = sql`select * from nonexistent_table_xyz`;
       const compiledSql = query.compile(kysely).sql;
 
-      const error = (await flipFailure(db.executeRaw(query))) as SqlError;
+      const error = await flipFailure(db.executeRaw(query));
 
       expect(error._tag).toBe("SqlError");
       expect(error.cause).toBeInstanceOf(Error);
@@ -107,7 +108,7 @@ describe("makeFromKysely", () => {
       );
       const controller = new AbortController();
       const transactionExit = Effect.runPromiseExit(
-        db.transaction().execute((trx) => {
+        db.transaction((trx) => {
           callbackStarted = true;
           return trx.execute(
             sql`insert into interrupt_before_begin_test default values`,
@@ -175,13 +176,11 @@ describe("makeFromKysely", () => {
       );
       const controller = new AbortController();
       const transactionExit = Effect.runPromiseExit(
-        db
-          .transaction()
-          .execute((trx) =>
-            trx.execute(
-              sql`insert into interrupt_during_query_test default values`,
-            ),
+        db.transaction((trx) =>
+          trx.execute(
+            sql`insert into interrupt_during_query_test default values`,
           ),
+        ),
         { signal: controller.signal },
       );
       let transactionSettled = false;
@@ -226,7 +225,7 @@ describe("makeFromKysely", () => {
       );
       const controller = new AbortController();
       const transactionExit = Effect.runPromiseExit(
-        db.transaction().execute((trx) =>
+        db.transaction((trx) =>
           Effect.gen(function* () {
             yield* Effect.promise(
               (signal) =>
@@ -272,11 +271,9 @@ describe("makeFromKysely", () => {
       const now = await Effect.runPromise(
         Effect.gen(function* () {
           yield* TestClock.setTime(1234);
-          return yield* db
-            .transaction()
-            .execute(() =>
-              Effect.clockWith((clock) => clock.currentTimeMillis),
-            );
+          return yield* db.transaction(() =>
+            Effect.clockWith((clock) => clock.currentTimeMillis),
+          );
         }).pipe(Effect.provide(TestClock.layer())),
       );
 
@@ -290,25 +287,27 @@ describe("makeFromKysely", () => {
 
       const requestId = await Effect.runPromise(
         db
-          .transaction()
-          .execute(() => Effect.service(RequestId))
+          .transaction(() => Effect.service(RequestId))
           .pipe(Effect.provideService(RequestId, "request-123")),
       );
 
       expect(requestId).toBe("request-123");
     });
 
-    it("preserves the Effect callback when transaction settings are chained", async () => {
+    it("preserves the Effect callback context with transaction options", async () => {
       const kysely = await createKysely();
       const db = makeFromKysely(kysely);
       const RequestId = Context.Service<string>("vitesakuga/test-request-id");
 
       const requestId = await Effect.runPromise(
         db
-          .transaction()
-          .setIsolationLevel("serializable")
-          .setAccessMode("read write")
-          .execute(() => Effect.service(RequestId))
+          .transaction(
+            {
+              isolationLevel: "serializable",
+              accessMode: "read write",
+            },
+            () => Effect.service(RequestId),
+          )
           .pipe(Effect.provideService(RequestId, "request-456")),
       );
 
@@ -323,9 +322,7 @@ describe("makeFromKysely", () => {
         Effect.withSpan(
           Effect.gen(function* () {
             const caller = yield* Effect.currentSpan;
-            const callback = yield* db
-              .transaction()
-              .execute(() => Effect.currentSpan);
+            const callback = yield* db.transaction(() => Effect.currentSpan);
             return [caller, callback] as const;
           }),
           "caller-span",
@@ -341,7 +338,7 @@ describe("makeFromKysely", () => {
       const defect = new Error("callback defect");
 
       const exit = await Effect.runPromiseExit(
-        db.transaction().execute(() => Effect.die(defect)),
+        db.transaction(() => Effect.die(defect)),
       );
 
       expect(Exit.isFailure(exit)).toBe(true);
@@ -360,7 +357,7 @@ describe("makeFromKysely", () => {
       const defect = new Error("synchronous callback defect");
 
       const exit = await Effect.runPromiseExit(
-        db.transaction().execute(() => {
+        db.transaction(() => {
           throw defect;
         }),
       );
@@ -387,7 +384,7 @@ describe("makeFromKysely", () => {
       const failure = new RollbackSignal();
 
       const error = await flipFailure(
-        db.transaction().execute((trx) =>
+        db.transaction((trx) =>
           Effect.gen(function* () {
             yield* trx.execute(
               sql`insert into rollback_test (name) values (${"lost"})`,
@@ -419,13 +416,11 @@ describe("makeFromKysely", () => {
       );
 
       const exit = await Effect.runPromiseExit(
-        db
-          .transaction()
-          .execute((trx) =>
-            trx.execute(
-              sql`insert into commit_failure_test (name) values (${"unknown"})`,
-            ),
+        db.transaction((trx) =>
+          trx.execute(
+            sql`insert into commit_failure_test (name) values (${"unknown"})`,
           ),
+        ),
       );
 
       expect(Exit.isFailure(exit)).toBe(true);
@@ -465,13 +460,11 @@ describe("makeFromKysely", () => {
       );
 
       const exit = await Effect.runPromiseExit(
-        db
-          .transaction()
-          .execute((trx) =>
-            trx.execute(
-              sql`insert into release_failure_test (name) values (${"kept"})`,
-            ),
+        db.transaction((trx) =>
+          trx.execute(
+            sql`insert into release_failure_test (name) values (${"kept"})`,
           ),
+        ),
       );
 
       expect(Exit.isSuccess(exit)).toBe(true);
@@ -496,7 +489,7 @@ describe("makeFromKysely", () => {
       const callbackFailure = new RollbackSignal();
 
       const exit = await Effect.runPromiseExit(
-        db.transaction().execute((trx) =>
+        db.transaction((trx) =>
           Effect.gen(function* () {
             yield* trx.execute(
               sql`insert into rollback_failure_test (name) values (${"lost"})`,
@@ -523,11 +516,9 @@ describe("makeFromKysely", () => {
       );
 
       const inserted = await Effect.runPromise(
-        db
-          .transaction()
-          .execute((trx) =>
-            trx.execute(sql`insert into commit_test (name) values (${"kept"})`),
-          ),
+        db.transaction((trx) =>
+          trx.execute(sql`insert into commit_test (name) values (${"kept"})`),
+        ),
       );
       expect(inserted).toEqual([]);
 
@@ -605,9 +596,9 @@ describe("makeFromKysely", () => {
       const db = makeFromKysely(kysely);
       await setupTable(db);
 
-      const error = (await flipFailure(
+      const error = await flipFailure(
         db.executeTakeFirstOrError(kysely.selectFrom(firstRowTest).selectAll()),
-      )) as { _tag?: string };
+      );
 
       expect(error._tag).toBe("SqlNoFirstResult");
     });
@@ -629,21 +620,152 @@ describe("makeFromKysely", () => {
       expect(row).toMatchObject({ name: "first" });
     });
 
-    it("executeTakeFirstUnsafe returns the first row on hits", async () => {
+    it("executeTakeFirstOrDie returns the first row on hits", async () => {
       const kysely = await createKysely();
       const db = makeFromKysely(kysely);
       await setupTable(db);
       await Effect.runPromise(
-        db.executeRaw(
-          sql`insert into first_row_test (name) values (${"unsafe"})`,
-        ),
+        db.executeRaw(sql`insert into first_row_test (name) values (${"hit"})`),
       );
 
       const row = await Effect.runPromise(
-        db.executeTakeFirstUnsafe(kysely.selectFrom(firstRowTest).selectAll()),
+        db.executeTakeFirstOrDie(kysely.selectFrom(firstRowTest).selectAll()),
       );
 
-      expect(row).toMatchObject({ name: "unsafe" });
+      expect(row).toMatchObject({ name: "hit" });
+    });
+
+    it("executeTakeFirstOrDie dies when the query returns no rows", async () => {
+      const kysely = await createKysely();
+      const db = makeFromKysely(kysely);
+      await setupTable(db);
+
+      const exit = await Effect.runPromiseExit(
+        db.executeTakeFirstOrDie(kysely.selectFrom(firstRowTest).selectAll()),
+      );
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        expect(Cause.findDie(exit.cause)._tag).toBe("Success");
+      }
+    });
+  });
+
+  describe("transaction extensions", () => {
+    it("classifies PostgreSQL constraint failures by SQLSTATE", async () => {
+      const kysely = await createKysely();
+      const db = makeFromKysely(kysely);
+      await Effect.runPromise(
+        db.executeRaw(
+          sql`create table unique_error_test (id serial primary key, value text unique)`,
+        ),
+      );
+      await Effect.runPromise(
+        db.executeRaw(
+          sql`insert into unique_error_test (value) values (${"duplicate"})`,
+        ),
+      );
+
+      const error = await flipFailure(
+        db.executeRaw(
+          sql`insert into unique_error_test (value) values (${"duplicate"})`,
+        ),
+      );
+
+      expect(error.reason._tag).toBe("UniqueViolation");
+      expect(error.reason.cause).toMatchObject({ code: "23505" });
+      expect(error.reason).toMatchObject({
+        constraint: "unique_error_test_value_key",
+      });
+    });
+
+    it("rolls back a failed savepoint and runs after-commit effects once", async () => {
+      const kysely = await createKysely();
+      const db = makeFromKysely(kysely);
+      await Effect.runPromise(
+        db.executeRaw(
+          sql`create table savepoint_test (id integer primary key)`,
+        ),
+      );
+      const afterCommit: string[] = [];
+
+      const rows = await Effect.runPromise(
+        db.transaction((trx) =>
+          Effect.gen(function* () {
+            yield* trx.execute(sql`insert into savepoint_test values (1)`);
+            yield* trx
+              .savepoint("discard-second-row", (nested) =>
+                Effect.gen(function* () {
+                  yield* nested.execute(
+                    sql`insert into savepoint_test values (2)`,
+                  );
+                  return yield* Effect.fail(new RollbackSignal());
+                }),
+              )
+              .pipe(Effect.catchTag("RollbackSignal", () => Effect.void));
+            yield* db
+              .transaction((nested) =>
+                Effect.gen(function* () {
+                  yield* nested.execute(
+                    sql`insert into savepoint_test values (3)`,
+                  );
+                  return yield* Effect.fail(new RollbackSignal());
+                }),
+              )
+              .pipe(Effect.catchTag("RollbackSignal", () => Effect.void));
+            yield* trx.afterCommit(
+              Effect.sync(() => {
+                afterCommit.push("committed");
+              }),
+            );
+            return yield* trx.execute(
+              sql<{ id: number }>`select id from savepoint_test order by id`,
+            );
+          }),
+        ),
+      );
+
+      expect(rows).toEqual([{ id: 1 }]);
+      expect(afterCommit).toEqual(["committed"]);
+
+      const rollbackExit = await Effect.runPromiseExit(
+        db.transaction((trx) =>
+          Effect.gen(function* () {
+            yield* trx.afterCommit(
+              Effect.sync(() => {
+                afterCommit.push("rolled-back");
+              }),
+            );
+            return yield* Effect.fail(new RollbackSignal());
+          }),
+        ),
+      );
+
+      expect(Exit.isFailure(rollbackExit)).toBe(true);
+      expect(afterCommit).toEqual(["committed"]);
+    });
+
+    it("retries a transaction when BEGIN fails with a retryable SQLSTATE", async () => {
+      let beginAttempts = 0;
+      const beginFailure = Object.assign(new Error("serialization conflict"), {
+        code: "40001",
+      });
+      const kysely = await createKysely({
+        beginTransaction: () => {
+          beginAttempts += 1;
+          if (beginAttempts === 1) throw beginFailure;
+        },
+      });
+      const db = makeFromKysely(kysely);
+
+      const rows = await Effect.runPromise(
+        db.transaction({ retry: { maxRetries: 1 } }, (trx) =>
+          trx.execute(sql<{ value: number }>`select 1 as value`),
+        ),
+      );
+
+      expect(beginAttempts).toBe(2);
+      expect(rows).toEqual([{ value: 1 }]);
     });
   });
 
@@ -664,9 +786,9 @@ describe("makeFromKysely", () => {
       const db = makeFromKysely(kysely);
 
       const rows = await Effect.runPromise(
-        db
-          .transaction()
-          .execute((trx) => trx.execute(sql<{ one: number }>`select 1 as one`)),
+        db.transaction((trx) =>
+          trx.execute(sql<{ one: number }>`select 1 as one`),
+        ),
       );
 
       expect(rows).toEqual([{ one: 1 }]);

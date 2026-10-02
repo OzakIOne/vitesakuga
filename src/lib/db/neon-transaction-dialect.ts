@@ -20,7 +20,11 @@ import {
 } from "kysely";
 
 // oxlint-disable effecttsgo/async-function -- this module implements Kysely's `Driver` and `DatabaseConnection` interfaces, whose methods must return Promises that Kysely awaits; converting them to Effect would break interface conformance
-import { SqlError, type SqlTransactionOutcome } from "../effect/effect.utils";
+import {
+  makeSqlTransactionError,
+  type SqlTransactionError,
+  type SqlTransactionOutcome,
+} from "./effect-kysely";
 
 type NeonClient = NeonQueryFunction<false, true>;
 
@@ -33,11 +37,8 @@ const makeTransactionError = (
   stage: TransactionStage,
   outcome: SqlTransactionOutcome,
 ) =>
-  new SqlError({
+  makeSqlTransactionError({
     cause,
-    message: `[transaction:${stage}] ${
-      cause instanceof Error ? cause.message : String(cause)
-    }`,
     outcome,
     stage,
   });
@@ -145,7 +146,7 @@ class NeonTransactionConnection implements DatabaseConnection {
     const pool = this.#pool;
     if (!client || !pool) return;
 
-    let commandFailure: SqlError | undefined;
+    let commandFailure: SqlTransactionError | undefined;
     try {
       await client.query(sqlCommand);
       this.#outcome =

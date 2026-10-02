@@ -17,7 +17,10 @@ import type {
   TransactionSettings,
 } from "kysely";
 
-import { SqlError, type SqlTransactionOutcome } from "../effect/effect.utils";
+import {
+  makeSqlTransactionError,
+  type SqlTransactionOutcome,
+} from "./effect-kysely";
 
 type TransactionHook = () => void | Promise<void>;
 
@@ -44,11 +47,8 @@ const makeTransactionError = (
   stage: "begin" | "commit" | "rollback" | "release",
   outcome: SqlTransactionOutcome,
 ) =>
-  new SqlError({
+  makeSqlTransactionError({
     cause,
-    message: `[transaction:${stage}] ${
-      cause instanceof Error ? cause.message : String(cause)
-    }`,
     outcome,
     stage,
   });
