@@ -1,5 +1,6 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { Schema } from "effect";
+import { getSafeAuthRedirectUrl } from "src/lib/auth/auth-redirect";
 import { seo } from "src/utils/seo";
 
 const AuthSearchSchema = Schema.Struct({
@@ -9,7 +10,7 @@ const AuthSearchSchema = Schema.Struct({
 export const Route = createFileRoute("/(auth)")({
   validateSearch: Schema.toStandardSchemaV1(AuthSearchSchema),
   beforeLoad: ({ context, search }) => {
-    const redirectUrl = search.redirect || "/";
+    const redirectUrl = getSafeAuthRedirectUrl(search.redirect);
     if (context.user) {
       throw redirect({
         to: redirectUrl,

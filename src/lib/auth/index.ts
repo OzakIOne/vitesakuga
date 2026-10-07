@@ -15,7 +15,12 @@ import {
   EMAIL_DOMAIN_POLICY_MESSAGE,
   isAllowedSignupEmail,
 } from "./email-policy";
-import { assessPassword, MIN_PASSWORD_LENGTH } from "./password-policy";
+import {
+  assessPassword,
+  isPasswordStrengthEnforcedPath,
+  MIN_PASSWORD_LENGTH,
+} from "./password-policy";
+import { isAdditionalTwoFactorSessionMintPath } from "./two-factor-plugin";
 import { generateUsername } from "./username.server";
 
 const passkeyRpID = new URL(envServer.VITE_BASE_URL).hostname;
@@ -45,15 +50,6 @@ if (envServer.GOOGLE_CLIENT_ID && googleClientSecret) {
   };
 }
 
-// Every endpoint whose body carries a new plaintext password. Better Auth's
-// `minPasswordLength` enforces the length floor on all of them; the strength
-// rules are added by the `hooks.before` middleware below.
-const PASSWORD_SET_PATHS = new Set([
-  "/change-password",
-  "/reset-password",
-  "/sign-up/email",
-]);
-
 // Shape of the two Better Auth endpoints that accept a new password:
 // sign-up uses `password`, change/reset use `newPassword`.
 const NewPasswordBody = Schema.Union([
@@ -65,6 +61,30 @@ const NewPasswordBody = Schema.Union([
 // production and development signup paths always enforce the provider policy.
 const enforceEmailDomainPolicy = envServer.NODE_ENV !== "test";
 const requireEmailVerification = envServer.NODE_ENV !== "test";
+
+const twoFactorPlugin = twoFactor({
+  issuer: "ViteSakuga",
+  // OAuth-only users (GitHub/Google) have no credential account, so they
+  // can't provide a password when enabling, disabling or regenerating 2FA.
+  // With this flag, Better Auth only asks for a password when the user
+  // actually has a credential account.
+  allowPasswordless: true,
+});
+
+// Better Auth's built-in matcher only covers password sign-in. Reuse its
+// challenge handler for every other endpoint that can mint a new session.
+const twoFactorPluginWithAllSignInMethods = {
+  ...twoFactorPlugin,
+  hooks: {
+    ...twoFactorPlugin.hooks,
+    after: twoFactorPlugin.hooks.after.map((hook) => ({
+      ...hook,
+      matcher: (context: Parameters<typeof hook.matcher>[0]) =>
+        hook.matcher(context) ||
+        isAdditionalTwoFactorSessionMintPath(context.path ?? ""),
+    })),
+  },
+};
 
 export const auth = betterAuth({
   baseURL: envServer.VITE_BASE_URL,
@@ -133,7 +153,7 @@ export const auth = betterAuth({
   hooks: {
     // oxlint-disable-next-line effecttsgo/async-function -- createAuthMiddleware requires an async middleware handler per Better Auth's contract; the Effect runtime cannot own this interface boundary
     before: createAuthMiddleware(async (ctx) => {
-      if (!PASSWORD_SET_PATHS.has(ctx.path)) {
+      if (!isPasswordStrengthEnforcedPath(ctx.path)) {
         return;
       }
       // Parse the request here instead of runtime-narrowing `ctx.body`;
@@ -221,14 +241,7 @@ export const auth = betterAuth({
     }),
     // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
     // https://www.better-auth.com/docs/plugins/2fa
-    twoFactor({
-      issuer: "ViteSakuga",
-      // OAuth-only users (GitHub/Google) have no credential account, so they
-      // can't provide a password when enabling, disabling or regenerating 2FA.
-      // With this flag, Better Auth only asks for a password when the user
-      // actually has a credential account.
-      allowPasswordless: true,
-    }),
+    twoFactorPluginWithAllSignInMethods,
     passkey({
       rpID: passkeyRpID,
       rpName: "ViteSakuga",

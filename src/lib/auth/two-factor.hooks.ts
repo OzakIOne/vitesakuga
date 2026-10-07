@@ -1,26 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { Schema } from "effect";
 import { useContext } from "react";
 import { usersKeys } from "src/lib/users/users.queries";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
+import { getSafeAuthRedirectUrl } from "./auth-redirect";
 import { AuthClientContext } from "./client-context";
 
 const TWO_FACTOR_REDIRECT_KEY = "vitesakuga:two-factor:redirect";
-
-export const TwoFactorRedirectSchema = Schema.Struct({
-  twoFactorRedirect: Schema.Literal(true),
-  twoFactorMethods: Schema.optional(Schema.Array(Schema.String)),
-});
 
 export function getTwoFactorRedirectUrl(): string {
   // SSR: `sessionStorage` is not exposed by Node unless the Web Storage
   // experimental flag is enabled, so the `in` check keeps this safe without
   // a `typeof window` guard.
-  return "sessionStorage" in globalThis
-    ? globalThis.sessionStorage.getItem(TWO_FACTOR_REDIRECT_KEY) || "/"
-    : "/";
+  const storedUrl =
+    "sessionStorage" in globalThis
+      ? globalThis.sessionStorage.getItem(TWO_FACTOR_REDIRECT_KEY) || undefined
+      : undefined;
+  return getSafeAuthRedirectUrl(storedUrl);
 }
 
 export function clearTwoFactorRedirectUrl(): void {
@@ -31,7 +28,10 @@ export function clearTwoFactorRedirectUrl(): void {
 
 export function setTwoFactorRedirectUrl(url: string): void {
   if ("sessionStorage" in globalThis) {
-    globalThis.sessionStorage.setItem(TWO_FACTOR_REDIRECT_KEY, url);
+    globalThis.sessionStorage.setItem(
+      TWO_FACTOR_REDIRECT_KEY,
+      getSafeAuthRedirectUrl(url),
+    );
   }
 }
 

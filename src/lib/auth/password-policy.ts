@@ -11,6 +11,16 @@ import { passwordStrength, type Options } from "check-password-strength";
 /** Enforced server-side by Better Auth's `emailAndPassword.minPasswordLength`. */
 export const MIN_PASSWORD_LENGTH = 12;
 
+const passwordStrengthPaths = new Set([
+  "/change-password",
+  "/reset-password",
+  "/sign-up/email",
+  "/email-otp/reset-password",
+]);
+
+export const isPasswordStrengthEnforcedPath = (path: string): boolean =>
+  passwordStrengthPaths.has(path);
+
 /** Same tiers the strength meter renders; ids map 0 weak → 3 strong. */
 export const PASSWORD_STRENGTH_OPTIONS: Options<string> = [
   { id: 0, value: "weak", minDiversity: 0, minLength: 0 },

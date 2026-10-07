@@ -115,6 +115,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - Chaque compte possède un pseudo unique (`user.username`), généré à l'inscription et modifiable sur `/account`.
 - Dans un commentaire, `@` ouvre une autocomplétion clavier accessible. Le contenu est stocké avec des tokens liés à l'identifiant utilisateur, donc un changement de pseudo ne casse pas les anciennes mentions.
 - Les nouvelles mentions créent `comment_mentions` et une notification best-effort ; les comptes supprimés et l'auto-mention sont exclus.
+- Le rendu utilise le pseudo actuel des comptes actifs ; après suppression, il conserve le pseudo capturé dans le commentaire au lieu de révéler un pseudo modifié ensuite.
 - Rendu : Markdown via `src/components/mentions/CommentContent.tsx`, pont des mentions via `src/lib/mentions/markdown.ts`, autocomplétion via `src/components/mentions/MentionTextarea.tsx` et canonicalisation via `src/lib/mentions/mentions.ts`.
 
 ## Authentification & comptes
@@ -125,7 +126,7 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 - **Inscription protégée** : les nouvelles adresses doivent appartenir à la liste de fournisseurs approuvés (Gmail, Outlook, Yahoo, Apple/Private Relay, Proton, etc.) ; la création d’un compte est suspendue jusqu’à la saisie d’un code envoyé par email.
 - **OAuth social** GitHub et Google, activé uniquement quand les credentials sont configurés.
 - **Passkeys (WebAuthn)** — `src/components/auth/PasskeySignInButton.tsx`, `src/components/auth/PasskeysSection.tsx`.
-- **2FA TOTP** avec codes de secours et option de confiance d'appareil — `src/components/auth/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`.
+- **2FA TOTP** avec codes de secours et option de confiance d'appareil, exigée après toute méthode de connexion — `src/components/auth/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`.
 - **Captcha Cloudflare Turnstile** en production lorsqu'il est provisionné.
 - **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Resend ; `RESEND_API_KEY` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.

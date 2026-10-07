@@ -111,9 +111,8 @@ export class CommentsService extends Context.Service<
           ]),
       );
 
-      // Second pass for @mentions: one query for the whole thread, grouped
-      // per comment client-side. Deleted users keep their row so old
-      // mentions still render (the profile shows "Deleted user").
+      // Resolve current handles only for active users. Deleted users fall
+      // back to the handle captured in the stored mention token.
       const commentIds = comments.map((row) => row.id);
       const mentionRows =
         commentIds.length === 0
@@ -127,7 +126,8 @@ export class CommentsService extends Context.Service<
                   "user.id as userId",
                   "user.username",
                 ])
-                .where("comment_mentions.commentId", "in", commentIds),
+                .where("comment_mentions.commentId", "in", commentIds)
+                .where("user.deletedAt", "is", null),
             );
       const mentionsByComment = new Map<number, typeof mentionRows>();
       for (const row of mentionRows) {
