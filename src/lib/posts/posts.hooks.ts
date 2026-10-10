@@ -71,8 +71,8 @@ export function usePostsInfiniteScroll<
   const {
     data,
     error,
-    fetchNextPage,
-    fetchPreviousPage,
+    fetchNextPage: queryFetchNextPage,
+    fetchPreviousPage: queryFetchPreviousPage,
     hasNextPage,
     hasPreviousPage,
     isFetching,
@@ -81,6 +81,15 @@ export function usePostsInfiniteScroll<
     isPending,
     refetch,
   } = useInfiniteQuery(infiniteOptions);
+
+  const fetchNextPage = useCallback(
+    () => queryFetchNextPage({ cancelRefetch: false }),
+    [queryFetchNextPage],
+  );
+  const fetchPreviousPage = useCallback(
+    () => queryFetchPreviousPage({ cancelRefetch: false }),
+    [queryFetchPreviousPage],
+  );
 
   // The last page we wrote to the URL ourselves during scroll. Used to tell
   // our own scroll-driven writes apart from external changes (back/forward,
@@ -92,6 +101,7 @@ export function usePostsInfiniteScroll<
   useEffect(() => {
     if (page === lastWrittenPageRef.current) return;
     lastWrittenPageRef.current = page;
+    scrollSyncedPagesRef.current.clear();
     setAnchorScrollKey((key) => key + 1);
     void queryClient.resetQueries({ queryKey: infiniteOptions.queryKey });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey identity is unstable; only page drives resets
@@ -102,6 +112,7 @@ export function usePostsInfiniteScroll<
   // concurrent fetch* calls on the same infinite query race (the second one
   // overwrites the first's cache write), so buffers must not overlap.
   const prefetchedAnchorRef = useRef<number | null>(null);
+  const scrollSyncedPagesRef = useRef(new Set<number>());
   const fetchNextPageRef = useRef(fetchNextPage);
   const hasNextPageRef = useRef(hasNextPage);
   const isFetchingNextPageRef = useRef(isFetchingNextPage);
@@ -116,6 +127,10 @@ export function usePostsInfiniteScroll<
     if (prefetchedAnchorRef.current === page) return;
     if (!data) return;
     prefetchedAnchorRef.current = page;
+    if (scrollSyncedPagesRef.current.has(page)) {
+      scrollSyncedPagesRef.current.clear();
+      return;
+    }
     if (hasPreviousPage && !isFetchingPreviousPage) {
       void fetchPreviousPage().then(() => {
         if (hasNextPageRef.current && !isFetchingNextPageRef.current) {
@@ -132,6 +147,7 @@ export function usePostsInfiniteScroll<
     (nextPage: number) => {
       if (nextPage === lastWrittenPageRef.current) return;
       lastWrittenPageRef.current = nextPage;
+      scrollSyncedPagesRef.current.add(nextPage);
       void navigate({
         search: (prev) => ({ ...prev, page: nextPage }),
         replace: true,
@@ -179,7 +195,9 @@ export function usePostsInfiniteScroll<
     : null;
 
   const popularTags = useMemo(
-    () => data?.pages[0]?.meta.popularTags ?? [],
+    () =>
+      data?.pages.find((pageData) => pageData.meta.popularTags.length > 0)?.meta
+        .popularTags ?? [],
     [data],
   );
 

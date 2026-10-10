@@ -159,7 +159,8 @@ export function VirtualPostsGrid({
   ]);
 
   const firstVisiblePage = useMemo(() => {
-    const firstItem = virtualItems[0];
+    const scrollTop = parentRef.current?.scrollTop ?? 0;
+    const firstItem = virtualItems.find((item) => item.end > scrollTop);
     const firstPageParam = pageParams[0];
     if (!firstItem || firstPageParam === undefined) return null;
     const firstPostIndex = firstItem.index * columns;
