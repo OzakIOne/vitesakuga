@@ -1,23 +1,23 @@
-import {
-  ClientOnly,
-  Portal,
-  type ComboboxValueChangeDetails,
-} from "@ark-ui/react";
+import { ClientOnly, type ComboboxValueChangeDetails } from "@ark-ui/react";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { LuX } from "react-icons/lu";
+import { LuChevronDown, LuX } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Field, Input } from "src/components/ui/field";
 import { Box, Group, Wrap } from "src/components/ui/layout";
-import { Combobox } from "src/components/ui/overlay";
 import { Heading } from "src/components/ui/typography";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
-import { useTagCollection } from "src/lib/tags/tags.hooks";
 
 import { SaveSearchDialog, SavedSearchesDialog } from "./SavedSearchDialogs";
+
+const LazySearchBoxTagCombobox = lazy(() =>
+  import("./SearchBoxTagCombobox").then((module) => ({
+    default: module.SearchBoxTagCombobox,
+  })),
+);
 
 // Tags are compared as a whole (order included) when deciding whether the
 // applied filters moved; the separator cannot appear in a tag name.
@@ -96,6 +96,7 @@ export function SearchBox({
     tagsKey(appliedTags),
     tagsKey,
   );
+  const [isTagComboboxActive, setIsTagComboboxActive] = useState(false);
 
   const applyDraftToUrl = (
     query: string,
@@ -213,10 +214,35 @@ export function SearchBox({
         <Field.Label fontSize="sm">Filter by Tags</Field.Label>
         <Box w="full">
           <ClientOnly fallback={null}>
-            <SearchBoxTagCombobox
-              onValueChange={handleTagChange}
-              tags={draftTags}
-            />
+            {isTagComboboxActive ? (
+              <Suspense
+                fallback={
+                  <Button
+                    className="w-full justify-between"
+                    disabled
+                    size="sm"
+                    variant="outline"
+                  >
+                    Loading tags…
+                  </Button>
+                }
+              >
+                <LazySearchBoxTagCombobox
+                  onValueChange={handleTagChange}
+                  tags={draftTags}
+                />
+              </Suspense>
+            ) : (
+              <Button
+                className="w-full justify-between"
+                onClick={() => setIsTagComboboxActive(true)}
+                size="sm"
+                variant="outline"
+              >
+                Select tags to filter…
+                <LuChevronDown aria-hidden="true" />
+              </Button>
+            )}
           </ClientOnly>
           {draftTags.length > 0 && (
             <Wrap gap="2" mt={2}>
@@ -247,67 +273,5 @@ export function SearchBox({
         </Box>
       </Field.Root>
     </Box>
-  );
-}
-
-type SearchBoxTagComboboxProps = {
-  onValueChange: (details: ComboboxValueChangeDetails) => void;
-  tags: readonly string[];
-};
-
-function SearchBoxTagCombobox({
-  onValueChange,
-  tags,
-}: SearchBoxTagComboboxProps) {
-  const [tagSearchValue, setTagSearchValue] = useState("");
-
-  const { collection } = useTagCollection({
-    search: tagSearchValue,
-    exclude: tags,
-  });
-
-  const handleValueChange = (details: ComboboxValueChangeDetails) => {
-    setTagSearchValue("");
-    onValueChange(details);
-  };
-
-  return (
-    <Combobox.Root
-      closeOnSelect
-      collection={collection}
-      multiple
-      onInputValueChange={(details) => {
-        setTagSearchValue(details.inputValue);
-      }}
-      onValueChange={handleValueChange}
-      openOnClick
-      value={[...tags]}
-    >
-      <Combobox.Control>
-        <Combobox.Input id="tag-filter" placeholder="Select tags to filter…" />
-        <Combobox.IndicatorGroup>
-          <Combobox.Trigger />
-        </Combobox.IndicatorGroup>
-      </Combobox.Control>
-
-      <Portal>
-        <Combobox.Positioner>
-          <Combobox.Content>
-            <Combobox.ItemGroup>
-              {collection.items.length > 0 ? (
-                collection.items.map((item: string) => (
-                  <Combobox.Item item={item} key={item}>
-                    {item}
-                    <Combobox.ItemIndicator />
-                  </Combobox.Item>
-                ))
-              ) : (
-                <Combobox.Empty>No tags found</Combobox.Empty>
-              )}
-            </Combobox.ItemGroup>
-          </Combobox.Content>
-        </Combobox.Positioner>
-      </Portal>
-    </Combobox.Root>
   );
 }
