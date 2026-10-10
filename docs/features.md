@@ -77,6 +77,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 ### Upload de post (`/upload`, authentification requise)
 
 - Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB par fichier, jusqu'à 10 images par post). Les images forment une galerie réordonnable sur la page de détail, la première image servant de thumbnail.
+- Changer le type de post conserve les fichiers déjà sélectionnés pour chaque type. Les aperçus image sont libérés au retrait des fichiers ou à la fermeture de la page.
 - Génération locale de vignettes vidéo, sélection de thumbnail et métadonnées via mediainfo.js. Les images enregistrent leurs dimensions et utilisent la première image comme thumbnail.
 - Métadonnées : titre, description, URL source, saison/épisode (vidéo) ou volume/chapitre (image), type de source, tags, post lié.
 - Les références de post lié doivent désigner un post existant différent du post en cours. Les identifiants de tags sont vérifiés côté serveur contre leur nom avant association.

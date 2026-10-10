@@ -38,15 +38,8 @@ import {
   MIN_TEXT_LENGTH,
 } from "src/lib/posts/posts.schema";
 import { searchPosts } from "src/lib/posts/posts.service";
-import {
-  useUploadDraft,
-  type UploadDraftData,
-} from "src/lib/upload/useUploadDraft";
-import {
-  useUploadForm,
-  type UploadMediaKind,
-} from "src/lib/upload/useUploadForm";
-import { useVideoProcessing } from "src/lib/upload/useVideoProcessing";
+import type { UploadDraftData } from "src/lib/upload/useUploadDraft";
+import { useUploadForm } from "src/lib/upload/useUploadForm";
 
 type MetaNumberFieldProps = {
   field: AnyFieldApi;
@@ -109,41 +102,16 @@ const UploadDraftPersistence = ({
 };
 
 export const UploadPage = () => {
-  const [mediaKind, setMediaKind] = useState<UploadMediaKind>("video");
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imageValidationErrors, setImageValidationErrors] = useState<
-    Record<string, string>
-  >({});
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<
-    Record<string, string>
-  >({});
-  const imagePreviewUrlsRef = useRef(imagePreviewUrls);
-  useEffect(() => {
-    imagePreviewUrlsRef.current = imagePreviewUrls;
-  }, [imagePreviewUrls]);
-
-  // Object URLs are revoked when the component unmounts. Individual URLs are
-  // revoked by syncImagePreviews/removeImage when files leave the selection.
-  useEffect(() => {
-    return () => {
-      for (const url of Object.values(imagePreviewUrlsRef.current)) {
-        URL.revokeObjectURL(url);
-      }
-    };
-  }, []);
-
-  const video = useVideoProcessing();
-  const draft = useUploadDraft();
-
-  const form = useUploadForm({
-    draft: draft.draft,
+  const form = useUploadForm();
+  const { media, draft } = form;
+  const {
     imageFiles,
+    imageKeyFor,
+    imagePreviewUrlFor,
+    imageValidationErrors,
     mediaKind,
-    onDraftClear: draft.clear,
-    thumbnail: video.thumbnails[video.selectedThumbnailIndex]?.file,
-    videoFile: video.videoFile,
-    videoMetadata: video.videoMetadata,
-  });
+    video,
+  } = media;
 
   const videoRef = useRef<VideoRef>(null);
 
@@ -175,89 +143,6 @@ export const UploadPage = () => {
         type: "error",
       });
     }
-  };
-
-  const handleFileChange = async (file: File | null) => {
-    if (file) {
-      await video.selectFile(file);
-    } else {
-      video.clearFile();
-    }
-  };
-
-  const imageFileKey = (file: File): string =>
-    `${file.name}:${file.size}:${file.lastModified}`;
-
-  const syncImagePreviews = (files: File[]) => {
-    setImageFiles(files);
-    setImagePreviewUrls((current) => {
-      const next: Record<string, string> = {};
-      const activeKeys = new Set<string>();
-      for (const file of files) {
-        const key = imageFileKey(file);
-        activeKeys.add(key);
-        next[key] = current[key] ?? URL.createObjectURL(file);
-      }
-      for (const [key, url] of Object.entries(current)) {
-        if (!activeKeys.has(key)) {
-          URL.revokeObjectURL(url);
-        }
-      }
-      return next;
-    });
-  };
-
-  const moveImage = (from: number, to: number) => {
-    if (to < 0 || to >= imageFiles.length) {
-      return;
-    }
-    setImageFiles((current) => {
-      const next = [...current];
-      const [file] = next.splice(from, 1);
-      if (file) {
-        next.splice(to, 0, file);
-      }
-      return next;
-    });
-  };
-
-  const removeImage = (index: number) => {
-    const file = imageFiles[index];
-    if (!file) {
-      return;
-    }
-    setImageFiles((current) =>
-      current.filter((_, itemIndex) => itemIndex !== index),
-    );
-    setImageValidationErrors((current) => {
-      const next = { ...current };
-      delete next[imageFileKey(file)];
-      return next;
-    });
-    setImagePreviewUrls((current) => {
-      const key = imageFileKey(file);
-      const url = current[key];
-      if (url) {
-        URL.revokeObjectURL(url);
-      }
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-  };
-
-  const formatImageRejection = (
-    file: File,
-    errors: readonly string[],
-  ): string => {
-    const validationError = getImageFileValidationError(file);
-    if (validationError) {
-      return validationError;
-    }
-    if (errors.includes("TOO_MANY_FILES")) {
-      return `You can select up to ${MAX_IMAGES_PER_POST} images per post`;
-    }
-    return "This image could not be selected";
   };
 
   const [relatedPostSearch, setRelatedPostSearch] = useState("");
@@ -637,7 +522,7 @@ export const UploadPage = () => {
                 colorPalette="blue"
                 aria-pressed={mediaKind === "video"}
                 onClick={() => {
-                  setMediaKind("video");
+                  media.setMediaKind("video");
                 }}
                 size="sm"
                 variant={mediaKind === "video" ? "solid" : "outline"}
@@ -648,7 +533,7 @@ export const UploadPage = () => {
                 colorPalette="blue"
                 aria-pressed={mediaKind === "image"}
                 onClick={() => {
-                  setMediaKind("image");
+                  media.setMediaKind("image");
                 }}
                 size="sm"
                 variant={mediaKind === "image" ? "solid" : "outline"}
@@ -674,7 +559,11 @@ export const UploadPage = () => {
                       maxW="xl"
                       onFileChange={async (details) => {
                         const file = details.acceptedFiles[0] || null;
-                        await handleFileChange(file);
+                        if (file) {
+                          await video.selectFile(file);
+                        } else {
+                          video.clearFile();
+                        }
                       }}
                     >
                       <FileUpload.HiddenInput id="video-upload" />
@@ -788,26 +677,15 @@ export const UploadPage = () => {
                     maxFiles={MAX_IMAGES_PER_POST}
                     maxW="xl"
                     onFileChange={(details) => {
-                      syncImagePreviews(details.acceptedFiles);
+                      media.onImageFilesChange({
+                        acceptedFiles: details.acceptedFiles,
+                        rejectedFiles: details.rejectedFiles,
+                      });
                       field.handleChange(
                         details.acceptedFiles.length > 0
                           ? details.acceptedFiles
                           : undefined,
                       );
-                      setImageValidationErrors((current) => {
-                        const next = { ...current };
-                        for (const file of details.acceptedFiles) {
-                          delete next[imageFileKey(file)];
-                        }
-                        for (const rejection of details.rejectedFiles) {
-                          next[imageFileKey(rejection.file)] =
-                            formatImageRejection(
-                              rejection.file,
-                              rejection.errors,
-                            );
-                        }
-                        return next;
-                      });
                     }}
                     validate={(file) =>
                       getImageFileValidationError(file)
@@ -834,7 +712,8 @@ export const UploadPage = () => {
                     <Grid className="grid-cols-2 md:grid-cols-3" gap={3} mt={3}>
                       {imageFiles.map((file, index) => {
                         const isDefaultThumbnail = index === 0;
-                        const previewUrl = imagePreviewUrls[imageFileKey(file)];
+                        const previewUrl = imagePreviewUrlFor(file);
+                        const imageKey = imageKeyFor(file);
                         return (
                           <Box
                             border="1px"
@@ -842,7 +721,7 @@ export const UploadPage = () => {
                               isDefaultThumbnail ? "blue.500" : "gray.200"
                             }
                             borderRadius="md"
-                            key={imageFileKey(file)}
+                            key={imageKey}
                             overflow="hidden"
                             p={2}
                           >
@@ -876,7 +755,9 @@ export const UploadPage = () => {
                               <Button
                                 aria-label={"Move " + file.name + " earlier"}
                                 disabled={index === 0}
-                                onClick={() => moveImage(index, index - 1)}
+                                onClick={() =>
+                                  media.moveImage(index, index - 1)
+                                }
                                 size="xs"
                                 variant="outline"
                               >
@@ -885,7 +766,9 @@ export const UploadPage = () => {
                               <Button
                                 aria-label={"Move " + file.name + " later"}
                                 disabled={index === imageFiles.length - 1}
-                                onClick={() => moveImage(index, index + 1)}
+                                onClick={() =>
+                                  media.moveImage(index, index + 1)
+                                }
                                 size="xs"
                                 variant="outline"
                               >
@@ -894,7 +777,7 @@ export const UploadPage = () => {
                               <Button
                                 aria-label={"Remove " + file.name}
                                 colorPalette="red"
-                                onClick={() => removeImage(index)}
+                                onClick={() => media.removeImage(index)}
                                 size="xs"
                                 variant="ghost"
                               >
@@ -906,7 +789,7 @@ export const UploadPage = () => {
                       })}
                     </Grid>
                   )}
-                  {Object.entries(imageValidationErrors).length > 0 && (
+                  {imageValidationErrors.length > 0 && (
                     <Box
                       aria-live="polite"
                       bg="red.50"
@@ -919,11 +802,9 @@ export const UploadPage = () => {
                         Some images were not added:
                       </Text>
                       <ul className="text-danger-700 mt-1 list-disc pl-5 text-sm">
-                        {Object.entries(imageValidationErrors).map(
-                          ([fileKey, message]) => (
-                            <li key={fileKey}>{message}</li>
-                          ),
-                        )}
+                        {imageValidationErrors.map(({ fileKey, message }) => (
+                          <li key={fileKey}>{message}</li>
+                        ))}
                       </ul>
                     </Box>
                   )}

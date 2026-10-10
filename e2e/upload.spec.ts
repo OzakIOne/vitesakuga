@@ -169,4 +169,105 @@ test.describe("Upload page", () => {
       timeout: 5000,
     });
   });
+
+  test("does not submit images whose dimensions finish after the selection changes", async ({
+    page,
+  }) => {
+    const postRequests: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).origin === new URL(page.url()).origin
+      ) {
+        postRequests.push(request.url());
+      }
+    });
+
+    await page.locator("#title").fill("Coordinated upload");
+    await page.locator("#description").fill("A description for the upload");
+    await page.getByRole("button", { name: "Image", exact: true }).click();
+    await page.evaluate(() => {
+      const originalDecode = HTMLImageElement.prototype.decode;
+      const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+      const originalRevokeObjectURL = URL.revokeObjectURL.bind(URL);
+      let firstImageUrlCount = 0;
+      URL.createObjectURL = (object) => {
+        const url = originalCreateObjectURL(object);
+        if (object instanceof File && object.name === "first.png") {
+          firstImageUrlCount += 1;
+          if (firstImageUrlCount === 2) {
+            document.documentElement.dataset["uploadPreparationUrl"] = url;
+          }
+        }
+        return url;
+      };
+      URL.revokeObjectURL = (url) => {
+        if (url === document.documentElement.dataset["uploadPreparationUrl"]) {
+          document.documentElement.dataset["uploadPreparationFinished"] =
+            "true";
+        }
+        originalRevokeObjectURL(url);
+      };
+      HTMLImageElement.prototype.decode = function () {
+        document.documentElement.dataset["uploadDecodeStarted"] = "true";
+        return new Promise<void>((resolve, reject) => {
+          window.addEventListener(
+            "upload-test-release-decode",
+            () => {
+              originalDecode.call(this).then(() => {
+                document.documentElement.dataset["uploadDecodeFinished"] =
+                  "true";
+                resolve();
+              }, reject);
+            },
+            { once: true },
+          );
+        });
+      };
+    });
+
+    const imageBuffer = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+nmD8AAAAASUVORK5CYII=",
+      "base64",
+    );
+    await page.locator("#image-upload").setInputFiles({
+      buffer: imageBuffer,
+      mimeType: "image/png",
+      name: "first.png",
+    });
+    await expect(page.getByRole("button", { name: "Upload" })).toBeEnabled();
+    await page.getByRole("button", { name: "Upload" }).click();
+    await page.waitForFunction(
+      () => document.documentElement.dataset["uploadDecodeStarted"] === "true",
+    );
+
+    await page.locator("#image-upload").setInputFiles({
+      buffer: imageBuffer,
+      mimeType: "image/png",
+      name: "second.png",
+    });
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event("upload-test-release-decode"));
+    });
+    await page.waitForFunction(
+      () => document.documentElement.dataset["uploadDecodeFinished"] === "true",
+    );
+    await page.waitForFunction(
+      () =>
+        document.documentElement.dataset["uploadPreparationFinished"] ===
+        "true",
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        }),
+    );
+
+    await expect(page.getByAltText("Preview of second.png")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Upload" })).toBeEnabled();
+    expect(postRequests).toEqual([]);
+  });
 });

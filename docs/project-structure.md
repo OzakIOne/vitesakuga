@@ -106,7 +106,7 @@ src/
 ## Upload & Storage
 
 - Client-side video analysis in `src/lib/upload/upload.processor.ts` (mediainfo.js + mediabunny)
-- Upload hooks in `src/lib/upload/useVideoProcessing.ts`, `useUploadDraft.ts`, `useUploadForm.ts`
+- Upload coordination in `src/lib/upload/useUploadForm.ts` (draft, media selection, media preparation and submit lifecycle), `src/lib/upload/use-upload-media.ts` (ordered image selection, validation, previews, media-kind changes and cancellation version), `useVideoProcessing.ts` (video analysis and thumbnails), and `useUploadDraft.ts` (persistent form draft)
 - Storage service in `src/lib/storage/storage.module.ts` (Effect service interface)
 - S3-compatible implementation for R2 and RustFS in `src/lib/storage/storage.adapter.ts`
 - Storage interface and tagged errors in `src/lib/storage/storage.module.ts`

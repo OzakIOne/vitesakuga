@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   safeParseStrictIssues,
@@ -25,19 +25,8 @@ import {
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
 import { createVideoUploadUrl, uploadPost } from "../posts/posts.service";
 import { buildFormData, getImageDimensions } from "./upload.processor";
-import type { UploadDraftData } from "./useUploadDraft";
-
-export type UploadMediaKind = "image" | "video";
-
-type UseUploadFormParams = {
-  draft: UploadDraftData | null;
-  mediaKind: UploadMediaKind;
-  videoFile: File | null;
-  imageFiles: File[];
-  thumbnail: File | undefined;
-  videoMetadata: VideoMetadata | undefined;
-  onDraftClear: () => void;
-};
+import { useUploadMedia } from "./use-upload-media";
+import { useUploadDraft } from "./useUploadDraft";
 
 type UploadFormValues = {
   operationKey: string;
@@ -117,35 +106,43 @@ type UseUploadFormResult = {
   >;
   isSubmitting: boolean;
   submit: () => Promise<void>;
+  draft: ReturnType<typeof useUploadDraft>;
+  media: ReturnType<typeof useUploadMedia>;
 };
 
-export function useUploadForm(
-  params: UseUploadFormParams,
-): UseUploadFormResult {
-  const {
-    draft,
-    mediaKind,
-    videoFile,
-    imageFiles,
-    thumbnail,
-    videoMetadata,
-    onDraftClear,
-  } = params;
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+export function useUploadForm(): UseUploadFormResult {
+  const draft = useUploadDraft();
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isPreparingImages, setIsPreparingImages] = useState(false);
   const uploadGenerationRef = useRef(0);
   const uploadAbortRef = useRef<AbortController | null>(null);
+  const imagePreparationAbortRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
+  const cancelCurrentPreparation = useCallback(() => {
+    uploadGenerationRef.current += 1;
+    uploadAbortRef.current?.abort();
+    uploadAbortRef.current = null;
+    imagePreparationAbortRef.current?.abort();
+    imagePreparationAbortRef.current = null;
+    setIsUploadingVideo(false);
+    setIsPreparingImages(false);
+  }, []);
+  const media = useUploadMedia({
+    onSelectionChanged: cancelCurrentPreparation,
+  });
+  const { mediaKind, video } = media;
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
       isMountedRef.current = false;
       uploadGenerationRef.current += 1;
       uploadAbortRef.current?.abort();
-    },
-    [],
-  );
+      imagePreparationAbortRef.current?.abort();
+    };
+  }, []);
 
   const uploadPostMutation = useMutationWithFeedback({
     errorFallback: "There was an error uploading your post.",
@@ -153,7 +150,7 @@ export function useUploadForm(
     mutationFn: async (data: FormData) => uploadPost({ data }),
     onSuccess: (newPost) => {
       form.reset(emptyValues);
-      onDraftClear();
+      draft.clear();
       void queryClient.invalidateQueries({ queryKey: postsKeys.all });
       void navigate({ to: `/posts/${newPost.id}` });
     },
@@ -188,16 +185,16 @@ export function useUploadForm(
 
   const defaultValues: UploadFormValues = {
     ...emptyValues,
-    operationKey: draft?.operationKey ?? emptyValues.operationKey,
-    chapterNumber: draft?.chapterNumber,
-    description: draft?.description ?? "",
-    relatedPostId: draft?.relatedPostId,
-    seasonNumber: draft?.seasonNumber,
-    source: draft?.source,
-    tags: draft?.tags ?? [],
-    title: draft?.title ?? "",
-    episodeNumber: draft?.episodeNumber,
-    volumeNumber: draft?.volumeNumber,
+    operationKey: draft.draft?.operationKey ?? emptyValues.operationKey,
+    chapterNumber: draft.draft?.chapterNumber,
+    description: draft.draft?.description ?? "",
+    relatedPostId: draft.draft?.relatedPostId,
+    seasonNumber: draft.draft?.seasonNumber,
+    source: draft.draft?.source,
+    tags: draft.draft?.tags ?? [],
+    title: draft.draft?.title ?? "",
+    episodeNumber: draft.draft?.episodeNumber,
+    volumeNumber: draft.draft?.volumeNumber,
   };
 
   const form = useForm({
@@ -243,6 +240,13 @@ export function useUploadForm(
   });
 
   const submitImagePost = async () => {
+    const selectionVersion = media.getSelectionVersion();
+    const { imageFiles } = media;
+    form.setFieldValue("videoKey", undefined);
+    form.setFieldValue("thumbnail", undefined);
+    form.setFieldValue("videoMetadata", undefined);
+    form.setFieldValue("images", undefined);
+    form.setFieldValue("imageDimensions", undefined);
     if (imageFiles.length === 0) {
       return false;
     }
@@ -262,23 +266,44 @@ export function useUploadForm(
       return false;
     }
 
+    imagePreparationAbortRef.current?.abort();
+    const controller = new AbortController();
+    imagePreparationAbortRef.current = controller;
+    setIsPreparingImages(true);
+    const isCurrent = () =>
+      isMountedRef.current &&
+      media.getSelectionVersion() === selectionVersion &&
+      !controller.signal.aborted;
+
     let imageDimensions: { height: number; width: number }[];
     try {
       imageDimensions = await Promise.all(
         imageFiles.map(async (file) => {
           try {
-            return await getImageDimensions(file);
+            return await getImageDimensions(file, controller.signal);
           } catch {
             throw new Error(`${file.name} could not be read as an image`);
           }
         }),
       );
     } catch (error) {
-      toastError(
-        "Upload failed",
-        error,
-        "There was an error uploading your post.",
-      );
+      if (isCurrent()) {
+        toastError(
+          "Upload failed",
+          error,
+          "There was an error uploading your post.",
+        );
+      }
+      return false;
+    } finally {
+      if (imagePreparationAbortRef.current === controller) {
+        imagePreparationAbortRef.current = null;
+        if (isMountedRef.current) {
+          setIsPreparingImages(false);
+        }
+      }
+    }
+    if (!isCurrent()) {
       return false;
     }
 
@@ -296,11 +321,21 @@ export function useUploadForm(
     uploadAbortRef.current?.abort();
     const controller = new AbortController();
     uploadAbortRef.current = controller;
+    const selectionVersion = media.getSelectionVersion();
     const isCurrent = () =>
       isMountedRef.current &&
       uploadGenerationRef.current === generation &&
+      media.getSelectionVersion() === selectionVersion &&
       !controller.signal.aborted;
 
+    const { videoFile, thumbnails, selectedThumbnailIndex, videoMetadata } =
+      video;
+    const thumbnail = thumbnails[selectedThumbnailIndex]?.file;
+    form.setFieldValue("images", undefined);
+    form.setFieldValue("imageDimensions", undefined);
+    form.setFieldValue("videoKey", undefined);
+    form.setFieldValue("thumbnail", undefined);
+    form.setFieldValue("videoMetadata", undefined);
     if (thumbnail) {
       form.setFieldValue("thumbnail", thumbnail);
     }
@@ -372,7 +407,10 @@ export function useUploadForm(
 
   return {
     form,
-    isSubmitting: uploadPostMutation.isPending || isUploadingVideo,
+    isSubmitting:
+      uploadPostMutation.isPending || isUploadingVideo || isPreparingImages,
     submit,
+    draft,
+    media,
   };
 }

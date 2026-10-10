@@ -32,9 +32,11 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **Video Processing** — Client-side hook (`useVideoProcessing`) that owns the MediaInfo WASM lifecycle, video file selection, preview URL, thumbnail generation/capture, and frame rate state. Returns `{ videoFile, previewUrl, frameRate, thumbnails, selectedThumbnailIndex, videoMetadata, selectFile, captureFrame, selectThumbnail, clearFile }`.
 
+**Upload Form Coordination** — `useUploadForm` composes the draft, media selection, and submission lifecycle so media snapshots, direct video PUT cancellation, image-dimension preparation, and the operation key stay aligned. `use-upload-media.ts` owns the selected post kind, ordered image files and errors, image preview URLs, and a selection version. Changing kind, files, order, or thumbnail cancels pending upload work; switching kind keeps both media selections available. Image object URLs are released when files leave the selection and when the coordinator unmounts.
+
 **Upload Draft** — Client-side persistence of incomplete upload form data via TanStack DB localStorage collection in `src/lib/db/collections.ts`. Hook: `useUploadDraft` in `src/lib/upload/useUploadDraft.ts` with `{ draft, isLoaded, persist, clear }`.
 
-**Upload Form** — Hook: `useUploadForm` in `src/lib/upload/useUploadForm.ts`. Manages the full upload form state including video processing, thumbnail selection, tag input, and FormData construction.
+**Upload Form** — Hook: `useUploadForm` in `src/lib/upload/useUploadForm.ts`. Composes `useUploadDraft`, `use-upload-media.ts`, form validation, media preparation, direct-to-R2 video PUTs, and FormData submission. Image and video fields are cleared when the form prepares the other media kind, so a prior selection cannot leak into the next request.
 
 **Video Metadata** — Technical metadata extracted from video files (codec, resolution, frame rate, duration, bitrate, etc.). Parsed via `VideoMetadataSchema` (Effect Schema).
 
