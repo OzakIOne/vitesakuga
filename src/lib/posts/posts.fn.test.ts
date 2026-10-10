@@ -129,10 +129,24 @@ const linkTags = async (postId: number, tagIds: number[]) => {
     .execute();
 };
 
+type SearchPostsParams = Parameters<typeof PostsService.search>[0]["params"];
+type SearchPostsInput = Omit<SearchPostsParams, "randomSeed" | "view"> &
+  Partial<Pick<SearchPostsParams, "randomSeed" | "view">>;
+
+const searchPosts = (params: SearchPostsInput) =>
+  PostsService.search({
+    includePopularTags: true,
+    params: {
+      ...params,
+      randomSeed: params.randomSeed ?? 0,
+      view: params.view ?? "chronological",
+    },
+  });
+
 describe("PostsService.search", () => {
   it("returns empty results when no posts exist", async () => {
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: [],
         page: 0,
@@ -151,7 +165,7 @@ describe("PostsService.search", () => {
     await insertPost({ title: "Post 2", description: "Content 2" });
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: [],
         page: 0,
@@ -172,7 +186,7 @@ describe("PostsService.search", () => {
     await insertPost({ title: "Regular Post", description: "Nothing here" });
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "anime",
         tags: [],
         page: 0,
@@ -190,7 +204,7 @@ describe("PostsService.search", () => {
     await insertPost({ animeTitle: "One Piece", title: "Pirate clip" });
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         seriesTitle: "mob psycho 100",
         tags: [],
@@ -209,7 +223,7 @@ describe("PostsService.search", () => {
     await insertPost({ title: "Plain Post", description: "no percent" });
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "100%",
         tags: [],
         page: 0,
@@ -226,7 +240,7 @@ describe("PostsService.search", () => {
     await insertPost({ title: "Anime", description: "Sakuga" });
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "%",
         tags: [],
         page: 0,
@@ -245,7 +259,7 @@ describe("PostsService.search", () => {
     await linkTags(postId1, [tagId]);
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: ["anime"],
         page: 0,
@@ -268,7 +282,7 @@ describe("PostsService.search", () => {
     await linkTags(animePostId, [animeTagId]);
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "-movies",
         tags: [],
         page: 0,
@@ -290,7 +304,7 @@ describe("PostsService.search", () => {
     }
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: [],
         page: 0,
@@ -311,7 +325,7 @@ describe("PostsService.search", () => {
     await linkTags(postId, [tagId]);
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: [],
         page: 0,
@@ -344,7 +358,7 @@ describe("PostsService.search", () => {
 
     const search = (dateRange: "today" | "week" | "month" | "all") =>
       runEffect(
-        PostsService.search({
+        searchPosts({
           q: "",
           tags: [],
           page: 0,
@@ -373,7 +387,7 @@ describe("PostsService.search", () => {
 
     const search = (sortBy: "newest" | "oldest") =>
       runEffect(
-        PostsService.search({
+        searchPosts({
           q: "",
           tags: [],
           page: 0,
@@ -429,7 +443,7 @@ describe("PostsService.search", () => {
       .execute();
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         dateRange: "all",
         page: 0,
         q: "",
@@ -477,7 +491,7 @@ describe("PostsService.search", () => {
       .execute();
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         dateRange: "all",
         page: 0,
         q: "",
@@ -520,7 +534,7 @@ describe("PostsService.search", () => {
       .execute();
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         dateRange: "all",
         page: 0,
         q: "",
@@ -557,7 +571,7 @@ describe("PostsService.search", () => {
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         dateRange: "all",
         page: 0,
         q: "",
@@ -579,7 +593,7 @@ describe("PostsService.search", () => {
 
     const search = () =>
       runEffect(
-        PostsService.search({
+        searchPosts({
           dateRange: "all",
           page: 0,
           q: "",
@@ -639,7 +653,7 @@ describe("PostsService.search", () => {
       .execute();
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: [],
         page: 0,
@@ -681,7 +695,7 @@ describe("PostsService.search", () => {
       .execute();
 
     const imageResults = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "width:>1000",
         tags: [],
         page: 0,
@@ -692,7 +706,7 @@ describe("PostsService.search", () => {
     expect(imageResults.data.map((post) => post.id)).toContain(imagePost);
 
     const videoResults = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "video_width:=1920",
         tags: [],
         page: 0,
@@ -703,7 +717,7 @@ describe("PostsService.search", () => {
     expect(videoResults.data.map((post) => post.id)).toContain(videoPost);
 
     const likeResults = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "likes:>0",
         tags: [],
         page: 0,
@@ -726,7 +740,7 @@ describe("PostsService.search", () => {
     await linkTags(cookingPost, [cookingTag]);
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "mecha",
         tags: [],
         page: 0,
@@ -749,7 +763,7 @@ describe("PostsService.search", () => {
     await linkTags(unrelatedPost, [unrelatedTag]);
 
     const result = await runEffect(
-      PostsService.search({
+      searchPosts({
         q: "",
         tags: ["selected"],
         page: 0,

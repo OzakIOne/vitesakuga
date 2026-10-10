@@ -106,10 +106,10 @@ exist in the generated stylesheet.
 
 ```html
 <!-- / (home) — saved only because index.tsx supplies its own text-2xl -->
-<h1 class="text-balance mb-4 text-2xl text-text-2xl font-bold"></h1>
+<h1 class="text-text-2xl mb-4 text-2xl font-bold text-balance"></h1>
 
 <!-- / (Popular Tags, sidebar) — no valid font-size class survives -->
-<h2 class="text-balance mb-3 text-text-base font-bold"></h2>
+<h2 class="text-text-base mb-3 font-bold text-balance"></h2>
 ```
 
 `text-text-2xl` does not appear in `/tmp/app-dev.css`, and the bare scale tokens
@@ -954,7 +954,7 @@ interface.
   (`PostsResultsState.tsx:91`) — items 12 and 13.
 - `RolesPanel.tsx:68-78` hand-rolls its controls with raw `<input>`/`<select>` and
   an inline `style={{ border: "1px solid currentColor", borderRadius: 6, padding:
-"4px 8px" }}`. `currentColor` is the same mistake as item 22: near-black on the
+  "4px 8px" }}`. `currentColor` is the same mistake as item 22: near-black on the
   light surface and near-white on the dark one, the only border in the app not
   taken from a token, and the `<select>` beside it is unstyled entirely.
 - The approval threshold is written twice. `REQUIRED_VOTES = 2`
@@ -1101,7 +1101,7 @@ classes instead of the `Button` primitives used everywhere else.
   with no dark variant, so both keep their light-mode colour on the dark surface.
 - `src/components/DefaultCatchBoundary.tsx:35` and `:42` carry the _identical_
   class string `rounded bg-gray-600 px-2 py-1 font-extrabold text-white uppercase
-dark:bg-gray-700`, so the `isRoot` ternary (`:33-51`) changes only the label and
+  dark:bg-gray-700`, so the `isRoot` ternary (`:33-51`) changes only the label and
   the click handler, not the appearance.
 - `font-black`, `font-extrabold`, and `uppercase` appear in exactly these four
   places across all of `src/`.
@@ -1648,7 +1648,7 @@ demonstrate (`dark:border-red-800 dark:bg-red-950/40 dark:text-red-200`), and ad
 - lead `mt-4 text-lg text-gray-600 dark:text-gray-400` —
   `news.index.tsx:23-25`, `wiki.index.tsx:24-26`, `help.tsx:29-31`.
 - list frame `divide-y divide-gray-200 border-y border-gray-200
-dark:divide-gray-800 dark:border-gray-800` (`news.index.tsx:32`,
+  dark:divide-gray-800 dark:border-gray-800` (`news.index.tsx:32`,
   `wiki.index.tsx:33`) and an empty state that is a bare `<p>`
   (`news.index.tsx:28-30`, `wiki.index.tsx:29-31`).
 
@@ -2247,7 +2247,7 @@ documented as "the variables object passed to the `mutationFn`"
 flag belongs to the panel, not the row:
 
 - `SuggestionsPanel.tsx:68` derives `busy = approve.isPending ||
-reject.isPending` and passes it to both buttons of every row (`:86`,
+  reject.isPending` and passes it to both buttons of every row (`:86`,
   `:94`), while `:87` gives every Apply button `loading={approve.isPending}`.
   Applying one suggestion therefore puts a spinner on all of them and freezes
   the rest of the queue.

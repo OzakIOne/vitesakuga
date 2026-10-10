@@ -139,23 +139,23 @@ rejetée (`Missing CAPTCHA response`) sans message utilisateur clair.
 
 ## Fichiers modifiés
 
-| Fichier                        | Changement                                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `src/lib/auth/useTurnstile.ts` | `execution: "execute"` au `render()` + type ; commentaire                                      |
-| `src/lib/auth/useTurnstile.ts` | `error-callback` (supprime l'exception 600010) + résolution `null` de l'`execute()` en attente |
-| `.env`                         | `VITE_TURNSTILE_SITEKEY` restauré (vraie sitekey dev, pour Alchemy)                            |
-| `package.json`                 | script `dev` : override sitekey + secret Turnstile avec les clés de test Cloudflare            |
-| `.env`                         | `VITE_BASE_URL` → `http://localhost:3000`                                                      |
-| `.env`                         | `BETTER_AUTH_ORIGIN` → `http://localhost:3000`                                                 |
-| `nitro.config.ts`              | `connect-src` : origine R2 (upload direct-to-R2) + rustfs local, env stage chargée via dotenv  |
-| `src/lib/env/defs.ts`          | flag client `VITE_TURNSTILE_REQUIRED` (défaut vide → désactivé)                                |
-| `src/lib/auth/useTurnstile.ts` | paramètre `required` : no-op (pas de widget, `execute()` → `null`) si non requis               |
-| `src/routes/(auth)/login.tsx`  | ne soumet pas sans token quand requis + message « Captcha verification failed »                |
-| `src/routes/(auth)/signup.tsx` | idem signup                                                                                    |
-| `package.json`                 | scripts `dev` / `dev:local` : `VITE_TURNSTILE_REQUIRED=0`                                      |
-| `.env`                         | `VITE_TURNSTILE_REQUIRED=1` pour le build déployé dev                                          |
+| Fichier                        | Changement                                                                                                  |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `src/lib/auth/useTurnstile.ts` | `execution: "execute"` au `render()` + type ; commentaire                                                   |
+| `src/lib/auth/useTurnstile.ts` | `error-callback` (supprime l'exception 600010) + résolution `null` de l'`execute()` en attente              |
+| `.env`                         | `VITE_TURNSTILE_SITEKEY` restauré (vraie sitekey dev, pour Alchemy)                                         |
+| `package.json`                 | script `dev` : override sitekey + secret Turnstile avec les clés de test Cloudflare                         |
+| `.env`                         | `VITE_BASE_URL` → `http://localhost:3000`                                                                   |
+| `.env`                         | `BETTER_AUTH_ORIGIN` → `http://localhost:3000`                                                              |
+| `nitro.config.ts`              | `connect-src` : origine R2 (upload direct-to-R2) + rustfs local, env stage chargée via dotenv               |
+| `src/lib/env/defs.ts`          | flag client `VITE_TURNSTILE_REQUIRED` (défaut vide → désactivé)                                             |
+| `src/lib/auth/useTurnstile.ts` | paramètre `required` : no-op (pas de widget, `execute()` → `null`) si non requis                            |
+| `src/routes/(auth)/login.tsx`  | ne soumet pas sans token quand requis + message « Captcha verification failed »                             |
+| `src/routes/(auth)/signup.tsx` | idem signup                                                                                                 |
+| `package.json`                 | scripts `dev` / `dev:local` : `VITE_TURNSTILE_REQUIRED=0`                                                   |
+| `.env`                         | `VITE_TURNSTILE_REQUIRED=1` pour le build déployé dev                                                       |
 | `.env.production`              | `VITE_TURNSTILE_REQUIRED=1` ; le TODO de sitekey a été remplacé par son provisionnement runtime via Alchemy |
-| `.env.example`                 | documentation du flag                                                                          |
+| `.env.example`                 | documentation du flag                                                                                       |
 
 ## Action requise au moment du diagnostic
 

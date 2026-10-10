@@ -6,9 +6,9 @@ import {
 } from "src/components/posts/PostFilters";
 import { PostsPageLayout } from "src/components/posts/PostsPageLayout";
 import { PostsResultsState } from "src/components/posts/PostsResultsState";
+import { VirtualPostsGrid } from "src/components/posts/VirtualPostsGrid";
 import { Box } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
-import { VirtualPostsGrid } from "src/components/posts/VirtualPostsGrid";
 import { DISCOVERY_VIEW_INFO } from "src/lib/posts/discovery";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
 import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
