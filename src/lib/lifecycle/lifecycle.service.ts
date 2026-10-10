@@ -89,6 +89,35 @@ export type ReserveObjectResult = {
   readonly outcome: "reserved" | "reused";
 };
 
+export type StoreObjectInput = Omit<ReserveObjectInput, "kind"> & {
+  readonly file: File;
+  readonly kind: "image" | "thumbnail";
+};
+
+export type StoreObjectResult = {
+  readonly object: MediaObjectSnapshot;
+  readonly outcome: "stored" | "reused";
+};
+
+export type CopyVideoInput = ReserveObjectInput & {
+  readonly kind: "video";
+  readonly sourceEtag: string;
+  readonly sourceKey: string;
+};
+
+export type ReplaceVideoInput = CopyVideoInput & {
+  readonly expectedVersion: number;
+  readonly oldVideoKey: string;
+  readonly postId: number;
+  readonly replacedBy: string;
+  readonly videoMetadata: string;
+};
+
+export type DeleteObjectResult = {
+  readonly key: string;
+  readonly outcome: "deleted" | "protected";
+};
+
 export type ObjectFenceInput = {
   readonly fence: number;
   readonly key: string;
@@ -1240,6 +1269,12 @@ export class LifecycleService extends Context.Service<
     readonly completeDelete: (
       input: ObjectFenceInput,
     ) => Effect.Effect<CompleteDeleteResult, LifecycleError>;
+    readonly copyVideoForPost: (
+      input: CopyVideoInput,
+    ) => Effect.Effect<StoreObjectResult, LifecycleError>;
+    readonly deleteObject: (
+      input: ObjectFenceInput,
+    ) => Effect.Effect<DeleteObjectResult, LifecycleError>;
     readonly failOperation: (
       input: FailOperationInput,
     ) => Effect.Effect<FailOperationResult, LifecycleError>;
@@ -1258,6 +1293,12 @@ export class LifecycleService extends Context.Service<
     readonly reserveObject: (
       input: ReserveObjectInput,
     ) => Effect.Effect<ReserveObjectResult, LifecycleError>;
+    readonly replaceVideo: (
+      input: ReplaceVideoInput,
+    ) => Effect.Effect<{ readonly videoKey: string }, LifecycleError>;
+    readonly storeObject: (
+      input: StoreObjectInput,
+    ) => Effect.Effect<StoreObjectResult, LifecycleError>;
     readonly updatePostWithVersion: (
       input: UpdatePostWithVersionInput,
     ) => Effect.Effect<PostVersionResult, LifecycleError>;
@@ -1352,6 +1393,169 @@ export class LifecycleService extends Context.Service<
       },
     );
 
+    const prepareObject = Effect.fn("LifecycleService.prepareObject")(
+      function* (input: ReserveObjectInput) {
+        const reservation = yield* reserveObject(input);
+        const transition = yield* markPreparing({
+          fence: reservation.object.fence,
+          key: input.key,
+          operationId: input.operationId,
+        });
+        return {
+          object: transition.object,
+          shouldWrite: transition.outcome !== "already-ready",
+        } as const;
+      },
+    );
+
+    const storeObject = Effect.fn("LifecycleService.storeObject")(function* (
+      input: StoreObjectInput,
+    ) {
+      const prepared = yield* prepareObject(input);
+      if (!prepared.shouldWrite) {
+        return { object: prepared.object, outcome: "reused" } as const;
+      }
+
+      const stored =
+        input.kind === "image"
+          ? yield* storage.putImage(input.key, input.file)
+          : yield* storage.putThumbnail(input.key, input.file);
+      const ready = yield* markReady({
+        fence: prepared.object.fence,
+        key: input.key,
+        observed: {
+          contentLength: input.contentLength,
+          contentType: input.contentType,
+          fingerprint: stored.fingerprint,
+        },
+        operationId: input.operationId,
+      });
+      return { object: ready.object, outcome: "stored" } as const;
+    });
+
+    const copyVideoForPost = Effect.fn("LifecycleService.copyVideoForPost")(
+      function* (input: CopyVideoInput) {
+        const prepared = yield* prepareObject(input);
+        if (!prepared.shouldWrite) {
+          return { object: prepared.object, outcome: "reused" } as const;
+        }
+
+        yield* storage.copyVideoIfMatch(
+          input.sourceKey,
+          input.sourceEtag,
+          input.key,
+        );
+        const ready = yield* markReady({
+          fence: prepared.object.fence,
+          key: input.key,
+          observed: {
+            contentLength: input.contentLength,
+            contentType: input.contentType,
+            fingerprint: input.fingerprint,
+          },
+          operationId: input.operationId,
+        });
+        return { object: ready.object, outcome: "stored" } as const;
+      },
+    );
+
+    const replaceVideo = Effect.fn("LifecycleService.replaceVideo")(function* (
+      input: ReplaceVideoInput,
+    ) {
+      const prepared = yield* prepareObject(input);
+      if (prepared.shouldWrite) {
+        yield* storage.copyVideoIfMatch(
+          input.sourceKey,
+          input.sourceEtag,
+          input.key,
+        );
+      }
+
+      const now = new Date(yield* Clock.currentTimeMillis);
+      yield* db.transaction((trx) =>
+        Effect.gen(function* () {
+          yield* markReadyInTransaction(
+            trx,
+            {
+              fence: prepared.object.fence,
+              key: input.key,
+              observed: {
+                contentLength: input.contentLength,
+                contentType: input.contentType,
+                fingerprint: input.fingerprint,
+              },
+              operationId: input.operationId,
+            },
+            now,
+          );
+          yield* trx.executeTakeFirstOrError(
+            trx
+              .insertInto("video_revisions")
+              .values({
+                postId: input.postId,
+                replacedBy: input.replacedBy,
+                videoKey: input.oldVideoKey,
+                videoMetadata: input.videoMetadata,
+              })
+              .returning("id"),
+          );
+          const updated = yield* trx.executeTakeFirstOption(
+            trx
+              .updateTable("posts")
+              .set({
+                videoKey: input.key,
+                version: sql<number>`"version" + 1`,
+              })
+              .where("id", "=", input.postId)
+              .where("version", "=", input.expectedVersion)
+              .returning("id"),
+          );
+          if (Option.isNone(updated)) {
+            return yield* new PostVersionConflictError({
+              actualVersion: input.expectedVersion + 1,
+              expectedVersion: input.expectedVersion,
+              message: `Post ${input.postId} changed while its video was being replaced`,
+              postId: input.postId,
+            });
+          }
+          yield* finishInTransaction(
+            trx,
+            {
+              fence: input.fence,
+              operationId: input.operationId,
+              result: {
+                postId: input.postId,
+                state: "completed",
+                videoKey: input.key,
+              },
+            },
+            now,
+          );
+        }),
+      );
+      return { videoKey: input.key } as const;
+    });
+
+    const deleteObject = Effect.fn("LifecycleService.deleteObject")(function* (
+      input: ObjectFenceInput,
+    ) {
+      const begun = yield* beginDelete(input);
+      if (begun.outcome === "protected") {
+        return { key: begun.key, outcome: "protected" } as const;
+      }
+
+      yield* storage.deleteFile(begun.key);
+      const completed = yield* completeDelete({
+        fence: begun.fence,
+        key: begun.key,
+        operationId: input.operationId,
+      });
+      return {
+        key: completed.key,
+        outcome: "deleted",
+      } as const;
+    });
+
     const updatePostWithVersion = Effect.fn(
       "LifecycleService.updatePostWithVersion",
     )(function* (input: UpdatePostWithVersionInput) {
@@ -1399,13 +1603,9 @@ export class LifecycleService extends Context.Service<
           operationId: row.operationId,
         } satisfies ObjectFenceInput;
         if (row.state === "deleting") {
-          // DELETE is deliberately outside every DB transaction. S3 DELETE is
-          // safe to repeat after a lost response, so reconcile can confirm the
-          // tombstone without guessing whether the first request committed.
-          const deletion = yield* storage.deleteFile(row.key).pipe(Effect.exit);
+          const deletion = yield* deleteObject(fenceInput).pipe(Effect.exit);
           if (Exit.isSuccess(deletion)) {
-            const completed = yield* completeDelete(fenceInput);
-            if (completed.outcome === "deleted")
+            if (deletion.value.outcome === "deleted")
               completedDeleteKeys.push(row.key);
           } else {
             quarantinedKeys.push(row.key);
@@ -1475,12 +1675,16 @@ export class LifecycleService extends Context.Service<
       claimOperation,
       compareAndIncrementPostVersion,
       completeDelete,
+      copyVideoForPost,
+      deleteObject,
       failOperation,
       finishOperation,
       markPreparing,
       markReady,
       reconcileNonTerminal,
       reserveObject,
+      replaceVideo,
+      storeObject,
       updatePostWithVersion,
     };
   }),
@@ -1510,6 +1714,20 @@ export class LifecycleService extends Context.Service<
     function* (input: ObjectFenceInput) {
       const lifecycle = yield* LifecycleService;
       return yield* lifecycle.completeDelete(input);
+    },
+  );
+
+  static readonly copyVideoForPost = Effect.fn(
+    "LifecycleService.copyVideoForPost",
+  )(function* (input: CopyVideoInput) {
+    const lifecycle = yield* LifecycleService;
+    return yield* lifecycle.copyVideoForPost(input);
+  });
+
+  static readonly deleteObject = Effect.fn("LifecycleService.deleteObject")(
+    function* (input: ObjectFenceInput) {
+      const lifecycle = yield* LifecycleService;
+      return yield* lifecycle.deleteObject(input);
     },
   );
 
@@ -1559,6 +1777,20 @@ export class LifecycleService extends Context.Service<
     function* (input: ReserveObjectInput) {
       const lifecycle = yield* LifecycleService;
       return yield* lifecycle.reserveObject(input);
+    },
+  );
+
+  static readonly replaceVideo = Effect.fn("LifecycleService.replaceVideo")(
+    function* (input: ReplaceVideoInput) {
+      const lifecycle = yield* LifecycleService;
+      return yield* lifecycle.replaceVideo(input);
+    },
+  );
+
+  static readonly storeObject = Effect.fn("LifecycleService.storeObject")(
+    function* (input: StoreObjectInput) {
+      const lifecycle = yield* LifecycleService;
+      return yield* lifecycle.storeObject(input);
     },
   );
 

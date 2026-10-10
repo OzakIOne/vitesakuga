@@ -24,6 +24,8 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **Staging Namespace & GC** — Unconfirmed direct video uploads use `videos/_pending/`; the R2 lifecycle rule in `infra/alchemy.run.ts` expires staged objects after 48 hours. Durable media-operation and media-object rows track accepted work and reconcile uncertain outcomes, so bucket expiry is not the source of truth for operation state.
 
+**Managed Media Protocol** — `LifecycleService` owns managed image/thumbnail writes, staged-video copies, replacement commits, and fenced deletion. Writes are reserved and prepared before S3 I/O; uncertain outcomes stay reconcilable. Video replacement copies outside the database transaction, then atomically marks the object ready, archives the previous video, checks the Post version, and completes the operation. `deleteObject` rechecks Post/image/revision references before committing a deletion tombstone; reconciliation retries a tombstoned remote delete.
+
 **Thumbnail Validation** — Thumbnails transit the Worker and are validated server-side in the confirm validator: `.jpe?g` extension + ≤5 MB + JPEG magic bytes (`file-validation.ts`); stored Content-Type forced to `image/jpeg`.
 
 **Upload Processor** — Pure functions in `upload.processor.ts` for client-side video work: `analyzeVideo` (mediainfo.js metadata extraction), `generateThumbnails` (mediabunny frame extraction), `generateAutoThumbnails` (5 evenly-spaced frames), `buildFormData` (values → FormData).

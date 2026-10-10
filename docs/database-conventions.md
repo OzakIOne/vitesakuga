@@ -38,6 +38,13 @@ This document outlines the conventions and best practices for database interacti
   - `makeMiddlewareLayer()` — resolves headers from request context
 - Test layer via `PGliteDialect` (`src/lib/db/pglite-driver.ts`), `makeServiceTestLayer` in test utils (includes RustFS storage), and `createE2EKysely` in `src/lib/db/e2e-db.ts` — service tests use in-memory PGlite and migrations from root `drizzle/`; e2e uses local Postgres + RustFS through the Playwright web server
 
+## Durable Media Lifecycle
+
+- `LifecycleService` owns the managed media protocol: operation fences, object reservation/preparation, storage writes or copies, readiness, and deletion tombstones.
+- Remote S3 calls stay outside database transactions. Video replacement copies first, then commits media readiness, the previous-video revision, the Post version compare-and-swap, and operation completion in one transaction.
+- `deleteObject` checks live Post, gallery-image, and revision references while acquiring the delete fence. If remote deletion fails or its response is uncertain, the object remains `deleting`; `reconcileNonTerminal` safely retries the idempotent delete. Uncertain writes remain reconcilable from verified storage metadata.
+- Callers keep their authorization and request validation at the domain service boundary; they do not sequence lifecycle transitions or delete managed keys directly.
+
 ## Migrations
 
 - Follow Drizzle Kit migration workflow via `nub run db generate`, `nub run db push`, `nub run db migrate` (stage-aware: `STAGE=local|dev|prod nub run db <command>`)

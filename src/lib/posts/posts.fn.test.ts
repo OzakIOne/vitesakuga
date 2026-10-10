@@ -1014,6 +1014,29 @@ describe("PostsService.upload", () => {
     expect(error._tag).toBe("ValidationError");
     expect(error.message).toBe("Tag selection is invalid");
     expect(await db.selectFrom("posts").selectAll().execute()).toEqual([]);
+
+    const mediaObjects = await db
+      .selectFrom("media_objects")
+      .select(["key", "state"])
+      .execute();
+    expect(mediaObjects).toHaveLength(2);
+    expect(mediaObjects.every((object) => object.state === "deleted")).toBe(
+      true,
+    );
+    for (const object of mediaObjects) {
+      const headFailure = await runEffect(
+        Effect.flip(
+          Effect.gen(function* () {
+            const storage = yield* StorageModule;
+            return yield* storage.headFile(object.key);
+          }),
+        ),
+      );
+      expect(headFailure).toMatchObject({
+        _tag: "StorageError",
+        operation: "head",
+      });
+    }
   });
 
   it("rejects tag ids whose names do not match the submitted tag", async () => {
@@ -1461,6 +1484,14 @@ describe("PostsService.upload (image posts)", () => {
       expect(
         await ctx.db.selectFrom("post_images").selectAll().execute(),
       ).toHaveLength(0);
+      const mediaObjects = await ctx.db
+        .selectFrom("media_objects")
+        .select("state")
+        .execute();
+      expect(mediaObjects.map((object) => object.state).sort()).toEqual([
+        "deleted",
+        "preparing",
+      ]);
 
       // Rollback deleted the already-uploaded image from RustFS.
       expect(uploadedKeys).toHaveLength(1);

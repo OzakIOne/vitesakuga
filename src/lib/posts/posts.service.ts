@@ -52,6 +52,7 @@ import {
   updatePostWithVersionInTransaction,
   LifecycleServiceLive,
   type LifecycleError,
+  type ObjectFenceInput,
 } from "../lifecycle/lifecycle.service";
 import {
   computePagination,
@@ -835,6 +836,7 @@ export class PostsService extends Context.Service<
         contentType: string;
         fingerprint: string;
         etag: string;
+        sourceKey: string;
       } | null = null;
 
       // Only keys from the caller's own deterministic staging namespace are
@@ -880,63 +882,33 @@ export class PostsService extends Context.Service<
           contentType: head.contentType,
           fingerprint: `etag:${stagingEtag}`,
           etag: stagingEtag,
+          sourceKey: videoKey,
         };
       }
 
-      const uploadedKeys: string[] = [];
-      function* prepareAndReady(
-        key: string,
-        kind: "video" | "image" | "thumbnail",
-        contentLength: number,
-        contentType: string,
-        fingerprint: string,
-      ) {
-        const reservation = yield* lifecycle.reserveObject({
-          contentLength,
-          contentType,
-          fence: claimFence,
-          fingerprint,
-          key,
-          kind,
-          operationId: claim.operationId,
-          userId,
-        });
-        yield* lifecycle.markPreparing({
-          key,
-          fence: reservation.object.fence,
-          operationId: claim.operationId,
-        });
-        return reservation.object.fence;
-      }
+      const uploadedObjects: ObjectFenceInput[] = [];
 
       const outcome = yield* Effect.gen(function* () {
         let thumbnailKey: string;
         const imageKeys: string[] = [];
 
         if (finalVideoKey !== null && videoObserved !== null) {
-          const fence = yield* prepareAndReady(
-            finalVideoKey,
-            "video",
-            videoObserved.contentLength,
-            videoObserved.contentType,
-            videoObserved.fingerprint,
-          );
-          const copied = yield* storage.copyVideoIfMatch(
-            // SAFETY: videoKey is defined in this branch because the enclosing condition checks videoKey !== undefined.
-            videoKey as string,
-            videoObserved.etag,
-            finalVideoKey,
-          );
-          uploadedKeys.push(copied.key);
-          yield* lifecycle.markReady({
+          const copied = yield* lifecycle.copyVideoForPost({
+            contentLength: videoObserved.contentLength,
+            contentType: videoObserved.contentType,
+            fence: claimFence,
+            fingerprint: videoObserved.fingerprint,
             key: finalVideoKey,
-            fence,
+            kind: "video",
             operationId: claim.operationId,
-            observed: {
-              contentLength: videoObserved.contentLength,
-              contentType: videoObserved.contentType,
-              fingerprint: videoObserved.fingerprint,
-            },
+            sourceEtag: videoObserved.etag,
+            sourceKey: videoObserved.sourceKey,
+            userId,
+          });
+          uploadedObjects.push({
+            fence: copied.object.fence,
+            key: copied.object.key,
+            operationId: copied.object.operationId,
           });
         }
 
@@ -950,26 +922,23 @@ export class PostsService extends Context.Service<
             const extension = image.name.split(".").pop() ?? "png";
             const contentType = imageContentType(extension);
             const fingerprint = yield* fileDigest(image);
-            const fence = yield* prepareAndReady(
-              key,
-              "image",
-              image.size,
+            const stored = yield* lifecycle.storeObject({
+              contentLength: image.size,
               contentType,
+              fence: claimFence,
+              file: image,
               fingerprint,
-            );
-            const stored = yield* storage.putImage(key, image);
-            yield* lifecycle.markReady({
               key,
-              fence,
+              kind: "image",
               operationId: claim.operationId,
-              observed: {
-                contentLength: image.size,
-                contentType,
-                fingerprint: stored.fingerprint,
-              },
+              userId,
             });
-            uploadedKeys.push(key);
-            imageKeys.push(key);
+            uploadedObjects.push({
+              fence: stored.object.fence,
+              key: stored.object.key,
+              operationId: stored.object.operationId,
+            });
+            imageKeys.push(stored.object.key);
           }
           thumbnailKey = imageKeys[0] ?? "";
         } else {
@@ -980,26 +949,23 @@ export class PostsService extends Context.Service<
           }
           const key = thumbnailObjectKey(claim.operationId);
           const fingerprint = yield* fileDigest(data.thumbnail);
-          const fence = yield* prepareAndReady(
-            key,
-            "thumbnail",
-            data.thumbnail.size,
-            "image/jpeg",
+          const stored = yield* lifecycle.storeObject({
+            contentLength: data.thumbnail.size,
+            contentType: "image/jpeg",
+            fence: claimFence,
+            file: data.thumbnail,
             fingerprint,
-          );
-          const stored = yield* storage.putThumbnail(key, data.thumbnail);
-          yield* lifecycle.markReady({
             key,
-            fence,
+            kind: "thumbnail",
             operationId: claim.operationId,
-            observed: {
-              contentLength: data.thumbnail.size,
-              contentType: "image/jpeg",
-              fingerprint: stored.fingerprint,
-            },
+            userId,
           });
-          thumbnailKey = key;
-          uploadedKeys.push(key);
+          thumbnailKey = stored.object.key;
+          uploadedObjects.push({
+            fence: stored.object.fence,
+            key: stored.object.key,
+            operationId: stored.object.operationId,
+          });
         }
 
         const newPost = yield* db.transaction((trx) =>
@@ -1099,8 +1065,8 @@ export class PostsService extends Context.Service<
       }).pipe(Effect.exit);
 
       if (Exit.isFailure(outcome)) {
-        yield* Effect.forEach(uploadedKeys, (key) =>
-          storage.deleteFile(key).pipe(Effect.ignore),
+        yield* Effect.forEach(uploadedObjects, (object) =>
+          lifecycle.deleteObject(object).pipe(Effect.ignore),
         ).pipe(Effect.ignore);
 
         return yield* Effect.failCause(outcome.cause);

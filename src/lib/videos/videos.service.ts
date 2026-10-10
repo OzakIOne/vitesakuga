@@ -25,7 +25,6 @@ import {
   type LifecycleError,
   PostVersionConflictError,
   finishOperationInTransaction,
-  markReadyInTransaction,
 } from "../lifecycle/lifecycle.service";
 import { MAX_VIDEO_SIZE_BYTES } from "../posts/posts.schema";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
@@ -350,73 +349,16 @@ export class VideosService extends Context.Service<
         operationId: claim.operationId,
         userId: user.id,
       };
-      yield* lifecycle.reserveObject(mediaObject);
-      yield* lifecycle.markPreparing(mediaObject);
-      yield* storage.copyVideoIfMatch(
-        input.pendingVideoKey,
-        head.etag,
-        finalKey,
-      );
-      // The source HEAD was validated and copyVideoIfMatch fenced the copy;
-      // preserve the registered source identity rather than replacing a
-      // metadata SHA-256 with an unrelated destination ETag.
-      const observed = {
-        contentLength: head.contentLength,
-        contentType: head.contentType,
-        fingerprint: sourceFingerprint,
-      };
-
-      // Revision, post CAS, media readiness and operation completion commit
-      // together. The remote copy is intentionally outside this transaction.
-      yield* db.transaction((trx) =>
-        Effect.gen(function* () {
-          yield* markReadyInTransaction(
-            trx,
-            { ...mediaObject, observed },
-            new Date(),
-          );
-          yield* trx.executeTakeFirstOrError(
-            trx
-              .insertInto("video_revisions")
-              .values({
-                postId: post.id,
-                replacedBy: user.id,
-                videoKey: oldVideoKey,
-                videoMetadata: post.videoMetadata,
-              })
-              .returning("id"),
-          );
-          const updated = yield* trx.executeTakeFirstOption(
-            trx
-              .updateTable("posts")
-              .set({ videoKey: finalKey, version: sql<number>`"version" + 1` })
-              .where("id", "=", post.id)
-              .where("version", "=", input.expectedVersion)
-              .returning("id"),
-          );
-          if (Option.isNone(updated)) {
-            return yield* new PostVersionConflictError({
-              actualVersion: input.expectedVersion + 1,
-              expectedVersion: input.expectedVersion,
-              message: `Post ${post.id} changed while its video was being replaced`,
-              postId: post.id,
-            });
-          }
-          yield* finishOperationInTransaction(
-            trx,
-            {
-              fence: claim.fence,
-              operationId: claim.operationId,
-              result: {
-                postId: post.id,
-                state: "completed",
-                videoKey: finalKey,
-              },
-            },
-            new Date(),
-          );
-        }),
-      );
+      yield* lifecycle.replaceVideo({
+        ...mediaObject,
+        expectedVersion: input.expectedVersion,
+        oldVideoKey,
+        postId: post.id,
+        replacedBy: user.id,
+        sourceEtag: head.etag,
+        sourceKey: input.pendingVideoKey,
+        videoMetadata: post.videoMetadata,
+      });
       yield* storage.deleteFile(input.pendingVideoKey).pipe(Effect.ignore);
 
       // Likes, comments and the post id stay untouched: this only swaps the
@@ -680,33 +622,22 @@ export class VideosService extends Context.Service<
         // lifecycle row lock. A revision reference is therefore retained for
         // this pass and purged only after the object is protected; the next GC
         // pass can then acquire the delete lease safely.
-        const begun = yield* lifecycle
-          .beginDelete({
+        const removed = yield* lifecycle
+          .deleteObject({
             fence: managed.fence,
             key: managed.key,
             operationId: managed.operationId,
           })
           .pipe(Effect.exit);
-        if (Exit.isFailure(begun)) continue;
+        if (Exit.isFailure(removed)) continue;
 
-        if (begun.value.outcome === "protected") {
+        if (removed.value.outcome === "protected") {
           protectedAfterRecheck.add(key);
           continue;
         }
         // A failed or uncertain delete intentionally leaves the row in
         // `deleting`; no revision row is purged and a later reconciler can
         // safely retry it. Only completeDelete creates the permanent tombstone.
-        const removed = yield* storage.deleteFile(key).pipe(Effect.exit);
-        if (Exit.isFailure(removed)) continue;
-        const completed = yield* lifecycle
-          .completeDelete({
-            fence: begun.value.fence,
-            key: begun.value.key,
-            operationId: managed.operationId,
-          })
-          .pipe(Effect.exit);
-        if (Exit.isFailure(completed)) continue;
-
         deletedKeys += 1;
         successfullyDeletedKeys.add(key);
       }

@@ -12,6 +12,7 @@ import {
   OperationConflictError,
   OperationFenceError,
   ObjectConflictError,
+  ObjectNotAdoptableError,
   PostVersionConflictError,
   finishOperationInTransaction,
   markPreparingInTransaction,
@@ -853,5 +854,144 @@ describe("LifecycleService operation claims", () => {
         .where("key", "=", key)
         .executeTakeFirstOrThrow(),
     ).toEqual({ state: "ready" });
+  });
+});
+
+describe("LifecycleService managed media protocols", () => {
+  it("stores managed media and reuses a ready object on retry", async () => {
+    const operation = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.claimOperation({
+          ...claimInput,
+          operationKey: "managed-image-write",
+        });
+      }),
+    );
+    if (operation.outcome !== "claimed") {
+      throw new Error("Expected a new media operation claim");
+    }
+
+    const file = new File(["managed image"], "managed.png", {
+      type: "image/png",
+    });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    const fingerprint = `sha256:${Array.from(new Uint8Array(digest), (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("")}`;
+    const input = {
+      contentLength: file.size,
+      contentType: file.type,
+      fence: operation.fence,
+      file,
+      fingerprint,
+      key: imageObjectKey(operation.operationId, 0, "png"),
+      kind: "image" as const,
+      operationId: operation.operationId,
+      userId: claimInput.userId,
+    };
+
+    const first = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.storeObject(input);
+      }),
+    );
+    const retry = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.storeObject(input);
+      }),
+    );
+    const stored = await context.runEffect(
+      Effect.gen(function* () {
+        const storage = yield* StorageModule;
+        return yield* storage.headFile(input.key);
+      }),
+    );
+
+    expect(first.outcome).toBe("stored");
+    expect(first.object.state).toBe("ready");
+    expect(retry).toEqual({ object: first.object, outcome: "reused" });
+    expect(stored.contentLength).toBe(file.size);
+    expect(
+      await context.db
+        .selectFrom("media_objects")
+        .select(["fingerprint", "state"])
+        .where("key", "=", input.key)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ fingerprint, state: "ready" });
+  });
+
+  it("deletes an unreferenced ready object through a permanent tombstone", async () => {
+    const operation = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.claimOperation({
+          ...claimInput,
+          operationKey: "managed-image-delete",
+        });
+      }),
+    );
+    if (operation.outcome !== "claimed") {
+      throw new Error("Expected a new media operation claim");
+    }
+
+    const file = new File(["delete me"], "delete.png", {
+      type: "image/png",
+    });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    const fingerprint = `sha256:${Array.from(new Uint8Array(digest), (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("")}`;
+    const stored = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.storeObject({
+          contentLength: file.size,
+          contentType: file.type,
+          fence: operation.fence,
+          file,
+          fingerprint,
+          key: imageObjectKey(operation.operationId, 0, "png"),
+          kind: "image",
+          operationId: operation.operationId,
+          userId: claimInput.userId,
+        });
+      }),
+    );
+    const deleted = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.deleteObject({
+          fence: stored.object.fence,
+          key: stored.object.key,
+          operationId: stored.object.operationId,
+        });
+      }),
+    );
+
+    expect(deleted).toEqual({ key: stored.object.key, outcome: "deleted" });
+    expect(
+      await context.db
+        .selectFrom("media_objects")
+        .select("state")
+        .where("key", "=", stored.object.key)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ state: "deleted" });
+    await expect(
+      context.runFailure(
+        Effect.gen(function* () {
+          const lifecycle = yield* LifecycleService;
+          return yield* lifecycle.deleteObject({
+            fence: stored.object.fence,
+            key: stored.object.key,
+            operationId: stored.object.operationId,
+          });
+        }),
+      ),
+    ).resolves.toBeInstanceOf(ObjectNotAdoptableError);
   });
 });
