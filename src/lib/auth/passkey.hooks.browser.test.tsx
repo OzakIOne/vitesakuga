@@ -10,6 +10,18 @@ import {
   useSignInWithPasskey,
 } from "./auth.hooks";
 import { AuthClientContext } from "./client-context";
+import { getTwoFactorRedirectUrl } from "./two-factor.hooks";
+import { useSignInCompletion } from "./use-sign-in-completion";
+
+const authNavigation = vi.hoisted(() => {
+  const events = new Array<string>();
+  return {
+    events,
+    navigate: vi.fn(async (_destination: { to: string }) => {
+      events.push("navigate");
+    }),
+  };
+});
 
 const createMockAuthClient = () => ({
   passkey: {
@@ -43,7 +55,7 @@ vi.mock("./delete-account", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
   isRedirect: () => false,
-  useNavigate: () => vi.fn(),
+  useNavigate: () => authNavigation.navigate,
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
 
@@ -83,6 +95,9 @@ describe(usePasskeys, () => {
       defaultOptions: { queries: { retry: false } },
     });
     mockAuth = createMockAuthClient();
+    authNavigation.events.length = 0;
+    authNavigation.navigate.mockClear();
+    globalThis.sessionStorage.clear();
   });
 
   it("loads the user's passkeys", async () => {
@@ -245,6 +260,9 @@ describe(useSignInWithPasskey, () => {
       defaultOptions: { queries: { retry: false } },
     });
     mockAuth = createMockAuthClient();
+    authNavigation.events.length = 0;
+    authNavigation.navigate.mockClear();
+    globalThis.sessionStorage.clear();
   });
 
   it("starts a passkey sign-in without autofill", async () => {
@@ -253,7 +271,7 @@ describe(useSignInWithPasskey, () => {
       error: null,
     });
     const { result } = await renderHook(
-      () => useSignInWithPasskey("/dashboard"),
+      () => useSignInWithPasskey("/account"),
       {
         wrapper: createWrapper(queryClient, mockAuth),
       },
@@ -278,5 +296,79 @@ describe(useSignInWithPasskey, () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockAuth.signIn.passkey).toHaveBeenCalledWith({ autoFill: true });
+  });
+
+  it("invalidates the user session before navigating after passkey sign-in", async () => {
+    mockAuth.signIn.passkey.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    queryClient.setQueryData(["userInfo"], { id: "previous-user" });
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "invalidate") {
+        authNavigation.events.push("invalidate");
+      }
+    });
+    const { result } = await renderHook(
+      () => useSignInWithPasskey("/account"),
+      { wrapper: createWrapper(queryClient, mockAuth) },
+    );
+
+    result.current.mutate({});
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    unsubscribe();
+
+    expect(authNavigation.events).toEqual(["invalidate", "navigate"]);
+    expect(authNavigation.navigate).toHaveBeenCalledWith({ to: "/account" });
+    expect(getTwoFactorRedirectUrl()).toBe("/");
+  });
+
+  it("retains the redirect and skips navigation for a passkey 2FA challenge", async () => {
+    mockAuth.signIn.passkey.mockResolvedValueOnce({
+      data: {
+        twoFactorRedirect: true,
+        twoFactorMethods: ["totp"],
+      },
+      error: null,
+    });
+    const { result } = await renderHook(
+      () => useSignInWithPasskey("/account"),
+      { wrapper: createWrapper(queryClient, mockAuth) },
+    );
+
+    result.current.mutate({});
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(getTwoFactorRedirectUrl()).toBe("/account");
+    expect(authNavigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it("clears the redirect when passkey sign-in fails", async () => {
+    mockAuth.signIn.passkey.mockResolvedValueOnce({
+      data: null,
+      error: { message: "No matching passkey" },
+    });
+    const { result } = await renderHook(
+      () => useSignInWithPasskey("/dashboard"),
+      { wrapper: createWrapper(queryClient, mockAuth) },
+    );
+
+    result.current.mutate({});
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(getTwoFactorRedirectUrl()).toBe("/");
+    expect(authNavigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps completion callbacks stable across renders for conditional passkey", async () => {
+    const { result, rerender } = await renderHook(
+      () => useSignInCompletion("/dashboard"),
+      { wrapper: createWrapper(queryClient, mockAuth) },
+    );
+    const initialCompletion = result.current;
+
+    rerender();
+
+    expect(result.current).toBe(initialCompletion);
   });
 });

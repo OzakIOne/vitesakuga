@@ -13,6 +13,17 @@ import {
   useVerifyEmail,
 } from "./auth.hooks";
 import { AuthClientContext } from "./client-context";
+import { getTwoFactorRedirectUrl } from "./two-factor.hooks";
+
+const authNavigation = vi.hoisted(() => {
+  const events = new Array<string>();
+  return {
+    events,
+    navigate: vi.fn(async (_destination: { to: string }) => {
+      events.push("navigate");
+    }),
+  };
+});
 
 const createMockAuthClient = () => ({
   signIn: {
@@ -39,7 +50,7 @@ vi.mock("@tanstack/react-router", async () => ({
   ...(await vi.importActual<typeof import("@tanstack/react-router")>(
     "@tanstack/react-router",
   )),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => authNavigation.navigate,
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
 
@@ -79,11 +90,14 @@ describe(useLogin, () => {
       defaultOptions: { queries: { retry: false } },
     });
     mockAuth = createMockAuthClient();
+    authNavigation.events.length = 0;
+    authNavigation.navigate.mockClear();
+    globalThis.sessionStorage.clear();
   });
 
   it("calls signIn.email with credentials", async () => {
     mockAuth.signIn.email.mockResolvedValueOnce({});
-    const { result } = await renderHook(() => useLogin("/dashboard"), {
+    const { result } = await renderHook(() => useLogin("/account"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -91,9 +105,49 @@ describe(useLogin, () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockAuth.signIn.email).toHaveBeenCalledWith(
-      { email: "a@b.com", password: "secret", callbackURL: "/dashboard" },
+      { email: "a@b.com", password: "secret", callbackURL: "/account" },
       expect.any(Object),
     );
+  });
+
+  it("keeps the safe redirect when password sign-in returns a 2FA challenge", async () => {
+    const challenge = {
+      twoFactorRedirect: true,
+      twoFactorMethods: ["totp"],
+    };
+    mockAuth.signIn.email.mockImplementationOnce(async (_input, options) => {
+      await options?.onSuccess?.({ data: challenge });
+      return { data: challenge, error: null };
+    });
+    const { result } = await renderHook(() => useLogin("https://evil.test"), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({ email: "a@b.com", password: "secret" });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockAuth.signIn.email).toHaveBeenCalledWith(
+      { email: "a@b.com", password: "secret", callbackURL: "/" },
+      expect.any(Object),
+    );
+    expect(getTwoFactorRedirectUrl()).toBe("/");
+    expect(authNavigation.events).toEqual([]);
+    expect(authNavigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it("clears a saved 2FA redirect after password sign-in fails", async () => {
+    mockAuth.signIn.email.mockResolvedValueOnce({
+      data: null,
+      error: { message: "Invalid credentials" },
+    });
+    const { result } = await renderHook(() => useLogin("/account"), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({ email: "a@b.com", password: "wrong" });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(getTwoFactorRedirectUrl()).toBe("/");
   });
 });
 
@@ -106,11 +160,14 @@ describe(useSignUp, () => {
       defaultOptions: { queries: { retry: false } },
     });
     mockAuth = createMockAuthClient();
+    authNavigation.events.length = 0;
+    authNavigation.navigate.mockClear();
+    globalThis.sessionStorage.clear();
   });
 
   it("calls signUp.email with user details", async () => {
     mockAuth.signUp.email.mockResolvedValueOnce({});
-    const { result } = await renderHook(() => useSignUp("/welcome"), {
+    const { result } = await renderHook(() => useSignUp("/account"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -122,7 +179,7 @@ describe(useSignUp, () => {
         name: "Alice",
         email: "a@b.com",
         password: "pw",
-        callbackURL: "/welcome",
+        callbackURL: "/account",
       },
       expect.any(Object),
     );
@@ -138,11 +195,14 @@ describe("email verification hooks", () => {
       defaultOptions: { queries: { retry: false } },
     });
     mockAuth = createMockAuthClient();
+    authNavigation.events.length = 0;
+    authNavigation.navigate.mockClear();
+    globalThis.sessionStorage.clear();
   });
 
   it("verifies the signup code", async () => {
     mockAuth.emailOtp.verifyEmail.mockResolvedValueOnce({ data: {} });
-    const { result } = await renderHook(() => useVerifyEmail("/welcome"), {
+    const { result } = await renderHook(() => useVerifyEmail("/account"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
@@ -153,6 +213,25 @@ describe("email verification hooks", () => {
       email: "alice@gmail.com",
       otp: "123456",
     });
+  });
+
+  it("keeps the redirect when email verification returns a 2FA challenge", async () => {
+    mockAuth.emailOtp.verifyEmail.mockResolvedValueOnce({
+      data: {
+        twoFactorRedirect: true,
+        twoFactorMethods: ["totp"],
+      },
+      error: null,
+    });
+    const { result } = await renderHook(() => useVerifyEmail("/account"), {
+      wrapper: createWrapper(queryClient, mockAuth),
+    });
+
+    result.current.mutate({ email: "alice@gmail.com", otp: "123456" });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(getTwoFactorRedirectUrl()).toBe("/account");
+    expect(authNavigation.navigate).not.toHaveBeenCalled();
   });
 
   it("resends the signup code", async () => {
@@ -401,14 +480,14 @@ describe(useSocialLogin, () => {
 
   it("calls signIn.social with provider", async () => {
     mockAuth.signIn.social.mockResolvedValueOnce({});
-    const { result } = await renderHook(() => useSocialLogin("/dashboard"), {
+    const { result } = await renderHook(() => useSocialLogin("/account"), {
       wrapper: createWrapper(queryClient, mockAuth),
     });
 
     await result.current("github");
 
     expect(mockAuth.signIn.social).toHaveBeenCalledWith(
-      { provider: "github", callbackURL: "/dashboard" },
+      { provider: "github", callbackURL: "/account" },
       expect.any(Object),
     );
   });

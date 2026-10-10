@@ -52,6 +52,8 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **Session** — Better Auth session with user info, accessed through `SessionService` (an Effect `Context.Service` in `src/lib/auth/session.effect.ts`, provided by `SessionServiceLive`). Interface: `getSession()` (full session or null), `getUser()` (user or null), and `requireUser(message)` (fails with `UnauthorizedError` when signed out). All mutating services read auth state through this service so the dependency appears in their Effect requirement channel; tests swap in a mocked `AuthService` under the real `SessionServiceLive`.
 
+**Sign-in Completion** — Password login, email verification, and both manual and conditional passkey sign-in share `useSignInCompletion` (`src/lib/auth/use-sign-in-completion.ts`). It stores the allowlisted return path for a 2FA challenge; after a completed sign-in it clears that value, invalidates the cached user session, then navigates. Signup keeps its separate verified-email gate.
+
 **Ownership Guard** — Pattern for checking that the authenticated user owns the resource before allowing mutation. The sign-in half is centralized: services call `SessionService.requireUser(message)` first. The ownership half is centralized in `ensureOwned({ resource, selectOwnerId, userId, notFound, forbidden })` (`src/lib/auth/ownership.ts`) — fails with the caller-supplied not-found error when absent, forbidden error when the owner differs; returns the owned row. Used by `PostsService.update`, `CommentsService.delete_`, and (via the private `requireOwnedPlaylist`) every playlist mutation. Vote set/remove needs no explicit guard — ownership is enforced structurally by scoping queries to the authenticated `userId`.
 
 ## Search & Pagination

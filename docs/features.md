@@ -129,6 +129,7 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 - **OAuth social** GitHub et Google, activé uniquement quand les credentials sont configurés.
 - **Passkeys (WebAuthn)** — `src/components/auth/PasskeySignInButton.tsx`, `src/components/auth/PasskeysSection.tsx`.
 - **2FA TOTP** avec codes de secours et option de confiance d'appareil, exigée après toute méthode de connexion — `src/components/auth/TwoFactorSection.tsx`, `src/routes/two-factor.tsx`.
+- Après une connexion réussie (mot de passe, passkey ou vérification email), l’application efface le retour 2FA, invalide la session utilisateur en cache, puis navigue vers une destination autorisée. Un défi 2FA conserve cette destination jusqu’à sa vérification. Le bouton passkey conditionnel reste indépendant de la mutation du bouton manuel afin que l’autofill en attente ne bloque pas une nouvelle tentative.
 - **Captcha Cloudflare Turnstile** en production lorsqu'il est provisionné.
 - **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Resend ; `RESEND_API_KEY` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.

@@ -1,19 +1,10 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { Schema } from "effect";
-import { useCallback, useContext, useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { LuFingerprint } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
-import { getSafeAuthRedirectUrl } from "src/lib/auth/auth-redirect";
 import { useSignInWithPasskey } from "src/lib/auth/auth.hooks";
 import { AuthClientContext } from "src/lib/auth/client-context";
-import {
-  clearTwoFactorRedirectUrl,
-  setTwoFactorRedirectUrl,
-} from "src/lib/auth/two-factor.hooks";
-import { TwoFactorRedirectSchema } from "src/lib/auth/two-factor.schema";
+import { useSignInCompletion } from "src/lib/auth/use-sign-in-completion";
 import { envClient } from "src/lib/env/client";
-import { usersKeys } from "src/lib/users/users.queries";
 
 type PasskeySignInButtonProps = {
   redirectUrl: string;
@@ -31,15 +22,7 @@ export function PasskeySignInButton({
 }: PasskeySignInButtonProps) {
   const { isPending, mutate } = useSignInWithPasskey(redirectUrl);
   const authClient = useContext(AuthClientContext);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const safeRedirectUrl = getSafeAuthRedirectUrl(redirectUrl);
-
-  const redirectAfterLogin = useCallback(async () => {
-    clearTwoFactorRedirectUrl();
-    await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-    await navigate({ to: safeRedirectUrl });
-  }, [queryClient, navigate, safeRedirectUrl]);
+  const completion = useSignInCompletion(redirectUrl);
 
   useEffect(() => {
     // WebAuthn only works same-origin: when the page is served from a
@@ -58,25 +41,32 @@ export function PasskeySignInButton({
     void PublicKeyCredential.isConditionalMediationAvailable()
       .then((available) => {
         if (!cancelled && available) {
-          setTwoFactorRedirectUrl(safeRedirectUrl);
+          completion.begin();
           // Deliberately not routed through the button's mutation: the
           // conditional-mediation ceremony stays pending until the user picks
           // a passkey, which would leave the button stuck in its pending
           // (disabled) state.
-          void authClient.signIn.passkey({
-            autoFill: true,
-            fetchOptions: {
-              onSuccess: async (data) => {
-                if (!cancelled) {
-                  if (Schema.is(TwoFactorRedirectSchema)(data)) {
-                    setTwoFactorRedirectUrl(safeRedirectUrl);
-                    return;
+          void authClient.signIn
+            .passkey({
+              autoFill: true,
+              fetchOptions: {
+                onSuccess: async (data) => {
+                  if (!cancelled) {
+                    await completion.complete(data.data);
                   }
-                  await redirectAfterLogin();
-                }
+                },
               },
-            },
-          });
+            })
+            .then(({ error }) => {
+              if (!cancelled && error) {
+                completion.fail();
+              }
+            })
+            .catch(() => {
+              if (!cancelled) {
+                completion.fail();
+              }
+            });
         }
       })
       .catch(() => {
@@ -86,7 +76,7 @@ export function PasskeySignInButton({
     return () => {
       cancelled = true;
     };
-  }, [authClient, redirectAfterLogin, safeRedirectUrl]);
+  }, [authClient, completion]);
 
   const handleClick = () => {
     mutate(

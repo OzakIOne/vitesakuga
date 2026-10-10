@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { Schema } from "effect";
 import { useCallback, useContext } from "react";
 import { usersKeys } from "src/lib/users/users.queries";
 
@@ -12,7 +11,7 @@ import {
   clearTwoFactorRedirectUrl,
   setTwoFactorRedirectUrl,
 } from "./two-factor.hooks";
-import { TwoFactorRedirectSchema } from "./two-factor.schema";
+import { useSignInCompletion } from "./use-sign-in-completion";
 
 const passkeysKeys = {
   all: ["auth", "passkeys"] as const,
@@ -39,37 +38,29 @@ function passkeyErrorMessage(
 }
 
 export function useLogin(redirectUrl: string) {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const authClient = useContext(AuthClientContext);
-  const safeRedirectUrl = getSafeAuthRedirectUrl(redirectUrl);
+  const completion = useSignInCompletion(redirectUrl);
 
   return useMutation({
     mutationFn: async ({ email, password, captchaToken }: LoginInput) => {
-      setTwoFactorRedirectUrl(safeRedirectUrl);
+      completion.begin();
       const options: NonNullable<
         Parameters<typeof authClient.signIn.email>[1]
       > = {
-        onSuccess: async (data) => {
-          if (Schema.is(TwoFactorRedirectSchema)(data)) {
-            // The 2FA challenge cookie is set and the client plugin
-            // redirects to the verification page; keep the original
-            // destination for after verification.
-            setTwoFactorRedirectUrl(safeRedirectUrl);
-            return;
-          }
-          clearTwoFactorRedirectUrl();
-          await queryClient.invalidateQueries({
-            queryKey: usersKeys.userInfo,
-          });
-          await navigate({ to: safeRedirectUrl });
-        },
+        onSuccess: async ({ data }) => completion.complete(data),
       };
       if (captchaToken) {
         options.headers = { "x-captcha-response": captchaToken };
       }
       return authClient.signIn
-        .email({ email, password, callbackURL: safeRedirectUrl }, options)
+        .email(
+          {
+            email,
+            password,
+            callbackURL: completion.safeRedirectUrl,
+          },
+          options,
+        )
         .then(({ data, error }) => {
           // The Better Auth client resolves with `{ error }` instead of
           // rejecting; surface it so React Query's `onError` fires.
@@ -79,7 +70,7 @@ export function useLogin(redirectUrl: string) {
           return data;
         });
     },
-    onError: () => clearTwoFactorRedirectUrl(),
+    onError: completion.fail,
   });
 }
 
@@ -125,14 +116,12 @@ export function useSignUp(redirectUrl: string) {
 }
 
 export function useVerifyEmail(redirectUrl: string) {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const authClient = useContext(AuthClientContext);
-  const safeRedirectUrl = getSafeAuthRedirectUrl(redirectUrl);
+  const completion = useSignInCompletion(redirectUrl);
 
   return useMutation({
     mutationFn: async ({ email, otp }: { email: string; otp: string }) => {
-      setTwoFactorRedirectUrl(safeRedirectUrl);
+      completion.begin();
       const { data, error } = await authClient.emailOtp.verifyEmail({
         email,
         otp,
@@ -142,18 +131,8 @@ export function useVerifyEmail(redirectUrl: string) {
       }
       return data;
     },
-    onSuccess: async (data) => {
-      if (Schema.is(TwoFactorRedirectSchema)(data)) {
-        setTwoFactorRedirectUrl(safeRedirectUrl);
-        return;
-      }
-      clearTwoFactorRedirectUrl();
-      await queryClient.invalidateQueries({
-        queryKey: usersKeys.userInfo,
-      });
-      await navigate({ to: safeRedirectUrl });
-    },
-    onError: () => clearTwoFactorRedirectUrl(),
+    onSuccess: async (data) => completion.complete(data),
+    onError: completion.fail,
   });
 }
 
@@ -389,32 +368,21 @@ export function useDeletePasskey() {
 }
 
 export function useSignInWithPasskey(redirectUrl: string) {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const authClient = useContext(AuthClientContext);
-  const safeRedirectUrl = getSafeAuthRedirectUrl(redirectUrl);
+  const completion = useSignInCompletion(redirectUrl);
 
   return useMutation({
     mutationFn: async ({ autoFill }: { autoFill?: boolean }) => {
-      setTwoFactorRedirectUrl(safeRedirectUrl);
+      completion.begin();
       const { data, error } = await authClient.signIn.passkey(
         autoFill === undefined ? {} : { autoFill },
       );
       if (error) {
-        clearTwoFactorRedirectUrl();
         throw passkeyErrorMessage(error, "Passkey sign-in failed");
       }
       return data;
     },
-    onSuccess: async (data) => {
-      if (Schema.is(TwoFactorRedirectSchema)(data)) {
-        setTwoFactorRedirectUrl(safeRedirectUrl);
-        return;
-      }
-      clearTwoFactorRedirectUrl();
-      await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-      await navigate({ to: safeRedirectUrl });
-    },
-    onError: () => clearTwoFactorRedirectUrl(),
+    onSuccess: async (data) => completion.complete(data),
+    onError: completion.fail,
   });
 }
