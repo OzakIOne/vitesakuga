@@ -171,13 +171,16 @@ export const UploadPage = () => {
     queryFn: async () =>
       searchPosts({
         data: {
-          dateRange: "all",
-          page: 0,
-          q: debouncedRelatedPostSearch,
-          randomSeed: 0,
-          sortBy: "newest",
-          tags: [],
-          view: "chronological",
+          includePopularTags: true,
+          params: {
+            dateRange: "all",
+            page: 0,
+            q: debouncedRelatedPostSearch,
+            randomSeed: 0,
+            sortBy: "newest",
+            tags: [],
+            view: "chronological",
+          },
         },
       }),
     queryKey: postsKeys.search({

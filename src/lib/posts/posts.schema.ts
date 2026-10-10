@@ -345,16 +345,18 @@ export type PostsSearchParams = Schema.Schema.Type<
   typeof searchPostsBaseSchema
 >;
 
+export const searchPostsRequestSchema = Schema.Struct({
+  includePopularTags: Schema.Boolean,
+  params: searchPostsBaseSchema,
+});
+
+export type SearchPostsRequest = Schema.Schema.Type<
+  typeof searchPostsRequestSchema
+>;
+
 export const seriesHubSchema = Schema.Struct({
   seriesTitle: SeriesTitleSchema,
 });
-
-/**
- * Service callers may omit newly introduced opt-in controls; the validated
- * server-function boundary still supplies their defaults before execution.
- */
-export type PostsSearchInput = Omit<PostsSearchParams, "randomSeed" | "view"> &
-  Partial<Pick<PostsSearchParams, "randomSeed" | "view">>;
 
 export const postByTagSchema = Schema.Struct({
   page: PageNumberWithDefaultSchema,

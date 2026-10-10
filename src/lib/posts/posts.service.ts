@@ -83,9 +83,9 @@ import {
   postByTagSchema,
   RESERVED_TAG_NAMES,
   randomPostSchema,
-  searchPostsBaseSchema,
+  searchPostsRequestSchema,
   seriesHubSchema,
-  type PostsSearchInput,
+  type SearchPostsRequest,
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
@@ -212,7 +212,7 @@ export class PostsService extends Context.Service<
   PostsService,
   {
     readonly search: (
-      data: PostsSearchInput,
+      data: SearchPostsRequest,
     ) => Effect.Effect<
       PostsSearchResult,
       SqlError | RowParseError | SessionFetchError,
@@ -318,8 +318,9 @@ export class PostsService extends Context.Service<
     );
 
     const search = Effect.fn("PostsService.search")(function* (
-      data: PostsSearchInput,
+      data: SearchPostsRequest,
     ) {
+      const { includePopularTags } = data;
       const {
         dateRange,
         page,
@@ -328,8 +329,8 @@ export class PostsService extends Context.Service<
         sortBy,
         tags,
         view = "chronological",
-      } = data;
-      const parsedSearch = parseSearchQuery(data.q);
+      } = data.params;
+      const parsedSearch = parseSearchQuery(data.params.q);
       const { excludedTags, text: q } = parsedSearch;
       const now = new Date(yield* Clock.currentTimeMillis);
       const sessions = yield* SessionService;
@@ -558,7 +559,7 @@ export class PostsService extends Context.Service<
       }
 
       const popularTags =
-        view === "chronological"
+        includePopularTags && view === "chronological"
           ? yield* fetchPopularTagsForPosts(db, popularTagsPredicates)
           : [];
 
@@ -1349,7 +1350,7 @@ export class PostsService extends Context.Service<
   }),
 }) {
   static readonly search = Effect.fn("PostsService.search")(function* (
-    data: PostsSearchInput,
+    data: SearchPostsRequest,
   ) {
     const svc = yield* PostsService;
     return yield* svc.search(data);
@@ -1480,7 +1481,7 @@ export const PostsServiceLive = Layer.effect(
 );
 
 export const searchPosts = createServerFn({ strict: { output: false } })
-  .validator(parseStrict(searchPostsBaseSchema))
+  .validator(parseStrict(searchPostsRequestSchema))
   .handler(
     createHandler(
       PostsServiceLive,

@@ -94,7 +94,10 @@ export const postsInfiniteQueryOptions = (params: PostsSearchParams) =>
     initialPageParam: params.page,
     queryFn: async ({ pageParam }) =>
       searchPosts({
-        data: { ...params, page: pageParam },
+        data: {
+          includePopularTags: pageParam === params.page,
+          params: { ...params, page: pageParam },
+        },
       }),
     queryKey: postsKeys.searchInfinite(params),
     staleTime: 60 * 1000,
