@@ -34,6 +34,8 @@
     "lint:check": "oxlint . --type-check --type-aware",
     "knip": "knip",
     "knip:production": "knip --production --include files,dependencies",
+    "typecheck": "nub exec tsc --noEmit",
+    "typecheck:fast": "nub dlx tsrs@0.18.0-ts7.1.0-dev.20260929 --noEmit --tsBuildInfoFile .cache/tsrs/tsconfig.tsbuildinfo",
     "test": "vitest -w",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:deployment": "nub exec vitest run scripts/cloudflare-release.test.mjs",

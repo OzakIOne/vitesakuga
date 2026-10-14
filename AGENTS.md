@@ -37,10 +37,16 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - format:check: oxfmt --check .
 - lint: oxlint . --fix
 - lint:check: oxlint . --type-check --type-aware
+- typecheck: `nub exec tsc --noEmit` (authoritative; runs the `@effect/tsgo`-patched compiler)
+- typecheck:fast: `nub dlx tsrs --noEmit` (advisory only, see below)
 - server: preview the existing Vite build output with `vite preview`
 - start: nub .output/server/index.mjs
 - test: vitest -w
 - test:ee: playwright test --config=e2e/playwright.config.ts
+
+### Type checking
+
+`nub run typecheck` stays authoritative: it runs the `@effect/tsgo`-patched `tsc`, which adds Effect diagnostics on top of TypeScript 7. `nub run typecheck:fast` runs [`tsrs`](https://github.com/oxc-project/tsrs), the experimental Rust port of the compiler, as a faster advisory pass (about 1.5x on this repo). It is deliberately not a dependency and not wired into CI, and its `--tsBuildInfoFile` points at `.cache/tsrs/` so it cannot overwrite the tracked `tsconfig.tsbuildinfo`. Treat its output as a hint and confirm with `typecheck`; it emits no Effect diagnostics, and its bundled TypeScript version does not overlap the one `@effect/tsgo` patches.
 
 ### Testing
 
