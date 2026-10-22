@@ -38,7 +38,7 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - lint: oxlint . --fix
 - lint:check: oxlint . --type-check --type-aware
 - typecheck: `nub exec tsc --noEmit` (authoritative; runs the `@effect/tsgo`-patched compiler)
-- typecheck:fast: `nub dlx tsrs --noEmit` (advisory only, see below)
+- typecheck:fast: `nub exec effect-tsrs diagnostics --project tsconfig.json` (advisory only, see below)
 - server: preview the existing Vite build output with `vite preview`
 - start: nub .output/server/index.mjs
 - test: vitest -w
@@ -46,7 +46,9 @@ Vitesakuga has not launched and has no production users or production data. Revi
 
 ### Type checking
 
-`nub run typecheck` stays authoritative: it runs the `@effect/tsgo`-patched `tsc`, which adds Effect diagnostics on top of TypeScript 7. `nub run typecheck:fast` runs [`tsrs`](https://github.com/oxc-project/tsrs), the experimental Rust port of the compiler, as a faster advisory pass (about 1.5x on this repo). It is deliberately not a dependency and not wired into CI, and its `--tsBuildInfoFile` points at `.cache/tsrs/` so it cannot overwrite the tracked `tsconfig.tsbuildinfo`. Treat its output as a hint and confirm with `typecheck`; it emits no Effect diagnostics, and its bundled TypeScript version does not overlap the one `@effect/tsgo` patches.
+`nub run typecheck` stays authoritative: it runs the `@effect/tsgo`-patched `tsc`, which adds Effect diagnostics on top of TypeScript 7. `nub run typecheck:fast` runs [`@yielded/effect-tsrs`](https://github.com/yielded-dev/effect-tsrs), which ports the same Effect diagnostics onto the Rust [`tsrs`](https://github.com/oxc-project/tsrs) compiler. It stays advisory: it is not wired into CI, its bundled TypeScript version does not match the one `@effect/tsgo` patches, and it cannot apply Effect quick fixes. Confirm anything it reports with `typecheck`.
+
+It always runs a full check with no incremental cache: roughly 2s here, faster than a cold `tsc` (2.8s) but slower than a warm one (1.7s). Effect rule severities come from the `@effect/language-service` plugin options in `tsconfig.json`, which set `diagnostics: false`; pass `--rules all` to inspect Effect diagnostics with this compiler. Oxlint still owns Effect rule enforcement in `lint:check`.
 
 ### Testing
 
