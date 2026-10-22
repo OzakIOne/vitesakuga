@@ -30,6 +30,5 @@ export default defineConfig({
   out: "./drizzle",
   schema: "./src/lib/db/schema/index.ts",
   schemaFilter: ["public"],
-  strict: true,
   verbose: true,
 });
