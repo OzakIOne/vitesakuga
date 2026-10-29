@@ -1,4 +1,4 @@
-import { useHotkey, useHotkeySequences } from "@tanstack/react-hotkeys";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { KeyboardShortcutsDialog } from "src/components/KeyboardShortcutsDialog";
@@ -27,24 +27,15 @@ export function GlobalShortcuts() {
 
   useHotkey("Mod+K", focusOrOpenSearch);
 
-  useHotkeySequences([
-    {
-      callback: () => {
-        void navigate({ to: "/posts" });
-      },
-      sequence: ["G", "P"],
-    },
-    {
-      callback: () => {
-        void navigate({ to: "/users" });
-      },
-      sequence: ["G", "U"],
-    },
-    {
-      callback: focusOrOpenSearch,
-      sequence: ["G", "S"],
-    },
-  ]);
+  useHotkey(["G", "P"], () => {
+    void navigate({ to: "/posts" });
+  });
+
+  useHotkey(["G", "U"], () => {
+    void navigate({ to: "/users" });
+  });
+
+  useHotkey(["G", "S"], focusOrOpenSearch);
 
   return (
     <>

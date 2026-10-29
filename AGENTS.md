@@ -35,8 +35,8 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - dcu / dcd: start / stop the local Docker stack
 - format: oxfmt --write .
 - format:check: oxfmt --check .
-- lint: oxlint . --fix
-- lint:check: oxlint . --type-check --type-aware
+- lint: `oxlint . --fix --ignore-pattern '.commandcode/**'`
+- lint:check: `oxlint . --type-check --type-aware --ignore-pattern '.commandcode/**'`
 - typecheck: `nub exec tsc --noEmit` (authoritative; runs the `@effect/tsgo`-patched compiler)
 - typecheck:fast: `nub exec effect-tsrs diagnostics --project tsconfig.json` (advisory only, see below)
 - server: preview the existing Vite build output with `vite preview`

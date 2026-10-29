@@ -535,7 +535,7 @@ describe("CommentsService.mention edge cases", () => {
     expect(notifications).toEqual([]);
   });
 
-  it("keeps rendering mentions of deleted users on fetch", async () => {
+  it("preserves the stored mention token when a user is deleted", async () => {
     await db
       .insertInto("user")
       .values({
@@ -560,7 +560,8 @@ describe("CommentsService.mention edge cases", () => {
 
     const fetched = await runEffect(CommentsService.fetch(postId));
     const rendered = fetched.find((row) => row.id === created.id);
-    expect(rendered?.mentions).toEqual([{ userId: "user-2", username: "bob" }]);
+    expect(rendered?.content).toBe("Hey [@bob](user:user-2)");
+    expect(rendered?.mentions).toEqual([]);
   });
 
   it("caps mentions at 10 per comment", async () => {

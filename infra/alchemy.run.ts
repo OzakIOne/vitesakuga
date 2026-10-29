@@ -1,7 +1,7 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Neon from "@alchemy.run/neon";
 import * as Alchemy from "alchemy";
 import { Stage } from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Neon from "alchemy/Neon";
 import { Config, Console, Effect, Layer } from "effect";
 
 import { getDeploymentStageConfig } from "../src/lib/env/stage-config";

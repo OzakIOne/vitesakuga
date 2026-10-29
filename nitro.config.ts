@@ -1,5 +1,5 @@
 import * as dotenv from "dotenv";
-import { defineNitroConfig } from "nitro/config";
+import { defineConfig } from "nitro";
 
 import {
   getApplicationStageConfig,
@@ -106,7 +106,7 @@ const imageSources = [
   .join(" ");
 const contentSecurityPolicy = `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src ${imageSources}; media-src 'self' blob: ${mediaSources}; connect-src ${connectSources}; font-src 'self' data:; object-src 'none'; frame-src 'self' ${turnstileSource}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
-export default defineNitroConfig({
+export default defineConfig({
   cloudflare: {
     deployConfig: true,
     nodeCompat: true,

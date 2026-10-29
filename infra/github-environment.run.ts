@@ -1,6 +1,6 @@
+import * as GitHub from "@alchemy.run/github";
 import * as Alchemy from "alchemy";
 import { Stage } from "alchemy";
-import * as GitHub from "alchemy/GitHub";
 import { localState } from "alchemy/State";
 import { Config, Effect } from "effect";
 
