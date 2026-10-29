@@ -57,8 +57,8 @@ jobs:
       - name: Check lint and type-aware rules
         run: nub run lint:check
 
-      - name: Check TypeScript
-        run: nub exec tsc --noEmit
+      - name: Check TypeScript and Effect diagnostics
+        run: nub run typecheck
 
       - name: Run unit and integration tests
         run: nub exec vitest run --maxWorkers=1
