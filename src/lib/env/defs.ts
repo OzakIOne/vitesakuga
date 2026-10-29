@@ -69,10 +69,18 @@ const serverEnvConfig = Config.all({
   CLOUDFLARE_R2: Config.String("CLOUDFLARE_R2"),
   CLOUDFLARE_SECRET_KEY: Config.String("CLOUDFLARE_SECRET_KEY"),
   DATABASE_URL: Config.String("DATABASE_URL"),
-  GITHUB_CLIENT_ID: Config.String("GITHUB_CLIENT_ID"),
-  GITHUB_CLIENT_SECRET: Config.String("GITHUB_CLIENT_SECRET"),
-  GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID"),
-  GOOGLE_CLIENT_SECRET: Config.String("GOOGLE_CLIENT_SECRET"),
+  GITHUB_CLIENT_ID: Config.String("GITHUB_CLIENT_ID").pipe(
+    Config.withDefault(""),
+  ),
+  GITHUB_CLIENT_SECRET: Config.String("GITHUB_CLIENT_SECRET").pipe(
+    Config.withDefault(""),
+  ),
+  GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID").pipe(
+    Config.withDefault(""),
+  ),
+  GOOGLE_CLIENT_SECRET: Config.String("GOOGLE_CLIENT_SECRET").pipe(
+    Config.withDefault(""),
+  ),
   RESEND_API_KEY: Config.String("RESEND_API_KEY").pipe(Config.withDefault("")),
   VITE_CLOUDFLARE_R2_PUBLIC_URL: Config.String("VITE_CLOUDFLARE_R2_PUBLIC_URL"),
   EMAIL_FROM: Config.String("EMAIL_FROM").pipe(Config.withDefault("")),

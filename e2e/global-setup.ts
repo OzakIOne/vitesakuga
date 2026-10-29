@@ -61,8 +61,14 @@ const waitForHealth = Effect.gen(function* () {
 });
 
 const startRustFS = Effect.gen(function* () {
+  const status = yield* curlStatus(`${RUSTFS_ENDPOINT}/`);
+  if (status === "403" || status === "200") {
+    yield* Effect.log("RustFS is already ready");
+    return;
+  }
+
   yield* Effect.log("Starting RustFS...");
-  yield* exec("docker compose up -d rustfs").pipe(
+  yield* exec("docker compose up -d rustfs", { cwd: REPO_ROOT }).pipe(
     Effect.catch((error) =>
       Effect.fail(
         new CommandError({
@@ -96,8 +102,8 @@ const createBucket = Effect.gen(function* () {
 });
 
 const ensurePostgres = Effect.gen(function* () {
-  yield* Effect.log("Checking local Postgres...");
-  yield* exec("docker compose up -d postgres", {
+  yield* Effect.log("Checking E2E Postgres...");
+  yield* exec("docker compose up -d postgres-e2e", {
     cwd: REPO_ROOT,
     env: {
       ...process.env,
@@ -108,12 +114,12 @@ const ensurePostgres = Effect.gen(function* () {
       Effect.fail(
         new CommandError({
           command: "docker compose",
-          message: `Failed to start Postgres: ${error instanceof Error ? error.message : error}`,
+          message: `Failed to start E2E Postgres: ${error instanceof Error ? error.message : error}`,
         }),
       ),
     ),
   );
-  yield* Effect.log("Postgres is up");
+  yield* Effect.log("E2E Postgres is up");
 });
 
 const migrateDatabase = Effect.gen(function* () {

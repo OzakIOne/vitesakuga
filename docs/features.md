@@ -171,7 +171,7 @@ Les commandes, résultats datés et périmètres de couverture sont maintenus da
 [Testing](testing.md), pour éviter de dupliquer des décomptes qui vieillissent.
 La suite couvre notamment :
 
-- **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts, raccourcis clavier et régressions d'accessibilité.
+- **Couverture e2e** : authentification, upload vidéo, conversion, commentaires, mentions, playlists (ajout depuis le détail d'un post, ajout/retrait en masse et réordonnancement souris/clavier), votes, suppression de compte credential et passwordless, passkeys, 2FA, hydratation, toasts, raccourcis clavier et régressions d'accessibilité.
 - **Couverture unitaire/service** : recherche et filtres numériques, pagination, posts, tags, utilisateurs, commentaires, mentions, playlists, votes, rapports, notifications, modération, suggestions, révisions vidéo/GC, points, rate limiting, stockage, auth et server-function boundary.
 - **Manques e2e principaux** : parcours feed/recherche → détail, pages accueil/tag/utilisateur/playlists publiques, inbox notifications, soumission de signalement, panneaux admin et upload d'image.
 

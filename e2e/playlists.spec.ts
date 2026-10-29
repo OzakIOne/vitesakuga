@@ -18,6 +18,7 @@ let playlistId = 0;
 let postIds: number[] = [];
 let client: Client;
 let title: (index: number) => string;
+let playlistTitle: string;
 
 async function gotoPlaylist(page: Page) {
   await page.goto(`/account/playlists/${playlistId}`, {
@@ -79,6 +80,7 @@ test.beforeAll(async ({ browser }) => {
 
   const stamp = Date.now();
   title = (index: number) => `E2E Playlists ${stamp} — post ${index}`;
+  playlistTitle = `E2E Playlist ${stamp}`;
 
   for (let index = 0; index < 3; index += 1) {
     const result = await client.query<{ id: number }>(
@@ -98,7 +100,7 @@ test.beforeAll(async ({ browser }) => {
     `INSERT INTO playlists (title, user_id, is_public)
      VALUES ($1, $2, false)
      RETURNING id`,
-    [`E2E Playlist ${Date.now()}`, E2E_USER_ID],
+    [playlistTitle, E2E_USER_ID],
   );
   const insertedPlaylist = playlist.rows[0];
   if (!insertedPlaylist) {
@@ -150,6 +152,32 @@ test.describe("Playlists UI", () => {
       },
     ]);
     await gotoPlaylist(page);
+  });
+
+  test("adds a post to a playlist from its detail page", async ({ page }) => {
+    await page.goto(`/posts/${postIds[0]}`, { waitUntil: "load" });
+    await expect(
+      page.getByRole("heading", { level: 1, name: title(0) }),
+    ).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Add to playlist" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: "Add to playlist" }),
+    ).toBeVisible();
+
+    const playlistCheckbox = dialog.getByRole("checkbox", {
+      name: playlistTitle,
+    });
+    await expect(playlistCheckbox).not.toBeChecked();
+    await dialog.getByText(playlistTitle, { exact: true }).click();
+    await expect(playlistCheckbox).toBeChecked();
+    await expect(page.getByText("Added to playlist")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Done" }).click();
+    await gotoPlaylist(page);
+    await expect(page.getByRole("link", { name: title(0) })).toBeVisible();
   });
 
   test("bulk adds posts by ID", async ({ page }) => {

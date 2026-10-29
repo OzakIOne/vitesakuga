@@ -4,9 +4,23 @@ services:
     ports:
       - "127.0.0.1:${VITESAKUGA_E2E_POSTGRES_PORT:-5432}:5432"
     env_file:
-      - .env.test
+      - path: .env.test
+        required: false
     volumes:
       - pgdata:/var/lib/postgresql
+    networks:
+      - my_network
+
+  postgres-e2e:
+    image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+    ports:
+      - "127.0.0.1:${VITESAKUGA_E2E_POSTGRES_PORT:-15432}:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sakuga
+    volumes:
+      - e2e_pgdata:/var/lib/postgresql
     networks:
       - my_network
 
@@ -50,5 +64,6 @@ networks:
 
 volumes:
   pgdata:
+  e2e_pgdata:
   rustfs_data:
   otelite_data:

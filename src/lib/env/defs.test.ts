@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { loadClientEnv, loadInfraEnv } from "./defs";
+import { loadClientEnv, loadInfraEnv, loadServerEnv } from "./defs";
+
+const makeServerEnv = (
+  overrides: Readonly<Record<string, string | undefined>> = {},
+) => ({
+  BETTER_AUTH_SECRET: "e2e-only-placeholder-secret-not-for-production",
+  CLOUDFLARE_ACCESS_KEY: "test",
+  CLOUDFLARE_BUCKET: "e2e-test",
+  CLOUDFLARE_R2: "http://localhost:9000",
+  CLOUDFLARE_SECRET_KEY: "test",
+  DATABASE_URL: "postgresql://user:password@localhost:15432/sakuga",
+  NODE_ENV: "test",
+  VITE_BASE_URL: "http://localhost:3100",
+  VITE_CLOUDFLARE_R2_PUBLIC_URL: "http://localhost:9000/e2e-test",
+  ...overrides,
+});
 
 const makeClientEnv = (
   overrides: Partial<Parameters<typeof loadClientEnv>[0]> = {},
@@ -16,6 +31,21 @@ const makeClientEnv = (
   VITE_TURNSTILE_REQUIRED: "0",
   VITE_TURNSTILE_SITEKEY: "",
   ...overrides,
+});
+
+describe(loadServerEnv, () => {
+  it("allows omitted OAuth credentials outside production", () => {
+    const env = loadServerEnv(makeServerEnv());
+
+    expect(env.GITHUB_CLIENT_ID).toBe("");
+    expect(env.GOOGLE_CLIENT_ID).toBe("");
+  });
+
+  it("still requires OAuth credentials in production", () => {
+    expect(() =>
+      loadServerEnv(makeServerEnv({ NODE_ENV: "production" })),
+    ).toThrow();
+  });
 });
 
 describe(loadInfraEnv, () => {

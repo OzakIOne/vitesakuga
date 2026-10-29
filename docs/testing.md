@@ -15,12 +15,16 @@ nub run test:ee                     # Playwright e2e suite
 
 Vitest is configured with a maximum of four workers in `vitest.config.ts`. The
 service-test harness uses real PGlite and RustFS layers where practical. E2e
-runs use the Playwright web server on port 3100 with local Postgres and RustFS;
-the E2E database binds to port 15432 by default (`VITESAKUGA_E2E_POSTGRES_PORT`
-overrides it), while a plain `docker compose up postgres` keeps the development
-default on 5432. The suites are separate from Vitest. The local server uses Nitro's
-`node-server` preset and disables the Turnstile requirement so the browser tests
-exercise the same authentication path as the test server.
+runs use the Playwright web server on port 3100 with the isolated
+`postgres-e2e` service and RustFS. `postgres-e2e` uses its own `e2e_pgdata`
+volume and test-only credentials, so it does not rely on ignored `.env.test` or
+reuse the development database. It binds to port 15432 by default
+(`VITESAKUGA_E2E_POSTGRES_PORT` overrides it); the development `postgres` service
+keeps its default on port 5432. The E2E setup reuses a responding RustFS on port
+9000 and otherwise starts it with Docker Compose. The suites are separate from
+Vitest. The local server uses Nitro's `node-server` preset and disables the
+Turnstile requirement so the browser tests exercise the same authentication
+path as the test server.
 
 ## Last recorded verification
 
