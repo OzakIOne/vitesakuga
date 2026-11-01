@@ -78,6 +78,8 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **Neon** — Serverless PostgreSQL database. Accessed via Neon HTTP driver (Drizzle) and Neon serverless pool (Kysely). Local dev (`DATABASE_DRIVER=local`) uses a `pg` Pool against Docker Postgres instead.
 
+**Kysely Schema** — The Kysely `DB` type (`src/lib/db/kysely.ts`) is derived from the Drizzle tables in `src/lib/db/schema/` by `src/lib/db/kysely-schema.ts`, so each Drizzle table definition is the single source for both query builders. Drizzle keys equal database column names.
+
 **PGlite** — In-memory PostgreSQL for tests. Custom Kysely dialect. Used in `makeServiceTestLayer` to build test layers with real DB queries.
 
 **Effect Layer** — Dependency injection pattern used by all domain services. Base layer: KyselyDB + StorageLive + logging + tracing. Auth layer adds AuthService + RequestHeadersService. Service layers compose on top.

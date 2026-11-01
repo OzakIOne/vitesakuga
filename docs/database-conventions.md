@@ -13,7 +13,7 @@ This document outlines the conventions and best practices for database interacti
 ## Kysely Client
 
 - Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over the pool from `pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`)
-- `DB` type derived from Drizzle schema definitions via `Kyselify`; `posts.version` and `post_edits.basePostVersion` support optimistic concurrency checks
+- `DB` is derived from the Drizzle tables by `KyselyTable` in `src/lib/db/kysely-schema.ts`: select types come from `$inferSelect`, and a column whose Drizzle definition has a default (`hasDefault`, including `$defaultFn`) is `Generated`, so it is optional on insert. `posts.version` and `post_edits.basePostVersion` support optimistic concurrency checks
 - Effect wrapper via `KyselyDB` context tag in `src/lib/db/context.ts` — all domain services inject this
 - `media_operations` and `media_objects` form the durable lifecycle registry. Mutations run through `LifecycleService.runOperation`, which claims a user-scoped operation key, persists a request fingerprint and fence, and replays terminal results decoded by a per-kind result schema. Object deletion uses durable `deleting`/`deleted` tombstones; remote storage I/O happens only after the database transition commits.
 - Lifecycle timestamps in these tables use PostgreSQL `timestamp with time zone` and represent instants. Pass and compare JavaScript `Date` values directly; never compensate for the process timezone with manual offsets.
@@ -28,6 +28,15 @@ This document outlines the conventions and best practices for database interacti
 - Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
 - Domain tables include `tags`, `posts`, `postImages`, `postTags`, `tagFollows`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, `videoRevisions`, `mediaOperations`, and `mediaObjects`
+
+## Adding a Table or Column
+
+- Define the table or column in `src/lib/db/schema/`. Do not hand-write a Kysely type: `DB` follows the Drizzle table automatically.
+- The Drizzle TS key must equal the database column name. `src/lib/db/schema/column-names.test.ts` enforces this, so write `created_at: timestamp()`, not `createdAt: timestamp("created_at")`.
+- Declare the real database default in Drizzle (`.defaultNow()`, `.default(...)`), so the type reflects it. A `$defaultFn` also makes the column optional on insert, but it sets no database default.
+- Narrow text and JSON columns with `.$type<T>()` (for example `.$type<Role>()`, `.$type<PostEditPayload>()`), so the type never widens to `string`.
+- A migration that sets a default by hand must also be recorded in the latest `drizzle/*/snapshot.json`. Otherwise `nub run db generate` emits a migration that is already applied.
+- `nub run db generate` must print `No schema changes` after a type-only or `$defaultFn` change. Add type-level expectations to `src/lib/db/kysely-schema.type-test.ts` when a precise type matters.
 
 ## Effect Layer Pattern
 

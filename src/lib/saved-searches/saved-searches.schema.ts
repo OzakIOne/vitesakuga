@@ -44,11 +44,24 @@ const SearchTags = Schema.Array(
   ),
 );
 
+export const savedSearchDateRangeSchema = Schema.Literals([
+  "all",
+  "today",
+  "week",
+  "month",
+]);
+
+export type SavedSearchDateRange = typeof savedSearchDateRangeSchema.Type;
+
+export const savedSearchSortBySchema = Schema.Literals(["newest", "oldest"]);
+
+export type SavedSearchSortBy = typeof savedSearchSortBySchema.Type;
+
 export const saveSearchInputSchema = Schema.Struct({
-  dateRange: Schema.Literals(["all", "today", "week", "month"]),
+  dateRange: savedSearchDateRangeSchema,
   name: SavedSearchName,
   q: SearchQuery,
-  sortBy: Schema.Literals(["newest", "oldest"]),
+  sortBy: savedSearchSortBySchema,
   tags: SearchTags,
 });
 
@@ -60,10 +73,10 @@ export type SaveSearchInput = Schema.Schema.Type<typeof saveSearchInputSchema>;
 
 export type SavedSearch = {
   created_at: string;
-  date_range: "all" | "today" | "week" | "month";
+  date_range: SavedSearchDateRange;
   id: number;
   name: string;
   q: string;
-  sort_by: "newest" | "oldest";
+  sort_by: SavedSearchSortBy;
   tags: readonly string[];
 };

@@ -18,8 +18,17 @@ import { Schema, SchemaGetter } from "effect";
 import { PostId } from "../../ids";
 import type { MediaOperationResult } from "../../lifecycle/operation-results";
 import type { PointAction } from "../../points/points.config";
+import type {
+  PostEditPayload,
+  PostEditPreviousPayload,
+} from "../../post-edits/post-edits.schema";
 import { sanitize } from "../../sanitize";
+import type {
+  SavedSearchDateRange,
+  SavedSearchSortBy,
+} from "../../saved-searches/saved-searches.schema";
 import { user } from "./auth.schema";
+import type { PostReportReason, PostSource, PostVote } from "./sakuga.utils";
 
 export const tags = pgTable("tags", {
   createdAt: timestamp().defaultNow().notNull(),
@@ -76,7 +85,7 @@ export const posts = pgTable(
     relatedPostId: integer(),
     seasonNumber: integer(),
     source: text(),
-    sourceType: text(),
+    sourceType: text().$type<PostSource>(),
     thumbnailKey: text().notNull(),
     title: text().notNull(),
     userId: text()
@@ -120,7 +129,7 @@ export const postVotes = pgTable(
     userId: text()
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
-    vote: text().notNull(),
+    vote: text().$type<PostVote>().notNull(),
   },
   (t) => [
     primaryKey({ columns: [t.postId, t.userId] }),
@@ -135,7 +144,7 @@ export const postReports = pgTable(
     postId: integer()
       .references(() => posts.id, { onDelete: "cascade" })
       .notNull(),
-    reason: text().notNull(),
+    reason: text().$type<PostReportReason>().notNull(),
     userId: text()
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
@@ -172,11 +181,11 @@ export const savedSearches = pgTable(
   "saved_searches",
   {
     created_at: timestamp().defaultNow().notNull(),
-    date_range: text().notNull(),
+    date_range: text().$type<SavedSearchDateRange>().notNull(),
     id: serial("id").primaryKey(),
     name: text().notNull(),
     q: text().notNull(),
-    sort_by: text().notNull(),
+    sort_by: text().$type<SavedSearchSortBy>().notNull(),
     tags: json().$type<string[]>().notNull(),
     user_id: text()
       .references(() => user.id, { onDelete: "cascade" })
@@ -357,8 +366,8 @@ export const postEdits = pgTable(
     basePostVersion: integer().notNull().default(0),
     createdAt: timestamp().defaultNow().notNull(),
     id: serial().primaryKey(),
-    payload: json().$type<string>().notNull(),
-    previous_payload: json().$type<string>().notNull(),
+    payload: json().$type<PostEditPayload>().notNull(),
+    previous_payload: json().$type<PostEditPreviousPayload>().notNull(),
     postId: integer()
       .references(() => posts.id, { onDelete: "cascade" })
       .notNull(),

@@ -10,36 +10,30 @@ import {
 } from "drizzle-orm/pg-core";
 import { DateTime, Schema } from "effect";
 
-import { RoleSchema } from "../../auth/roles";
+import { type Role, RoleSchema } from "../../auth/roles";
 import { TimestampSchema } from "./timestamp";
 
 export const user = pgTable("user", {
-  createdAt: timestamp()
-    .$defaultFn(() => /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()))
-    .notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
   // Set when the account has been deleted and anonymized: posts and comments
   // keep referencing this row so they stay public, attributed to
   // DELETED_USER_NAME ("Deleted user").
   deletedAt: timestamp(),
   email: text().notNull().unique(),
-  emailVerified: boolean()
-    .$defaultFn(() => false)
-    .notNull(),
+  emailVerified: boolean().notNull().default(false),
   id: text().primaryKey(),
   image: text(),
   name: text().notNull(),
   // Rank used by the authorization policies (`src/lib/auth/policy.ts`);
   // promoted through the points system and staff review, never set by users.
   // Values are constrained at runtime by `RoleSchema` in the select schema.
-  role: text().notNull().default("novice"),
+  role: text().$type<Role>().notNull().default("novice"),
   twoFactorEnabled: boolean().notNull().default(false),
   // Unique public handle used for @mentions in comments. Lowercase
   // `[a-z0-9_]`, 3–30 chars — normalized/validated by Better Auth's username
   // plugin (src/lib/auth/index.ts). Generated at sign-up, changeable on
   // /account. Backfilled for existing users by the column's migration.
-  updatedAt: timestamp()
-    .$defaultFn(() => /* @__PURE__ */ DateTime.toDate(DateTime.nowUnsafe()))
-    .notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
   username: text().notNull().unique(),
 });
 

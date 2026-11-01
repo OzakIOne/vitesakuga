@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { Role } from "../auth/roles";
 import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
@@ -14,7 +15,7 @@ afterEach(async () => {
   closeCtx = undefined;
 });
 
-const insertUser = (db: Kysely<DB>, args: { id: string; role: string }) =>
+const insertUser = (db: Kysely<DB>, args: { id: string; role: Role }) =>
   db
     .insertInto("user")
     .values({

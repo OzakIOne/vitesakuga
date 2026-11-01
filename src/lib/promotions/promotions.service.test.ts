@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { Role } from "../auth/roles";
 import { makeAuthSession } from "../auth/session.fixture";
 import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
@@ -21,7 +22,7 @@ const insertUser = (
   db: Kysely<DB>,
   args: {
     id: string;
-    role?: string;
+    role?: Role;
     createdAtDaysAgo?: number;
   },
 ) =>
