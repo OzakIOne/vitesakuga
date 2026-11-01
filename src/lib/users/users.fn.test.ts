@@ -318,6 +318,72 @@ describe("UsersService.userPosts", () => {
       { id: selectedTag.id, name: "selected", postCount: 1 },
     ]);
   });
+
+  it("pages a user's posts with popular tags covering the whole profile list", async () => {
+    const bulkTag = await db
+      .insertInto("tags")
+      .values({ name: "bulk" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    for (let index = 0; index < 31; index += 1) {
+      const post = await db
+        .insertInto("posts")
+        .values({
+          description: `Description ${index}`,
+          title: `Bulk ${index}`,
+          userId: "user-1",
+          videoKey: `videos/bulk-${index}.mp4`,
+          thumbnailKey: `thumbnails/bulk-${index}.jpg`,
+          videoMetadata: "{}",
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      await db
+        .insertInto("post_tags")
+        .values({ postId: post.id, tagId: bulkTag.id })
+        .execute();
+    }
+    const otherUserPost = await db
+      .insertInto("posts")
+      .values({
+        description: "Other user",
+        title: "Other user post",
+        userId: "user-2",
+        videoKey: "videos/other-user.mp4",
+        thumbnailKey: "thumbnails/other-user.jpg",
+        videoMetadata: "{}",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto("post_tags")
+      .values({ postId: otherUserPost.id, tagId: bulkTag.id })
+      .execute();
+
+    const expectedPopularTags = [
+      { id: bulkTag.id, name: "bulk", postCount: 31 },
+    ];
+    const firstPage = await runEffect(
+      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+    );
+    const secondPage = await runEffect(
+      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 1 }),
+    );
+
+    expect(firstPage.data).toHaveLength(30);
+    expect(firstPage.meta.pagination).toMatchObject({
+      hasMore: true,
+      total: 31,
+      totalPages: 2,
+    });
+    expect(firstPage.meta.popularTags).toEqual(expectedPopularTags);
+    expect(secondPage.data.map((post) => post.title)).toEqual(["Bulk 0"]);
+    expect(secondPage.meta.pagination).toMatchObject({
+      hasMore: false,
+      hasPrevious: true,
+    });
+    expect(secondPage.meta.popularTags).toEqual(expectedPopularTags);
+  });
 });
 
 describe("UsersService.contributorProfile", () => {

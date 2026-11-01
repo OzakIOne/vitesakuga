@@ -130,6 +130,19 @@ const linkTags = async (postId: number, tagIds: number[]) => {
     .execute();
 };
 
+const linkImageWidth = async (postId: number, width: number) => {
+  await db
+    .insertInto("post_images")
+    .values({
+      height: 1080,
+      postId,
+      position: 0,
+      storageKey: `images/${postId}-${width}.jpg`,
+      width,
+    })
+    .execute();
+};
+
 type SearchPostsParams = Parameters<typeof PostsService.search>[0]["params"];
 type SearchPostsInput = Omit<SearchPostsParams, "randomSeed" | "view"> &
   Partial<Pick<SearchPostsParams, "randomSeed" | "view">>;
@@ -778,6 +791,156 @@ describe("PostsService.search", () => {
       "selected",
     ]);
   });
+
+  it("combines text, included and excluded tags, numeric filters and date range", async () => {
+    const now = Date.now();
+    const DAY_MS = 86_400_000;
+    const matchingPost = await insertPost({
+      createdAt: new Date(now - DAY_MS),
+      title: "Mecha finale",
+    });
+    const narrowPost = await insertPost({
+      createdAt: new Date(now - DAY_MS),
+      title: "Mecha narrow",
+    });
+    const movieTaggedPost = await insertPost({
+      createdAt: new Date(now - DAY_MS),
+      title: "Mecha movie",
+    });
+    const oldPost = await insertPost({
+      createdAt: new Date(now - 40 * DAY_MS),
+      title: "Mecha archive",
+    });
+    const noTextPost = await insertPost({
+      createdAt: new Date(now - DAY_MS),
+      title: "Cooking show",
+    });
+    const noIncludedTagPost = await insertPost({
+      createdAt: new Date(now - DAY_MS),
+      title: "Mecha solo",
+    });
+    const [mechaTag, actionTag, moviesTag] = await Promise.all([
+      insertTag("mecha"),
+      insertTag("action"),
+      insertTag("movies"),
+    ]);
+    await linkTags(matchingPost, [mechaTag, actionTag]);
+    await linkTags(narrowPost, [mechaTag, actionTag]);
+    await linkTags(movieTaggedPost, [mechaTag, actionTag, moviesTag]);
+    await linkTags(oldPost, [mechaTag, actionTag]);
+    await linkTags(noTextPost, [actionTag]);
+    await linkTags(noIncludedTagPost, [mechaTag]);
+    await linkImageWidth(matchingPost, 1920);
+    await linkImageWidth(narrowPost, 800);
+    await linkImageWidth(movieTaggedPost, 1920);
+    await linkImageWidth(oldPost, 1920);
+    await linkImageWidth(noTextPost, 1920);
+    await linkImageWidth(noIncludedTagPost, 1920);
+
+    const result = await runEffect(
+      searchPosts({
+        dateRange: "week",
+        page: 0,
+        q: "mecha width:>1000 -movies",
+        sortBy: "newest",
+        tags: ["action"],
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual(["Mecha finale"]);
+    expect(result.meta.pagination.total).toBe(1);
+    expect(result.meta.popularTags.map((tag) => tag.name).sort()).toEqual([
+      "action",
+      "mecha",
+    ]);
+  });
+
+  it("omits popular tags unless requested for the chronological view", async () => {
+    const postId = await insertPost({ title: "Liked post" });
+    await linkTags(postId, [await insertTag("anime")]);
+    await db
+      .insertInto("post_votes")
+      .values({ postId, userId: "user-1", vote: "like" })
+      .execute();
+
+    const chronologicalNotRequested = await runEffect(
+      PostsService.search({
+        includePopularTags: false,
+        params: {
+          dateRange: "all",
+          page: 0,
+          q: "",
+          randomSeed: 0,
+          sortBy: "newest",
+          tags: [],
+          view: "chronological",
+        },
+      }),
+    );
+    const mostLiked = await runEffect(
+      searchPosts({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+        view: "most-liked",
+      }),
+    );
+
+    expect(chronologicalNotRequested.meta.popularTags).toEqual([]);
+    expect(mostLiked.data.map((post) => post.id)).toEqual([postId]);
+    expect(mostLiked.meta.popularTags).toEqual([]);
+  });
+
+  it("returns an empty followed-tags feed for anonymous visitors", async () => {
+    const postId = await insertPost({ title: "Followed candidate" });
+    await linkTags(postId, [await insertTag("followed")]);
+    mockGetSession.mockResolvedValue(null);
+
+    const result = await runEffect(
+      searchPosts({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+        view: "followed-tags",
+      }),
+    );
+
+    expect(result.data).toEqual([]);
+    expect(result.meta.pagination.total).toBe(0);
+    expect(result.meta.popularTags).toEqual([]);
+  });
+
+  it("breaks equal createdAt ties by id in the requested direction", async () => {
+    const createdAt = new Date("2024-06-01T00:00:00Z");
+    const first = await insertPost({ createdAt, title: "First" });
+    const second = await insertPost({ createdAt, title: "Second" });
+
+    const newest = await runEffect(
+      searchPosts({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+      }),
+    );
+    const oldest = await runEffect(
+      searchPosts({
+        dateRange: "all",
+        page: 0,
+        q: "",
+        sortBy: "oldest",
+        tags: [],
+      }),
+    );
+
+    expect(newest.data.map((post) => post.id)).toEqual([second, first]);
+    expect(oldest.data.map((post) => post.id)).toEqual([first, second]);
+  });
 });
 
 describe("PostsService.fetchDetail", () => {
@@ -896,6 +1059,68 @@ describe("PostsService.getByTag", () => {
 
     expect(result.data).toHaveLength(0);
     expect(result.meta.pagination.total).toBe(0);
+  });
+
+  it("pages tag posts newest first with popular tags for the whole tag", async () => {
+    const now = Date.now();
+    const HOUR_MS = 3_600_000;
+    const animeTag = await insertTag("anime");
+    for (let index = 0; index < 31; index += 1) {
+      const postId = await insertPost({
+        createdAt: new Date(now - index * HOUR_MS),
+        title: `Anime ${index}`,
+      });
+      await linkTags(postId, [animeTag]);
+    }
+    const expectedPopularTags = [{ id: animeTag, name: "anime", postCount: 31 }];
+
+    const firstPage = await runEffect(
+      PostsService.getByTag({ tag: "anime", page: 0 }),
+    );
+    const secondPage = await runEffect(
+      PostsService.getByTag({ tag: "anime", page: 1 }),
+    );
+
+    expect(firstPage.data).toHaveLength(30);
+    expect(firstPage.data[0]!.title).toBe("Anime 0");
+    expect(firstPage.meta.pagination).toMatchObject({
+      hasMore: true,
+      hasPrevious: false,
+      total: 31,
+      totalPages: 2,
+    });
+    expect(firstPage.meta.popularTags).toEqual(expectedPopularTags);
+    expect(secondPage.data.map((post) => post.title)).toEqual(["Anime 30"]);
+    expect(secondPage.meta.pagination).toMatchObject({
+      hasMore: false,
+      hasPrevious: true,
+    });
+    expect(secondPage.meta.popularTags).toEqual(expectedPopularTags);
+  });
+
+  it("reports popular tags of only the tag's posts", async () => {
+    const animePost = await insertPost({ title: "Anime with action" });
+    const secondAnimePost = await insertPost({ title: "Plain anime" });
+    const otherPost = await insertPost({ title: "Action elsewhere" });
+    const [animeTag, actionTag, otherTag] = await Promise.all([
+      insertTag("anime"),
+      insertTag("action"),
+      insertTag("other"),
+    ]);
+    await linkTags(animePost, [animeTag, actionTag]);
+    await linkTags(secondAnimePost, [animeTag]);
+    await linkTags(otherPost, [otherTag, actionTag]);
+
+    const result = await runEffect(
+      PostsService.getByTag({ tag: "anime", page: 0 }),
+    );
+
+    expect(
+      result.meta.popularTags.map((tag) => [tag.name, tag.postCount]),
+    ).toEqual([
+      ["anime", 2],
+      ["action", 1],
+    ]);
   });
 });
 
