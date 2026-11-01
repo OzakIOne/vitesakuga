@@ -14,12 +14,12 @@ The old pattern of separate `<feature>.fn.ts` files has been consolidated — se
 
 Each `*.service.ts` file follows this layered pattern (top to bottom):
 
-1. **Imports** — Effect, TanStack Start, domain schemas (Effect Schema), layer factories, `createEndpointHandler` (or `createHandler` for adapters)
+1. **Imports** — Effect, TanStack Start, domain schemas (Effect Schema), layer factories, `createEndpointHandler`
 2. **Service class** — Effect `Context.Service<Self, Shape>()("Name", { make })` with the typed interface as `Shape` and the implementation as `make`
 3. **Live layer** — `Layer.effect(Service, Service.make)` providing the service
 4. **Server functions** — TanStack Start `createServerFn` instances with Effect Schema validators whose `.handler(...)` is `createEndpointHandler({ service, operation, layer, base })`
 
-Service classes have no static accessors. Code that needs an operation outside a server function (tests, other services) yields the service tag: `Effect.flatMap(CommentsService, (service) => service.fetch(postId))`.
+There is one way to expose an operation. Service classes have no static accessors, and no `createHandler` lambdas appear in service files: `src/lib/service-endpoint-boundary.test.ts` fails on both. Code that needs an operation outside a server function (tests, other services) yields the service tag: `Effect.flatMap(CommentsService, (service) => service.fetch(postId))`.
 
 Example pattern (from `comments.service.ts`):
 
@@ -28,7 +28,7 @@ Example pattern (from `comments.service.ts`):
 export class CommentsService extends Context.Service<CommentsService, {
   readonly fetch: (postId: number) => Effect.Effect<unknown, Error>;
   readonly add: (data: ...) => Effect.Effect<unknown, Error>;
-  readonly delete_: (commentId: number) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
+      readonly delete_: (input: { commentId: number }) => Effect.Effect<{ success: boolean }, Error, AuthServices>;
 }>()("CommentsService", {
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
@@ -63,18 +63,16 @@ export const addComment = createServerFn({ method: "POST" })
     }),
   );
 
-// Adapter: the wire input is `{ commentId }`, while the operation takes the bare id.
+// The operation takes the validated wire input itself, so no adapter is needed.
 export const deleteComment = createServerFn({ method: "POST" })
-  .validator((input: unknown) =>
-    parse(Schema.Struct({ commentId: Schema.Number }))(input),
-  )
+  .validator(parse(Schema.Struct({ commentId: Schema.Number })))
   .handler(
-    createHandler(
-      CommentsServiceLive,
-      baseLayerFactories.auth,
-    )((data: { commentId: number }) =>
-      Effect.flatMap(CommentsService, (service) => service.delete_(data.commentId)),
-    ),
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "delete_",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 ```
 
@@ -88,7 +86,7 @@ export const deleteComment = createServerFn({ method: "POST" })
 
 It wraps `createHandler`, so failures, sanitization and debug IDs behave exactly as described below. The HTTP method and the validator stay on the `createServerFn(...)` chain in the same module: TanStack's compiler only extracts a `.handler(...)` written there, and it strips the server-only handler argument from the client bundle.
 
-Not covered, and kept as `createHandler` with an adapter lambda: handlers that reshape the wire input before calling the operation.
+There are no adapter lambdas. When the wire input differs from the operation's input, the operation takes the validated input object (`delete_({ commentId })`, `reject({ editId })`, `approve({ userId })`). Scalar wire payloads stay plain numbers: the operation brands the id on entry (`asPostId(rawPostId)`), because a branded primitive cannot cross the server-function boundary. An operation that needs the signed-in user resolves it itself with `SessionService.requireUser`, so the endpoint passes no user id (`NotificationsService.list()`).
 
 ## `createHandler` Bridge
 
