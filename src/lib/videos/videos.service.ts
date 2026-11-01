@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Clock, Context, Effect, Exit, Layer, Option } from "effect";
-import { sql } from "kysely";
+import { Clock, Context, DateTime, Effect, Exit, Layer, Option } from "effect";
 
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { roleAtLeast } from "../auth/roles";
@@ -23,20 +22,14 @@ import {
   LifecycleService,
   LifecycleServiceLive,
   type LifecycleError,
-  PostVersionConflictError,
-  finishOperationInTransaction,
+  swapPostVideoInTransaction,
 } from "../lifecycle/lifecycle.service";
-import { MAX_VIDEO_SIZE_BYTES } from "../posts/posts.schema";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
-import { videoContentType } from "../storage/content-type";
 import {
   isDeterministicMediaKey,
   PENDING_VIDEOS_PREFIX,
-  pendingVideoPrefix,
-  videoObjectKey,
 } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
-import { isUploadedVideoValid } from "../storage/upload-policy";
 import { DAY_MS, REVISION_RETENTION_DAYS } from "./videos.config";
 
 /** A restorable previous version of a post's video. */
@@ -311,67 +304,41 @@ export class VideosService extends Context.Service<
           message: STAFF_ONLY_MESSAGE,
         });
       }
-      // Same trust model as first uploads: only promote objects staged in
-      // the caller's own namespace (`videos/_pending/{userId}/…`).
-      if (!input.pendingVideoKey.startsWith(pendingVideoPrefix(user.id))) {
-        return yield* new ValidationError({
-          message: "Invalid video upload key",
-        });
-      }
-
-      const ext = input.pendingVideoKey.split(".").pop() ?? "";
-      const expectedContentType = videoContentType(ext);
-      const head = yield* storage.headFile(input.pendingVideoKey);
-      if (!isUploadedVideoValid(head, expectedContentType)) {
-        yield* storage.deleteFile(input.pendingVideoKey).pipe(Effect.ignore);
-        return yield* new ValidationError({
-          message: `Video upload is invalid: expected ${expectedContentType}, at most ${
-            MAX_VIDEO_SIZE_BYTES / (1024 * 1024)
-          } MB`,
-        });
-      }
-      const sourceFingerprint =
-        head.metadataFingerprint ??
-        (head.etag === null ? "" : `etag:${head.etag}`);
-      if (sourceFingerprint.length === 0 || head.etag === null) {
-        return yield* new ValidationError({
-          message: "Video upload could not be identified safely",
-        });
-      }
-      const finalKey = videoObjectKey(claim.operationId, ext);
-      const mediaObject = {
-        contentLength: head.contentLength,
-        contentType: head.contentType,
-        fence: claim.fence,
-        fingerprint: sourceFingerprint,
-        key: finalKey,
-        kind: "video" as const,
+      const staged = yield* lifecycle.verifyStagedVideo({
         operationId: claim.operationId,
+        pendingKey: input.pendingVideoKey,
         userId: user.id,
-      };
+      });
       yield* lifecycle.replaceVideo({
-        ...mediaObject,
+        contentLength: staged.contentLength,
+        contentType: staged.contentType,
         expectedVersion: input.expectedVersion,
+        fence: claim.fence,
+        fingerprint: staged.fingerprint,
+        key: staged.finalKey,
+        kind: "video",
         oldVideoKey,
+        operationId: claim.operationId,
         postId: post.id,
         replacedBy: user.id,
-        sourceEtag: head.etag,
-        sourceKey: input.pendingVideoKey,
+        sourceEtag: staged.etag,
+        sourceKey: staged.sourceKey,
+        userId: user.id,
         videoMetadata: post.videoMetadata,
       });
-      yield* storage.deleteFile(input.pendingVideoKey).pipe(Effect.ignore);
+      yield* lifecycle.discardStagedVideo(staged.sourceKey);
 
       // Likes, comments and the post id stay untouched: this only swaps the
       // media backing the same content entry.
       yield* Effect.logInfo("Video replaced").pipe(
         Effect.annotateLogs({
-          newPath: finalKey,
+          newPath: staged.finalKey,
           oldPath: post.videoKey,
           postId: String(post.id),
           replacedBy: user.id,
         }),
       );
-      return { videoKey: finalKey };
+      return { videoKey: staged.finalKey };
     });
 
     const listRevisions = Effect.fn("VideosService.listRevisions")(function* (
@@ -479,43 +446,13 @@ export class VideosService extends Context.Service<
         });
       }
       yield* storage.headFile(revisionKey);
+      const now = yield* DateTime.nowAsDate;
       yield* db.transaction((trx) =>
-        Effect.gen(function* () {
-          if (post.videoKey !== null) {
-            yield* trx.executeTakeFirstOrError(
-              trx
-                .insertInto("video_revisions")
-                .values({
-                  postId: post.id,
-                  replacedBy: user.id,
-                  videoKey: post.videoKey,
-                  videoMetadata: post.videoMetadata,
-                })
-                .returning("id"),
-            );
-          }
-          const updated = yield* trx.executeTakeFirstOption(
-            trx
-              .updateTable("posts")
-              .set({
-                videoKey: revisionOption.value.videoKey,
-                version: sql<number>`"version" + 1`,
-              })
-              .where("id", "=", post.id)
-              .where("version", "=", input.expectedVersion)
-              .returning("id"),
-          );
-          if (Option.isNone(updated)) {
-            return yield* new PostVersionConflictError({
-              actualVersion: input.expectedVersion + 1,
-              expectedVersion: input.expectedVersion,
-              message: `Post ${post.id} changed while its video was being restored`,
-              postId: post.id,
-            });
-          }
-          yield* finishOperationInTransaction(
-            trx,
-            {
+        swapPostVideoInTransaction(
+          trx,
+          {
+            expectedVersion: input.expectedVersion,
+            finish: {
               fence: claim.fence,
               operationId: claim.operationId,
               result: {
@@ -524,9 +461,19 @@ export class VideosService extends Context.Service<
                 videoKey: revisionKey,
               },
             },
-            new Date(),
-          );
-        }),
+            nextVideoKey: revisionKey,
+            postId: post.id,
+            previousVideo:
+              post.videoKey === null
+                ? null
+                : {
+                    videoKey: post.videoKey,
+                    videoMetadata: post.videoMetadata,
+                  },
+            replacedBy: user.id,
+          },
+          now,
+        ),
       );
 
       yield* Effect.logInfo("Video restored from revision").pipe(

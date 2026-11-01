@@ -8,7 +8,7 @@ import type { UploadedFileHead } from "./storage.module";
 export const isUploadedVideoValid = (
   head: UploadedFileHead,
   expectedContentType: string,
-): boolean =>
+): head is UploadedFileHead & { readonly etag: string } =>
   head.contentLength > 0 &&
   head.contentLength <= MAX_VIDEO_SIZE_BYTES &&
   head.contentType === expectedContentType &&

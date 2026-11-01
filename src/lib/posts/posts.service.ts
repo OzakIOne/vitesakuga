@@ -53,6 +53,7 @@ import {
   LifecycleServiceLive,
   type LifecycleError,
   type ObjectFenceInput,
+  type StagedVideo,
 } from "../lifecycle/lifecycle.service";
 import {
   computePagination,
@@ -64,12 +65,9 @@ import { imageContentType, videoContentType } from "../storage/content-type";
 import {
   imageObjectKey,
   pendingVideoObjectKey,
-  pendingVideoPrefix,
   thumbnailObjectKey,
-  videoObjectKey,
 } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
-import { isUploadedVideoValid } from "../storage/upload-policy";
 import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
 import { mergeVoteCounts } from "../votes/votes.utils";
 import {
@@ -79,7 +77,6 @@ import {
 import {
   createVideoUploadUrlSchema,
   FormFileUploadSchema,
-  MAX_VIDEO_SIZE_BYTES,
   postByTagSchema,
   RESERVED_TAG_NAMES,
   randomPostSchema,
@@ -831,61 +828,15 @@ export class PostsService extends Context.Service<
         }),
       );
 
-      let finalVideoKey: string | null = null;
-      let videoObserved: {
-        contentLength: number;
-        contentType: string;
-        fingerprint: string;
-        etag: string;
-        sourceKey: string;
-      } | null = null;
-
-      // Only keys from the caller's own deterministic staging namespace are
-      // acceptable. The final object identity is derived from operationId.
+      let stagedVideo: StagedVideo | null = null;
       if (videoKey !== undefined) {
-        if (!videoKey.startsWith(pendingVideoPrefix(userId))) {
-          return yield* Effect.fail(
-            new ValidationError({ message: "Invalid video upload key" }),
-          );
-        }
-
-        const ext = videoKey.split(".").pop() ?? "";
-        const expectedContentType = videoContentType(ext);
-        const head = yield* storage.headFile(videoKey).pipe(
-          Effect.mapError(
-            (error) =>
-              new ValidationError({
-                cause: error,
-                message: `Video upload could not be verified: ${error.message}`,
-              }),
-          ),
-        );
-
-        if (!isUploadedVideoValid(head, expectedContentType)) {
-          yield* storage.deleteFile(videoKey).pipe(Effect.ignore);
-          return yield* Effect.fail(
-            new ValidationError({
-              message: `Video upload is invalid: expected ${expectedContentType}, at most ${MAX_VIDEO_SIZE_BYTES / (1024 * 1024)} MB`,
-            }),
-          );
-        }
-
-        const stagingEtag = head.etag;
-        if (stagingEtag === null) {
-          return yield* Effect.fail(
-            new ValidationError({ message: "Video upload has no stable ETag" }),
-          );
-        }
-        const extension = videoKey.split(".").pop() ?? "mp4";
-        finalVideoKey = videoObjectKey(claim.operationId, extension);
-        videoObserved = {
-          contentLength: head.contentLength,
-          contentType: head.contentType,
-          fingerprint: `etag:${stagingEtag}`,
-          etag: stagingEtag,
-          sourceKey: videoKey,
-        };
+        stagedVideo = yield* lifecycle.verifyStagedVideo({
+          operationId: claim.operationId,
+          pendingKey: videoKey,
+          userId,
+        });
       }
+      const finalVideoKey = stagedVideo?.finalKey ?? null;
 
       const uploadedObjects: ObjectFenceInput[] = [];
 
@@ -893,17 +844,17 @@ export class PostsService extends Context.Service<
         let thumbnailKey: string;
         const imageKeys: string[] = [];
 
-        if (finalVideoKey !== null && videoObserved !== null) {
+        if (stagedVideo !== null) {
           const copied = yield* lifecycle.copyVideoForPost({
-            contentLength: videoObserved.contentLength,
-            contentType: videoObserved.contentType,
+            contentLength: stagedVideo.contentLength,
+            contentType: stagedVideo.contentType,
             fence: claimFence,
-            fingerprint: videoObserved.fingerprint,
-            key: finalVideoKey,
+            fingerprint: stagedVideo.fingerprint,
+            key: stagedVideo.finalKey,
             kind: "video",
             operationId: claim.operationId,
-            sourceEtag: videoObserved.etag,
-            sourceKey: videoObserved.sourceKey,
+            sourceEtag: stagedVideo.etag,
+            sourceKey: stagedVideo.sourceKey,
             userId,
           });
           uploadedObjects.push({
@@ -1071,6 +1022,10 @@ export class PostsService extends Context.Service<
         ).pipe(Effect.ignore);
 
         return yield* Effect.failCause(outcome.cause);
+      }
+
+      if (stagedVideo !== null) {
+        yield* lifecycle.discardStagedVideo(stagedVideo.sourceKey);
       }
 
       return yield* Effect.try({

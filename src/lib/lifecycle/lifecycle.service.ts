@@ -16,11 +16,17 @@ import type {
   MediaOperationResult,
   MediaOperationStatus,
 } from "../db/schema/sakuga.schema";
+import { ValidationError } from "../errors";
 import {
   isDeterministicMediaKey,
   type DeterministicMediaKind,
 } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
+import {
+  discardStagedVideo as discardStagedVideoObject,
+  verifyStagedVideo as verifyStagedVideoObject,
+  type StagedVideo,
+} from "./staged-video";
 
 export type ClaimOperationInput = {
   readonly kind: MediaOperationKind;
@@ -111,6 +117,12 @@ export type ReplaceVideoInput = CopyVideoInput & {
   readonly postId: number;
   readonly replacedBy: string;
   readonly videoMetadata: string;
+};
+
+export type VerifyStagedVideoInput = {
+  readonly operationId: string;
+  readonly pendingKey: string;
+  readonly userId: string;
 };
 
 export type DeleteObjectResult = {
@@ -1251,6 +1263,65 @@ const compareAndIncrementPostVersionInTransaction = (
 ): Effect.Effect<PostVersionResult, LifecycleError> =>
   postVersionUpdateInTransaction(trx, { ...input, changes: {} });
 
+export type SwapPostVideoInput = {
+  readonly expectedVersion: number;
+  readonly finish: FinishOperationInput;
+  readonly nextVideoKey: string;
+  readonly postId: number;
+  readonly previousVideo: {
+    readonly videoKey: string;
+    readonly videoMetadata: string;
+  } | null;
+  readonly replacedBy: string;
+};
+
+/**
+ * Archives the post's current video (when it has one), points the post at the
+ * next video under an optimistic version check, and completes the operation.
+ * Callers run it in their single short transaction, after the next object is
+ * durably ready.
+ */
+const swapPostVideoInTransaction = (
+  trx: LifecycleTransaction,
+  input: SwapPostVideoInput,
+  now: Date,
+): Effect.Effect<FinishOperationResult, LifecycleError> =>
+  Effect.gen(function* () {
+    if (input.previousVideo !== null) {
+      yield* trx.executeTakeFirstOrError(
+        trx
+          .insertInto("video_revisions")
+          .values({
+            postId: input.postId,
+            replacedBy: input.replacedBy,
+            videoKey: input.previousVideo.videoKey,
+            videoMetadata: input.previousVideo.videoMetadata,
+          })
+          .returning("id"),
+      );
+    }
+    const updated = yield* trx.executeTakeFirstOption(
+      trx
+        .updateTable("posts")
+        .set({
+          videoKey: input.nextVideoKey,
+          version: sql<number>`"version" + 1`,
+        })
+        .where("id", "=", input.postId)
+        .where("version", "=", input.expectedVersion)
+        .returning("id"),
+    );
+    if (Option.isNone(updated)) {
+      return yield* new PostVersionConflictError({
+        actualVersion: input.expectedVersion + 1,
+        expectedVersion: input.expectedVersion,
+        message: `Post ${input.postId} changed while its video was being replaced or restored`,
+        postId: input.postId,
+      });
+    }
+    return yield* finishInTransaction(trx, input.finish, now);
+  });
+
 export class LifecycleService extends Context.Service<
   LifecycleService,
   {
@@ -1275,6 +1346,7 @@ export class LifecycleService extends Context.Service<
     readonly deleteObject: (
       input: ObjectFenceInput,
     ) => Effect.Effect<DeleteObjectResult, LifecycleError>;
+    readonly discardStagedVideo: (sourceKey: string) => Effect.Effect<void>;
     readonly failOperation: (
       input: FailOperationInput,
     ) => Effect.Effect<FailOperationResult, LifecycleError>;
@@ -1302,6 +1374,9 @@ export class LifecycleService extends Context.Service<
     readonly updatePostWithVersion: (
       input: UpdatePostWithVersionInput,
     ) => Effect.Effect<PostVersionResult, LifecycleError>;
+    readonly verifyStagedVideo: (
+      input: VerifyStagedVideoInput,
+    ) => Effect.Effect<StagedVideo, ValidationError>;
   }
 >()("LifecycleService", {
   make: Effect.gen(function* () {
@@ -1488,46 +1563,26 @@ export class LifecycleService extends Context.Service<
             },
             now,
           );
-          yield* trx.executeTakeFirstOrError(
-            trx
-              .insertInto("video_revisions")
-              .values({
-                postId: input.postId,
-                replacedBy: input.replacedBy,
-                videoKey: input.oldVideoKey,
-                videoMetadata: input.videoMetadata,
-              })
-              .returning("id"),
-          );
-          const updated = yield* trx.executeTakeFirstOption(
-            trx
-              .updateTable("posts")
-              .set({
-                videoKey: input.key,
-                version: sql<number>`"version" + 1`,
-              })
-              .where("id", "=", input.postId)
-              .where("version", "=", input.expectedVersion)
-              .returning("id"),
-          );
-          if (Option.isNone(updated)) {
-            return yield* new PostVersionConflictError({
-              actualVersion: input.expectedVersion + 1,
-              expectedVersion: input.expectedVersion,
-              message: `Post ${input.postId} changed while its video was being replaced`,
-              postId: input.postId,
-            });
-          }
-          yield* finishInTransaction(
+          yield* swapPostVideoInTransaction(
             trx,
             {
-              fence: input.fence,
-              operationId: input.operationId,
-              result: {
-                postId: input.postId,
-                state: "completed",
-                videoKey: input.key,
+              expectedVersion: input.expectedVersion,
+              finish: {
+                fence: input.fence,
+                operationId: input.operationId,
+                result: {
+                  postId: input.postId,
+                  state: "completed",
+                  videoKey: input.key,
+                },
               },
+              nextVideoKey: input.key,
+              postId: input.postId,
+              previousVideo: {
+                videoKey: input.oldVideoKey,
+                videoMetadata: input.videoMetadata,
+              },
+              replacedBy: input.replacedBy,
             },
             now,
           );
@@ -1669,6 +1724,18 @@ export class LifecycleService extends Context.Service<
       } satisfies ReconcileResult;
     });
 
+    const verifyStagedVideo = Effect.fn("LifecycleService.verifyStagedVideo")(
+      function* (input: VerifyStagedVideoInput) {
+        return yield* verifyStagedVideoObject({ ...input, storage });
+      },
+    );
+
+    const discardStagedVideo = Effect.fn("LifecycleService.discardStagedVideo")(
+      function* (sourceKey: string) {
+        yield* discardStagedVideoObject({ sourceKey, storage });
+      },
+    );
+
     return {
       adoptObject,
       beginDelete,
@@ -1677,6 +1744,7 @@ export class LifecycleService extends Context.Service<
       completeDelete,
       copyVideoForPost,
       deleteObject,
+      discardStagedVideo,
       failOperation,
       finishOperation,
       markPreparing,
@@ -1686,6 +1754,7 @@ export class LifecycleService extends Context.Service<
       replaceVideo,
       storeObject,
       updatePostWithVersion,
+      verifyStagedVideo,
     };
   }),
 }) {
@@ -1736,6 +1805,13 @@ export class LifecycleService extends Context.Service<
   )(function* (input: CompareAndIncrementPostVersionInput) {
     const lifecycle = yield* LifecycleService;
     return yield* lifecycle.compareAndIncrementPostVersion(input);
+  });
+
+  static readonly discardStagedVideo = Effect.fn(
+    "LifecycleService.discardStagedVideo",
+  )(function* (sourceKey: string) {
+    const lifecycle = yield* LifecycleService;
+    return yield* lifecycle.discardStagedVideo(sourceKey);
   });
 
   static readonly failOperation = Effect.fn("LifecycleService.failOperation")(
@@ -1794,6 +1870,13 @@ export class LifecycleService extends Context.Service<
     },
   );
 
+  static readonly verifyStagedVideo = Effect.fn(
+    "LifecycleService.verifyStagedVideo",
+  )(function* (input: VerifyStagedVideoInput) {
+    const lifecycle = yield* LifecycleService;
+    return yield* lifecycle.verifyStagedVideo(input);
+  });
+
   static readonly updatePostWithVersion = Effect.fn(
     "LifecycleService.updatePostWithVersion",
   )(function* (input: UpdatePostWithVersionInput) {
@@ -1822,6 +1905,7 @@ export {
   markPreparingInTransaction,
   markReadyInTransaction,
   postVersionUpdateInTransaction as updatePostWithVersionInTransaction,
+  swapPostVideoInTransaction,
 };
 
-export type { DeterministicMediaKind };
+export type { DeterministicMediaKind, StagedVideo };
