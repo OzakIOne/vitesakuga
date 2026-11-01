@@ -10,7 +10,7 @@ No — browsing, searching, and watching are public. An account adds voting, com
 
 ## Why can’t I upload?
 
-New accounts start as **novices** and can’t upload yet. Moderators promote eligible novices through the queue in the admin area, based on everyday useful activity. See [Roles and points](/wiki/roles-and-points).
+New accounts start as **novices** and can upload right away, but they can’t suggest edits to other people’s posts until a moderator promotes them to uploader. Moderators promote eligible novices through the queue in the admin area, based on everyday useful activity. See [Roles and points](/wiki/roles-and-points).
 
 ## How do I search precisely?
 

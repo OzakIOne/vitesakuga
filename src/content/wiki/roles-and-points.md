@@ -2,16 +2,16 @@ ViteSakuga uses a role ladder to keep the archive safe without slowing contribut
 
 ## Roles
 
-Roles progress from `novice → uploader → moderator → admin`. Permissions — not role labels — drive every authorization check, so what each role can do is explicit in code.
+Roles progress from `novice → uploader → moderator → admin`. Each role grants a fixed set of permissions in `src/lib/auth/policy.ts`, and most checks test those permissions. A few decisions still compare the rank itself: staff access (moderator and above), storage cleanup and role assignment (admin only), and the ownership override for staff. Those comparisons follow the same order as the ladder.
 
-- **Novice** — newly registered accounts. They can browse, vote, comment, and build playlists, but cannot upload yet.
-- **Uploader** — novices promoted after review. They can upload posts and take part in the wiki-edit workflow.
-- **Moderator** — handles reports, edit suggestions, and storage cleanup from `/admin`.
-- **Admin** — additionally manages roles manually.
+- **Novice** — newly registered accounts. They can browse, vote, comment, build playlists, and upload their own posts. They cannot suggest edits to other people's posts yet.
+- **Uploader** — novices promoted after review. They can also suggest edits to other people's posts and take part in the wiki-edit workflow.
+- **Moderator** — reviews reports, edit suggestions, and promotion candidates from `/admin`.
+- **Admin** — everything a moderator can do, plus storage cleanup (preview and purge) and manual role assignment from `/admin`. Role changes and account deletion cannot leave the site without an active admin: the last active admin cannot be demoted or delete their account until another admin exists.
 
 ## How promotion works
 
-Eligible novices appear in the promotion queue that moderators review in `/admin`. Promotions draw on the points system, so everyday useful activity — voting, commenting, uploading — is what moves an account forward.
+A novice is eligible once they have at least 300 points, an account at least 7 days old, and no deleted account. Eligible novices appear in the promotion queue that moderators review in `/admin`. Approval checks these rules again, so a candidate who was rejected after the queue loaded cannot be promoted. A rejected candidate returns to the queue only after earning more points than they had when they were rejected. Promotions draw on the points system, so everyday useful activity — voting, commenting, uploading — is what moves an account forward.
 
 ## Points
 

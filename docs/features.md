@@ -74,7 +74,7 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 
 ## Upload & création de contenu
 
-### Upload de post (`/upload`, authentification requise)
+### Upload de post (`/upload`, authentification requise, tout rang y compris novice)
 
 - Deux types de post : **vidéo** (mp4/avi/mov/wmv/flv/mkv, max 200 MiB) ou **image** (jpg/jpeg/png/webp, max 10 MiB par fichier, jusqu'à 10 images par post). Les images forment une galerie réordonnable sur la page de détail, la première image servant de thumbnail.
 - Changer le type de post conserve les fichiers déjà sélectionnés pour chaque type. Les aperçus image sont libérés au retrait des fichiers ou à la fermeture de la page.
@@ -135,19 +135,19 @@ Better Auth est monté sur `/api/auth/*` (`src/lib/auth/index.ts`, `src/routes/a
 - **Codes email** via Better Auth Email OTP, avec stockage haché, expiration de 10 minutes et cinq tentatives maximum. L’envoi utilise Resend ; `RESEND_API_KEY` et `EMAIL_FROM` doivent être provisionnés avant l’activation sur un déploiement.
 - **Rate limiting** en base Better Auth, avec règles renforcées sur les endpoints d'authentification.
 - **Compte** (`/account`) : profil, pseudo, changement de mot de passe et suppression avec anonymisation ; le contenu public reste attribué à « Deleted user ». Écran : `src/features/account/account-page.tsx`.
-- **Rôles et permissions** : `novice → uploader → moderator → admin`, appliqués par les policies Effect — `src/lib/auth/roles.ts`, `src/lib/auth/policy.ts`, `src/lib/auth/ownership.ts`.
+- **Rôles et permissions** : `novice → uploader → moderator → admin`. Chaque rôle accorde un ensemble fixe de permissions (`src/lib/auth/policy.ts`) que la plupart des contrôles vérifient ; le staff, la purge de stockage, l'attribution des rôles et la dérogation d'ownership comparent encore le rang (`roleAtLeast`, `src/lib/auth/roles.ts`, `src/lib/auth/ownership.ts`). Un novice peut uploader ses propres posts ; proposer une modification sur le post d'un autre demande le rang uploader. Le dernier admin actif ne peut être ni rétrogradé ni supprimer son compte (`src/lib/auth/admin-continuity.ts`).
 
 ## Espace admin / staff
 
 `/admin` est réservé aux rôles moderator+ (`src/routes/admin.tsx`). Onglets disponibles :
 
-| Onglet           | Rôle                                                                                                      | Fichiers                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Promotions**   | File de novices éligibles ; approuver ou rejeter, avec confirmation du rejet                              | `src/routes/admin.promotions.tsx`, `src/components/admin/PromotionQueuePanel.tsx`, `src/lib/promotions/*` |
-| **Reports**      | File des signalements récents                                                                             | `src/routes/admin.reports.tsx`, `src/components/admin/ReportsPanel.tsx`, `src/lib/moderation/*`           |
-| **Suggestions**  | Suggestions d'édition en attente, décision staff et confirmation avant rejet                              | `src/routes/admin.suggestions.tsx`, `src/components/admin/SuggestionsPanel.tsx`, `src/lib/post-edits/*`   |
-| **Storage (GC)** | Prévisualisation puis purge confirmée des révisions expirées et objets orphelins, avec comptage explicite | `src/routes/admin.storage.tsx`, `src/components/admin/StorageGcPanel.tsx`, `src/lib/videos/*`             |
-| **Roles**        | Attribution manuelle des rôles                                                                            | `src/routes/admin.roles.tsx`, `src/components/admin/RolesPanel.tsx`, `src/lib/moderation/*`               |
+| Onglet           | Rôle                                                                                                                                                                                              | Fichiers                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Promotions**   | File de novices éligibles (au moins 300 points, compte d'au moins 7 jours, non supprimé) ; approuver ou rejeter, avec confirmation du rejet. L'approbation revérifie ces règles                   | `src/routes/admin.promotions.tsx`, `src/components/admin/PromotionQueuePanel.tsx`, `src/lib/promotions/*` |
+| **Reports**      | File des signalements récents                                                                                                                                                                     | `src/routes/admin.reports.tsx`, `src/components/admin/ReportsPanel.tsx`, `src/lib/moderation/*`           |
+| **Suggestions**  | Suggestions d'édition en attente, décision staff et confirmation avant rejet                                                                                                                      | `src/routes/admin.suggestions.tsx`, `src/components/admin/SuggestionsPanel.tsx`, `src/lib/post-edits/*`   |
+| **Storage (GC)** | Prévisualisation puis purge confirmée des révisions expirées et objets orphelins, avec comptage explicite ; admin uniquement (le serveur refuse la prévisualisation et la purge aux autres rôles) | `src/routes/admin.storage.tsx`, `src/components/admin/StorageGcPanel.tsx`, `src/lib/videos/*`             |
+| **Roles**        | Attribution manuelle des rôles (admin uniquement ; le dernier admin actif ne peut pas être rétrogradé)                                                                                            | `src/routes/admin.roles.tsx`, `src/components/admin/RolesPanel.tsx`, `src/lib/moderation/*`               |
 
 ## API (server functions)
 
