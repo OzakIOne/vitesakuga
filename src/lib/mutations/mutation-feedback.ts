@@ -26,6 +26,15 @@ const actionForTag = (
   tag: string | undefined,
   retry: (() => void) | undefined,
 ): { label: string; onClick: () => void } | undefined => {
+  // A stale version never succeeds on retry; reloading loads the newer post.
+  if (tag === "PostVersionConflictError") {
+    return {
+      label: "Reload",
+      onClick: () => {
+        window.location.reload();
+      },
+    };
+  }
   if (retry) {
     return { label: "Retry", onClick: retry };
   }

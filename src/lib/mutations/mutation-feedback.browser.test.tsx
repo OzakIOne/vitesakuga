@@ -88,6 +88,22 @@ describe(toastError, () => {
     );
   });
 
+  it("offers a reload action for post version conflicts", async () => {
+    const conflict = Object.assign(
+      new Error("Post 7 changed while it was being edited"),
+      { _tag: "PostVersionConflictError" },
+    );
+    toastError("Title", conflict, "fallback", vi.fn());
+
+    const { toaster } = await import("src/components/ui/toaster");
+    expect(toaster.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: { label: "Reload", onClick: expect.any(Function) },
+        description: "Post 7 changed while it was being edited",
+      }),
+    );
+  });
+
   it("keeps no action for untagged errors", async () => {
     toastError("Title", new Error("nope"), "fallback");
 

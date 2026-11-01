@@ -10,6 +10,11 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "./errors";
+import {
+  ObjectProtectedError,
+  OperationConflictError,
+  PostVersionConflictError,
+} from "./lifecycle/lifecycle.service";
 import { createHandler } from "./server-fn.handler";
 
 // The boundary is exercised as a pure function: `createHandler` with empty
@@ -77,6 +82,35 @@ describe("server-fn failure boundary", () => {
     ).rejects.toMatchObject({ _tag: "UnauthorizedError" });
   });
 
+  it("passes concurrent-edit conflicts through with tag and message", async () => {
+    const versionConflict = new PostVersionConflictError({
+      actualVersion: 4,
+      expectedVersion: 3,
+      message: "Post 7 changed while it was being edited",
+      postId: 7,
+    });
+    await expect(
+      makeHandler(Effect.fail(versionConflict))({ data: "x" }),
+    ).rejects.toMatchObject({
+      _tag: "PostVersionConflictError",
+      message: "Post 7 changed while it was being edited",
+    });
+
+    await expect(
+      makeHandler(
+        Effect.fail(
+          new OperationConflictError({
+            message: "Operation key is already bound to another request",
+            operationKey: "key-1",
+          }),
+        ),
+      )({ data: "x" }),
+    ).rejects.toMatchObject({
+      _tag: "OperationConflictError",
+      message: "Operation key is already bound to another request",
+    });
+  });
+
   it("strips ValidationError of its cause but keeps the user-facing message", async () => {
     const internalCause = {
       issues: ["decode internals"],
@@ -126,6 +160,14 @@ describe("server-fn failure boundary", () => {
         new SessionFetchError({
           cause: "network down",
           message: "fetch failed",
+        }),
+    ],
+    [
+      "ObjectProtectedError",
+      () =>
+        new ObjectProtectedError({
+          key: "media/raw/secret-key.mp4",
+          message: "Object is protected",
         }),
     ],
     ["plain Error", () => new Error("boom: internal detail")],
