@@ -38,7 +38,8 @@ import {
   type StagedVideo,
 } from "../lifecycle/lifecycle.service";
 import type { PaginationMeta } from "../pagination/pagination";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import { imageContentType, videoContentType } from "../storage/content-type";
 import {
   imageObjectKey,
@@ -220,10 +221,10 @@ export class PostsService extends Context.Service<
       data: Schema.Schema.Type<typeof seriesHubSchema>,
     ) => Effect.Effect<SeriesHubResult, SqlError | RowParseError>;
     readonly fetchDetail: (
-      postId: PostId,
+      postId: number,
     ) => Effect.Effect<PostDetailResult, SqlError | PostNotFoundError>;
     readonly fetchDetailVersion: (
-      postId: PostId,
+      postId: number,
     ) => Effect.Effect<number, SqlError | PostNotFoundError>;
     readonly upload: (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
@@ -404,8 +405,9 @@ export class PostsService extends Context.Service<
     });
 
     const fetchDetail = Effect.fn("PostsService.fetchDetail")(function* (
-      postId: PostId,
+      rawPostId: number,
     ) {
+      const postId = asPostId(rawPostId);
       const postOption = yield* db.executeTakeFirstOption(
         db
           .selectFrom("posts")
@@ -845,7 +847,8 @@ export class PostsService extends Context.Service<
     });
 
     const fetchDetailVersion = Effect.fn("PostsService.fetchDetailVersion")(
-      function* (postId: PostId) {
+      function* (rawPostId: number) {
+        const postId = asPostId(rawPostId);
         const row = yield* db.executeTakeFirstOption(
           db
             .selectFrom("posts")
@@ -1021,70 +1024,7 @@ export class PostsService extends Context.Service<
       update,
     };
   }),
-}) {
-  static readonly search = Effect.fn("PostsService.search")(function* (
-    data: SearchPostsRequest,
-  ) {
-    const svc = yield* PostsService;
-    return yield* svc.search(data);
-  });
-
-  static readonly fetchRandomPost = Effect.fn("PostsService.fetchRandomPost")(
-    function* (data: Schema.Schema.Type<typeof randomPostSchema>) {
-      const svc = yield* PostsService;
-      return yield* svc.fetchRandomPost(data);
-    },
-  );
-
-  static readonly fetchDetail = Effect.fn("PostsService.fetchDetail")(
-    function* (postId: PostId) {
-      const svc = yield* PostsService;
-      return yield* svc.fetchDetail(postId);
-    },
-  );
-
-  static readonly fetchDetailVersion = Effect.fn(
-    "PostsService.fetchDetailVersion",
-  )(function* (postId: PostId) {
-    const svc = yield* PostsService;
-    return yield* svc.fetchDetailVersion(postId);
-  });
-
-  static readonly fetchSeriesHub = Effect.fn("PostsService.fetchSeriesHub")(
-    function* (data: Schema.Schema.Type<typeof seriesHubSchema>) {
-      const svc = yield* PostsService;
-      return yield* svc.fetchSeriesHub(data);
-    },
-  );
-
-  static readonly upload = Effect.fn("PostsService.upload")(function* (
-    data: Schema.Schema.Type<typeof FormFileUploadSchema>,
-  ) {
-    const svc = yield* PostsService;
-    return yield* svc.upload(data);
-  });
-
-  static readonly createVideoUploadUrl = Effect.fn(
-    "PostsService.createVideoUploadUrl",
-  )(function* (data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>) {
-    const svc = yield* PostsService;
-    return yield* svc.createVideoUploadUrl(data);
-  });
-
-  static readonly getByTag = Effect.fn("PostsService.getByTag")(function* (
-    data: Schema.Schema.Type<typeof postByTagSchema>,
-  ) {
-    const svc = yield* PostsService;
-    return yield* svc.getByTag(data);
-  });
-
-  static readonly update = Effect.fn("PostsService.update")(function* (
-    data: Schema.Schema.Type<typeof updatePostInputSchema>,
-  ) {
-    const svc = yield* PostsService;
-    return yield* svc.update(data);
-  });
-}
+}) {}
 
 const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
   db: Pick<
@@ -1156,49 +1096,60 @@ export const PostsServiceLive = Layer.effect(
 export const searchPosts = createServerFn({ strict: { output: false } })
   .validator(parseStrict(searchPostsRequestSchema))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.auth,
-    )(PostsService.search),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "search",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const fetchRandomPostId = createServerFn({ strict: { output: false } })
   .validator(parseStrict(randomPostSchema))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.db,
-    )(PostsService.fetchRandomPost),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "fetchRandomPost",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const fetchSeriesHub = createServerFn({ strict: { output: false } })
   .validator(parseStrict(seriesHubSchema))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.db,
-    )(PostsService.fetchSeriesHub),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "fetchSeriesHub",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const fetchPostDetailVersion = createServerFn({
   strict: { output: false },
 })
+  // Scalar payloads stay unbranded on the wire (see fetchComments pattern);
+  // the service brands the id on entry.
   .validator(parse(Schema.Number))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.db,
-    )((postId: number) => PostsService.fetchDetailVersion(asPostId(postId))),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "fetchDetailVersion",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const fetchPostDetail = createServerFn({ strict: { output: false } })
-  // Scalar payloads stay unbranded on the wire (see fetchComments pattern).
   .validator(parse(Schema.Number))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.db,
-    )((postId: number) => PostsService.fetchDetail(asPostId(postId))),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "fetchDetail",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const uploadPost = createServerFn({ method: "POST" })
@@ -1223,9 +1174,6 @@ export const uploadPost = createServerFn({ method: "POST" })
     const imageFiles = data
       .getAll("images")
       .filter((entry): entry is File => entry instanceof File);
-    // SAFETY: the object deliberately mixes arbitrary FormData keys (validated
-    // away by the strict schema) with the known fields; the inferred value
-    // type is a string-keyed map whose values are validated downstream.
     // SAFETY: the object deliberately mixes arbitrary FormData keys (validated
     // away by the strict schema) with the known fields; the inferred value
     // type is a string-keyed map whose values are validated downstream.
@@ -1254,26 +1202,32 @@ export const uploadPost = createServerFn({ method: "POST" })
     return parsed;
   })
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.auth,
-    )(PostsService.upload),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "upload",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const createVideoUploadUrl = createServerFn({ method: "POST" })
   .validator(parseStrict(createVideoUploadUrlSchema))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.auth,
-    )(PostsService.createVideoUploadUrl),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "createVideoUploadUrl",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const updatePost = createServerFn({ method: "POST" })
   .validator(parseStrict(updatePostInputSchema))
   .handler(
-    createHandler(
-      PostsServiceLive,
-      baseLayerFactories.auth,
-    )(PostsService.update),
+    createEndpointHandler({
+      service: PostsService,
+      operation: "update",
+      layer: PostsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

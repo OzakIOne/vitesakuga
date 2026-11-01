@@ -144,19 +144,21 @@ const linkImageWidth = async (postId: number, width: number) => {
     .execute();
 };
 
-type SearchPostsParams = Parameters<typeof PostsService.search>[0]["params"];
+type SearchPostsParams = Parameters<PostsService["Service"]["search"]>[0]["params"];
 type SearchPostsInput = Omit<SearchPostsParams, "randomSeed" | "view"> &
   Partial<Pick<SearchPostsParams, "randomSeed" | "view">>;
 
 const searchPosts = (params: SearchPostsInput) =>
-  PostsService.search({
-    includePopularTags: true,
-    params: {
-      ...params,
-      randomSeed: params.randomSeed ?? 0,
-      view: params.view ?? "chronological",
-    },
-  });
+  Effect.flatMap(PostsService, (service) =>
+    service.search({
+      includePopularTags: true,
+      params: {
+        ...params,
+        randomSeed: params.randomSeed ?? 0,
+        view: params.view ?? "chronological",
+      },
+    }),
+  );
 
 describe("PostsService.search", () => {
   it("returns empty results when no posts exist", async () => {
@@ -665,7 +667,9 @@ describe("PostsService.search", () => {
     });
 
     const result = await runEffect(
-      PostsService.fetchRandomPost({ randomSeed: 42 }),
+      Effect.flatMap(PostsService, (service) =>
+        service.fetchRandomPost({ randomSeed: 42 }),
+      ),
     );
 
     expect(result).toBe(imagePostId);
@@ -897,18 +901,20 @@ describe("PostsService.search", () => {
       .execute();
 
     const chronologicalNotRequested = await runEffect(
-      PostsService.search({
-        includePopularTags: false,
-        params: {
-          dateRange: "all",
-          page: 0,
-          q: "",
-          randomSeed: 0,
-          sortBy: "newest",
-          tags: [],
-          view: "chronological",
-        },
-      }),
+      Effect.flatMap(PostsService, (service) =>
+        service.search({
+          includePopularTags: false,
+          params: {
+            dateRange: "all",
+            page: 0,
+            q: "",
+            randomSeed: 0,
+            sortBy: "newest",
+            tags: [],
+            view: "chronological",
+          },
+        }),
+      ),
     );
     const mostLiked = await runEffect(
       searchPosts({
@@ -984,7 +990,9 @@ describe("PostsService.fetchDetail", () => {
       source: "https://example.com",
     });
 
-    const result = await runEffect(PostsService.fetchDetail(postId));
+    const result = await runEffect(
+      Effect.flatMap(PostsService, (service) => service.fetchDetail(postId)),
+    );
 
     expect(result.post.title).toBe("Detail Post");
     expect(result.post.description).toBe("<p>Rich description</p>");
@@ -1001,7 +1009,9 @@ describe("PostsService.fetchDetail", () => {
     const tagId = await insertTag("sakuga");
     await linkTags(postId, [tagId]);
 
-    const result = await runEffect(PostsService.fetchDetail(postId));
+    const result = await runEffect(
+      Effect.flatMap(PostsService, (service) => service.fetchDetail(postId)),
+    );
 
     expect(result.tags).toHaveLength(1);
     expect(result.tags[0]!.name).toBe("sakuga");
@@ -1009,7 +1019,11 @@ describe("PostsService.fetchDetail", () => {
 
   it("fails with PostNotFoundError when post is not found", async () => {
     const error = await runEffect(
-      Effect.flip(PostsService.fetchDetail(asPostId(999))),
+      Effect.flip(
+        Effect.flatMap(PostsService, (service) =>
+          service.fetchDetail(asPostId(999)),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("PostNotFoundError");
@@ -1048,7 +1062,9 @@ describe("PostsService.fetchSeriesHub", () => {
     await insertPost({ animeTitle: "Other series", title: "Ignored" });
 
     const result = await runEffect(
-      PostsService.fetchSeriesHub({ seriesTitle: "MOB PSYCHO 100" }),
+      Effect.flatMap(PostsService, (service) =>
+        service.fetchSeriesHub({ seriesTitle: "MOB PSYCHO 100" }),
+      ),
     );
 
     expect(result.title).toBe("Mob Psycho 100");
@@ -1074,7 +1090,9 @@ describe("PostsService.getByTag", () => {
     await linkTags(postId1, [tagId]);
 
     const result = await runEffect(
-      PostsService.getByTag({ tag: "anime", page: 0 }),
+      Effect.flatMap(PostsService, (service) =>
+        service.getByTag({ tag: "anime", page: 0 }),
+      ),
     );
 
     expect(result.data).toHaveLength(1);
@@ -1087,7 +1105,9 @@ describe("PostsService.getByTag", () => {
     await insertPost({ title: "Some Post" });
 
     const result = await runEffect(
-      PostsService.getByTag({ tag: "empty-tag", page: 0 }),
+      Effect.flatMap(PostsService, (service) =>
+        service.getByTag({ tag: "empty-tag", page: 0 }),
+      ),
     );
 
     expect(result.data).toHaveLength(0);
@@ -1110,10 +1130,14 @@ describe("PostsService.getByTag", () => {
     ];
 
     const firstPage = await runEffect(
-      PostsService.getByTag({ tag: "anime", page: 0 }),
+      Effect.flatMap(PostsService, (service) =>
+        service.getByTag({ tag: "anime", page: 0 }),
+      ),
     );
     const secondPage = await runEffect(
-      PostsService.getByTag({ tag: "anime", page: 1 }),
+      Effect.flatMap(PostsService, (service) =>
+        service.getByTag({ tag: "anime", page: 1 }),
+      ),
     );
 
     expect(firstPage.data).toHaveLength(30);
@@ -1147,7 +1171,9 @@ describe("PostsService.getByTag", () => {
     await linkTags(otherPost, [otherTag, actionTag]);
 
     const result = await runEffect(
-      PostsService.getByTag({ tag: "anime", page: 0 }),
+      Effect.flatMap(PostsService, (service) =>
+        service.getByTag({ tag: "anime", page: 0 }),
+      ),
     );
 
     expect(
@@ -1201,7 +1227,11 @@ describe("PostsService.upload", () => {
     // UnauthorizedError messages reach clients verbatim, so the exact copy
     // is part of the contract.
     const error = await runEffect(
-      Effect.flip(PostsService.upload(makeUploadInput("videos/user-1/a.mp4"))),
+      Effect.flip(
+        Effect.flatMap(PostsService, (service) =>
+          service.upload(makeUploadInput("videos/user-1/a.mp4")),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");
@@ -1213,7 +1243,9 @@ describe("PostsService.upload", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const post = await runEffect(
-      PostsService.upload(makeUploadInput(pendingKey)),
+      Effect.flatMap(PostsService, (service) =>
+        service.upload(makeUploadInput(pendingKey)),
+      ),
     );
 
     expect(post.id).toBeGreaterThan(0);
@@ -1228,7 +1260,9 @@ describe("PostsService.upload", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const post = await runEffect(
-      PostsService.upload(makeUploadInput(pendingKey)),
+      Effect.flatMap(PostsService, (service) =>
+        service.upload(makeUploadInput(pendingKey)),
+      ),
     );
 
     const ledger = await db
@@ -1247,10 +1281,12 @@ describe("PostsService.upload", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.upload({
-          ...makeUploadInput("videos/_pending/user-1/not-used.mp4"),
-          relatedPostId: asPostId(9999),
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.upload({
+            ...makeUploadInput("videos/_pending/user-1/not-used.mp4"),
+            relatedPostId: asPostId(9999),
+          }),
+        ),
       ),
     );
 
@@ -1263,7 +1299,9 @@ describe("PostsService.upload", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.upload(makeUploadInput("videos/other-user/abc.mp4")),
+        Effect.flatMap(PostsService, (service) =>
+          service.upload(makeUploadInput("videos/other-user/abc.mp4")),
+        ),
       ),
     );
 
@@ -1275,7 +1313,11 @@ describe("PostsService.upload", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const error = await runEffect(
-      Effect.flip(PostsService.upload(makeUploadInput("videos/user-1/a.mp4"))),
+      Effect.flip(
+        Effect.flatMap(PostsService, (service) =>
+          service.upload(makeUploadInput("videos/user-1/a.mp4")),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("ValidationError");
@@ -1287,8 +1329,10 @@ describe("PostsService.upload", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.upload(
-          makeUploadInput("videos/_pending/user-1/never-uploaded.mp4"),
+        Effect.flatMap(PostsService, (service) =>
+          service.upload(
+            makeUploadInput("videos/_pending/user-1/never-uploaded.mp4"),
+          ),
         ),
       ),
     );
@@ -1303,10 +1347,12 @@ describe("PostsService.upload", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.upload({
-          ...makeUploadInput(pendingKey),
-          tags: [{ id: 999999, name: "missing" }],
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.upload({
+            ...makeUploadInput(pendingKey),
+            tags: [{ id: 999999, name: "missing" }],
+          }),
+        ),
       ),
     );
 
@@ -1345,10 +1391,12 @@ describe("PostsService.upload", () => {
 
     const result = await runEffect(
       Effect.flip(
-        PostsService.upload({
-          ...makeUploadInput(pendingKey),
-          tags: [{ id: imageTagId, name: "safe-tag" }],
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.upload({
+            ...makeUploadInput(pendingKey),
+            tags: [{ id: imageTagId, name: "safe-tag" }],
+          }),
+        ),
       ),
     );
 
@@ -1362,7 +1410,11 @@ describe("PostsService.createVideoUploadUrl", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runEffect(
-      Effect.flip(PostsService.createVideoUploadUrl({ fileName: "clip.mp4" })),
+      Effect.flip(
+        Effect.flatMap(PostsService, (service) =>
+          service.createVideoUploadUrl({ fileName: "clip.mp4" }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");
@@ -1373,7 +1425,9 @@ describe("PostsService.createVideoUploadUrl", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostsService.createVideoUploadUrl({ fileName: "clip.mp4" }),
+      Effect.flatMap(PostsService, (service) =>
+        service.createVideoUploadUrl({ fileName: "clip.mp4" }),
+      ),
     );
 
     expect(result.key).toMatch(/^videos\/_pending\/user-1\/[a-f0-9-]+\.mp4$/);
@@ -1403,17 +1457,19 @@ describe("PostsService.update", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.update({
-          expectedVersion: 0,
-          operationKey: "test-update",
-          ...noSeriesMetadata,
-          postId,
-          title: "Hacked",
-          description: "Bad",
-          source: "",
-          relatedPostId: undefined,
-          tags: [],
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.update({
+            expectedVersion: 0,
+            operationKey: "test-update",
+            ...noSeriesMetadata,
+            postId,
+            title: "Hacked",
+            description: "Bad",
+            source: "",
+            relatedPostId: undefined,
+            tags: [],
+          }),
+        ),
       ),
     );
 
@@ -1427,17 +1483,19 @@ describe("PostsService.update", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.update({
-          expectedVersion: 0,
-          operationKey: "test-update",
-          ...noSeriesMetadata,
-          postId,
-          title: "Hacked",
-          description: "Bad",
-          source: "",
-          relatedPostId: undefined,
-          tags: [],
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.update({
+            expectedVersion: 0,
+            operationKey: "test-update",
+            ...noSeriesMetadata,
+            postId,
+            title: "Hacked",
+            description: "Bad",
+            source: "",
+            relatedPostId: undefined,
+            tags: [],
+          }),
+        ),
       ),
     );
 
@@ -1450,17 +1508,19 @@ describe("PostsService.update", () => {
     const postId = await insertPost({ title: "Old Title" });
 
     const result = await runEffect(
-      PostsService.update({
-        expectedVersion: 0,
-        operationKey: "test-update",
-        ...noSeriesMetadata,
-        postId,
-        title: "Updated",
-        description: "New description",
-        source: "https://new.example.com",
-        relatedPostId: undefined,
-        tags: [],
-      }),
+      Effect.flatMap(PostsService, (service) =>
+        service.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
+          ...noSeriesMetadata,
+          postId,
+          title: "Updated",
+          description: "New description",
+          source: "https://new.example.com",
+          relatedPostId: undefined,
+          tags: [],
+        }),
+      ),
     );
 
     expect(result.title).toBe("Updated");
@@ -1478,22 +1538,24 @@ describe("PostsService.update", () => {
     });
 
     await runEffect(
-      PostsService.update({
-        animeTitle: "Right Show",
-        chapterNumber: null,
-        episodeNumber: 5,
-        expectedVersion: 0,
-        operationKey: "test-update",
-        postId,
-        seasonNumber: 2,
-        sourceType: "tv_series",
-        title: "Series fix",
-        description: "Corrected series metadata",
-        source: "",
-        relatedPostId: undefined,
-        tags: [],
-        volumeNumber: null,
-      }),
+      Effect.flatMap(PostsService, (service) =>
+        service.update({
+          animeTitle: "Right Show",
+          chapterNumber: null,
+          episodeNumber: 5,
+          expectedVersion: 0,
+          operationKey: "test-update",
+          postId,
+          seasonNumber: 2,
+          sourceType: "tv_series",
+          title: "Series fix",
+          description: "Corrected series metadata",
+          source: "",
+          relatedPostId: undefined,
+          tags: [],
+          volumeNumber: null,
+        }),
+      ),
     );
 
     const post = await db
@@ -1515,17 +1577,19 @@ describe("PostsService.update", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.update({
-          expectedVersion: 0,
-          operationKey: "test-update",
-          ...noSeriesMetadata,
-          postId,
-          title: "Updated",
-          description: "New description",
-          source: "",
-          relatedPostId: asPostId(9999),
-          tags: [],
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.update({
+            expectedVersion: 0,
+            operationKey: "test-update",
+            ...noSeriesMetadata,
+            postId,
+            title: "Updated",
+            description: "New description",
+            source: "",
+            relatedPostId: asPostId(9999),
+            tags: [],
+          }),
+        ),
       ),
     );
 
@@ -1539,17 +1603,19 @@ describe("PostsService.update", () => {
     const existingTag = await insertTag("existing");
 
     await runEffect(
-      PostsService.update({
-        expectedVersion: 0,
-        operationKey: "test-update",
-        ...noSeriesMetadata,
-        postId,
-        title: "Tagged",
-        description: "Content",
-        source: "",
-        relatedPostId: undefined,
-        tags: [{ name: "new-tag" }, { id: existingTag, name: "existing" }],
-      }),
+      Effect.flatMap(PostsService, (service) =>
+        service.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
+          ...noSeriesMetadata,
+          postId,
+          title: "Tagged",
+          description: "Content",
+          source: "",
+          relatedPostId: undefined,
+          tags: [{ name: "new-tag" }, { id: existingTag, name: "existing" }],
+        }),
+      ),
     );
 
     const tags = await db
@@ -1573,17 +1639,19 @@ describe("PostsService.update", () => {
     const postId = await insertPost();
 
     await runEffect(
-      PostsService.update({
-        expectedVersion: 0,
-        operationKey: "test-update",
-        ...noSeriesMetadata,
-        postId,
-        title: "Repeated tags",
-        description: "Content",
-        source: "",
-        relatedPostId: undefined,
-        tags: [{ name: "repeat" }, { name: "repeat" }],
-      }),
+      Effect.flatMap(PostsService, (service) =>
+        service.update({
+          expectedVersion: 0,
+          operationKey: "test-update",
+          ...noSeriesMetadata,
+          postId,
+          title: "Repeated tags",
+          description: "Content",
+          source: "",
+          relatedPostId: undefined,
+          tags: [{ name: "repeat" }, { name: "repeat" }],
+        }),
+      ),
     );
 
     const tags = await db
@@ -1603,17 +1671,19 @@ describe("PostsService.update", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.update({
-          expectedVersion: 0,
-          operationKey: "test-update",
-          ...noSeriesMetadata,
-          postId,
-          title: "Should roll back",
-          description: "Updated description",
-          source: "",
-          relatedPostId: undefined,
-          tags: [{ id: 999999, name: "missing" }],
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.update({
+            expectedVersion: 0,
+            operationKey: "test-update",
+            ...noSeriesMetadata,
+            postId,
+            title: "Should roll back",
+            description: "Updated description",
+            source: "",
+            relatedPostId: undefined,
+            tags: [{ id: 999999, name: "missing" }],
+          }),
+        ),
       ),
     );
 
@@ -1659,12 +1729,14 @@ describe("PostsService.upload (image posts)", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const post = await runEffect(
-      PostsService.upload(
-        makeImageUploadInput([
-          new File(["first"], "first.png", { type: "image/png" }),
-          new File(["second"], "second.jpg", { type: "image/jpeg" }),
-          new File(["third"], "third.webp", { type: "image/webp" }),
-        ]),
+      Effect.flatMap(PostsService, (service) =>
+        service.upload(
+          makeImageUploadInput([
+            new File(["first"], "first.png", { type: "image/png" }),
+            new File(["second"], "second.jpg", { type: "image/jpeg" }),
+            new File(["third"], "third.webp", { type: "image/webp" }),
+          ]),
+        ),
       ),
     );
 
@@ -1698,11 +1770,13 @@ describe("PostsService.upload (image posts)", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const post = await runEffect(
-      PostsService.upload(
-        makeImageUploadInput([
-          new File(["first"], "first.jpg", { type: "image/jpeg" }),
-          new File(["second"], "second.jpg", { type: "image/jpeg" }),
-        ]),
+      Effect.flatMap(PostsService, (service) =>
+        service.upload(
+          makeImageUploadInput([
+            new File(["first"], "first.jpg", { type: "image/jpeg" }),
+            new File(["second"], "second.jpg", { type: "image/jpeg" }),
+          ]),
+        ),
       ),
     );
 
@@ -1722,13 +1796,15 @@ describe("PostsService.upload (image posts)", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostsService.upload({
-          description: "<p>No media</p>",
-          relatedPostId: undefined,
-          source: undefined,
-          tags: [],
-          title: "Empty Post",
-        }),
+        Effect.flatMap(PostsService, (service) =>
+          service.upload({
+            description: "<p>No media</p>",
+            relatedPostId: undefined,
+            source: undefined,
+            tags: [],
+            title: "Empty Post",
+          }),
+        ),
       ),
     );
 
@@ -1818,11 +1894,13 @@ describe("PostsService.upload (image posts)", () => {
 
       const error = await ctx.runEffect(
         Effect.flip(
-          PostsService.upload(
-            makeImageUploadInput([
-              new File(["first"], "first.png", { type: "image/png" }),
-              new File(["second"], "second.png", { type: "image/png" }),
-            ]),
+          Effect.flatMap(PostsService, (service) =>
+            service.upload(
+              makeImageUploadInput([
+                new File(["first"], "first.png", { type: "image/png" }),
+                new File(["second"], "second.png", { type: "image/png" }),
+              ]),
+            ),
           ),
         ),
       );

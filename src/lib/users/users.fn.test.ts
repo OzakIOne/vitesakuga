@@ -49,7 +49,9 @@ describe("UsersService.all", () => {
       .where("id", "=", "user-2")
       .execute();
 
-    const result = await runEffect(UsersService.all());
+    const result = await runEffect(
+      Effect.flatMap(UsersService, (service) => service.all()),
+    );
 
     expect(result).toHaveLength(2);
     expect(result.map((u) => u.name)).toEqual(["Aaron", "Alice"]);
@@ -62,14 +64,18 @@ describe("UsersService.all", () => {
       .where("id", "=", "user-2")
       .execute();
 
-    const result = await runEffect(UsersService.all());
+    const result = await runEffect(
+      Effect.flatMap(UsersService, (service) => service.all()),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]!.name).toBe("Alice");
   });
 
   it("returns validated user objects", async () => {
-    const result = await runEffect(UsersService.all());
+    const result = await runEffect(
+      Effect.flatMap(UsersService, (service) => service.all()),
+    );
 
     expect(result[0]).toHaveProperty("id");
     expect(result[0]).toHaveProperty("name");
@@ -82,7 +88,9 @@ describe("UsersService.all", () => {
 describe("UsersService.searchMentionable", () => {
   it("matches by username prefix", async () => {
     const result = await runEffect(
-      UsersService.searchMentionable({ query: "ali" }),
+      Effect.flatMap(UsersService, (service) =>
+        service.searchMentionable({ query: "ali" }),
+      ),
     );
     expect(result.map((u) => u.username)).toEqual(["alice"]);
   });
@@ -99,7 +107,9 @@ describe("UsersService.searchMentionable", () => {
       .execute();
 
     const result = await runEffect(
-      UsersService.searchMentionable({ query: "charlie" }),
+      Effect.flatMap(UsersService, (service) =>
+        service.searchMentionable({ query: "charlie" }),
+      ),
     );
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -118,7 +128,9 @@ describe("UsersService.searchMentionable", () => {
       .execute();
 
     const result = await runEffect(
-      UsersService.searchMentionable({ query: "a" }),
+      Effect.flatMap(UsersService, (service) =>
+        service.searchMentionable({ query: "a" }),
+      ),
     );
     expect(result.map((u) => u.username)).toEqual([]);
   });
@@ -127,7 +139,9 @@ describe("UsersService.searchMentionable", () => {
 describe("UsersService.userPosts", () => {
   it("returns empty posts for user with no posts", async () => {
     const result = await runEffect(
-      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      ),
     );
 
     expect(result.data).toEqual([]);
@@ -165,7 +179,9 @@ describe("UsersService.userPosts", () => {
       .execute();
 
     const result = await runEffect(
-      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      ),
     );
 
     expect(result.data).toHaveLength(1);
@@ -205,7 +221,9 @@ describe("UsersService.userPosts", () => {
     }
 
     const result = await runEffect(
-      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      ),
     );
 
     expect(result.meta.pagination.total).toBe(5);
@@ -247,12 +265,14 @@ describe("UsersService.userPosts", () => {
       .execute();
 
     const result = await runEffect(
-      UsersService.userPosts({
-        userId: "user-1",
-        tags: ["first", "second"],
-        q: "",
-        page: 0,
-      }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({
+          userId: "user-1",
+          tags: ["first", "second"],
+          q: "",
+          page: 0,
+        }),
+      ),
     );
 
     expect(result.data).toHaveLength(1);
@@ -305,12 +325,14 @@ describe("UsersService.userPosts", () => {
       .execute();
 
     const result = await runEffect(
-      UsersService.userPosts({
-        userId: "user-1",
-        tags: ["selected"],
-        q: "Selected",
-        page: 0,
-      }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({
+          userId: "user-1",
+          tags: ["selected"],
+          q: "Selected",
+          page: 0,
+        }),
+      ),
     );
 
     expect(result.data.map((post) => post.id)).toEqual([selectedPost.id]);
@@ -364,10 +386,14 @@ describe("UsersService.userPosts", () => {
       { id: bulkTag.id, name: "bulk", postCount: 31 },
     ];
     const firstPage = await runEffect(
-      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({ userId: "user-1", tags: [], q: "", page: 0 }),
+      ),
     );
     const secondPage = await runEffect(
-      UsersService.userPosts({ userId: "user-1", tags: [], q: "", page: 1 }),
+      Effect.flatMap(UsersService, (service) =>
+        service.userPosts({ userId: "user-1", tags: [], q: "", page: 1 }),
+      ),
     );
 
     expect(firstPage.data).toHaveLength(30);
@@ -512,7 +538,9 @@ describe("UsersService.contributorProfile", () => {
       .execute();
 
     const profile = await runEffect(
-      UsersService.contributorProfile({ userId: "user-1" }),
+      Effect.flatMap(UsersService, (service) =>
+        service.contributorProfile({ userId: "user-1" }),
+      ),
     );
 
     expect(profile).toMatchObject({
@@ -555,7 +583,11 @@ describe("UsersService.contributorProfile", () => {
       .execute();
 
     const error = await runEffect(
-      Effect.flip(UsersService.contributorProfile({ userId: "user-2" })),
+      Effect.flip(
+        Effect.flatMap(UsersService, (service) =>
+          service.contributorProfile({ userId: "user-2" }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("UserNotFoundError");

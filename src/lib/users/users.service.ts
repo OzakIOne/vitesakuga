@@ -15,7 +15,8 @@ import {
   type PostScope,
 } from "../posts/post-page-query";
 import { escapeLikePattern } from "../posts/search-pattern";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import type { mapPopularTags } from "../tags/tags.utils";
 import {
   contributorProfileSchema,
@@ -389,40 +390,17 @@ export class UsersService extends Context.Service<
 
     return { all, contributorProfile, searchMentionable, userPosts };
   }),
-}) {
-  static readonly all = Effect.fn("UsersService.all")(function* () {
-    const svc = yield* UsersService;
-    return yield* svc.all();
-  });
-
-  static readonly searchMentionable = Effect.fn(
-    "UsersService.searchMentionable",
-  )(function* (data: Schema.Schema.Type<typeof mentionSearchInputSchema>) {
-    const svc = yield* UsersService;
-    return yield* svc.searchMentionable(data);
-  });
-
-  static readonly userPosts = Effect.fn("UsersService.userPosts")(function* (
-    data: Schema.Schema.Type<typeof fetchUserInputSchema>,
-  ) {
-    const svc = yield* UsersService;
-    return yield* svc.userPosts(data);
-  });
-
-  static readonly contributorProfile = Effect.fn(
-    "UsersService.contributorProfile",
-  )(function* (
-    data: Schema.Schema.Type<typeof fetchContributorProfileInputSchema>,
-  ) {
-    const svc = yield* UsersService;
-    return yield* svc.contributorProfile(data);
-  });
-}
+}) {}
 
 export const UsersServiceLive = Layer.effect(UsersService, UsersService.make);
 
 export const fetchUsers = createServerFn().handler(
-  createHandler(UsersServiceLive, baseLayerFactories.db)(UsersService.all),
+  createEndpointHandler({
+    service: UsersService,
+    operation: "all",
+    layer: UsersServiceLive,
+    base: baseLayerFactories.db,
+  }),
 );
 
 export const fetchMentionableUsers = createServerFn({
@@ -430,26 +408,32 @@ export const fetchMentionableUsers = createServerFn({
 })
   .validator(parseStrict(mentionSearchInputSchema))
   .handler(
-    createHandler(
-      UsersServiceLive,
-      baseLayerFactories.db,
-    )(UsersService.searchMentionable),
+    createEndpointHandler({
+      service: UsersService,
+      operation: "searchMentionable",
+      layer: UsersServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const fetchUserPosts = createServerFn()
   .validator(parseStrict(fetchUserInputSchema))
   .handler(
-    createHandler(
-      UsersServiceLive,
-      baseLayerFactories.db,
-    )(UsersService.userPosts),
+    createEndpointHandler({
+      service: UsersService,
+      operation: "userPosts",
+      layer: UsersServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const fetchContributorProfile = createServerFn()
   .validator(parseStrict(fetchContributorProfileInputSchema))
   .handler(
-    createHandler(
-      UsersServiceLive,
-      baseLayerFactories.db,
-    )(UsersService.contributorProfile),
+    createEndpointHandler({
+      service: UsersService,
+      operation: "contributorProfile",
+      layer: UsersServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
