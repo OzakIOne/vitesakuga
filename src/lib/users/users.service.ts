@@ -3,7 +3,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
 import { postsSelectSchema, type PostWithVotes } from "src/lib/db/schema";
 
-import { RoleSchema, roleAtLeast, type Role } from "../auth/roles";
+import { roleAtLeast, type Role } from "../auth/roles";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
@@ -367,15 +367,6 @@ export class UsersService extends Context.Service<
           onSome: Effect.succeed,
         });
 
-        const role = yield* Effect.try({
-          try: () => parse(RoleSchema)(user.role),
-          catch: (error) =>
-            new RowParseError({
-              cause: error,
-              message: "Error processing contributor profile",
-            }),
-        });
-
         const counts = yield* Effect.all({
           acceptedEdits: db
             .executeTakeFirstOrUndefined(
@@ -437,7 +428,7 @@ export class UsersService extends Context.Service<
         const profile = {
           acceptedEdits: counts.acceptedEdits,
           badges: getProfileBadges(
-            role,
+            user.role,
             counts.acceptedEdits,
             counts.publicPlaylistCount,
           ),
@@ -451,7 +442,7 @@ export class UsersService extends Context.Service<
           posts: counts.posts,
           publicPlaylistCount: counts.publicPlaylistCount,
           publicPlaylists,
-          role,
+          role: user.role,
           username: user.username,
         } satisfies ContributorProfile;
 
