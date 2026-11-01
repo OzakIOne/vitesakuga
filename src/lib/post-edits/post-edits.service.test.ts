@@ -67,6 +67,38 @@ const approve = (editId: number, operationKey = crypto.randomUUID()) =>
   PostEditsService.approve({ editId, operationKey });
 
 describe("PostEditsService.propose", () => {
+  it("replays a repeated proposal with the real edit id and no second row", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "author-replay", role: "novice" });
+    await insertUser(db, { id: "uploader-replay", role: "uploader" });
+    const postId = await insertPost(db, "author-replay");
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "uploader-replay", role: "uploader" }),
+    );
+    const propose = () =>
+      ctx.runEffect(
+        PostEditsService.propose({
+          operationKey: "propose-replay",
+          payload: PAYLOAD,
+          postId,
+        }),
+      );
+    const first = await propose();
+    const replayed = await propose();
+
+    expect(replayed.editId).toBe(first.editId);
+    expect(replayed.editId).toBeGreaterThan(0);
+    const rows = await db
+      .selectFrom("post_edits")
+      .select("id")
+      .where("postId", "=", postId)
+      .execute();
+    expect(rows).toEqual([{ id: first.editId }]);
+  });
+
   it("lets an uploader suggest an edit on someone else's post", async () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);
     closeCtx = ctx.close;

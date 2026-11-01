@@ -14,9 +14,6 @@ import {
   ObjectConflictError,
   ObjectNotAdoptableError,
   PostVersionConflictError,
-  finishOperationInTransaction,
-  markPreparingInTransaction,
-  markReadyInTransaction,
   type ClaimOperationInput,
 } from "./lifecycle.service";
 
@@ -157,7 +154,12 @@ describe("LifecycleService operation claims", () => {
         return yield* lifecycle.finishOperation({
           fence: retry.fence,
           operationId: retry.operationId,
-          result: { videoKey: object.key },
+          result: {
+            imageKeys: [],
+            postId: 1,
+            thumbnailKey: object.key,
+            videoKey: object.key,
+          },
         });
       }),
     );
@@ -310,7 +312,12 @@ describe("LifecycleService operation claims", () => {
         return yield* lifecycle.finishOperation({
           fence: claim.fence,
           operationId: claim.operationId,
-          result: { postId: 42, videoKey: reserveInput.key },
+          result: {
+            imageKeys: [],
+            postId: 42,
+            thumbnailKey: reserveInput.key,
+            videoKey: reserveInput.key,
+          },
         });
       }),
     );
@@ -324,7 +331,12 @@ describe("LifecycleService operation claims", () => {
     expect(replay.outcome).toBe("replayed");
     if (replay.outcome !== "replayed")
       throw new Error("operation was reclaimed");
-    expect(replay.result).toEqual({ postId: 42, videoKey: reserveInput.key });
+    expect(replay.result).toEqual({
+      imageKeys: [],
+      postId: 42,
+      thumbnailKey: reserveInput.key,
+      videoKey: reserveInput.key,
+    });
     expect(replay.operation.fence).toBe(claim.fence);
   });
 
@@ -346,7 +358,6 @@ describe("LifecycleService operation claims", () => {
           failureCode: "post-version-conflict",
           fence: claim.fence,
           operationId: claim.operationId,
-          result: { state: "conflict" },
           status: "conflict",
         });
       }),
@@ -365,7 +376,7 @@ describe("LifecycleService operation claims", () => {
     if (replay.outcome !== "replayed")
       throw new Error("conflict was reclaimed");
     expect(replay.operation.status).toBe("conflict");
-    expect(replay.result).toEqual({ state: "conflict" });
+    expect(replay.result).toBeNull();
   });
 
   it("fences the old worker after a retry claims the same request", async () => {
@@ -403,67 +414,64 @@ describe("LifecycleService operation claims", () => {
   });
 
   it("exposes a short transaction contract for refs plus completion", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "atomic-finalization-operation",
-        });
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-    const reserveInput = {
-      contentLength: 12,
-      contentType: "video/mp4",
-      fence: claim.fence,
-      fingerprint: 'etag:"atomic-video"',
-      key: videoObjectKey(claim.operationId, "mp4"),
-      kind: "video" as const,
-      operationId: claim.operationId,
-      userId: claimInput.userId,
-    };
     await context.runEffect(
       Effect.gen(function* () {
         const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject(reserveInput);
-      }),
-    );
-
-    const finished = await context.runEffect(
-      Effect.gen(function* () {
         const db = yield* KyselyDB;
-        return yield* db.transaction((trx) =>
-          Effect.gen(function* () {
-            yield* markPreparingInTransaction(trx, reserveInput, new Date());
-            yield* markReadyInTransaction(trx, reserveInput, new Date());
-            const post = yield* trx.executeTakeFirstOrError(
-              trx
-                .insertInto("posts")
-                .values({
-                  description: "atomic post",
-                  thumbnailKey: "legacy-thumbnail",
-                  title: "atomic post",
-                  userId: claimInput.userId,
-                  videoKey: reserveInput.key,
-                  videoMetadata: "{}",
-                })
-                .returning("id"),
-            );
-            return yield* finishOperationInTransaction(
-              trx,
-              {
-                fence: claim.fence,
-                operationId: claim.operationId,
-                result: { postId: post.id, videoKey: reserveInput.key },
-              },
-              new Date(),
-            );
-          }),
-        );
+        return yield* lifecycle.runOperation({
+          kind: "post-create",
+          operationKey: "atomic-finalization-operation",
+          replay: () => Effect.void,
+          request: { payload: { title: "atomic post" } },
+          run: (operation) =>
+            Effect.gen(function* () {
+              const object = {
+                contentLength: 12,
+                contentType: "video/mp4",
+                fence: operation.fence,
+                fingerprint: 'etag:"atomic-video"',
+                key: videoObjectKey(operation.operationId, "mp4"),
+                kind: "video" as const,
+                operationId: operation.operationId,
+                userId: claimInput.userId,
+              };
+              yield* lifecycle.reserveObject(object);
+              yield* lifecycle.markPreparing(object);
+              yield* lifecycle.markReady(object);
+              yield* db.transaction((trx) =>
+                Effect.gen(function* () {
+                  const post = yield* trx.executeTakeFirstOrError(
+                    trx
+                      .insertInto("posts")
+                      .values({
+                        description: "atomic post",
+                        thumbnailKey: "legacy-thumbnail",
+                        title: "atomic post",
+                        userId: claimInput.userId,
+                        videoKey: object.key,
+                        videoMetadata: "{}",
+                      })
+                      .returning("id"),
+                  );
+                  yield* operation.finish(trx, {
+                    imageKeys: [],
+                    postId: post.id,
+                    thumbnailKey: "legacy-thumbnail",
+                    videoKey: object.key,
+                  });
+                }),
+              );
+            }),
+          userId: claimInput.userId,
+        });
       }),
     );
-    expect(finished.outcome).toBe("completed");
+    const operation = await context.db
+      .selectFrom("media_operations")
+      .select(["id", "status"])
+      .where("operationKey", "=", "atomic-finalization-operation")
+      .executeTakeFirstOrThrow();
+    expect(operation.status).toBe("completed");
     const rows = await context.db
       .selectFrom("media_operations")
       .innerJoin(
@@ -477,10 +485,14 @@ describe("LifecycleService operation claims", () => {
         "media_objects.state",
         "posts.videoKey",
       ])
-      .where("media_operations.id", "=", claim.operationId)
+      .where("media_operations.id", "=", operation.id)
       .execute();
     expect(rows).toEqual([
-      { state: "ready", status: "completed", videoKey: reserveInput.key },
+      {
+        state: "ready",
+        status: "completed",
+        videoKey: videoObjectKey(operation.id, "mp4"),
+      },
     ]);
   });
 

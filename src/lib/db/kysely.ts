@@ -4,8 +4,10 @@ import { Kysely, PostgresDialect } from "kysely";
 import { Pool as PgPool } from "pg";
 
 import { envServer } from "../env/server";
+import type { MediaOperationResult } from "../lifecycle/operation-results";
 import { NeonTransactionDialect } from "./neon-transaction-dialect";
 import { getKyselyPool, isLocal } from "./pool";
+import type { MediaOperationKind } from "./schema/sakuga.schema";
 
 type UserTable = {
   id: string;
@@ -265,21 +267,10 @@ type MediaOperationsTable = {
   failureCode: string | null;
   fence: Generated<number>;
   id: string;
-  kind:
-    | "post-create"
-    | "post-update"
-    | "video-replace"
-    | "video-restore"
-    | "edit-apply";
+  kind: MediaOperationKind;
   operationKey: string;
   requestFingerprint: string;
-  result: {
-    readonly postId?: number;
-    readonly videoKey?: string;
-    readonly imageKeys?: ReadonlyArray<string>;
-    readonly thumbnailKey?: string;
-    readonly state?: string;
-  } | null;
+  result: MediaOperationResult | null;
   status: "in-progress" | "completed" | "conflict" | "failed" | "unknown";
   updatedAt: Generated<Date>;
   userId: string;

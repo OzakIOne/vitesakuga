@@ -16,6 +16,7 @@ import {
 import { Schema, SchemaGetter } from "effect";
 
 import { PostId } from "../../ids";
+import type { MediaOperationResult } from "../../lifecycle/operation-results";
 import type { PointAction } from "../../points/points.config";
 import { sanitize } from "../../sanitize";
 import { user } from "./auth.schema";
@@ -422,6 +423,7 @@ export type MediaOperationKind =
   | "post-update"
   | "video-replace"
   | "video-restore"
+  | "edit-propose"
   | "edit-apply";
 
 export type MediaOperationStatus =
@@ -430,14 +432,6 @@ export type MediaOperationStatus =
   | "conflict"
   | "failed"
   | "unknown";
-
-export type MediaOperationResult = Readonly<{
-  readonly postId?: number;
-  readonly videoKey?: string;
-  readonly imageKeys?: ReadonlyArray<string>;
-  readonly thumbnailKey?: string;
-  readonly state?: string;
-}>;
 
 export type MediaObjectKind = "video" | "image" | "thumbnail";
 

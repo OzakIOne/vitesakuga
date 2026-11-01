@@ -1,13 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  Clock,
-  Context,
-  DateTime,
-  Effect,
-  Layer,
-  Option,
-  Schema,
-} from "effect";
+import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { isStaffRole } from "../auth/roles";
@@ -31,11 +23,9 @@ import {
   ValidationError,
 } from "../errors";
 import { type PostId, asPostId } from "../ids";
-import { operationRequestFingerprint } from "../lifecycle/fingerprint";
 import {
   LifecycleService,
   LifecycleServiceLive,
-  finishOperationInTransaction,
   updatePostWithVersionInTransaction,
 } from "../lifecycle/lifecycle.service";
 import {
@@ -305,79 +295,63 @@ export class PostEditsService extends Context.Service<
       const post = postOption.value;
       const operationKey =
         input.operationKey ?? `post-${input.postId}-${user.id}`;
-      const requestFingerprint = yield* operationRequestFingerprint({
-        fileDigests: [],
-        operationKind: "edit-apply",
-        payload: {
-          payload: input.payload,
-          postId: input.postId,
-          phase: "propose",
+      return yield* lifecycle.runOperation({
+        kind: "edit-propose",
+        operationKey: `propose:${operationKey}`,
+        replay: (result) => Effect.succeed({ editId: result.editId }),
+        request: {
+          payload: {
+            payload: input.payload,
+            postId: input.postId,
+            phase: "propose",
+          },
+          version: post.version,
         },
         userId: user.id,
-        version: post.version,
-      });
-      const claim = yield* lifecycle.claimOperation({
-        kind: "edit-apply",
-        operationKey: `propose:${operationKey}`,
-        requestFingerprint,
-        userId: user.id,
-      });
-      if (claim.outcome === "replayed") {
-        if (claim.result?.postId !== input.postId) {
-          return yield* new ValidationError({
-            message: "Lifecycle replay did not contain a valid edit result",
-          });
-        }
-        return { editId: claim.result.state ? Number(claim.result.state) : 0 };
-      }
-      const previousPayload = Schema.decodeUnknownSync(
-        postEditPreviousPayloadSchema,
-      )({
-        animeTitle: post.animeTitle,
-        chapterNumber: post.chapterNumber,
-        description: post.description,
-        episodeNumber: post.episodeNumber,
-        seasonNumber: post.seasonNumber,
-        source: post.source,
-        title: post.title,
-        volumeNumber: post.volumeNumber,
-      });
-      const created = yield* db.transaction((trx) =>
-        Effect.gen(function* () {
-          const created = yield* trx.executeTakeFirstOrError(
-            trx
-              .insertInto("post_edits")
-              .values({
-                basePostVersion: post.version,
-                payload: input.payload,
-                postId: input.postId,
-                previous_payload: previousPayload,
-                status: "pending",
-                suggestedBy: user.id,
-              })
-              .returning("id"),
-          );
-          yield* finishOperationInTransaction(
-            trx,
-            {
-              fence: claim.fence,
-              operationId: claim.operationId,
-              result: { postId: input.postId, state: String(created.id) },
-            },
-            new Date(yield* Clock.currentTimeMillis),
-          );
-          return created;
-        }),
-      );
+        run: (operation) =>
+          Effect.gen(function* () {
+            const previousPayload = Schema.decodeUnknownSync(
+              postEditPreviousPayloadSchema,
+            )({
+              animeTitle: post.animeTitle,
+              chapterNumber: post.chapterNumber,
+              description: post.description,
+              episodeNumber: post.episodeNumber,
+              seasonNumber: post.seasonNumber,
+              source: post.source,
+              title: post.title,
+              volumeNumber: post.volumeNumber,
+            });
+            const created = yield* db.transaction((trx) =>
+              Effect.gen(function* () {
+                const created = yield* trx.executeTakeFirstOrError(
+                  trx
+                    .insertInto("post_edits")
+                    .values({
+                      basePostVersion: post.version,
+                      payload: input.payload,
+                      postId: input.postId,
+                      previous_payload: previousPayload,
+                      status: "pending",
+                      suggestedBy: user.id,
+                    })
+                    .returning("id"),
+                );
+                yield* operation.finish(trx, { editId: created.id });
+                return created;
+              }),
+            );
 
-      yield* Effect.logInfo("Edit suggestion proposed").pipe(
-        Effect.annotateLogs({
-          editId: String(created.id),
-          postId: String(input.postId),
-          userId: user.id,
-        }),
-      );
-      return { editId: created.id };
+            yield* Effect.logInfo("Edit suggestion proposed").pipe(
+              Effect.annotateLogs({
+                editId: String(created.id),
+                postId: String(input.postId),
+                userId: user.id,
+              }),
+            );
+            return { editId: created.id };
+          }),
+      });
     });
 
     const approve = Effect.fn("PostEditsService.approve")(function* (input: {
@@ -386,143 +360,138 @@ export class PostEditsService extends Context.Service<
     }) {
       const editId = input.editId;
       const user = yield* requireSignedIn();
-      const claimFingerprint = yield* operationRequestFingerprint({
-        fileDigests: [],
-        operationKind: "edit-apply",
-        payload: { editId, phase: "approve" },
-        userId: user.id,
-      });
-      const claim = yield* lifecycle.claimOperation({
+      return yield* lifecycle.runOperation({
         kind: "edit-apply",
         operationKey: input.operationKey,
-        requestFingerprint: claimFingerprint,
+        replay: () => Effect.succeed({ applied: true }),
+        request: { payload: { editId, phase: "approve" } },
         userId: user.id,
-      });
-      if (claim.outcome === "replayed") {
-        return { applied: claim.result?.state === "applied" };
-      }
-      // Lock before reading status or votes; approve and reject serialize on
-      // the same suggestion. Content and decision commit together.
-      const decision = yield* db.transaction((trx) =>
-        Effect.gen(function* () {
-          const context = yield* resolveDecisionContext(editId, user, trx);
+        run: (operation) =>
+          Effect.gen(function* () {
+            // Lock before reading status or votes; approve and reject serialize on
+            // the same suggestion. Content and decision commit together.
+            const decision = yield* db.transaction((trx) =>
+              Effect.gen(function* () {
+                const context = yield* resolveDecisionContext(
+                  editId,
+                  user,
+                  trx,
+                );
 
-          let stillNeeded = 0;
-          if (!context.isInstantDecider) {
-            const existing = yield* approvalsFor(editId, trx);
-            const otherVotes = existing.filter(
-              (row) =>
-                row.userId !== context.userId &&
-                row.userId !== context.edit.suggestedBy,
-            ).length;
-            stillNeeded = Math.max(
-              0,
-              POST_EDIT_REQUIRED_VOTES - 1 - otherVotes,
+                let stillNeeded = 0;
+                if (!context.isInstantDecider) {
+                  const existing = yield* approvalsFor(editId, trx);
+                  const otherVotes = existing.filter(
+                    (row) =>
+                      row.userId !== context.userId &&
+                      row.userId !== context.edit.suggestedBy,
+                  ).length;
+                  stillNeeded = Math.max(
+                    0,
+                    POST_EDIT_REQUIRED_VOTES - 1 - otherVotes,
+                  );
+                }
+
+                // Record this vote; repeat clicks are no-ops via the composite PK.
+                yield* trx.execute(
+                  trx
+                    .insertInto("post_edit_approvals")
+                    .values({ editId, userId: context.userId })
+                    .onConflict((oc) =>
+                      oc.columns(["editId", "userId"]).doNothing(),
+                    ),
+                );
+
+                if (stillNeeded > 0) {
+                  yield* Effect.logInfo("Edit suggestion vote recorded").pipe(
+                    Effect.annotateLogs({
+                      approvedBy: context.userId,
+                      editId: String(editId),
+                      votesStillNeeded: String(stillNeeded),
+                    }),
+                  );
+                  return { applied: false as const, context };
+                }
+
+                // Apply the patch built strictly from the defined payload fields.
+                const decoded = decodePostEditPayload(context.edit.payload);
+                const patch: {
+                  -readonly [K in keyof PostEditPayload]+?: PostEditPayload[K];
+                } = {};
+                // The generic keeps key and value correlated, so each write is checked
+                // against its own field type instead of the whole value union.
+                const copyIfDefined = <K extends keyof PostEditPayload>(
+                  key: K,
+                  source: PostEditPayload,
+                  target: {
+                    -readonly [
+                      L in keyof PostEditPayload
+                    ]+?: PostEditPayload[L];
+                  },
+                ): void => {
+                  const value = source[key];
+                  if (value !== undefined) {
+                    target[key] = value;
+                  }
+                };
+                for (const key of PAYLOAD_KEYS) {
+                  copyIfDefined(key, decoded, patch);
+                }
+                const now = yield* DateTime.now;
+                const resolvedAt = DateTime.toDate(now);
+                yield* updatePostWithVersionInTransaction(trx, {
+                  changes: patch,
+                  expectedVersion: context.edit.basePostVersion,
+                  postId: context.edit.postId,
+                });
+                yield* trx.execute(
+                  trx
+                    .updateTable("post_edits")
+                    .set({
+                      resolvedAt,
+                      resolvedBy: context.userId,
+                      status: "approved",
+                    })
+                    .where("id", "=", editId)
+                    .where("status", "=", "pending"),
+                );
+                yield* operation.finish(trx, { postId: context.edit.postId });
+
+                return { applied: true as const, context };
+              }),
             );
-          }
+            if (!decision.applied) return { applied: false as const };
+            const { context } = decision;
 
-          // Record this vote; repeat clicks are no-ops via the composite PK.
-          yield* trx.execute(
-            trx
-              .insertInto("post_edit_approvals")
-              .values({ editId, userId: context.userId })
-              .onConflict((oc) => oc.columns(["editId", "userId"]).doNothing()),
-          );
+            // The suggester earns their reward exactly once per applied edit
+            // (ledger dedupe on suggester × action × editId), daily-capped to
+            // blunt collusion rings.
+            yield* points.awardOrLog({
+              userId: context.edit.suggestedBy,
+              action: "edit-suggestion-approved",
+              refId: editId,
+            });
+            yield* notifications.notifyOrLog({
+              type: "edit-suggestion-applied",
+              userId: context.postOwnerId,
+              postId: context.edit.postId,
+            });
+            yield* notifications.notifyOrLog({
+              type: "edit-suggestion-approved",
+              userId: context.edit.suggestedBy,
+              postId: context.edit.postId,
+            });
 
-          if (stillNeeded > 0) {
-            yield* Effect.logInfo("Edit suggestion vote recorded").pipe(
+            yield* Effect.logInfo("Edit suggestion applied").pipe(
               Effect.annotateLogs({
                 approvedBy: context.userId,
                 editId: String(editId),
-                votesStillNeeded: String(stillNeeded),
+                postId: String(context.edit.postId),
               }),
             );
-            return { applied: false as const, context };
-          }
-
-          // Apply the patch built strictly from the defined payload fields.
-          const decoded = decodePostEditPayload(context.edit.payload);
-          const patch: {
-            -readonly [K in keyof PostEditPayload]+?: PostEditPayload[K];
-          } = {};
-          // The generic keeps key and value correlated, so each write is checked
-          // against its own field type instead of the whole value union.
-          const copyIfDefined = <K extends keyof PostEditPayload>(
-            key: K,
-            source: PostEditPayload,
-            target: {
-              -readonly [L in keyof PostEditPayload]+?: PostEditPayload[L];
-            },
-          ): void => {
-            const value = source[key];
-            if (value !== undefined) {
-              target[key] = value;
-            }
-          };
-          for (const key of PAYLOAD_KEYS) {
-            copyIfDefined(key, decoded, patch);
-          }
-          const now = yield* DateTime.now;
-          const resolvedAt = DateTime.toDate(now);
-          yield* updatePostWithVersionInTransaction(trx, {
-            changes: patch,
-            expectedVersion: context.edit.basePostVersion,
-            postId: context.edit.postId,
-          });
-          yield* trx.execute(
-            trx
-              .updateTable("post_edits")
-              .set({
-                resolvedAt,
-                resolvedBy: context.userId,
-                status: "approved",
-              })
-              .where("id", "=", editId)
-              .where("status", "=", "pending"),
-          );
-          yield* finishOperationInTransaction(
-            trx,
-            {
-              fence: claim.fence,
-              operationId: claim.operationId,
-              result: { postId: context.edit.postId, state: "applied" },
-            },
-            resolvedAt,
-          );
-
-          return { applied: true as const, context };
-        }),
-      );
-      if (!decision.applied) return { applied: false as const };
-      const { context } = decision;
-
-      // The suggester earns their reward exactly once per applied edit
-      // (ledger dedupe on suggester × action × editId), daily-capped to
-      // blunt collusion rings.
-      yield* points.awardOrLog({
-        userId: context.edit.suggestedBy,
-        action: "edit-suggestion-approved",
-        refId: editId,
+            return { applied: true as const };
+          }),
       });
-      yield* notifications.notifyOrLog({
-        type: "edit-suggestion-applied",
-        userId: context.postOwnerId,
-        postId: context.edit.postId,
-      });
-      yield* notifications.notifyOrLog({
-        type: "edit-suggestion-approved",
-        userId: context.edit.suggestedBy,
-        postId: context.edit.postId,
-      });
-
-      yield* Effect.logInfo("Edit suggestion applied").pipe(
-        Effect.annotateLogs({
-          approvedBy: context.userId,
-          editId: String(editId),
-          postId: String(context.edit.postId),
-        }),
-      );
-      return { applied: true as const };
     });
 
     const reject = Effect.fn("PostEditsService.reject")(function* (

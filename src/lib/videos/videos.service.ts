@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Clock, Context, DateTime, Effect, Exit, Layer, Option } from "effect";
+import { Clock, Context, Effect, Exit, Layer, Option } from "effect";
 
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { roleAtLeast } from "../auth/roles";
@@ -14,10 +14,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors";
-import {
-  operationRequestFingerprint,
-  type FingerprintInputError,
-} from "../lifecycle/fingerprint";
+import type { FingerprintInputError } from "../lifecycle/fingerprint";
 import {
   LifecycleService,
   LifecycleServiceLive,
@@ -255,90 +252,81 @@ export class VideosService extends Context.Service<
       );
       const role = getUserRole(user);
 
-      const requestFingerprint = yield* operationRequestFingerprint({
-        fileDigests: [],
-        operationKind: "video-replace",
-        payload: {
-          pendingVideoKey: input.pendingVideoKey,
-          postId: input.postId,
-        },
-        userId: user.id,
-        version: input.expectedVersion,
-      });
-      const claim = yield* lifecycle.claimOperation({
+      return yield* lifecycle.runOperation({
         kind: "video-replace",
         operationKey: input.operationKey,
-        requestFingerprint,
+        replay: (result) => Effect.succeed({ videoKey: result.videoKey }),
+        request: {
+          payload: {
+            pendingVideoKey: input.pendingVideoKey,
+            postId: input.postId,
+          },
+          version: input.expectedVersion,
+        },
         userId: user.id,
-      });
-      if (claim.outcome === "replayed") {
-        if (claim.result?.videoKey === undefined) {
-          return yield* new ValidationError({
-            message: "Lifecycle replay did not contain a video result",
-          });
-        }
-        return { videoKey: claim.result.videoKey };
-      }
-      const postOption = yield* loadPost(input.postId);
-      if (Option.isNone(postOption)) {
-        return yield* new PostNotFoundError({
-          message: `Post ${input.postId} not found`,
-          postId: input.postId,
-        });
-      }
-      const post = postOption.value;
-      if (post.videoKey === null) {
-        return yield* new ValidationError({
-          message:
-            "This post has no video — image posts use the regular edit flow",
-        });
-      }
-      const oldVideoKey = post.videoKey;
+        run: (operation) =>
+          Effect.gen(function* () {
+            const postOption = yield* loadPost(input.postId);
+            if (Option.isNone(postOption)) {
+              return yield* new PostNotFoundError({
+                message: `Post ${input.postId} not found`,
+                postId: input.postId,
+              });
+            }
+            const post = postOption.value;
+            if (post.videoKey === null) {
+              return yield* new ValidationError({
+                message:
+                  "This post has no video — image posts use the regular edit flow",
+              });
+            }
+            const oldVideoKey = post.videoKey;
 
-      // Author replaces their own video at any rank; non-authors need staff.
-      if (
-        post.userId !== user.id &&
-        !userHasPermission(role, "videos:replace-any")
-      ) {
-        return yield* new ForbiddenError({
-          message: STAFF_ONLY_MESSAGE,
-        });
-      }
-      const staged = yield* lifecycle.verifyStagedVideo({
-        operationId: claim.operationId,
-        pendingKey: input.pendingVideoKey,
-        userId: user.id,
-      });
-      yield* lifecycle.replaceVideo({
-        contentLength: staged.contentLength,
-        contentType: staged.contentType,
-        expectedVersion: input.expectedVersion,
-        fence: claim.fence,
-        fingerprint: staged.fingerprint,
-        key: staged.finalKey,
-        kind: "video",
-        oldVideoKey,
-        operationId: claim.operationId,
-        postId: post.id,
-        replacedBy: user.id,
-        sourceEtag: staged.etag,
-        sourceKey: staged.sourceKey,
-        userId: user.id,
-        videoMetadata: post.videoMetadata,
-      });
-      yield* lifecycle.discardStagedVideo(staged.sourceKey);
+            // Author replaces their own video at any rank; non-authors need staff.
+            if (
+              post.userId !== user.id &&
+              !userHasPermission(role, "videos:replace-any")
+            ) {
+              return yield* new ForbiddenError({
+                message: STAFF_ONLY_MESSAGE,
+              });
+            }
+            const staged = yield* lifecycle.verifyStagedVideo({
+              operationId: operation.operationId,
+              pendingKey: input.pendingVideoKey,
+              userId: user.id,
+            });
+            yield* lifecycle.replaceVideo({
+              contentLength: staged.contentLength,
+              contentType: staged.contentType,
+              expectedVersion: input.expectedVersion,
+              fingerprint: staged.fingerprint,
+              key: staged.finalKey,
+              kind: "video",
+              oldVideoKey,
+              operation,
+              postId: post.id,
+              replacedBy: user.id,
+              sourceEtag: staged.etag,
+              sourceKey: staged.sourceKey,
+              userId: user.id,
+              videoMetadata: post.videoMetadata,
+            });
+            yield* lifecycle.discardStagedVideo(staged.sourceKey);
 
-      // Likes, comments and the post id stay untouched: this only swaps the
-      // media backing the same content entry.
-      yield* Effect.logInfo("Video replaced").pipe(
-        Effect.annotateLogs({
-          newPath: staged.finalKey,
-          oldPath: post.videoKey,
-          postId: String(post.id),
-          replacedBy: user.id,
-        }),
-      );
-      return { videoKey: staged.finalKey };
+            // Likes, comments and the post id stay untouched: this only swaps the
+            // media backing the same content entry.
+            yield* Effect.logInfo("Video replaced").pipe(
+              Effect.annotateLogs({
+                newPath: staged.finalKey,
+                oldPath: post.videoKey,
+                postId: String(post.id),
+                replacedBy: user.id,
+              }),
+            );
+            return { videoKey: staged.finalKey };
+          }),
+      });
     });
 
     const listRevisions = Effect.fn("VideosService.listRevisions")(function* (
@@ -376,113 +364,102 @@ export class VideosService extends Context.Service<
       const sessions = yield* SessionService;
       const user = yield* sessions.requireUser(STAFF_ONLY_MESSAGE);
       const role = getUserRole(user);
-      const requestFingerprint = yield* operationRequestFingerprint({
-        fileDigests: [],
-        operationKind: "video-restore",
-        payload: { revisionId: input.revisionId },
-        userId: user.id,
-        version: input.expectedVersion,
-      });
-      const claim = yield* lifecycle.claimOperation({
+      return yield* lifecycle.runOperation({
         kind: "video-restore",
         operationKey: input.operationKey,
-        requestFingerprint,
+        replay: () => Effect.succeed({ restored: true as const }),
+        request: {
+          payload: { revisionId: input.revisionId },
+          version: input.expectedVersion,
+        },
         userId: user.id,
-      });
-      if (claim.outcome === "replayed") return { restored: true as const };
+        run: (operation) =>
+          Effect.gen(function* () {
+            const revisionOption = yield* db.executeTakeFirstOption(
+              db
+                .selectFrom("video_revisions")
+                .selectAll()
+                .where("id", "=", input.revisionId),
+            );
+            if (Option.isNone(revisionOption)) {
+              return yield* new ValidationError({
+                message: `Revision ${input.revisionId} not found`,
+              });
+            }
 
-      const revisionOption = yield* db.executeTakeFirstOption(
-        db
-          .selectFrom("video_revisions")
-          .selectAll()
-          .where("id", "=", input.revisionId),
-      );
-      if (Option.isNone(revisionOption)) {
-        return yield* new ValidationError({
-          message: `Revision ${input.revisionId} not found`,
-        });
-      }
+            const postOption = yield* loadPost(revisionOption.value.postId);
+            if (Option.isNone(postOption)) {
+              return yield* new PostNotFoundError({
+                message: `Post ${revisionOption.value.postId} not found`,
+                postId: revisionOption.value.postId,
+              });
+            }
 
-      const postOption = yield* loadPost(revisionOption.value.postId);
-      if (Option.isNone(postOption)) {
-        return yield* new PostNotFoundError({
-          message: `Post ${revisionOption.value.postId} not found`,
-          postId: revisionOption.value.postId,
-        });
-      }
+            // Restoring other users' videos mirrors the replace-any gate.
+            if (!userHasPermission(role, "videos:replace-any")) {
+              return yield* new ForbiddenError({
+                message: STAFF_ONLY_MESSAGE,
+              });
+            }
 
-      // Restoring other users' videos mirrors the replace-any gate.
-      if (!userHasPermission(role, "videos:replace-any")) {
-        return yield* new ForbiddenError({
-          message: STAFF_ONLY_MESSAGE,
-        });
-      }
-
-      // Guard against a just-purged or legacy object being restored. A
-      // revision is restorable only when its durable registry row is ready and
-      // the key is in the managed deterministic namespace.
-      const post = postOption.value;
-      const revisionKey = revisionOption.value.videoKey;
-      if (!isDeterministicMediaKey(revisionKey)) {
-        return yield* new ValidationError({
-          message:
-            "This legacy video is quarantined and cannot be restored automatically",
-        });
-      }
-      const registered = yield* db.executeTakeFirstOption(
-        db
-          .selectFrom("media_objects")
-          .select(["state", "kind"])
-          .where("key", "=", revisionKey),
-      );
-      if (
-        Option.isNone(registered) ||
-        registered.value.kind !== "video" ||
-        registered.value.state !== "ready"
-      ) {
-        return yield* new ValidationError({
-          message:
-            "This video is not registered as ready and cannot be restored",
-        });
-      }
-      yield* storage.headFile(revisionKey);
-      const now = yield* DateTime.nowAsDate;
-      yield* db.transaction((trx) =>
-        swapPostVideoInTransaction(
-          trx,
-          {
-            expectedVersion: input.expectedVersion,
-            finish: {
-              fence: claim.fence,
-              operationId: claim.operationId,
-              result: {
+            // Guard against a just-purged or legacy object being restored. A
+            // revision is restorable only when its durable registry row is ready and
+            // the key is in the managed deterministic namespace.
+            const post = postOption.value;
+            const revisionKey = revisionOption.value.videoKey;
+            if (!isDeterministicMediaKey(revisionKey)) {
+              return yield* new ValidationError({
+                message:
+                  "This legacy video is quarantined and cannot be restored automatically",
+              });
+            }
+            const registered = yield* db.executeTakeFirstOption(
+              db
+                .selectFrom("media_objects")
+                .select(["state", "kind"])
+                .where("key", "=", revisionKey),
+            );
+            if (
+              Option.isNone(registered) ||
+              registered.value.kind !== "video" ||
+              registered.value.state !== "ready"
+            ) {
+              return yield* new ValidationError({
+                message:
+                  "This video is not registered as ready and cannot be restored",
+              });
+            }
+            yield* storage.headFile(revisionKey);
+            yield* db.transaction((trx) =>
+              swapPostVideoInTransaction(trx, {
+                expectedVersion: input.expectedVersion,
+                finish: (transaction) =>
+                  operation.finish(transaction, {
+                    postId: post.id,
+                    videoKey: revisionKey,
+                  }),
+                nextVideoKey: revisionKey,
                 postId: post.id,
-                state: "completed",
-                videoKey: revisionKey,
-              },
-            },
-            nextVideoKey: revisionKey,
-            postId: post.id,
-            previousVideo:
-              post.videoKey === null
-                ? null
-                : {
-                    videoKey: post.videoKey,
-                    videoMetadata: post.videoMetadata,
-                  },
-            replacedBy: user.id,
-          },
-          now,
-        ),
-      );
+                previousVideo:
+                  post.videoKey === null
+                    ? null
+                    : {
+                        videoKey: post.videoKey,
+                        videoMetadata: post.videoMetadata,
+                      },
+                replacedBy: user.id,
+              }),
+            );
 
-      yield* Effect.logInfo("Video restored from revision").pipe(
-        Effect.annotateLogs({
-          restoredBy: user.id,
-          revisionId: String(input.revisionId),
-        }),
-      );
-      return { restored: true as const };
+            yield* Effect.logInfo("Video restored from revision").pipe(
+              Effect.annotateLogs({
+                restoredBy: user.id,
+                revisionId: String(input.revisionId),
+              }),
+            );
+            return { restored: true as const };
+          }),
+      });
     });
 
     const gcPreview = Effect.fn("VideosService.gcPreview")(function* () {

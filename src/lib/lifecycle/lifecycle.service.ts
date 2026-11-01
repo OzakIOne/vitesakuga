@@ -1,4 +1,13 @@
-import { Clock, Context, Effect, Exit, Layer, Option, Schema } from "effect";
+import {
+  Clock,
+  Context,
+  DateTime,
+  Effect,
+  Exit,
+  Layer,
+  Option,
+  Schema,
+} from "effect";
 import type { Selectable } from "kysely";
 import { sql } from "kysely";
 
@@ -13,7 +22,6 @@ import type {
   MediaObjectKind,
   MediaObjectState,
   MediaOperationKind,
-  MediaOperationResult,
   MediaOperationStatus,
 } from "../db/schema/sakuga.schema";
 import { ValidationError } from "../errors";
@@ -22,6 +30,17 @@ import {
   type DeterministicMediaKind,
 } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
+import {
+  operationRequestFingerprint,
+  type CanonicalFileDigest,
+  type CanonicalJson,
+  type FingerprintInputError,
+} from "./fingerprint";
+import {
+  operationResultSchemas,
+  type MediaOperationResult,
+  type OperationResultOf,
+} from "./operation-results";
 import {
   discardStagedVideo as discardStagedVideoObject,
   verifyStagedVideo as verifyStagedVideoObject,
@@ -111,9 +130,37 @@ export type CopyVideoInput = ReserveObjectInput & {
   readonly sourceKey: string;
 };
 
-export type ReplaceVideoInput = CopyVideoInput & {
+export type OperationHandle<Result extends MediaOperationResult> = {
+  readonly fence: number;
+  readonly finish: (
+    trx: LifecycleTransaction,
+    result: Result,
+  ) => Effect.Effect<void, LifecycleError>;
+  readonly operationId: string;
+};
+
+export type RunOperationInput<Kind extends MediaOperationKind, A, E, R> = {
+  readonly kind: Kind;
+  readonly operationKey: string;
+  readonly replay: (result: OperationResultOf<Kind>) => Effect.Effect<A, E, R>;
+  readonly request: {
+    readonly fileDigests?: ReadonlyArray<CanonicalFileDigest>;
+    readonly payload: CanonicalJson;
+    readonly version?: number;
+  };
+  readonly run: (
+    operation: OperationHandle<OperationResultOf<Kind>>,
+  ) => Effect.Effect<A, E, R>;
+  readonly userId: string;
+};
+
+export type ReplaceVideoInput = Omit<
+  CopyVideoInput,
+  "fence" | "operationId"
+> & {
   readonly expectedVersion: number;
   readonly oldVideoKey: string;
+  readonly operation: OperationHandle<OperationResultOf<"video-replace">>;
   readonly postId: number;
   readonly replacedBy: string;
   readonly videoMetadata: string;
@@ -237,7 +284,7 @@ export type CompareAndIncrementPostVersionInput = {
 
 export class LifecycleInputError extends Schema.TaggedError<LifecycleInputError>()(
   "LifecycleInputError",
-  { message: Schema.String },
+  { message: Schema.String, cause: Schema.optionalKey(Schema.Unknown) },
 ) {}
 
 export class OperationConflictError extends Schema.TaggedError<OperationConflictError>()(
@@ -245,6 +292,15 @@ export class OperationConflictError extends Schema.TaggedError<OperationConflict
   {
     message: Schema.String,
     operationKey: Schema.String,
+  },
+) {}
+
+export class OperationReplayError extends Schema.TaggedError<OperationReplayError>()(
+  "OperationReplayError",
+  {
+    cause: Schema.optionalKey(Schema.Unknown),
+    message: Schema.String,
+    operationId: Schema.String,
   },
 ) {}
 
@@ -325,6 +381,7 @@ export type LifecycleError =
   | OperationConflictError
   | OperationFenceError
   | OperationNotReadyError
+  | OperationReplayError
   | PostNotFoundForVersionError
   | PostVersionConflictError
   | LifecycleStateError
@@ -486,48 +543,6 @@ const validateFailureInput = (
         message: "Lifecycle failure codes must be short stable identifiers",
       }),
     );
-  }
-  return Effect.void;
-};
-
-const validateOperationResult = (
-  result: MediaOperationResult | undefined,
-): Effect.Effect<void, LifecycleInputError> => {
-  if (result === undefined) return Effect.void;
-  // SAFETY: MediaOperationResult is the validated lifecycle result object; this view is used only to enumerate its allowed persisted fields.
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the result's values are intentionally checked below before validation.
-  const values = result as Readonly<Record<string, unknown>>;
-  const allowed = new Set([
-    "postId",
-    "videoKey",
-    "imageKeys",
-    "thumbnailKey",
-    "state",
-  ]);
-  for (const [key, value] of Object.entries(values)) {
-    if (!allowed.has(key)) {
-      return Effect.fail(
-        new LifecycleInputError({
-          message: "Operation results may contain identifiers and states only",
-        }),
-      );
-    }
-    const strings = Array.isArray(value) ? value : [value];
-    for (const item of strings) {
-      // SAFETY: Array values are validated as primitive lifecycle result entries; only strings can contain URLs or oversized values.
-      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this is the final primitive-domain check for the validated result payload.
-      if (
-        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- validated lifecycle result entries are checked for string-only URL and size restrictions.
-        typeof item === "string" &&
-        (/^https?:\/\//i.test(item) || item.length > 512)
-      ) {
-        return Effect.fail(
-          new LifecycleInputError({
-            message: "Operation results cannot persist URLs or large values",
-          }),
-        );
-      }
-    }
   }
   return Effect.void;
 };
@@ -949,6 +964,7 @@ const finishInTransaction = (
       (objects.length === 0 &&
         current.kind !== "video-restore" &&
         current.kind !== "post-update" &&
+        current.kind !== "edit-propose" &&
         current.kind !== "edit-apply") ||
       objects.some((object) => object.state !== "ready")
     ) {
@@ -1265,7 +1281,9 @@ const compareAndIncrementPostVersionInTransaction = (
 
 export type SwapPostVideoInput = {
   readonly expectedVersion: number;
-  readonly finish: FinishOperationInput;
+  readonly finish: (
+    trx: LifecycleTransaction,
+  ) => Effect.Effect<void, LifecycleError>;
   readonly nextVideoKey: string;
   readonly postId: number;
   readonly previousVideo: {
@@ -1277,15 +1295,14 @@ export type SwapPostVideoInput = {
 
 /**
  * Archives the post's current video (when it has one), points the post at the
- * next video under an optimistic version check, and completes the operation.
- * Callers run it in their single short transaction, after the next object is
- * durably ready.
+ * next video under an optimistic version check, and completes the operation
+ * through `finish`. Callers run it in their single short transaction, after the
+ * next object is durably ready.
  */
 const swapPostVideoInTransaction = (
   trx: LifecycleTransaction,
   input: SwapPostVideoInput,
-  now: Date,
-): Effect.Effect<FinishOperationResult, LifecycleError> =>
+): Effect.Effect<void, LifecycleError> =>
   Effect.gen(function* () {
     if (input.previousVideo !== null) {
       yield* trx.executeTakeFirstOrError(
@@ -1319,7 +1336,7 @@ const swapPostVideoInTransaction = (
         postId: input.postId,
       });
     }
-    return yield* finishInTransaction(trx, input.finish, now);
+    yield* input.finish(trx);
   });
 
 export class LifecycleService extends Context.Service<
@@ -1368,6 +1385,9 @@ export class LifecycleService extends Context.Service<
     readonly replaceVideo: (
       input: ReplaceVideoInput,
     ) => Effect.Effect<{ readonly videoKey: string }, LifecycleError>;
+    readonly runOperation: <Kind extends MediaOperationKind, A, E, R>(
+      input: RunOperationInput<Kind, A, E, R>,
+    ) => Effect.Effect<A, E | LifecycleError | FingerprintInputError, R>;
     readonly storeObject: (
       input: StoreObjectInput,
     ) => Effect.Effect<StoreObjectResult, LifecycleError>;
@@ -1431,7 +1451,6 @@ export class LifecycleService extends Context.Service<
 
     const finishOperation = Effect.fn("LifecycleService.finishOperation")(
       function* (input: FinishOperationInput) {
-        yield* validateOperationResult(input.result);
         const now = new Date(yield* Clock.currentTimeMillis);
         return yield* db.transaction((trx) =>
           finishInTransaction(trx, input, now),
@@ -1442,7 +1461,7 @@ export class LifecycleService extends Context.Service<
     const failOperation = Effect.fn("LifecycleService.failOperation")(
       function* (input: FailOperationInput) {
         yield* validateFailureInput(input);
-        yield* validateOperationResult(input.result);
+
         const now = new Date(yield* Clock.currentTimeMillis);
         return yield* db.transaction((trx) =>
           failInTransaction(trx, input, now),
@@ -1537,7 +1556,12 @@ export class LifecycleService extends Context.Service<
     const replaceVideo = Effect.fn("LifecycleService.replaceVideo")(function* (
       input: ReplaceVideoInput,
     ) {
-      const prepared = yield* prepareObject(input);
+      const { operation } = input;
+      const prepared = yield* prepareObject({
+        ...input,
+        fence: operation.fence,
+        operationId: operation.operationId,
+      });
       if (prepared.shouldWrite) {
         yield* storage.copyVideoIfMatch(
           input.sourceKey,
@@ -1545,8 +1569,7 @@ export class LifecycleService extends Context.Service<
           input.key,
         );
       }
-
-      const now = new Date(yield* Clock.currentTimeMillis);
+      const now = yield* DateTime.nowAsDate;
       yield* db.transaction((trx) =>
         Effect.gen(function* () {
           yield* markReadyInTransaction(
@@ -1559,33 +1582,25 @@ export class LifecycleService extends Context.Service<
                 contentType: input.contentType,
                 fingerprint: input.fingerprint,
               },
-              operationId: input.operationId,
+              operationId: operation.operationId,
             },
             now,
           );
-          yield* swapPostVideoInTransaction(
-            trx,
-            {
-              expectedVersion: input.expectedVersion,
-              finish: {
-                fence: input.fence,
-                operationId: input.operationId,
-                result: {
-                  postId: input.postId,
-                  state: "completed",
-                  videoKey: input.key,
-                },
-              },
-              nextVideoKey: input.key,
-              postId: input.postId,
-              previousVideo: {
-                videoKey: input.oldVideoKey,
-                videoMetadata: input.videoMetadata,
-              },
-              replacedBy: input.replacedBy,
+          yield* swapPostVideoInTransaction(trx, {
+            expectedVersion: input.expectedVersion,
+            finish: (transaction) =>
+              operation.finish(transaction, {
+                postId: input.postId,
+                videoKey: input.key,
+              }),
+            nextVideoKey: input.key,
+            postId: input.postId,
+            previousVideo: {
+              videoKey: input.oldVideoKey,
+              videoMetadata: input.videoMetadata,
             },
-            now,
-          );
+            replacedBy: input.replacedBy,
+          });
         }),
       );
       return { videoKey: input.key } as const;
@@ -1724,6 +1739,70 @@ export class LifecycleService extends Context.Service<
       } satisfies ReconcileResult;
     });
 
+    const runOperation = Effect.fn("LifecycleService.runOperation")(function* <
+      Kind extends MediaOperationKind,
+      A,
+      E,
+      R,
+    >(input: RunOperationInput<Kind, A, E, R>) {
+      const resultSchema = operationResultSchemas[input.kind];
+      const requestFingerprint = yield* operationRequestFingerprint({
+        fileDigests: input.request.fileDigests ?? [],
+        operationKind: input.kind,
+        payload: input.request.payload,
+        userId: input.userId,
+        version: input.request.version,
+      });
+      const claim = yield* claimOperation({
+        kind: input.kind,
+        operationKey: input.operationKey,
+        requestFingerprint,
+        userId: input.userId,
+      });
+      if (claim.outcome === "replayed") {
+        const stored = yield* Schema.decodeUnknownEffect(resultSchema)(
+          claim.result,
+        ).pipe(
+          Effect.mapError(
+            (cause) =>
+              new OperationReplayError({
+                cause,
+                message: "Stored operation result does not decode for its kind",
+                operationId: claim.operationId,
+              }),
+          ),
+        );
+        return yield* input.replay(stored);
+      }
+
+      const { fence, operationId } = claim;
+      const operation: OperationHandle<OperationResultOf<Kind>> = {
+        fence,
+        finish: (trx, result) =>
+          Effect.gen(function* () {
+            const now = yield* DateTime.nowAsDate;
+            const encoded = yield* Schema.encodeUnknownEffect(resultSchema)(
+              result,
+            ).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new LifecycleInputError({
+                    cause,
+                    message: "Operation result does not match its kind",
+                  }),
+              ),
+            );
+            yield* finishInTransaction(
+              trx,
+              { fence, operationId, result: encoded },
+              now,
+            );
+          }),
+        operationId,
+      };
+      return yield* input.run(operation);
+    });
+
     const verifyStagedVideo = Effect.fn("LifecycleService.verifyStagedVideo")(
       function* (input: VerifyStagedVideoInput) {
         return yield* verifyStagedVideoObject({ ...input, storage });
@@ -1752,6 +1831,7 @@ export class LifecycleService extends Context.Service<
       reconcileNonTerminal,
       reserveObject,
       replaceVideo,
+      runOperation,
       storeObject,
       updatePostWithVersion,
       verifyStagedVideo,
@@ -1863,6 +1943,15 @@ export class LifecycleService extends Context.Service<
     },
   );
 
+  static readonly runOperation = Effect.fn("LifecycleService.runOperation")(
+    function* <Kind extends MediaOperationKind, A, E, R>(
+      input: RunOperationInput<Kind, A, E, R>,
+    ) {
+      const lifecycle = yield* LifecycleService;
+      return yield* lifecycle.runOperation(input);
+    },
+  );
+
   static readonly storeObject = Effect.fn("LifecycleService.storeObject")(
     function* (input: StoreObjectInput) {
       const lifecycle = yield* LifecycleService;
@@ -1892,18 +1981,10 @@ export const LifecycleServiceLive = Layer.effect(
 
 /**
  * Integration helpers: use these inside the caller's one short transaction,
- * before/after inserting post references. No storage call belongs in that
+ * alongside the caller's own post writes. No storage call belongs in that
  * transaction.
  */
 export {
-  adoptInTransaction as adoptObjectInTransaction,
-  beginDeleteInTransaction,
-  compareAndIncrementPostVersionInTransaction,
-  completeDeleteInTransaction,
-  failInTransaction as failOperationInTransaction,
-  finishInTransaction as finishOperationInTransaction,
-  markPreparingInTransaction,
-  markReadyInTransaction,
   postVersionUpdateInTransaction as updatePostWithVersionInTransaction,
   swapPostVideoInTransaction,
 };

@@ -1,18 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  Clock,
-  Context,
-  DateTime,
-  Effect,
-  Exit,
-  Layer,
-  Option,
-  Schema,
-} from "effect";
+import { Clock, Context, Effect, Exit, Layer, Option, Schema } from "effect";
 import {
   sql,
   type Expression,
   type ExpressionBuilder,
+  type Selectable,
   type SqlBool,
 } from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
@@ -27,11 +19,7 @@ import {
   type EffectTransaction,
 } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
-import type {
-  MediaOperationResult,
-  postSourceSchema,
-  PostWithVotes,
-} from "../db/schema";
+import type { postSourceSchema, PostWithVotes } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
@@ -42,12 +30,8 @@ import {
   ValidationError,
 } from "../errors";
 import { asPostId, PostId } from "../ids";
+import { FingerprintInputError } from "../lifecycle/fingerprint";
 import {
-  FingerprintInputError,
-  operationRequestFingerprint,
-} from "../lifecycle/fingerprint";
-import {
-  finishOperationInTransaction,
   LifecycleService,
   updatePostWithVersionInTransaction,
   LifecycleServiceLive,
@@ -735,6 +719,24 @@ export class PostsService extends Context.Service<
       };
     });
 
+    const parsePostRow = (row: Selectable<DB["posts"]>, message: string) =>
+      Effect.try({
+        try: () => parse(postsSelectSchema)(row),
+        catch: (cause) => new RowParseError({ message, cause }),
+      });
+
+    const selectParsedPost = Effect.fn("PostsService.selectParsedPost")(
+      function* (postId: number) {
+        const row = yield* db.executeTakeFirstOrError(
+          db.selectFrom("posts").selectAll().where("id", "=", postId),
+        );
+        return yield* parsePostRow(
+          row,
+          "There was an error processing the replay result",
+        );
+      },
+    );
+
     const upload = Effect.fn("PostsService.upload")(function* (
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) {
@@ -762,289 +764,250 @@ export class PostsService extends Context.Service<
               },
             ]),
       ];
-      const requestFingerprint = yield* operationRequestFingerprint({
-        fileDigests,
-        operationKind: "post-create",
-        payload: {
-          description: data.description,
-          relatedPostId: data.relatedPostId ?? null,
-          source: data.source ?? null,
-          tags: data.tags.map((tag) => ({
-            id: tag.id ?? null,
-            name: tag.name,
-          })),
-          title: data.title,
-          videoKey: data.videoKey ?? null,
-        },
-        userId,
-      });
-      const claim = yield* lifecycle.claimOperation({
+      return yield* lifecycle.runOperation({
         kind: "post-create",
         operationKey,
-        requestFingerprint,
+        replay: (result) => selectParsedPost(result.postId),
         userId,
-      });
-      if (claim.outcome === "replayed") {
-        if (claim.result?.postId === undefined) {
-          return yield* new ValidationError({
-            message: "Completed upload has no post result",
-          });
-        }
-        const replayed = yield* db.executeTakeFirstOrError(
-          db
-            .selectFrom("posts")
-            .selectAll()
-            .where("id", "=", claim.result.postId),
-        );
-        return yield* Effect.try({
-          try: () => parse(postsSelectSchema)(replayed),
-          catch: (error) =>
-            new RowParseError({
-              message: "There was an error processing the replay result",
-              cause: error,
-            }),
-        });
-      }
-
-      const claimFence = claim.fence;
-
-      const {
-        title,
-        description,
-        source,
-        relatedPostId,
-        tags,
-        videoMetadata,
-        videoKey,
-      } = data;
-
-      yield* validateRelatedPost({ relatedPostId });
-
-      yield* Effect.logInfo("Upload started").pipe(
-        Effect.annotateLogs({
-          mediaKind: videoKey === undefined ? "image" : "video",
-          title,
-          userId,
-        }),
-      );
-
-      let stagedVideo: StagedVideo | null = null;
-      if (videoKey !== undefined) {
-        stagedVideo = yield* lifecycle.verifyStagedVideo({
-          operationId: claim.operationId,
-          pendingKey: videoKey,
-          userId,
-        });
-      }
-      const finalVideoKey = stagedVideo?.finalKey ?? null;
-
-      const uploadedObjects: ObjectFenceInput[] = [];
-
-      const outcome = yield* Effect.gen(function* () {
-        let thumbnailKey: string;
-        const imageKeys: string[] = [];
-
-        if (stagedVideo !== null) {
-          const copied = yield* lifecycle.copyVideoForPost({
-            contentLength: stagedVideo.contentLength,
-            contentType: stagedVideo.contentType,
-            fence: claimFence,
-            fingerprint: stagedVideo.fingerprint,
-            key: stagedVideo.finalKey,
-            kind: "video",
-            operationId: claim.operationId,
-            sourceEtag: stagedVideo.etag,
-            sourceKey: stagedVideo.sourceKey,
-            userId,
-          });
-          uploadedObjects.push({
-            fence: copied.object.fence,
-            key: copied.object.key,
-            operationId: copied.object.operationId,
-          });
-        }
-
-        if (data.images !== undefined && data.images.length > 0) {
-          for (const [index, image] of data.images.entries()) {
-            const key = imageObjectKey(
-              claim.operationId,
-              index,
-              image.name.split(".").pop() ?? "png",
-            );
-            const extension = image.name.split(".").pop() ?? "png";
-            const contentType = imageContentType(extension);
-            const fingerprint = yield* fileDigest(image);
-            const stored = yield* lifecycle.storeObject({
-              contentLength: image.size,
-              contentType,
-              fence: claimFence,
-              file: image,
-              fingerprint,
-              key,
-              kind: "image",
-              operationId: claim.operationId,
-              userId,
-            });
-            uploadedObjects.push({
-              fence: stored.object.fence,
-              key: stored.object.key,
-              operationId: stored.object.operationId,
-            });
-            imageKeys.push(stored.object.key);
-          }
-          thumbnailKey = imageKeys[0] ?? "";
-        } else {
-          if (data.thumbnail === undefined) {
-            return yield* Effect.fail(
-              new ValidationError({ message: "Thumbnail is required" }),
-            );
-          }
-          const key = thumbnailObjectKey(claim.operationId);
-          const fingerprint = yield* fileDigest(data.thumbnail);
-          const stored = yield* lifecycle.storeObject({
-            contentLength: data.thumbnail.size,
-            contentType: "image/jpeg",
-            fence: claimFence,
-            file: data.thumbnail,
-            fingerprint,
-            key,
-            kind: "thumbnail",
-            operationId: claim.operationId,
-            userId,
-          });
-          thumbnailKey = stored.object.key;
-          uploadedObjects.push({
-            fence: stored.object.fence,
-            key: stored.object.key,
-            operationId: stored.object.operationId,
-          });
-        }
-
-        const newPost = yield* db.transaction((trx) =>
+        request: {
+          fileDigests,
+          payload: {
+            description: data.description,
+            relatedPostId: data.relatedPostId ?? null,
+            source: data.source ?? null,
+            tags: data.tags.map((tag) => ({
+              id: tag.id ?? null,
+              name: tag.name,
+            })),
+            title: data.title,
+            videoKey: data.videoKey ?? null,
+          },
+        },
+        run: (operation) =>
           Effect.gen(function* () {
-            const newPost = yield* trx.executeTakeFirstOrError(
-              trx
-                .insertInto("posts")
-                .values({
-                  animeTitle: data.animeTitle ? data.animeTitle : null,
-                  chapterNumber: data.chapterNumber ?? null,
-                  description,
-                  episodeNumber: data.episodeNumber ?? null,
-                  relatedPostId,
-                  seasonNumber: data.seasonNumber ?? null,
-                  source,
-                  sourceType: data.sourceType ?? null,
-                  thumbnailKey,
-                  title,
-                  userId,
-                  videoKey: finalVideoKey,
-                  videoMetadata:
-                    videoMetadata === undefined
-                      ? "{}"
-                      : Schema.encodeSync(
-                          Schema.fromJsonString(VideoMetadataSchema),
-                        )(videoMetadata),
-                  volumeNumber: data.volumeNumber ?? null,
-                })
-                .returningAll(),
-            );
+            const claimFence = operation.fence;
 
-            const postId = asPostId(newPost.id);
+            const {
+              title,
+              description,
+              source,
+              relatedPostId,
+              tags,
+              videoMetadata,
+              videoKey,
+            } = data;
 
-            if (imageKeys.length > 0) {
-              yield* trx.execute(
-                trx.insertInto("post_images").values(
-                  imageKeys.map((storageKey, index) => {
-                    const dimensions = data.imageDimensions?.[index];
-                    return {
-                      height: dimensions?.height ?? null,
-                      postId,
-                      position: index,
-                      storageKey,
-                      width: dimensions?.width ?? null,
-                    };
-                  }),
-                ),
-              );
-            }
+            yield* validateRelatedPost({ relatedPostId });
 
-            // Strip reserved tag names from user input, then append the correct
-            // one so every post always carries its implicit media-kind tag.
-            const reservedNames: ReadonlySet<string> = new Set(
-              RESERVED_TAG_NAMES,
-            );
-            const effectiveTags = [
-              ...tags.filter((tag) => !reservedNames.has(tag.name)),
-              { name: finalVideoKey === null ? "image" : "video" },
-            ];
-            yield* resolveAndLinkTags(trx, postId, effectiveTags);
-
-            yield* finishOperationInTransaction(
-              trx,
-              {
-                fence: claimFence,
-                operationId: claim.operationId,
-                result: (() => {
-                  const result: MediaOperationResult = {
-                    imageKeys,
-                    postId,
-                    thumbnailKey,
-                    state: "created",
-                    ...(finalVideoKey !== null && { videoKey: finalVideoKey }),
-                  };
-                  return result;
-                })(),
-              },
-              yield* DateTime.nowAsDate,
-            );
-
-            yield* Effect.logInfo("Tags linked to post").pipe(
+            yield* Effect.logInfo("Upload started").pipe(
               Effect.annotateLogs({
-                postId: String(postId),
-                tagCount: effectiveTags.length,
+                mediaKind: videoKey === undefined ? "image" : "video",
+                title,
+                userId,
               }),
             );
 
-            return newPost;
+            let stagedVideo: StagedVideo | null = null;
+            if (videoKey !== undefined) {
+              stagedVideo = yield* lifecycle.verifyStagedVideo({
+                operationId: operation.operationId,
+                pendingKey: videoKey,
+                userId,
+              });
+            }
+            const finalVideoKey = stagedVideo?.finalKey ?? null;
+
+            const uploadedObjects: ObjectFenceInput[] = [];
+
+            const outcome = yield* Effect.gen(function* () {
+              let thumbnailKey: string;
+              const imageKeys: string[] = [];
+
+              if (stagedVideo !== null) {
+                const copied = yield* lifecycle.copyVideoForPost({
+                  contentLength: stagedVideo.contentLength,
+                  contentType: stagedVideo.contentType,
+                  fence: claimFence,
+                  fingerprint: stagedVideo.fingerprint,
+                  key: stagedVideo.finalKey,
+                  kind: "video",
+                  operationId: operation.operationId,
+                  sourceEtag: stagedVideo.etag,
+                  sourceKey: stagedVideo.sourceKey,
+                  userId,
+                });
+                uploadedObjects.push({
+                  fence: copied.object.fence,
+                  key: copied.object.key,
+                  operationId: copied.object.operationId,
+                });
+              }
+
+              if (data.images !== undefined && data.images.length > 0) {
+                for (const [index, image] of data.images.entries()) {
+                  const key = imageObjectKey(
+                    operation.operationId,
+                    index,
+                    image.name.split(".").pop() ?? "png",
+                  );
+                  const extension = image.name.split(".").pop() ?? "png";
+                  const contentType = imageContentType(extension);
+                  const fingerprint = yield* fileDigest(image);
+                  const stored = yield* lifecycle.storeObject({
+                    contentLength: image.size,
+                    contentType,
+                    fence: claimFence,
+                    file: image,
+                    fingerprint,
+                    key,
+                    kind: "image",
+                    operationId: operation.operationId,
+                    userId,
+                  });
+                  uploadedObjects.push({
+                    fence: stored.object.fence,
+                    key: stored.object.key,
+                    operationId: stored.object.operationId,
+                  });
+                  imageKeys.push(stored.object.key);
+                }
+                thumbnailKey = imageKeys[0] ?? "";
+              } else {
+                if (data.thumbnail === undefined) {
+                  return yield* Effect.fail(
+                    new ValidationError({ message: "Thumbnail is required" }),
+                  );
+                }
+                const key = thumbnailObjectKey(operation.operationId);
+                const fingerprint = yield* fileDigest(data.thumbnail);
+                const stored = yield* lifecycle.storeObject({
+                  contentLength: data.thumbnail.size,
+                  contentType: "image/jpeg",
+                  fence: claimFence,
+                  file: data.thumbnail,
+                  fingerprint,
+                  key,
+                  kind: "thumbnail",
+                  operationId: operation.operationId,
+                  userId,
+                });
+                thumbnailKey = stored.object.key;
+                uploadedObjects.push({
+                  fence: stored.object.fence,
+                  key: stored.object.key,
+                  operationId: stored.object.operationId,
+                });
+              }
+
+              const newPost = yield* db.transaction((trx) =>
+                Effect.gen(function* () {
+                  const newPost = yield* trx.executeTakeFirstOrError(
+                    trx
+                      .insertInto("posts")
+                      .values({
+                        animeTitle: data.animeTitle ? data.animeTitle : null,
+                        chapterNumber: data.chapterNumber ?? null,
+                        description,
+                        episodeNumber: data.episodeNumber ?? null,
+                        relatedPostId,
+                        seasonNumber: data.seasonNumber ?? null,
+                        source,
+                        sourceType: data.sourceType ?? null,
+                        thumbnailKey,
+                        title,
+                        userId,
+                        videoKey: finalVideoKey,
+                        videoMetadata:
+                          videoMetadata === undefined
+                            ? "{}"
+                            : Schema.encodeSync(
+                                Schema.fromJsonString(VideoMetadataSchema),
+                              )(videoMetadata),
+                        volumeNumber: data.volumeNumber ?? null,
+                      })
+                      .returningAll(),
+                  );
+
+                  const postId = asPostId(newPost.id);
+
+                  if (imageKeys.length > 0) {
+                    yield* trx.execute(
+                      trx.insertInto("post_images").values(
+                        imageKeys.map((storageKey, index) => {
+                          const dimensions = data.imageDimensions?.[index];
+                          return {
+                            height: dimensions?.height ?? null,
+                            postId,
+                            position: index,
+                            storageKey,
+                            width: dimensions?.width ?? null,
+                          };
+                        }),
+                      ),
+                    );
+                  }
+
+                  // Strip reserved tag names from user input, then append the correct
+                  // one so every post always carries its implicit media-kind tag.
+                  const reservedNames: ReadonlySet<string> = new Set(
+                    RESERVED_TAG_NAMES,
+                  );
+                  const effectiveTags = [
+                    ...tags.filter((tag) => !reservedNames.has(tag.name)),
+                    { name: finalVideoKey === null ? "image" : "video" },
+                  ];
+                  yield* resolveAndLinkTags(trx, postId, effectiveTags);
+
+                  yield* operation.finish(trx, {
+                    imageKeys,
+                    postId,
+                    thumbnailKey,
+                    ...(finalVideoKey !== null && { videoKey: finalVideoKey }),
+                  });
+
+                  yield* Effect.logInfo("Tags linked to post").pipe(
+                    Effect.annotateLogs({
+                      postId: String(postId),
+                      tagCount: effectiveTags.length,
+                    }),
+                  );
+
+                  return newPost;
+                }),
+              );
+
+              yield* Effect.logInfo("Upload completed").pipe(
+                Effect.annotateLogs("postId", String(newPost.id)),
+              );
+
+              return newPost;
+            }).pipe(Effect.exit);
+
+            if (Exit.isFailure(outcome)) {
+              yield* Effect.forEach(uploadedObjects, (object) =>
+                lifecycle.deleteObject(object).pipe(Effect.ignore),
+              ).pipe(Effect.ignore);
+
+              return yield* Effect.failCause(outcome.cause);
+            }
+
+            if (stagedVideo !== null) {
+              yield* lifecycle.discardStagedVideo(stagedVideo.sourceKey);
+            }
+
+            const parsed = yield* parsePostRow(
+              outcome.value,
+              "There was an error processing the upload result",
+            );
+            yield* points.awardOrLog({
+              userId,
+              action: "post-upload",
+              refId: parsed.id,
+              actorId: userId,
+            });
+            return parsed;
           }),
-        );
-
-        yield* Effect.logInfo("Upload completed").pipe(
-          Effect.annotateLogs("postId", String(newPost.id)),
-        );
-
-        return newPost;
-      }).pipe(Effect.exit);
-
-      if (Exit.isFailure(outcome)) {
-        yield* Effect.forEach(uploadedObjects, (object) =>
-          lifecycle.deleteObject(object).pipe(Effect.ignore),
-        ).pipe(Effect.ignore);
-
-        return yield* Effect.failCause(outcome.cause);
-      }
-
-      if (stagedVideo !== null) {
-        yield* lifecycle.discardStagedVideo(stagedVideo.sourceKey);
-      }
-
-      return yield* Effect.try({
-        try: () => parse(postsSelectSchema)(outcome.value),
-        catch: (error) =>
-          new RowParseError({
-            message: "There was an error processing the upload result",
-            cause: error,
-          }),
-      }).pipe(
-        Effect.tap((parsed) =>
-          points.awardOrLog({
-            userId,
-            action: "post-upload",
-            refId: parsed.id,
-            actorId: userId,
-          }),
-        ),
-      );
+      });
     });
 
     const createVideoUploadUrl = Effect.fn("PostsService.createVideoUploadUrl")(
@@ -1155,20 +1118,6 @@ export class PostsService extends Context.Service<
       );
 
       const { postId, title, description, source, relatedPostId, tags } = data;
-      const requestFingerprint = yield* operationRequestFingerprint({
-        fileDigests: [],
-        operationKind: "post-update",
-        payload: {
-          description,
-          postId,
-          relatedPostId: relatedPostId ?? null,
-          source: source ?? null,
-          tags: tags.map((tag) => ({ id: tag.id ?? null, name: tag.name })),
-          title,
-        },
-        userId: user.id,
-        version: data.expectedVersion,
-      });
 
       yield* Effect.logInfo("Post update started").pipe(
         Effect.annotateLogs({
@@ -1200,95 +1149,83 @@ export class PostsService extends Context.Service<
 
       yield* validateRelatedPost({ postId, relatedPostId });
 
-      const claim = yield* lifecycle.claimOperation({
+      return yield* lifecycle.runOperation({
         kind: "post-update",
         operationKey: data.operationKey,
-        requestFingerprint,
+        replay: (result) => selectParsedPost(result.postId),
         userId: user.id,
-      });
-
-      if (claim.outcome === "replayed") {
-        const replayedPost = yield* db.executeTakeFirstOrError(
-          db.selectFrom("posts").selectAll().where("id", "=", postId),
-        );
-        return yield* Effect.try({
-          try: () => parse(postsSelectSchema)(replayedPost),
-          catch: (error) =>
-            new RowParseError({
-              message: "There was an error processing the replay result",
-              cause: error,
-            }),
-        });
-      }
-
-      const changes: PostUpdateChanges = { description, title };
-      if (relatedPostId !== undefined) changes.relatedPostId = relatedPostId;
-      if (source !== undefined) changes.source = source;
-
-      const updatedPost = yield* db.transaction((trx) =>
-        Effect.gen(function* () {
-          yield* updatePostWithVersionInTransaction(trx, {
-            changes,
-            expectedVersion: data.expectedVersion,
-            ownerUserId: user.id,
+        request: {
+          payload: {
+            description,
             postId,
-          });
-          const updatedPost = yield* trx.executeTakeFirstOrError(
-            trx.selectFrom("posts").selectAll().where("id", "=", postId),
-          );
+            relatedPostId: relatedPostId ?? null,
+            source: source ?? null,
+            tags: tags.map((tag) => ({ id: tag.id ?? null, name: tag.name })),
+            title,
+          },
+          version: data.expectedVersion,
+        },
+        run: (operation) =>
+          Effect.gen(function* () {
+            const changes: PostUpdateChanges = { description, title };
+            if (relatedPostId !== undefined)
+              changes.relatedPostId = relatedPostId;
+            if (source !== undefined) changes.source = source;
 
-          // Tag links are rebuilt wholesale: delete-then-relink. Reserved media
-          // tags ("video"/"image") are stripped from user input and re-applied
-          // server-side so every post keeps its implicit media-kind tag.
-          yield* trx.execute(
-            trx.deleteFrom("post_tags").where("postId", "=", postId),
-          );
-          const imageRow = yield* trx.executeTakeFirstOrUndefined(
-            trx
-              .selectFrom("post_images")
-              .select("postId")
-              .where("postId", "=", postId)
-              .limit(1),
-          );
-          const reservedNames: ReadonlySet<string> = new Set(
-            RESERVED_TAG_NAMES,
-          );
-          const userTags = (tags ?? []).filter(
-            (tag) => !reservedNames.has(tag.name),
-          );
-          yield* resolveAndLinkTags(trx, postId, [
-            ...userTags,
-            { name: imageRow ? "image" : "video" },
-          ]);
+            const updatedPost = yield* db.transaction((trx) =>
+              Effect.gen(function* () {
+                yield* updatePostWithVersionInTransaction(trx, {
+                  changes,
+                  expectedVersion: data.expectedVersion,
+                  ownerUserId: user.id,
+                  postId,
+                });
+                const updatedPost = yield* trx.executeTakeFirstOrError(
+                  trx.selectFrom("posts").selectAll().where("id", "=", postId),
+                );
 
-          yield* finishOperationInTransaction(
-            trx,
-            {
-              fence: claim.fence,
-              operationId: claim.operationId,
-              result: { postId, state: "updated" },
-            },
-            yield* DateTime.nowAsDate,
-          );
+                // Tag links are rebuilt wholesale: delete-then-relink. Reserved media
+                // tags ("video"/"image") are stripped from user input and re-applied
+                // server-side so every post keeps its implicit media-kind tag.
+                yield* trx.execute(
+                  trx.deleteFrom("post_tags").where("postId", "=", postId),
+                );
+                const imageRow = yield* trx.executeTakeFirstOrUndefined(
+                  trx
+                    .selectFrom("post_images")
+                    .select("postId")
+                    .where("postId", "=", postId)
+                    .limit(1),
+                );
+                const reservedNames: ReadonlySet<string> = new Set(
+                  RESERVED_TAG_NAMES,
+                );
+                const userTags = (tags ?? []).filter(
+                  (tag) => !reservedNames.has(tag.name),
+                );
+                yield* resolveAndLinkTags(trx, postId, [
+                  ...userTags,
+                  { name: imageRow ? "image" : "video" },
+                ]);
 
-          return updatedPost;
-        }),
-      );
+                yield* operation.finish(trx, { postId });
 
-      const updatedPostParsed = yield* Effect.try({
-        try: () => parse(postsSelectSchema)(updatedPost),
-        catch: (error) =>
-          new RowParseError({
-            message: "There was an error processing the update result",
-            cause: error,
+                return updatedPost;
+              }),
+            );
+
+            const updatedPostParsed = yield* parsePostRow(
+              updatedPost,
+              "There was an error processing the update result",
+            );
+
+            yield* Effect.logInfo("Post updated").pipe(
+              Effect.annotateLogs("postId", String(postId)),
+            );
+
+            return updatedPostParsed;
           }),
       });
-
-      yield* Effect.logInfo("Post updated").pipe(
-        Effect.annotateLogs("postId", String(postId)),
-      );
-
-      return updatedPostParsed;
     });
 
     return {

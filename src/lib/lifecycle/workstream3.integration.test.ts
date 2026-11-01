@@ -139,7 +139,7 @@ describe("workstream 3 isolated PostgreSQL + RustFS recovery", () => {
         return yield* lifecycle.finishOperation({
           fence: operation.fence,
           operationId: operation.operationId,
-          result: { imageKeys: [key] },
+          result: { imageKeys: [key], postId: 1, thumbnailKey: key },
         });
       }),
     );

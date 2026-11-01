@@ -425,6 +425,23 @@ describe("VideosService.restore", () => {
       .where("postId", "=", postId)
       .execute();
     expect(revisions.length).toBeGreaterThanOrEqual(2);
+
+    // A repeated request with the same key replays the stored result without
+    // archiving the current video again.
+    const replayed = await ctx.runEffect(
+      VideosService.restore({
+        expectedVersion: 1,
+        operationKey: "restore-original",
+        revisionId: 1,
+      }),
+    );
+    expect(replayed).toEqual({ restored: true });
+    const revisionsAfterReplay = await db
+      .selectFrom("video_revisions")
+      .selectAll()
+      .where("postId", "=", postId)
+      .execute();
+    expect(revisionsAfterReplay).toHaveLength(revisions.length);
   });
 
   it("refuses to restore a revision whose object is missing", async () => {

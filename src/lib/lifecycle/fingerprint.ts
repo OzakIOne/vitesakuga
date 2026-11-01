@@ -18,7 +18,7 @@ export type CanonicalOperationRequest = {
   readonly operationKind: string;
   readonly payload: CanonicalJson;
   readonly userId: string;
-  readonly version?: number;
+  readonly version?: number | undefined;
 };
 
 type CanonicalIdentity = {
