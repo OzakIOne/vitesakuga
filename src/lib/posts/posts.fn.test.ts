@@ -144,7 +144,9 @@ const linkImageWidth = async (postId: number, width: number) => {
     .execute();
 };
 
-type SearchPostsParams = Parameters<PostsService["Service"]["search"]>[0]["params"];
+type SearchPostsParams = Parameters<
+  PostsService["Service"]["search"]
+>[0]["params"];
 type SearchPostsInput = Omit<SearchPostsParams, "randomSeed" | "view"> &
   Partial<Pick<SearchPostsParams, "randomSeed" | "view">>;
 

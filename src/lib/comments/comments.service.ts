@@ -22,8 +22,9 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
-import { asPostId, PostId } from "../ids";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { asPostId } from "../ids";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 
 export type CommentWithUser = {
   content: string;
@@ -42,7 +43,7 @@ export class CommentsService extends Context.Service<
   CommentsService,
   {
     readonly fetch: (
-      postId: PostId,
+      postId: number,
     ) => Effect.Effect<readonly CommentWithUser[], SqlError>;
     readonly add: (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
@@ -51,9 +52,9 @@ export class CommentsService extends Context.Service<
       SqlError | SqlNoFirstResult | UnauthorizedError | SessionFetchError,
       SessionService
     >;
-    readonly delete_: (
-      commentId: number,
-    ) => Effect.Effect<
+    readonly delete_: (input: {
+      commentId: number;
+    }) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
       | ForbiddenError
@@ -80,8 +81,9 @@ export class CommentsService extends Context.Service<
     const community = yield* CommunityActivityService;
 
     const fetch = Effect.fn("CommentsService.fetch")(function* (
-      postId: PostId,
+      rawPostId: number,
     ) {
+      const postId = asPostId(rawPostId);
       const comments = yield* db.execute(
         db
           .selectFrom("comments")
@@ -197,9 +199,11 @@ export class CommentsService extends Context.Service<
       return created;
     });
 
-    const delete_ = Effect.fn("CommentsService.delete_")(function* (
-      commentId: number,
-    ) {
+    const delete_ = Effect.fn("CommentsService.delete_")(function* ({
+      commentId,
+    }: {
+      commentId: number;
+    }) {
       const sessions = yield* SessionService;
       const user = yield* sessions.requireUser(
         "You must be logged in to delete a comment",
@@ -302,35 +306,7 @@ export class CommentsService extends Context.Service<
 
     return { fetch, add, delete_, update };
   }),
-}) {
-  static readonly fetch = Effect.fn("CommentsService.fetch")(function* (
-    postId: PostId,
-  ) {
-    const svc = yield* CommentsService;
-    return yield* svc.fetch(postId);
-  });
-
-  static readonly add = Effect.fn("CommentsService.add")(function* (
-    data: Schema.Schema.Type<typeof commentInsertSchema>,
-  ) {
-    const svc = yield* CommentsService;
-    return yield* svc.add(data);
-  });
-
-  static readonly delete_ = Effect.fn("CommentsService.delete_")(function* (
-    commentId: number,
-  ) {
-    const svc = yield* CommentsService;
-    return yield* svc.delete_(commentId);
-  });
-
-  static readonly update = Effect.fn("CommentsService.update")(function* (
-    data: Schema.Schema.Type<typeof commentUpdateSchema>,
-  ) {
-    const svc = yield* CommentsService;
-    return yield* svc.update(data);
-  });
-}
+}) {}
 
 export const CommentsServiceLive = Layer.effect(
   CommentsService,
@@ -339,13 +315,15 @@ export const CommentsServiceLive = Layer.effect(
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   // Scalar server-fn payloads stay unbranded on the wire (TanStack's ServerFnCtx
-  // cannot round-trip branded primitives); conversion happens in the handler.
+  // cannot round-trip branded primitives); the service brands the id on entry.
   .validator(parse(Schema.Number))
   .handler(
-    createHandler(
-      CommentsServiceLive,
-      baseLayerFactories.db,
-    )((postId: number) => CommentsService.fetch(asPostId(postId))),
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "fetch",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const addComment = createServerFn({
@@ -354,26 +332,32 @@ export const addComment = createServerFn({
 })
   .validator(parse(commentInsertSchema))
   .handler(
-    createHandler(
-      CommentsServiceLive,
-      baseLayerFactories.auth,
-    )(CommentsService.add),
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "add",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const deleteComment = createServerFn({ method: "POST" })
   .validator(parse(Schema.Struct({ commentId: Schema.Number })))
   .handler(
-    createHandler(
-      CommentsServiceLive,
-      baseLayerFactories.auth,
-    )((data: { commentId: number }) => CommentsService.delete_(data.commentId)),
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "delete_",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const updateComment = createServerFn({ method: "POST" })
   .validator(parse(commentUpdateSchema))
   .handler(
-    createHandler(
-      CommentsServiceLive,
-      baseLayerFactories.auth,
-    )(CommentsService.update),
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "update",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

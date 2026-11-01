@@ -57,7 +57,9 @@ afterEach(() => closeCtx());
 
 describe("CommentsService.fetch", () => {
   it("returns empty array when no comments", async () => {
-    const result = await runEffect(CommentsService.fetch(postId));
+    const result = await runEffect(
+      Effect.flatMap(CommentsService, (service) => service.fetch(postId)),
+    );
     expect(result).toEqual([]);
   });
 
@@ -71,7 +73,9 @@ describe("CommentsService.fetch", () => {
       })
       .execute();
 
-    const result = await runEffect(CommentsService.fetch(postId));
+    const result = await runEffect(
+      Effect.flatMap(CommentsService, (service) => service.fetch(postId)),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]!.content).toBe("Great post!");
@@ -101,7 +105,9 @@ describe("CommentsService.fetch", () => {
       })
       .execute();
 
-    const result = await runEffect(CommentsService.fetch(postId));
+    const result = await runEffect(
+      Effect.flatMap(CommentsService, (service) => service.fetch(postId)),
+    );
 
     expect(result).toHaveLength(2);
     expect(result[0]!.content).toBe("Second");
@@ -117,10 +123,12 @@ describe("CommentsService.add", () => {
     // is part of the contract.
     const error = await runEffect(
       Effect.flip(
-        CommentsService.add({
-          content: "Nice!",
-          postId,
-        }),
+        Effect.flatMap(CommentsService, (service) =>
+          service.add({
+            content: "Nice!",
+            postId,
+          }),
+        ),
       ),
     );
 
@@ -132,10 +140,12 @@ describe("CommentsService.add", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      CommentsService.add({
-        content: "Nice!",
-        postId,
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({
+          content: "Nice!",
+          postId,
+        }),
+      ),
     );
 
     expect(result.content).toBe("Nice!");
@@ -160,10 +170,12 @@ describe("CommentsService.add", () => {
     // failure to SqlError — there is no PostNotFoundError on this path.
     const error = await runEffect(
       Effect.flip(
-        CommentsService.add({
-          content: "Bad",
-          postId: asPostId(999),
-        }),
+        Effect.flatMap(CommentsService, (service) =>
+          service.add({
+            content: "Bad",
+            postId: asPostId(999),
+          }),
+        ),
       ),
     );
 
@@ -174,7 +186,9 @@ describe("CommentsService.add", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const created = await runEffect(
-      CommentsService.add({ content: "Nice", postId }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({ content: "Nice", postId }),
+      ),
     );
 
     const ledger = await db
@@ -201,10 +215,12 @@ describe("CommentsService.add", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      CommentsService.add({
-        content: "Hey @bob, look at this!",
-        postId,
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({
+          content: "Hey @bob, look at this!",
+          postId,
+        }),
+      ),
     );
 
     // Freshly typed handles are canonicalized to id-based tokens on storage.
@@ -227,7 +243,9 @@ describe("CommentsService.add", () => {
     expect(notifications[0]!.type).toBe("comment-mention");
     expect(notifications[0]!.postId).toBe(postId);
 
-    const fetched = await runEffect(CommentsService.fetch(postId));
+    const fetched = await runEffect(
+      Effect.flatMap(CommentsService, (service) => service.fetch(postId)),
+    );
     expect(fetched[0]!.mentions).toEqual([
       { userId: "user-2", username: "bob" },
     ]);
@@ -237,10 +255,12 @@ describe("CommentsService.add", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     await runEffect(
-      CommentsService.add({
-        content: "Note to @alice myself",
-        postId,
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({
+          content: "Note to @alice myself",
+          postId,
+        }),
+      ),
     );
 
     const mentions = await db
@@ -261,7 +281,9 @@ describe("CommentsService.add", () => {
     await sql`ALTER TABLE points_ledger DROP COLUMN points`.execute(db);
     try {
       const created = await runEffect(
-        CommentsService.add({ content: "Still here", postId }),
+        Effect.flatMap(CommentsService, (service) =>
+          service.add({ content: "Still here", postId }),
+        ),
       );
       const rows = await db
         .selectFrom("comments")
@@ -280,10 +302,12 @@ describe("CommentsService.add", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     await runEffect(
-      CommentsService.add({
-        content: "Pinging @ghost_who_does_not_exist",
-        postId,
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({
+          content: "Pinging @ghost_who_does_not_exist",
+          postId,
+        }),
+      ),
     );
 
     const mentions = await db
@@ -315,7 +339,11 @@ describe("CommentsService.delete_", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runEffect(
-      Effect.flip(CommentsService.delete_(commentId)),
+      Effect.flip(
+        Effect.flatMap(CommentsService, (service) =>
+          service.delete_({ commentId }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");
@@ -326,7 +354,11 @@ describe("CommentsService.delete_", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-2" }));
 
     const error = await runEffect(
-      Effect.flip(CommentsService.delete_(commentId)),
+      Effect.flip(
+        Effect.flatMap(CommentsService, (service) =>
+          service.delete_({ commentId }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("ForbiddenError");
@@ -338,7 +370,11 @@ describe("CommentsService.delete_", () => {
       makeAuthSession({ id: "moderator-1", role: "moderator" }),
     );
 
-    const result = await runEffect(CommentsService.delete_(commentId));
+    const result = await runEffect(
+      Effect.flatMap(CommentsService, (service) =>
+        service.delete_({ commentId }),
+      ),
+    );
 
     expect(result).toEqual({ success: true });
   });
@@ -346,7 +382,13 @@ describe("CommentsService.delete_", () => {
   it("fails with CommentNotFoundError when comment does not exist", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
-    const error = await runEffect(Effect.flip(CommentsService.delete_(9999)));
+    const error = await runEffect(
+      Effect.flip(
+        Effect.flatMap(CommentsService, (service) =>
+          service.delete_({ commentId: 9999 }),
+        ),
+      ),
+    );
 
     expect(error._tag).toBe("CommentNotFoundError");
     if (error._tag !== "CommentNotFoundError") {
@@ -359,7 +401,11 @@ describe("CommentsService.delete_", () => {
   it("deletes own comment successfully", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
-    const result = await runEffect(CommentsService.delete_(commentId));
+    const result = await runEffect(
+      Effect.flatMap(CommentsService, (service) =>
+        service.delete_({ commentId }),
+      ),
+    );
 
     expect(result).toEqual({ success: true });
 
@@ -379,10 +425,12 @@ describe("CommentsService.update", () => {
   beforeEach(async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const created = await runEffect(
-      CommentsService.add({
-        content: "Editable comment",
-        postId,
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({
+          content: "Editable comment",
+          postId,
+        }),
+      ),
     );
     commentId = created.id;
   });
@@ -391,7 +439,11 @@ describe("CommentsService.update", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runEffect(
-      Effect.flip(CommentsService.update({ commentId, content: "Hack" })),
+      Effect.flip(
+        Effect.flatMap(CommentsService, (service) =>
+          service.update({ commentId, content: "Hack" }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");
@@ -402,7 +454,11 @@ describe("CommentsService.update", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-2" }));
 
     const error = await runEffect(
-      Effect.flip(CommentsService.update({ commentId, content: "Hack" })),
+      Effect.flip(
+        Effect.flatMap(CommentsService, (service) =>
+          service.update({ commentId, content: "Hack" }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("ForbiddenError");
@@ -423,7 +479,9 @@ describe("CommentsService.update", () => {
     );
 
     const result = await runEffect(
-      CommentsService.update({ commentId, content: "Moderated edit" }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.update({ commentId, content: "Moderated edit" }),
+      ),
     );
 
     expect(result).toEqual({ success: true });
@@ -439,7 +497,11 @@ describe("CommentsService.update", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const error = await runEffect(
-      Effect.flip(CommentsService.update({ commentId: 9999, content: "X" })),
+      Effect.flip(
+        Effect.flatMap(CommentsService, (service) =>
+          service.update({ commentId: 9999, content: "X" }),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("CommentNotFoundError");
@@ -469,7 +531,11 @@ describe("CommentsService.mention edge cases", () => {
     );
     try {
       const error = await runEffect(
-        Effect.flip(CommentsService.add({ content: "Hey @bob", postId })),
+        Effect.flip(
+          Effect.flatMap(CommentsService, (service) =>
+            service.add({ content: "Hey @bob", postId }),
+          ),
+        ),
       );
       expect(error._tag).toBe("SqlError");
     } finally {
@@ -504,7 +570,9 @@ describe("CommentsService.mention edge cases", () => {
       .execute();
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
     const created = await runEffect(
-      CommentsService.add({ content: "Hey @bob", postId }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({ content: "Hey @bob", postId }),
+      ),
     );
     await sql`ALTER TABLE comment_mentions RENAME TO comment_mentions_broken`.execute(
       db,
@@ -512,10 +580,12 @@ describe("CommentsService.mention edge cases", () => {
     try {
       const error = await runEffect(
         Effect.flip(
-          CommentsService.update({
-            commentId: created.id,
-            content: "Edited without mention",
-          }),
+          Effect.flatMap(CommentsService, (service) =>
+            service.update({
+              commentId: created.id,
+              content: "Edited without mention",
+            }),
+          ),
         ),
       );
       expect(error._tag).toBe("SqlError");
@@ -552,7 +622,9 @@ describe("CommentsService.mention edge cases", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      CommentsService.add({ content: "Hey @bob", postId }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({ content: "Hey @bob", postId }),
+      ),
     );
 
     // Deleted accounts are not mention targets: the handle stays plain text.
@@ -583,7 +655,9 @@ describe("CommentsService.mention edge cases", () => {
       .execute();
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const created = await runEffect(
-      CommentsService.add({ content: "Hey @bob", postId }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({ content: "Hey @bob", postId }),
+      ),
     );
 
     // Bob is anonymized after the fact: the stored mention must still
@@ -594,7 +668,9 @@ describe("CommentsService.mention edge cases", () => {
       .where("id", "=", "user-2")
       .execute();
 
-    const fetched = await runEffect(CommentsService.fetch(postId));
+    const fetched = await runEffect(
+      Effect.flatMap(CommentsService, (service) => service.fetch(postId)),
+    );
     const rendered = fetched.find((row) => row.id === created.id);
     expect(rendered?.content).toBe("Hey [@bob](user:user-2)");
     expect(rendered?.mentions).toEqual([]);
@@ -619,7 +695,9 @@ describe("CommentsService.mention edge cases", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      CommentsService.add({ content: `Pinging ${handles.join(" ")}`, postId }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({ content: `Pinging ${handles.join(" ")}`, postId }),
+      ),
     );
 
     // Exactly the first 10 handles are canonicalized; the tail stays text.
@@ -668,10 +746,12 @@ describe("CommentsService.update mention re-resolution", () => {
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const created = await runEffect(
-      CommentsService.add({
-        content: "Hey @bob",
-        postId,
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({
+          content: "Hey @bob",
+          postId,
+        }),
+      ),
     );
     commentId = created.id;
   });
@@ -680,10 +760,12 @@ describe("CommentsService.update mention re-resolution", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      CommentsService.update({
-        commentId,
-        content: "Hey @bob and @carol",
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.update({
+          commentId,
+          content: "Hey @bob and @carol",
+        }),
+      ),
     );
     expect(result).toEqual({ success: true });
 
@@ -712,10 +794,12 @@ describe("CommentsService.update mention re-resolution", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     await runEffect(
-      CommentsService.update({
-        commentId,
-        content: "Hey @bob, edited typo",
-      }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.update({
+          commentId,
+          content: "Hey @bob, edited typo",
+        }),
+      ),
     );
 
     const notifications = await db
@@ -730,7 +814,9 @@ describe("CommentsService.update mention re-resolution", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     await runEffect(
-      CommentsService.update({ commentId, content: "Nobody mentioned now" }),
+      Effect.flatMap(CommentsService, (service) =>
+        service.update({ commentId, content: "Nobody mentioned now" }),
+      ),
     );
 
     const mentions = await db

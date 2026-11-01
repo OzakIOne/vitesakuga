@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,7 +60,9 @@ afterEach(() => closeCtx());
 
 describe("PostVotesService.get", () => {
   it("returns zero counts and no user vote when there are no votes", async () => {
-    const result = await runEffect(PostVotesService.get(postId));
+    const result = await runEffect(
+      Effect.flatMap(PostVotesService, (service) => service.get(postId)),
+    );
 
     expect(result).toEqual({ dislikes: 0, likes: 0, userVote: null });
   });
@@ -71,7 +74,9 @@ describe("PostVotesService.get", () => {
       .execute();
 
     mockGetSession.mockResolvedValueOnce(null);
-    const result = await runEffect(PostVotesService.get(postId));
+    const result = await runEffect(
+      Effect.flatMap(PostVotesService, (service) => service.get(postId)),
+    );
 
     expect(result).toEqual({ dislikes: 0, likes: 1, userVote: null });
   });
@@ -83,7 +88,9 @@ describe("PostVotesService.get", () => {
       .execute();
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
-    const result = await runEffect(PostVotesService.get(postId));
+    const result = await runEffect(
+      Effect.flatMap(PostVotesService, (service) => service.get(postId)),
+    );
 
     expect(result).toEqual({ dislikes: 1, likes: 0, userVote: "dislike" });
   });
@@ -94,7 +101,9 @@ describe("PostVotesService.set", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runFailure(
-      PostVotesService.set({ postId, vote: "like" }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "like" }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
@@ -106,7 +115,9 @@ describe("PostVotesService.set", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const error = await runFailure(
-      PostVotesService.set({ postId: asPostId(999), vote: "like" }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId: asPostId(999), vote: "like" }),
+      ),
     );
     expect(error).toMatchObject({ _tag: "PostNotFoundError", postId: 999 });
   });
@@ -115,7 +126,9 @@ describe("PostVotesService.set", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostVotesService.set({ postId, vote: "like" }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "like" }),
+      ),
     );
 
     expect(result).toEqual({ dislikes: 0, likes: 1, userVote: "like" });
@@ -129,7 +142,9 @@ describe("PostVotesService.set", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostVotesService.set({ postId, vote: "dislike" }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "dislike" }),
+      ),
     );
 
     expect(result).toEqual({ dislikes: 1, likes: 0, userVote: "dislike" });
@@ -153,7 +168,9 @@ describe("PostVotesService.set", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostVotesService.set({ postId, vote: "dislike" }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "dislike" }),
+      ),
     );
 
     expect(result).toEqual({ dislikes: 1, likes: 1, userVote: "dislike" });
@@ -164,7 +181,9 @@ describe("PostVotesService.remove", () => {
   it("throws unauthorized when logged out", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    const error = await runFailure(PostVotesService.remove({ postId }));
+    const error = await runFailure(
+      Effect.flatMap(PostVotesService, (service) => service.remove({ postId })),
+    );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
       message: "You must be logged in to vote on posts",
@@ -178,7 +197,9 @@ describe("PostVotesService.remove", () => {
       .execute();
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
-    const result = await runEffect(PostVotesService.remove({ postId }));
+    const result = await runEffect(
+      Effect.flatMap(PostVotesService, (service) => service.remove({ postId })),
+    );
 
     expect(result).toEqual({ dislikes: 0, likes: 0, userVote: null });
   });
@@ -186,7 +207,9 @@ describe("PostVotesService.remove", () => {
   it("is a no-op when the user has no vote", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
-    const result = await runEffect(PostVotesService.remove({ postId }));
+    const result = await runEffect(
+      Effect.flatMap(PostVotesService, (service) => service.remove({ postId })),
+    );
 
     expect(result).toEqual({ dislikes: 0, likes: 0, userVote: null });
   });
@@ -209,7 +232,11 @@ describe("PostVotesService.set community activity", () => {
     await insertVoter();
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-2" }));
 
-    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "like" }),
+      ),
+    );
 
     const ledger = await db.selectFrom("points_ledger").selectAll().execute();
     expect(ledger).toHaveLength(1);
@@ -227,8 +254,16 @@ describe("PostVotesService.set community activity", () => {
     await insertVoter();
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-2" }));
 
-    await runEffect(PostVotesService.set({ postId, vote: "like" }));
-    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "like" }),
+      ),
+    );
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "like" }),
+      ),
+    );
 
     const ledger = await db.selectFrom("points_ledger").selectAll().execute();
     expect(ledger).toHaveLength(1);
@@ -238,7 +273,11 @@ describe("PostVotesService.set community activity", () => {
     await insertVoter();
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-2" }));
 
-    await runEffect(PostVotesService.set({ postId, vote: "dislike" }));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "dislike" }),
+      ),
+    );
 
     const ledger = await db.selectFrom("points_ledger").selectAll().execute();
     expect(ledger).toEqual([]);
@@ -247,7 +286,11 @@ describe("PostVotesService.set community activity", () => {
   it("awards nothing when the author likes their own post", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
-    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId, vote: "like" }),
+      ),
+    );
 
     const ledger = await db.selectFrom("points_ledger").selectAll().execute();
     expect(ledger).toEqual([]);
@@ -259,7 +302,9 @@ describe("PostVotesService.fetchLikedPosts", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runFailure(
-      PostVotesService.fetchLikedPosts({ page: 0 }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.fetchLikedPosts({ page: 0 }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
@@ -271,7 +316,9 @@ describe("PostVotesService.fetchLikedPosts", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostVotesService.fetchLikedPosts({ page: 0 }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.fetchLikedPosts({ page: 0 }),
+      ),
     );
 
     expect(result.playlist).toEqual({
@@ -318,7 +365,9 @@ describe("PostVotesService.fetchLikedPosts", () => {
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const result = await runEffect(
-      PostVotesService.fetchLikedPosts({ page: 0 }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.fetchLikedPosts({ page: 0 }),
+      ),
     );
 
     expect(result.playlist.post_count).toBe(1);
@@ -364,7 +413,9 @@ describe("PostVotesService.fetchLikedPosts", () => {
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const result = await runEffect(
-      PostVotesService.fetchLikedPosts({ page: 0 }),
+      Effect.flatMap(PostVotesService, (service) =>
+        service.fetchLikedPosts({ page: 0 }),
+      ),
     );
 
     expect(result.data.map((row) => row.post_id)).toEqual([

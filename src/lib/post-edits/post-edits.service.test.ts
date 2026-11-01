@@ -65,7 +65,9 @@ const PAYLOAD: PostEditPayload = {
 };
 
 const approve = (editId: number, operationKey = crypto.randomUUID()) =>
-  PostEditsService.approve({ editId, operationKey });
+  Effect.flatMap(PostEditsService, (service) =>
+    service.approve({ editId, operationKey }),
+  );
 
 describe("PostEditsService.propose", () => {
   it("replays a repeated proposal with the real edit id and no second row", async () => {
@@ -81,11 +83,13 @@ describe("PostEditsService.propose", () => {
     );
     const propose = () =>
       ctx.runEffect(
-        PostEditsService.propose({
-          operationKey: "propose-replay",
-          payload: PAYLOAD,
-          postId,
-        }),
+        Effect.flatMap(PostEditsService, (service) =>
+          service.propose({
+            operationKey: "propose-replay",
+            payload: PAYLOAD,
+            postId,
+          }),
+        ),
       );
     const first = await propose();
     const replayed = await propose();
@@ -112,7 +116,9 @@ describe("PostEditsService.propose", () => {
       makeAuthSession({ id: "uploader-1", role: "uploader" }),
     );
     const result = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     const row = await editRow(db, result.editId);
@@ -139,7 +145,11 @@ describe("PostEditsService.propose", () => {
     ctx.mockGetSession.mockResolvedValue(null);
 
     const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.propose({ payload: PAYLOAD, postId })),
+      Effect.flip(
+        Effect.flatMap(PostEditsService, (service) =>
+          service.propose({ payload: PAYLOAD, postId }),
+        ),
+      ),
     );
     expect(error._tag).toBe("UnauthorizedError");
     expect(error.message).toBe("You must be logged in to suggest an edit");
@@ -155,7 +165,11 @@ describe("PostEditsService.propose", () => {
     );
 
     const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.propose({ payload: PAYLOAD, postId: 9999 })),
+      Effect.flip(
+        Effect.flatMap(PostEditsService, (service) =>
+          service.propose({ payload: PAYLOAD, postId: 9999 }),
+        ),
+      ),
     );
     expect(error._tag).toBe("PostNotFoundError");
     if (error._tag !== "PostNotFoundError") {
@@ -177,7 +191,11 @@ describe("PostEditsService.propose", () => {
       makeAuthSession({ id: "plain-novice", role: "novice" }),
     );
     const noviceError = await ctx.runEffect(
-      Effect.flip(PostEditsService.propose({ payload: PAYLOAD, postId })),
+      Effect.flip(
+        Effect.flatMap(PostEditsService, (service) =>
+          service.propose({ payload: PAYLOAD, postId }),
+        ),
+      ),
     );
     expect(noviceError._tag).toBe("ForbiddenError");
     expect(noviceError.message).toBe(
@@ -188,7 +206,11 @@ describe("PostEditsService.propose", () => {
       makeAuthSession({ id: "author-1", role: "novice" }),
     );
     const ownerError = await ctx.runEffect(
-      Effect.flip(PostEditsService.propose({ payload: PAYLOAD, postId })),
+      Effect.flip(
+        Effect.flatMap(PostEditsService, (service) =>
+          service.propose({ payload: PAYLOAD, postId }),
+        ),
+      ),
     );
     expect(ownerError._tag).toBe("ValidationError");
     expect(ownerError.message).toBe(
@@ -211,7 +233,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "uploader-1", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     ctx.mockGetSession.mockResolvedValueOnce(
@@ -272,7 +296,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "peer-a", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     // First vote alone does not apply.
@@ -315,7 +341,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "uploader-2", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     ctx.mockGetSession.mockResolvedValue(null);
 
@@ -357,7 +385,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "uploader-9", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     // The post_edits.postId FK cascades, so the suggestion row goes with
@@ -389,7 +419,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "uploader-6", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     // Break exactly the ledger insert (dedupe/cap reads select id/count
@@ -439,7 +471,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "uploader-7", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     // A peer votes first (recorded, not applied), staff then applies
@@ -484,7 +518,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "author-race", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     ctx.mockGetSession
       .mockResolvedValueOnce(
@@ -523,14 +559,22 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "author-decision", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "owner-decision", role: "novice" }),
     );
     const results = await Promise.all([
       ctx.runEffect(Effect.exit(approve(editId))),
-      ctx.runEffect(Effect.exit(PostEditsService.reject(editId))),
+      ctx.runEffect(
+        Effect.exit(
+          Effect.flatMap(PostEditsService, (service) =>
+            service.reject({ editId }),
+          ),
+        ),
+      ),
     ]);
     expect(results.filter((result) => result._tag === "Success")).toHaveLength(
       1,
@@ -557,7 +601,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "author-rollback", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     await sql`ALTER TABLE post_edits ADD CONSTRAINT deny_approval CHECK (status <> 'approved') NOT VALID`.execute(
       ctx.db,
@@ -601,7 +647,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "author-notify", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     await sql`ALTER TABLE notifications RENAME TO unavailable_notifications`.execute(
       ctx.db,
@@ -640,7 +688,9 @@ describe("PostEditsService.approve", () => {
       makeAuthSession({ id: "uploader-3", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "admin-3", role: "admin" }),
@@ -648,7 +698,11 @@ describe("PostEditsService.approve", () => {
     await ctx.runEffect(approve(editId));
 
     const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.reject(editId)),
+      Effect.flip(
+        Effect.flatMap(PostEditsService, (service) =>
+          service.reject({ editId }),
+        ),
+      ),
     );
     expect(error._tag).toBe("EditAlreadyResolvedError");
     if (error._tag !== "EditAlreadyResolvedError") {
@@ -663,7 +717,11 @@ describe("PostEditsService.reject", () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);
     closeCtx = ctx.close;
     ctx.mockGetSession.mockResolvedValueOnce(null);
-    const error = await ctx.runFailure(PostEditsService.reject(123));
+    const error = await ctx.runFailure(
+      Effect.flatMap(PostEditsService, (service) =>
+        service.reject({ editId: 123 }),
+      ),
+    );
     expect(error._tag).toBe("UnauthorizedError");
   });
 
@@ -681,7 +739,9 @@ describe("PostEditsService.reject", () => {
       makeAuthSession({ id: "propose-4", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     // A plain uploader (not the suggester, not staff, not the owner) cannot
@@ -690,7 +750,11 @@ describe("PostEditsService.reject", () => {
       makeAuthSession({ id: "lone-uploader", role: "uploader" }),
     );
     const error = await ctx.runEffect(
-      Effect.flip(PostEditsService.reject(editId)),
+      Effect.flip(
+        Effect.flatMap(PostEditsService, (service) =>
+          service.reject({ editId }),
+        ),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
     expect(error.message).toBe(
@@ -701,7 +765,9 @@ describe("PostEditsService.reject", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "owner-4", role: "novice" }),
     );
-    const result = await ctx.runEffect(PostEditsService.reject(editId));
+    const result = await ctx.runEffect(
+      Effect.flatMap(PostEditsService, (service) => service.reject({ editId })),
+    );
     expect(result.rejected).toBe(true);
     const row = await editRow(db, editId);
     expect(row.status).toBe("rejected");
@@ -739,13 +805,17 @@ describe("PostEditsService.reject community activity", () => {
       makeAuthSession({ id: "uploader-3", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
 
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-3", role: "moderator" }),
     );
-    await ctx.runEffect(PostEditsService.reject(editId));
+    await ctx.runEffect(
+      Effect.flatMap(PostEditsService, (service) => service.reject({ editId })),
+    );
 
     const suggesterInbox = await db
       .selectFrom("notifications")
@@ -779,7 +849,9 @@ describe("PostEditsService.listForPost", () => {
       makeAuthSession({ id: "voter-5", role: "uploader" }),
     );
     const { editId } = await ctx.runEffect(
-      PostEditsService.propose({ payload: PAYLOAD, postId }),
+      Effect.flatMap(PostEditsService, (service) =>
+        service.propose({ payload: PAYLOAD, postId }),
+      ),
     );
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "second-voter", role: "uploader" }),
@@ -791,7 +863,11 @@ describe("PostEditsService.listForPost", () => {
       makeAuthSession({ id: "third-voter", role: "uploader" }),
     );
     await insertUser(db, { id: "third-voter", role: "uploader" });
-    const pending = await ctx.runEffect(PostEditsService.listForPost(postId));
+    const pending = await ctx.runEffect(
+      Effect.flatMap(PostEditsService, (service) =>
+        service.listForPost({ postId }),
+      ),
+    );
 
     expect(pending).toHaveLength(1);
     expect(pending[0]!.approvals).toEqual(["second-voter"]);

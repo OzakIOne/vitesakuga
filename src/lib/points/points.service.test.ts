@@ -332,7 +332,7 @@ describe("service hooks", () => {
       makeAuthSession({ id: "commenter-1" }),
     );
     await runEffect(
-      CommentsService.add({ content: "nice sakuga", postId: post.id }),
+      Effect.flatMap(CommentsService, (service) => service.add({ content: "nice sakuga", postId: post.id })),
     );
 
     const rows = await ledgerRows(db, "commenter-1");
@@ -351,12 +351,12 @@ describe("service hooks", () => {
 
     // A self-like earns nothing.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "author-1" }));
-    await runEffect(PostVotesService.set({ postId: post.id, vote: "like" }));
+    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "like" })));
     expect(await ledgerRows(db, "author-1")).toHaveLength(0);
 
     // Another user's like pays out once.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));
-    await runEffect(PostVotesService.set({ postId: post.id, vote: "like" }));
+    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "like" })));
     let rows = await ledgerRows(db, "author-1");
     expect(rows).toHaveLength(1);
     expect(rows[0]!.action).toBe("post-like-received");
@@ -364,9 +364,9 @@ describe("service hooks", () => {
 
     // Dislike then re-like never pays twice.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));
-    await runEffect(PostVotesService.set({ postId: post.id, vote: "dislike" }));
+    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "dislike" })));
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));
-    await runEffect(PostVotesService.set({ postId: post.id, vote: "like" }));
+    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "like" })));
     rows = await ledgerRows(db, "author-1");
     expect(rows).toHaveLength(1);
   });

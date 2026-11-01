@@ -17,7 +17,8 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import {
   fetchLikedPostsSchema,
   removePostVoteSchema,
@@ -72,7 +73,7 @@ export class PostVotesService extends Context.Service<
   PostVotesService,
   {
     readonly get: (
-      postId: PostId,
+      postId: number,
     ) => Effect.Effect<
       PostVotesSummary,
       SessionFetchError | SqlError,
@@ -136,7 +137,10 @@ export class PostVotesService extends Context.Service<
       };
     });
 
-    const get = Effect.fn("PostVotesService.get")(function* (postId: PostId) {
+    const get = Effect.fn("PostVotesService.get")(function* (
+      rawPostId: number,
+    ) {
+      const postId = asPostId(rawPostId);
       const sessions = yield* SessionService;
       const user = yield* sessions.getUser();
       return yield* fetchSummary(postId, user?.id ?? null);
@@ -304,35 +308,7 @@ export class PostVotesService extends Context.Service<
 
     return { get, set, remove, fetchLikedPosts };
   }),
-}) {
-  static readonly get = Effect.fn("PostVotesService.get")(function* (
-    postId: PostId,
-  ) {
-    const svc = yield* PostVotesService;
-    return yield* svc.get(postId);
-  });
-
-  static readonly set = Effect.fn("PostVotesService.set")(function* (
-    data: SetPostVoteInput,
-  ) {
-    const svc = yield* PostVotesService;
-    return yield* svc.set(data);
-  });
-
-  static readonly remove = Effect.fn("PostVotesService.remove")(function* (
-    data: RemovePostVoteInput,
-  ) {
-    const svc = yield* PostVotesService;
-    return yield* svc.remove(data);
-  });
-
-  static readonly fetchLikedPosts = Effect.fn(
-    "PostVotesService.fetchLikedPosts",
-  )(function* (data: FetchLikedPostsInput) {
-    const svc = yield* PostVotesService;
-    return yield* svc.fetchLikedPosts(data);
-  });
-}
+}) {}
 
 export const PostVotesServiceLive = Layer.effect(
   PostVotesService,
@@ -340,31 +316,37 @@ export const PostVotesServiceLive = Layer.effect(
 ).pipe(Layer.provideMerge(CommunityActivityServiceLive));
 
 export const fetchPostVotes = createServerFn({ strict: { output: false } })
-  // Scalar payloads stay unbranded on the wire; see fetchComments note pattern.
+  // Scalar payloads stay unbranded on the wire; the service brands the id on entry.
   .validator(parse(Schema.Number))
   .handler(
-    createHandler(
-      PostVotesServiceLive,
-      baseLayerFactories.auth,
-    )((postId: number) => PostVotesService.get(asPostId(postId))),
+    createEndpointHandler({
+      service: PostVotesService,
+      operation: "get",
+      layer: PostVotesServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const setPostVote = createServerFn({ method: "POST" })
   .validator(parseStrict(setPostVoteSchema))
   .handler(
-    createHandler(
-      PostVotesServiceLive,
-      baseLayerFactories.auth,
-    )(PostVotesService.set),
+    createEndpointHandler({
+      service: PostVotesService,
+      operation: "set",
+      layer: PostVotesServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const removePostVote = createServerFn({ method: "POST" })
   .validator(parseStrict(removePostVoteSchema))
   .handler(
-    createHandler(
-      PostVotesServiceLive,
-      baseLayerFactories.auth,
-    )(PostVotesService.remove),
+    createEndpointHandler({
+      service: PostVotesService,
+      operation: "remove",
+      layer: PostVotesServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const fetchLikedPosts = createServerFn({
@@ -372,8 +354,10 @@ export const fetchLikedPosts = createServerFn({
 })
   .validator(parseStrict(fetchLikedPostsSchema))
   .handler(
-    createHandler(
-      PostVotesServiceLive,
-      baseLayerFactories.auth,
-    )(PostVotesService.fetchLikedPosts),
+    createEndpointHandler({
+      service: PostVotesService,
+      operation: "fetchLikedPosts",
+      layer: PostVotesServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
