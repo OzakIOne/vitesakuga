@@ -59,7 +59,7 @@ const insertNotification = async (
 const notificationRows = async (db: Kysely<DB>) =>
   db.selectFrom("notifications").selectAll().orderBy("id", "asc").execute();
 
-describe("NotificationsService.notifyOrLog", () => {
+describe("NotificationsService.notify", () => {
   it("inserts a row with the deep link and one without", async () => {
     const ctx = await makeServiceTestLayer(NotificationsServiceLive);
     closeCtx = ctx.close;
@@ -69,12 +69,12 @@ describe("NotificationsService.notifyOrLog", () => {
     await runEffect(
       Effect.gen(function* () {
         const svc = yield* NotificationsService;
-        yield* svc.notifyOrLog({
+        yield* svc.notify({
           postId: 42,
           type: "promotion-approved",
           userId: "user-1",
         });
-        yield* svc.notifyOrLog({
+        yield* svc.notify({
           type: "promotion-rejected",
           userId: "user-1",
         });
@@ -97,7 +97,7 @@ describe("NotificationsService.notifyOrLog", () => {
     });
   });
 
-  it("swallows a SqlError and resolves undefined without writing a row", async () => {
+  it("fails with SqlError and writes no row when the insert breaks", async () => {
     const ctx = await makeServiceTestLayer(NotificationsServiceLive);
     closeCtx = ctx.close;
     const { db, runEffect } = ctx;
@@ -109,13 +109,13 @@ describe("NotificationsService.notifyOrLog", () => {
       runEffect(
         Effect.gen(function* () {
           const svc = yield* NotificationsService;
-          return yield* svc.notifyOrLog({
+          return yield* svc.notify({
             type: "comment-mention",
             userId: "user-1",
           });
         }),
       ),
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({ _tag: "SqlError" });
 
     // Restore the column so the (empty) inbox can be inspected.
     await sql`ALTER TABLE notifications ADD COLUMN type text NOT NULL`.execute(

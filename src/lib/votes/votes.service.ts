@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
+import {
+  CommunityActivityService,
+  CommunityActivityServiceLive,
+} from "../activity/community-activity.service";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
@@ -13,7 +17,6 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
-import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   fetchLikedPostsSchema,
@@ -100,7 +103,7 @@ export class PostVotesService extends Context.Service<
 >()("PostVotesService", {
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
-    const points = yield* PointsService;
+    const community = yield* CommunityActivityService;
 
     const fetchSummary = Effect.fn("PostVotesService.fetchSummary")(function* (
       postId: PostId,
@@ -174,19 +177,12 @@ export class PostVotesService extends Context.Service<
           ),
       );
 
-      // Points hook: a like credits the post's author, not the voter. The
-      // ledger dedupes on (author, action, post, voter), so toggling the
-      // vote or removing and re-liking never pays out again.
-      if (
-        Option.isSome(postOption) &&
-        data.vote === "like" &&
-        postOption.value.userId !== session.id
-      ) {
-        yield* points.awardOrLog({
-          userId: postOption.value.userId,
-          action: "post-like-received",
-          refId: data.postId,
-          actorId: session.id,
+      if (Option.isSome(postOption) && data.vote === "like") {
+        yield* community.record({
+          _tag: "LikeReceived",
+          authorId: postOption.value.userId,
+          postId: data.postId,
+          voterId: session.id,
         });
       }
 
@@ -341,7 +337,7 @@ export class PostVotesService extends Context.Service<
 export const PostVotesServiceLive = Layer.effect(
   PostVotesService,
   PostVotesService.make,
-).pipe(Layer.provideMerge(PointsServiceLive));
+).pipe(Layer.provideMerge(CommunityActivityServiceLive));
 
 export const fetchPostVotes = createServerFn({ strict: { output: false } })
   // Scalar payloads stay unbranded on the wire; see fetchComments note pattern.

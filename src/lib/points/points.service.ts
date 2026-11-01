@@ -36,13 +36,6 @@ export class PointsService extends Context.Service<
       input: AwardInput,
     ) => Effect.Effect<AwardOutcome, SqlError>;
 
-    /**
-     * Best-effort variant for hooks inside other services: a ledger failure
-     * must never abort the user's upload/comment/vote, so errors are logged
-     * and swallowed.
-     */
-    readonly awardOrLog: (input: AwardInput) => Effect.Effect<void>;
-
     /** Lifetime total across all actions. */
     readonly total: (userId: string) => Effect.Effect<number, SqlError>;
   }
@@ -161,18 +154,6 @@ export class PointsService extends Context.Service<
       return outcome;
     });
 
-    const awardOrLog = Effect.fn("PointsService.awardOrLog")(function* (
-      input: AwardInput,
-    ) {
-      yield* award(input).pipe(
-        Effect.catchTag("SqlError", (error) =>
-          Effect.logError("Points award failed").pipe(
-            Effect.annotateLogs({ error: String(error), ...input }),
-          ),
-        ),
-      );
-    });
-
     const total = Effect.fn("PointsService.total")(function* (userId: string) {
       const row = yield* db.executeTakeFirstOrUndefined(
         db
@@ -183,7 +164,7 @@ export class PointsService extends Context.Service<
       return Number(row?.total ?? 0);
     });
 
-    return { award, awardOrLog, total };
+    return { award, total };
   }),
 }) {
   static readonly award = Effect.fn("PointsService.award")(function* (
@@ -191,13 +172,6 @@ export class PointsService extends Context.Service<
   ) {
     const svc = yield* PointsService;
     return yield* svc.award(input);
-  });
-
-  static readonly awardOrLog = Effect.fn("PointsService.awardOrLog")(function* (
-    input: AwardInput,
-  ) {
-    const svc = yield* PointsService;
-    return yield* svc.awardOrLog(input);
   });
 
   static readonly total = Effect.fn("PointsService.total")(function* (

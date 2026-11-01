@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
+import {
+  CommunityActivityService,
+  CommunityActivityServiceLive,
+} from "../activity/community-activity.service";
 import { ensureOwnedOrStaff } from "../auth/ownership";
 import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
@@ -19,22 +23,7 @@ import {
   UnauthorizedError,
 } from "../errors";
 import { asPostId, PostId } from "../ids";
-import {
-  canonicalizeMentionContent,
-  extractPlainMentionHandles,
-} from "../mentions/mentions";
-import {
-  NotificationsService,
-  NotificationsServiceLive,
-} from "../notifications/notifications.service";
-import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
-
-// Each resolved mention fans out into a mention row + notification, so the
-// count is capped per comment (security audit M2). Applies to freshly typed
-// handles AND to ids smuggled in via pre-canonicalized tokens, because both
-// end up in `mentionUserIds`.
-const MAX_MENTIONS_PER_COMMENT = 10;
 
 export type CommentWithUser = {
   content: string;
@@ -88,8 +77,7 @@ export class CommentsService extends Context.Service<
 >()("CommentsService", {
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
-    const points = yield* PointsService;
-    const notifications = yield* NotificationsService;
+    const community = yield* CommunityActivityService;
 
     const fetch = Effect.fn("CommentsService.fetch")(function* (
       postId: PostId,
@@ -151,93 +139,6 @@ export class CommentsService extends Context.Service<
       }));
     });
 
-    /**
-     * Canonicalize freshly typed `@handle` mentions into stored tokens.
-     * Handles resolve against active users other than the author; unknown
-     * handles stay plain text. Returns the content to persist plus the
-     * mentioned user ids (fresh resolutions + ids already stored in tokens).
-     */
-    const canonicalizeContent = Effect.fn("CommentsService.canonicalize")(
-      function* (args: { readonly actorId: string; readonly content: string }) {
-        const handles = extractPlainMentionHandles(args.content).slice(
-          0,
-          MAX_MENTIONS_PER_COMMENT,
-        );
-        const mentioned =
-          handles.length === 0
-            ? []
-            : yield* db.execute(
-                db
-                  .selectFrom("user")
-                  .select(["id", "username"])
-                  .where("deletedAt", "is", null)
-                  .where("username", "in", handles)
-                  .where("id", "!=", args.actorId),
-              );
-        const userIdByHandle = new Map(
-          mentioned.map((row) => [row.username, row.id]),
-        );
-        return canonicalizeMentionContent(
-          args.content,
-          (handle) => userIdByHandle.get(handle) ?? null,
-        );
-      },
-    );
-
-    /**
-     * Persist `comment_mentions` rows for a canonicalized comment and notify
-     * newly mentioned users. Best-effort: a mention that fails to persist
-     * must never fail the comment that carries it. `previousMentionedUserIds`
-     * lets edits notify only newly added users.
-     */
-    const applyMentions = Effect.fn("CommentsService.applyMentions")(
-      function* (args: {
-        readonly commentId: number;
-        readonly postId: PostId;
-        readonly userIds: readonly string[];
-        readonly previousMentionedUserIds: readonly string[];
-      }) {
-        if (args.userIds.length === 0) {
-          return;
-        }
-
-        yield* db.execute(
-          db
-            .insertInto("comment_mentions")
-            .values(
-              args.userIds.map((userId) => ({
-                commentId: args.commentId,
-                userId,
-              })),
-            )
-            .onConflict((oc) => oc.doNothing()),
-        );
-
-        const previouslyMentioned = new Set(args.previousMentionedUserIds);
-        const toNotify = args.userIds.filter(
-          (userId) => !previouslyMentioned.has(userId),
-        );
-        if (toNotify.length === 0) {
-          return;
-        }
-        // Only active users get notified; anonymized accounts have no inbox.
-        const active = yield* db.execute(
-          db
-            .selectFrom("user")
-            .select("id")
-            .where("deletedAt", "is", null)
-            .where("id", "in", toNotify),
-        );
-        for (const row of active) {
-          yield* notifications.notifyOrLog({
-            userId: row.id,
-            type: "comment-mention",
-            postId: args.postId,
-          });
-        }
-      },
-    );
-
     const add = Effect.fn("CommentsService.add")(function* (
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) {
@@ -246,22 +147,34 @@ export class CommentsService extends Context.Service<
         "You must be logged in to comment",
       );
 
-      const canonical = yield* canonicalizeContent({
-        actorId: user.id,
+      const canonical = yield* community.canonicalizeCommentMentions({
+        authorId: user.id,
         content: data.content,
       });
 
       const now = yield* DateTime.now;
-      const comment = yield* db.executeTakeFirstOrError(
-        db
-          .insertInto("comments")
-          .values({
-            content: canonical.content,
-            createdAt: DateTime.toDate(now),
+      const comment = yield* db.transaction((trx) =>
+        Effect.gen(function* () {
+          const inserted = yield* trx.executeTakeFirstOrError(
+            trx
+              .insertInto("comments")
+              .values({
+                content: canonical.content,
+                createdAt: DateTime.toDate(now),
+                postId: data.postId,
+                userId: user.id,
+              })
+              .returning(["id", "postId", "content", "userId", "createdAt"]),
+          );
+          yield* community.recordInTransaction(trx, {
+            _tag: "CommentWritten",
+            authorId: user.id,
+            commentId: inserted.id,
+            mentionedUserIds: canonical.mentionUserIds,
             postId: data.postId,
-            userId: user.id,
-          })
-          .returning(["id", "postId", "content", "userId", "createdAt"]),
+          });
+          return inserted;
+        }),
       );
 
       // SAFETY: postId is a comments.postId FK column; the row value satisfies
@@ -272,31 +185,6 @@ export class CommentsService extends Context.Service<
         postId: asPostId(Number(comment.postId)),
         createdAt: toIsoTimestamp(comment.createdAt),
       };
-
-      // Points hook: commenting earns a small daily-capped reward.
-      yield* points.awardOrLog({
-        userId: user.id,
-        action: "comment-written",
-        refId: comment.id,
-        actorId: user.id,
-      });
-
-      // @mention hook: best-effort, never fails the comment.
-      yield* applyMentions({
-        commentId: comment.id,
-        postId: data.postId,
-        userIds: canonical.mentionUserIds.slice(0, MAX_MENTIONS_PER_COMMENT),
-        previousMentionedUserIds: [],
-      }).pipe(
-        Effect.catchTag("SqlError", (error) =>
-          Effect.logError("Failed to apply comment mentions").pipe(
-            Effect.annotateLogs({
-              commentId: String(comment.id),
-              error: String(error),
-            }),
-          ),
-        ),
-      );
 
       yield* Effect.logInfo("Comment added").pipe(
         Effect.annotateLogs({
@@ -379,50 +267,27 @@ export class CommentsService extends Context.Service<
         }),
       });
 
-      // Re-canonicalize @mentions (the editor sends de-tokenized text):
-      // content tokens are rebuilt, and only newly mentioned users get a
-      // notification. Best-effort, like on creation.
-      const canonical = yield* canonicalizeContent({
-        actorId: user.id,
+      // The editor sends de-tokenized text, so mentions are re-resolved here.
+      const canonical = yield* community.canonicalizeCommentMentions({
+        authorId: user.id,
         content: data.content,
       });
 
-      yield* db.execute(
-        db
-          .updateTable("comments")
-          .set({ content: canonical.content })
-          .where("id", "=", data.commentId),
-      );
-
-      yield* Effect.gen(function* () {
-        const previousMentionedUserIds = yield* db.execute(
-          db
-            .selectFrom("comment_mentions")
-            .select("userId")
-            .where("commentId", "=", data.commentId),
-        );
-        yield* db.execute(
-          db
-            .deleteFrom("comment_mentions")
-            .where("commentId", "=", data.commentId),
-        );
-        yield* applyMentions({
-          commentId: data.commentId,
-          postId: asPostId(comment.postId),
-          userIds: canonical.mentionUserIds.slice(0, MAX_MENTIONS_PER_COMMENT),
-          previousMentionedUserIds: previousMentionedUserIds.map(
-            (row) => row.userId,
-          ),
-        });
-      }).pipe(
-        Effect.catchTag("SqlError", (error) =>
-          Effect.logError("Failed to apply comment mentions").pipe(
-            Effect.annotateLogs({
-              commentId: String(data.commentId),
-              error: String(error),
-            }),
-          ),
-        ),
+      yield* db.transaction((trx) =>
+        Effect.gen(function* () {
+          yield* trx.execute(
+            trx
+              .updateTable("comments")
+              .set({ content: canonical.content })
+              .where("id", "=", data.commentId),
+          );
+          yield* community.recordInTransaction(trx, {
+            _tag: "CommentEdited",
+            commentId: data.commentId,
+            mentionedUserIds: canonical.mentionUserIds,
+            postId: comment.postId,
+          });
+        }),
       );
 
       yield* Effect.logInfo("Comment updated").pipe(
@@ -470,10 +335,7 @@ export class CommentsService extends Context.Service<
 export const CommentsServiceLive = Layer.effect(
   CommentsService,
   CommentsService.make,
-).pipe(
-  Layer.provideMerge(PointsServiceLive),
-  Layer.provideMerge(NotificationsServiceLive),
-);
+).pipe(Layer.provideMerge(CommunityActivityServiceLive));
 
 export const fetchComments = createServerFn({ strict: { output: false } })
   // Scalar server-fn payloads stay unbranded on the wire (TanStack's ServerFnCtx

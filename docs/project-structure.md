@@ -29,6 +29,7 @@ src/
 │   ├── convert/      # Converter page and XState machine
 │   └── upload/       # Post upload page
 ├── lib/              # Core feature modules, services, and infrastructure
+│   ├── activity/ # Community activity: points, notifications, and mentions for domain events
 │   ├── assets/   # Asset URL builder (R2 public URLs)
 │   ├── auth/     # Better Auth configuration, middleware, hooks, schemas
 │   ├── comments/      # Comments, mentions, queries, hooks, and tests

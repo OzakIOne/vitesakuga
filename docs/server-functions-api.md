@@ -134,22 +134,23 @@ Post edits, video replacement/restoration, and post updates also use optimistic 
 
 ## Effective Service Files
 
-| Feature       | Service file                                     |
-| ------------- | ------------------------------------------------ |
-| Auth          | `src/lib/auth/*`                                 |
-| Comments      | `src/lib/comments/comments.service.ts`           |
-| Moderation    | `src/lib/moderation/moderation.service.ts`       |
-| Notifications | `src/lib/notifications/notifications.service.ts` |
-| Playlists     | `src/lib/playlists/playlists.service.ts`         |
-| Points        | `src/lib/points/points.service.ts`               |
-| Post edits    | `src/lib/post-edits/post-edits.service.ts`       |
-| Posts         | `src/lib/posts/posts.service.ts`                 |
-| Promotions    | `src/lib/promotions/promotions.service.ts`       |
-| Reports       | `src/lib/reports/reports.service.ts`             |
-| Tags          | `src/lib/tags/tags.service.ts`                   |
-| Users         | `src/lib/users/users.service.ts`                 |
-| Videos        | `src/lib/videos/videos.service.ts`               |
-| Votes         | `src/lib/votes/votes.service.ts`                 |
+| Feature            | Service file                                     |
+| ------------------ | ------------------------------------------------ |
+| Auth               | `src/lib/auth/*`                                 |
+| Comments           | `src/lib/comments/comments.service.ts`           |
+| Community activity | `src/lib/activity/community-activity.service.ts` |
+| Moderation         | `src/lib/moderation/moderation.service.ts`       |
+| Notifications      | `src/lib/notifications/notifications.service.ts` |
+| Playlists          | `src/lib/playlists/playlists.service.ts`         |
+| Points             | `src/lib/points/points.service.ts`               |
+| Post edits         | `src/lib/post-edits/post-edits.service.ts`       |
+| Posts              | `src/lib/posts/posts.service.ts`                 |
+| Promotions         | `src/lib/promotions/promotions.service.ts`       |
+| Reports            | `src/lib/reports/reports.service.ts`             |
+| Tags               | `src/lib/tags/tags.service.ts`                   |
+| Users              | `src/lib/users/users.service.ts`                 |
+| Videos             | `src/lib/videos/videos.service.ts`               |
+| Votes              | `src/lib/votes/votes.service.ts`                 |
 
 ## Error Handling
 

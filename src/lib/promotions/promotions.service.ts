@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 
+import {
+  CommunityActivityService,
+  CommunityActivityServiceLive,
+} from "../activity/community-activity.service";
 import { requirePermission, type PolicyError } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
@@ -10,12 +14,6 @@ import {
   PromotionAlreadyReviewedError,
   PromotionNotEligibleError,
 } from "../errors";
-import {
-  NotificationsService,
-  NotificationsServiceLive,
-} from "../notifications/notifications.service";
-import { PointsServiceLive } from "../points/points.service";
-import { PointsService } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { PROMOTION_RULES } from "./promotions.config";
 
@@ -87,8 +85,7 @@ export class PromotionsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const sessions = yield* SessionService;
-    const points = yield* PointsService;
-    const notifications = yield* NotificationsService;
+    const community = yield* CommunityActivityService;
 
     const gateStaff = () =>
       requirePermission("promotions:review", {
@@ -284,8 +281,8 @@ export class PromotionsService extends Context.Service<
         }),
       );
 
-      yield* notifications.notifyOrLog({
-        type: "promotion-approved",
+      yield* community.record({
+        _tag: "PromotionApproved",
         userId: targetUserId,
       });
 
@@ -309,7 +306,7 @@ export class PromotionsService extends Context.Service<
 
       yield* requireAwaitingNovice(targetUserId);
 
-      const total = yield* points.total(targetUserId);
+      const total = yield* community.totalPoints(targetUserId);
 
       yield* db.execute(
         db.insertInto("promotion_reviews").values({
@@ -320,8 +317,8 @@ export class PromotionsService extends Context.Service<
         }),
       );
 
-      yield* notifications.notifyOrLog({
-        type: "promotion-rejected",
+      yield* community.record({
+        _tag: "PromotionRejected",
         userId: targetUserId,
       });
 
@@ -361,10 +358,7 @@ export class PromotionsService extends Context.Service<
 export const PromotionsServiceLive = Layer.effect(
   PromotionsService,
   PromotionsService.make,
-).pipe(
-  Layer.provideMerge(PointsServiceLive),
-  Layer.provideMerge(NotificationsServiceLive),
-);
+).pipe(Layer.provideMerge(CommunityActivityServiceLive));
 
 export const fetchPromotionQueue = createServerFn().handler(
   createHandler(

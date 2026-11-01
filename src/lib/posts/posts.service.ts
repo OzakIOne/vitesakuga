@@ -3,6 +3,10 @@ import { Clock, Context, Effect, Exit, Layer, Option, Schema } from "effect";
 import { sql, type Selectable } from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 
+import {
+  CommunityActivityService,
+  CommunityActivityServiceLive,
+} from "../activity/community-activity.service";
 import { ensureOwnedOrStaff } from "../auth/ownership";
 import { getUserRole } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
@@ -34,7 +38,6 @@ import {
   type StagedVideo,
 } from "../lifecycle/lifecycle.service";
 import type { PaginationMeta } from "../pagination/pagination";
-import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { imageContentType, videoContentType } from "../storage/content-type";
 import {
@@ -274,7 +277,7 @@ export class PostsService extends Context.Service<
     const db = yield* KyselyDB;
     const storage = yield* StorageModule;
     const lifecycle = yield* LifecycleService;
-    const points = yield* PointsService;
+    const community = yield* CommunityActivityService;
 
     const validateRelatedPost = Effect.fn("PostsService.validateRelatedPost")(
       function* (args: {
@@ -797,11 +800,10 @@ export class PostsService extends Context.Service<
               outcome.value,
               "There was an error processing the upload result",
             );
-            yield* points.awardOrLog({
-              userId,
-              action: "post-upload",
-              refId: parsed.id,
-              actorId: userId,
+            yield* community.record({
+              _tag: "PostUploaded",
+              authorId: userId,
+              postId: parsed.id,
             });
             return parsed;
           }),
@@ -1147,7 +1149,7 @@ export const PostsServiceLive = Layer.effect(
   PostsService,
   PostsService.make,
 ).pipe(
-  Layer.provideMerge(PointsServiceLive),
+  Layer.provideMerge(CommunityActivityServiceLive),
   Layer.provideMerge(LifecycleServiceLive),
 );
 

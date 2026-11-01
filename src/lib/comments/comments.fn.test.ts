@@ -452,7 +452,7 @@ describe("CommentsService.update", () => {
 });
 
 describe("CommentsService.mention edge cases", () => {
-  it("keeps working when mention persistence fails (best-effort)", async () => {
+  it("rolls back the whole comment when its mention rows cannot be written", async () => {
     await db
       .insertInto("user")
       .values({
@@ -464,35 +464,26 @@ describe("CommentsService.mention edge cases", () => {
       .execute();
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
 
-    // Make the mention-persistence insert fail (relation gone); the comment
-    // itself must still be created and returned.
     await sql`ALTER TABLE comment_mentions RENAME TO comment_mentions_broken`.execute(
       db,
     );
     try {
-      const created = await runEffect(
-        CommentsService.add({ content: "Hey @bob", postId }),
+      const error = await runEffect(
+        Effect.flip(CommentsService.add({ content: "Hey @bob", postId })),
       );
-
-      // The comment survived with its canonical content; only the mention
-      // fan-out was dropped.
-      const comment = await db
-        .selectFrom("comments")
-        .selectAll()
-        .where("id", "=", created.id)
-        .executeTakeFirstOrThrow();
-      expect(comment.content).toBe("Hey [@bob](user:user-2)");
+      expect(error._tag).toBe("SqlError");
     } finally {
       await sql`ALTER TABLE comment_mentions_broken RENAME TO comment_mentions`.execute(
         db,
       );
     }
 
-    const mentions = await db
-      .selectFrom("comment_mentions")
-      .selectAll()
+    const comments = await db
+      .selectFrom("comments")
+      .select("content")
+      .where("postId", "=", postId)
       .execute();
-    expect(mentions).toEqual([]);
+    expect(comments).toEqual([]);
 
     const notifications = await db
       .selectFrom("notifications")
@@ -501,7 +492,7 @@ describe("CommentsService.mention edge cases", () => {
     expect(notifications).toEqual([]);
   });
 
-  it("keeps an update when mention persistence fails", async () => {
+  it("keeps the stored content and mention rows when mention rewriting fails", async () => {
     await db
       .insertInto("user")
       .values({
@@ -513,32 +504,38 @@ describe("CommentsService.mention edge cases", () => {
       .execute();
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
     const created = await runEffect(
-      CommentsService.add({ content: "Before", postId }),
+      CommentsService.add({ content: "Hey @bob", postId }),
     );
     await sql`ALTER TABLE comment_mentions RENAME TO comment_mentions_broken`.execute(
       db,
     );
     try {
-      await runEffect(
-        CommentsService.update({ commentId: created.id, content: "Hey @bob" }),
+      const error = await runEffect(
+        Effect.flip(
+          CommentsService.update({
+            commentId: created.id,
+            content: "Edited without mention",
+          }),
+        ),
       );
-      const comment = await db
-        .selectFrom("comments")
-        .select("content")
-        .where("id", "=", created.id)
-        .executeTakeFirstOrThrow();
-      expect(comment.content).toBe("Hey [@bob](user:user-2)");
+      expect(error._tag).toBe("SqlError");
     } finally {
       await sql`ALTER TABLE comment_mentions_broken RENAME TO comment_mentions`.execute(
         db,
       );
     }
-    expect(
-      await db.selectFrom("comment_mentions").selectAll().execute(),
-    ).toEqual([]);
-    expect(await db.selectFrom("notifications").selectAll().execute()).toEqual(
-      [],
-    );
+
+    const comment = await db
+      .selectFrom("comments")
+      .select("content")
+      .where("id", "=", created.id)
+      .executeTakeFirstOrThrow();
+    expect(comment.content).toBe("Hey [@bob](user:user-2)");
+    const mentions = await db
+      .selectFrom("comment_mentions")
+      .select(["commentId", "userId"])
+      .execute();
+    expect(mentions).toEqual([{ commentId: created.id, userId: "user-2" }]);
   });
 
   it("leaves deleted users unmentioned", async () => {

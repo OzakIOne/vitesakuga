@@ -393,7 +393,7 @@ describe("PostEditsService.approve", () => {
     );
 
     // Break exactly the ledger insert (dedupe/cap reads select id/count
-    // only); awardOrLog must swallow it and the approval must still land.
+    // only); record must swallow it and the approval must still land.
     await sql`ALTER TABLE points_ledger DROP COLUMN points`.execute(db);
     let applyResult: { applied: boolean };
     try {

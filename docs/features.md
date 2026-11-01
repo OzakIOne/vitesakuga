@@ -110,14 +110,14 @@ Les tags peuvent être suivis depuis leur page. `New from followed tags` montre 
 - **Signalements** : signaler un post avec un motif — `src/components/reports/ReportDialog.tsx`, `src/lib/reports/*`.
 - **Suggestions d'édition « wiki »** : depuis le détail d'un post, les uploaders peuvent proposer une modification avec aperçu diff par champ. Les uploaders éligibles, le propriétaire ou le staff peuvent l'approuver/rejeter selon les règles du workflow ; l'historique affiche les suggestions en attente, appliquées ou rejetées, et le suggester reçoit une notification de décision — `src/components/posts/PostDetail/PostEditSuggestionDialog.tsx`, `src/components/posts/PostDetail/PostEditHistory.tsx`, `src/lib/post-edits/*`. L'historique persiste et affiche la valeur présente lors de la proposition à côté de la valeur suggérée.
 - **Remplacement de vidéo** : workflow serveur pour remplacer la vidéo en conservant l'identité du post ; révisions conservées 90 jours et restaurables par le staff. Aucun écran public dédié n'est actuellement exposé — `src/lib/videos/*`.
-- **Système de points** : registre append-only `points_ledger` avec caps par action ; utilisé notamment pour la promotion des uploaders — `src/lib/points/*`, `src/lib/promotions/*`.
+- **Système de points** : registre append-only `points_ledger` avec caps par action ; utilisé notamment pour la promotion des uploaders. Les gains sont décidés par `CommunityActivityService` (post publié, like reçu, commentaire écrit, suggestion d'édition approuvée) — `src/lib/points/*`, `src/lib/activity/*`, `src/lib/promotions/*`.
 - **Notifications in-app** : promotion, décisions de suggestions d'édition (avec lien vers le post), mentions de commentaires et autres événements métier ; chaque notification peut être marquée comme lue sans affecter les autres — `src/lib/notifications/*`, `src/routes/notifications.tsx`.
 
 ### Mentions @pseudo
 
 - Chaque compte possède un pseudo unique (`user.username`), généré à l'inscription et modifiable sur `/account`.
 - Dans un commentaire, `@` ouvre une autocomplétion clavier accessible. Le contenu est stocké avec des tokens liés à l'identifiant utilisateur, donc un changement de pseudo ne casse pas les anciennes mentions.
-- Les nouvelles mentions créent `comment_mentions` et une notification best-effort ; les comptes supprimés et l'auto-mention sont exclus.
+- Les mentions sont écrites dans la même transaction que le commentaire, à la création comme à l'édition : si l'écriture des mentions échoue, l'action échoue et le commentaire, son contenu et ses lignes de mention sont tous annulés. Seules les nouvelles mentions notifient, après commit et en best-effort. Les comptes supprimés et l'auto-mention sont exclus.
 - Le rendu utilise le pseudo actuel des comptes actifs ; après suppression, il conserve le pseudo capturé dans le commentaire au lieu de révéler un pseudo modifié ensuite.
 - Rendu : Markdown via `src/components/mentions/CommentContent.tsx`, pont des mentions via `src/lib/mentions/markdown.ts`, autocomplétion via `src/components/mentions/MentionTextarea.tsx` et canonicalisation via `src/lib/mentions/mentions.ts`.
 

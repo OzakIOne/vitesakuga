@@ -290,7 +290,7 @@ describe("PointsService.total", () => {
   });
 });
 
-describe("PointsService.awardOrLog", () => {
+describe("PointsService.award (broken ledger)", () => {
   /**
    * Breaks ledger writes while keeping the dedupe/daily-cap reads intact:
    * both reads select `id`/`count` only, so removing the `points` column
@@ -298,30 +298,6 @@ describe("PointsService.awardOrLog", () => {
    */
   const dropLedgerPoints = (db: Kysely<DB>) =>
     sql`ALTER TABLE points_ledger DROP COLUMN points`.execute(db);
-
-  it("swallows a SqlError and resolves undefined without writing a ledger row", async () => {
-    const ctx = await makeServiceTestLayer(PointsServiceLive);
-    closeCtx = ctx.close;
-    const { db, runEffect } = ctx;
-    await insertUser(db, "user-1");
-    await dropLedgerPoints(db);
-    // Restore in finally: the file shares one PGlite, so a broken schema
-    // would poison every later test, not just the next fresh instance.
-    try {
-      await expect(
-        runEffect(
-          PointsService.awardOrLog({ userId: "user-1", action: "post-upload" }),
-        ),
-      ).resolves.toBeUndefined();
-
-      // awardOrLog must have written nothing.
-      expect(await ledgerRows(db, "user-1")).toHaveLength(0);
-    } finally {
-      await sql`ALTER TABLE points_ledger ADD COLUMN points integer NOT NULL DEFAULT 0`.execute(
-        db,
-      );
-    }
-  });
 
   it("award rejects with SqlError in the same broken-ledger setup", async () => {
     const ctx = await makeServiceTestLayer(PointsServiceLive);

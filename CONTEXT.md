@@ -114,6 +114,10 @@ See [docs/build-environment.md](./docs/build-environment.md) for the full explan
 
 **Pagination** — Offset-based pagination computed by `computePagination(totalCount, { page, pageSize })` in `src/lib/pagination/pagination.ts`. Returns `{ currentPage, totalPages, hasMore, hasPrevious, offset, limit, total }`. Page is 0-indexed internally; `currentPage` is 1-indexed for display.
 
+## Community Activity
+
+**Community Activity** — The module that decides what a committed domain fact earns and who is notified. Domain services (posts upload, votes, comments, post-edit decisions, promotions) report facts to `CommunityActivityService`: `record` applies points and notifications after the domain change commits, and `recordInTransaction` writes a comment's mention rows inside the comment's own transaction. Points and notifications are best-effort, so a failure there never fails the action that produced it.
+
 ## Conventions
 
 **Server Function** — TanStack Start `createServerFn` with input validator and handler. Server functions are embedded at the bottom of `*.service.ts` files (not separate `.fn.ts` files). The `.handler(...)` is `createEndpointHandler({ service, operation, layer, base })` (`src/lib/server-endpoint.ts`), which wraps `createHandler` to bridge a service operation to an async server function. Service classes have no static accessors.

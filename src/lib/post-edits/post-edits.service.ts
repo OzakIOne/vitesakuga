@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 
+import {
+  CommunityActivityService,
+  CommunityActivityServiceLive,
+} from "../activity/community-activity.service";
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { isStaffRole } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
@@ -28,12 +32,6 @@ import {
   LifecycleServiceLive,
   updatePostWithVersionInTransaction,
 } from "../lifecycle/lifecycle.service";
-import {
-  NotificationsService,
-  NotificationsServiceLive,
-} from "../notifications/notifications.service";
-import { PointsServiceLive } from "../points/points.service";
-import { PointsService } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { POST_EDIT_REQUIRED_VOTES } from "./post-edits.config";
 import {
@@ -144,8 +142,7 @@ export class PostEditsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
     const lifecycle = yield* LifecycleService;
-    const points = yield* PointsService;
-    const notifications = yield* NotificationsService;
+    const community = yield* CommunityActivityService;
 
     // Resolved per call so the requirement surfaces in each method's type
     // (repo-wide contract style; see CommentsService).
@@ -463,23 +460,12 @@ export class PostEditsService extends Context.Service<
             if (!decision.applied) return { applied: false as const };
             const { context } = decision;
 
-            // The suggester earns their reward exactly once per applied edit
-            // (ledger dedupe on suggester × action × editId), daily-capped to
-            // blunt collusion rings.
-            yield* points.awardOrLog({
-              userId: context.edit.suggestedBy,
-              action: "edit-suggestion-approved",
-              refId: editId,
-            });
-            yield* notifications.notifyOrLog({
-              type: "edit-suggestion-applied",
-              userId: context.postOwnerId,
+            yield* community.record({
+              _tag: "EditApproved",
+              editId,
               postId: context.edit.postId,
-            });
-            yield* notifications.notifyOrLog({
-              type: "edit-suggestion-approved",
-              userId: context.edit.suggestedBy,
-              postId: context.edit.postId,
+              postOwnerId: context.postOwnerId,
+              suggestedById: context.edit.suggestedBy,
             });
 
             yield* Effect.logInfo("Edit suggestion applied").pipe(
@@ -521,10 +507,10 @@ export class PostEditsService extends Context.Service<
           return context;
         }),
       );
-      yield* notifications.notifyOrLog({
-        type: "edit-suggestion-rejected",
-        userId: context.edit.suggestedBy,
+      yield* community.record({
+        _tag: "EditRejected",
         postId: context.edit.postId,
+        suggestedById: context.edit.suggestedBy,
       });
       return { rejected: true as const };
     });
@@ -626,8 +612,7 @@ export const PostEditsServiceLive = Layer.effect(
   PostEditsService,
   PostEditsService.make,
 ).pipe(
-  Layer.provideMerge(PointsServiceLive),
-  Layer.provideMerge(NotificationsServiceLive),
+  Layer.provideMerge(CommunityActivityServiceLive),
   Layer.provideMerge(LifecycleServiceLive),
 );
 

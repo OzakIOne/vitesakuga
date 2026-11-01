@@ -31,16 +31,13 @@ const INBOX_PAGE_SIZE = 50;
 export class NotificationsService extends Context.Service<
   NotificationsService,
   {
-    /**
-     * Best-effort notification: a broken inbox must never fail the business
-     * event that raised it (an approved promotion stays approved).
-     */
-    readonly notifyOrLog: (args: {
+    /** Inserts one inbox row. Callers decide whether a failure matters. */
+    readonly notify: (args: {
       readonly userId: string;
       readonly type: NotificationType;
       /** Post the notification links to, when there is a deep link. */
       readonly postId?: number;
-    }) => Effect.Effect<void>;
+    }) => Effect.Effect<void, SqlError>;
 
     /** Newest-first inbox for one user. */
     readonly list: (
@@ -60,29 +57,19 @@ export class NotificationsService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
-    const notifyOrLog = Effect.fn("NotificationsService.notifyOrLog")(
-      function* (args: {
-        userId: string;
-        type: NotificationType;
-        postId?: number;
-      }) {
-        yield* db
-          .execute(
-            db.insertInto("notifications").values({
-              type: args.type,
-              userId: args.userId,
-              postId: args.postId ?? null,
-            }),
-          )
-          .pipe(
-            Effect.catchTag("SqlError", (error) =>
-              Effect.logError("Notification insert failed").pipe(
-                Effect.annotateLogs({ error: String(error), ...args }),
-              ),
-            ),
-          );
-      },
-    );
+    const notify = Effect.fn("NotificationsService.notify")(function* (args: {
+      userId: string;
+      type: NotificationType;
+      postId?: number;
+    }) {
+      yield* db.execute(
+        db.insertInto("notifications").values({
+          type: args.type,
+          userId: args.userId,
+          postId: args.postId ?? null,
+        }),
+      );
+    });
 
     const list = Effect.fn("NotificationsService.list")(function* (
       userId: string,
@@ -130,7 +117,7 @@ export class NotificationsService extends Context.Service<
       );
     });
 
-    return { notifyOrLog, list, markAllRead, markRead };
+    return { notify, list, markAllRead, markRead };
   }),
 }) {
   static readonly list = Effect.fn("NotificationsService.list")(function* () {

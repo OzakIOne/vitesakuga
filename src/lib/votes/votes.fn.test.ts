@@ -2,7 +2,6 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeAuthSession } from "../auth/session.fixture";
-import { POINTS_RULES } from "../points/points.config";
 import type { DB } from "../db/kysely";
 import {
   makeServiceTestLayer,
@@ -10,6 +9,7 @@ import {
 } from "../db/test-utils";
 import type { PostId } from "../ids";
 import { asPostId } from "../ids";
+import { POINTS_RULES } from "../points/points.config";
 import { PostVotesService, PostVotesServiceLive } from "./votes.service";
 
 let db: Kysely<DB>;
@@ -211,10 +211,7 @@ describe("PostVotesService.set community activity", () => {
 
     await runEffect(PostVotesService.set({ postId, vote: "like" }));
 
-    const ledger = await db
-      .selectFrom("points_ledger")
-      .selectAll()
-      .execute();
+    const ledger = await db.selectFrom("points_ledger").selectAll().execute();
     expect(ledger).toHaveLength(1);
     expect(ledger[0]!.userId).toBe("user-1");
     expect(ledger[0]!.action).toBe("post-like-received");
