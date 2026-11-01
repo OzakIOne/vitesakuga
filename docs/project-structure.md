@@ -81,7 +81,8 @@ src/
 - `src/components/form/` — shared form fields
 - `src/lib/<feature>/<feature>.service.ts` — Effect service with embedded TanStack server functions
 - `src/lib/<feature>/<feature>.schema.ts` — Effect Schema for validation
-- `src/lib/<feature>/<feature>.queries.ts` — TanStack Query `queryOptions` factories
+- `src/lib/<feature>/<feature>.queries.ts` — TanStack Query key factories
+- `src/lib/<feature>/<feature>.query-options.ts` — TanStack Query `queryOptions` factories (import server functions)
 - `src/lib/<feature>/<feature>.hooks.ts` — React hooks (mutations, query wrappers)
 - `src/lib/<feature>/<feature>.utils.ts` — Pure utility functions
 - `src/lib/<feature>/*.test.{ts,tsx}` — Unit/integration tests for the feature service, schema, or hooks
