@@ -7,8 +7,6 @@ import {
   videoContentType,
 } from "./content-type";
 import {
-  PENDING_VIDEOS_PREFIX,
-  finalizedVideoKey,
   isDeterministicMediaKey,
   isDeterministicPendingVideoKey,
 } from "./keys";
@@ -184,64 +182,6 @@ const makeS3StorageService = (connection: S3Connection) =>
         });
       });
 
-    const uploadFile = (
-      namespace: string,
-      userId: string,
-      file: File,
-      ext: string,
-      contentType: string,
-    ): Effect.Effect<{ key: string }, StorageError> =>
-      Effect.gen(function* () {
-        // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
-        const baseName = crypto.randomUUID();
-        const key = `${namespace}/${userId}/${baseName}.${ext}`;
-
-        const buffer = yield* Effect.tryPromise({
-          try: () => file.arrayBuffer(),
-          catch: (cause) =>
-            new StorageError({
-              cause,
-              key,
-              message: `Failed to read file: ${String(cause)}`,
-              operation: "upload",
-            }),
-        });
-
-        const result = yield* Effect.tryPromise({
-          try: () =>
-            client.send(
-              new s3Mod.PutObjectCommand({
-                Body: Buffer.from(buffer),
-                Bucket: connection.bucket,
-                ContentType: contentType,
-                Key: key,
-              }),
-            ),
-          catch: (cause) =>
-            new StorageError({
-              cause,
-              key,
-              message: `Upload failed: ${String(cause)}`,
-              operation: "upload",
-            }),
-        });
-
-        if (result.$metadata.httpStatusCode !== 200) {
-          return yield* new StorageError({
-            cause: result.$metadata,
-            key,
-            message: `Upload failed with status ${result.$metadata.httpStatusCode}`,
-            operation: "upload",
-          });
-        }
-
-        yield* Effect.logInfo(`File uploaded to ${connection.label}`).pipe(
-          Effect.annotateLogs("key", key),
-        );
-
-        return { key };
-      });
-
     return {
       deleteFile: (key) =>
         Effect.gen(function* () {
@@ -266,12 +206,6 @@ const makeS3StorageService = (connection: S3Connection) =>
             Effect.annotateLogs("key", key),
           );
         }),
-      uploadThumbnail: (userId, file) =>
-        uploadFile("thumbnails", userId, file, "jpg", THUMBNAIL_CONTENT_TYPE),
-      uploadImage: (userId, file) => {
-        const ext = file.name.split(".").pop() ?? "png";
-        return uploadFile("images", userId, file, ext, imageContentType(ext));
-      },
       putImage: (key, file) => {
         const ext = key.split(".").pop() ?? "";
         return putDeterministic(
@@ -283,10 +217,6 @@ const makeS3StorageService = (connection: S3Connection) =>
       },
       putThumbnail: (key, file) =>
         putDeterministic(key, file, "media/thumbnail/", THUMBNAIL_CONTENT_TYPE),
-      uploadVideo: (userId, file) => {
-        const ext = file.name.split(".").pop() ?? "mp4";
-        return uploadFile("videos", userId, file, ext, videoContentType(ext));
-      },
       headFile: (key) =>
         Effect.gen(function* () {
           const result = yield* headObject(key);
@@ -298,41 +228,6 @@ const makeS3StorageService = (connection: S3Connection) =>
             metadataFingerprint:
               result.Metadata?.["vitesakuga-fingerprint"] ?? null,
           };
-        }),
-      presignVideoUpload: (userId, ext) =>
-        Effect.gen(function* () {
-          // oxlint-disable-next-line effecttsgo/crypto-random-uuid-in-effect -- object keys must be unpredictable; Effect's `Random` is Math.random-based and not cryptographically secure, so native WebCrypto is kept here
-          const baseName = crypto.randomUUID();
-          // Presigned PUTs land in the staging namespace; only the confirm
-          // step promotes validated objects to their final `videos/` key.
-          const key = `${PENDING_VIDEOS_PREFIX}${userId}/${baseName}.${ext}`;
-          const contentType = videoContentType(ext);
-
-          const url = yield* Effect.tryPromise({
-            try: () =>
-              getSignedUrl(
-                client,
-                new s3Mod.PutObjectCommand({
-                  Bucket: connection.bucket,
-                  ContentType: contentType,
-                  Key: key,
-                }),
-                { expiresIn: 15 * 60 },
-              ),
-            catch: (cause) =>
-              new StorageError({
-                cause,
-                key,
-                message: `Failed to presign upload: ${String(cause)}`,
-                operation: "presign",
-              }),
-          });
-
-          yield* Effect.logInfo("Video upload URL presigned").pipe(
-            Effect.annotateLogs({ key }),
-          );
-
-          return { contentType, key, url };
         }),
       presignDeterministicVideoUpload: (userId, key, contentType) =>
         Effect.gen(function* () {
@@ -468,66 +363,6 @@ const makeS3StorageService = (connection: S3Connection) =>
             operation: "finalize",
           });
         }),
-      finalizeVideoUpload: (pendingKey) =>
-        Effect.gen(function* () {
-          const finalKey = finalizedVideoKey(pendingKey);
-
-          // SAFETY: CopySource is `${bucket}/${key}` with the key path
-          // URL-encoded; the generated keys only ever contain UUIDs, a
-          // whitelisted extension and `/` separators, so encoding each
-          // segment is identity in practice and defensive by construction.
-          const copySource = `${connection.bucket}/${pendingKey
-            .split("/")
-            .map(encodeURIComponent)
-            .join("/")}`;
-
-          yield* Effect.tryPromise({
-            try: () =>
-              client.send(
-                new s3Mod.CopyObjectCommand({
-                  Bucket: connection.bucket,
-                  CopySource: copySource,
-                  Key: finalKey,
-                }),
-              ),
-            catch: (cause) =>
-              new StorageError({
-                cause,
-                key: pendingKey,
-                message: `Failed to promote upload: ${String(cause)}`,
-                operation: "finalize",
-              }),
-          });
-
-          // Best-effort cleanup of the staging copy: if this delete fails,
-          // the bucket lifecycle rule expires it, so promotion must not
-          // fail (a raised error here would leak the promoted object with
-          // no uploadedKeys entry to roll back).
-          yield* Effect.ignore(
-            Effect.tryPromise({
-              try: () =>
-                client.send(
-                  new s3Mod.DeleteObjectCommand({
-                    Bucket: connection.bucket,
-                    Key: pendingKey,
-                  }),
-                ),
-              catch: (cause) =>
-                new StorageError({
-                  cause,
-                  key: pendingKey,
-                  message: `Failed to clean up staged upload: ${String(cause)}`,
-                  operation: "finalize",
-                }),
-            }),
-          );
-
-          yield* Effect.logInfo("Pending upload promoted").pipe(
-            Effect.annotateLogs({ finalKey }),
-          );
-
-          return { key: finalKey };
-        }),
       listKeys: (prefix) =>
         Effect.gen(function* () {
           const keys: string[] = [];
@@ -635,18 +470,15 @@ export const StorageLive = Layer.effect(
 );
 
 /** Local Docker RustFS store used by the service test layers. */
+/** The local RustFS bucket and credentials shared by the service tests. */
+export const RUSTFS_TEST_CONNECTION: RustFSConnection = {
+  accessKeyId: "rustfsadmin",
+  bucket: "e2e-test",
+  endpoint: "http://localhost:9000",
+  secretAccessKey: "rustfsadmin",
+};
+
 export const makeRustFSStorageLayer = (): Layer.Layer<
   StorageModule,
   StorageError
-> =>
-  makeS3StorageLayer({
-    bucket: "e2e-test",
-    credentials: {
-      accessKeyId: "rustfsadmin",
-      secretAccessKey: "rustfsadmin",
-    },
-    endpoint: "http://localhost:9000",
-    forcePathStyle: true,
-    label: "RustFS",
-    region: "us-east-1",
-  });
+> => makeRustFSStorageLayerAt(RUSTFS_TEST_CONNECTION);

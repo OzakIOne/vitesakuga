@@ -10,6 +10,7 @@ import {
 } from "../db/test-utils";
 import { safeParseStrict } from "../effect/schema.utils";
 import { asPostId } from "../ids";
+import { pendingVideoObjectKey } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { FormFileUploadSchema, MAX_IMAGE_SIZE_BYTES } from "./posts.schema";
 import { PostsService, PostsServiceLive } from "./posts.service";
@@ -903,19 +904,24 @@ describe("PostsService.upload", () => {
   // and hand the staging key to the confirm step.
   const uploadVideoToStorage = async (name = "video.mp4") => {
     const file = new File(["video bytes"], name, { type: "video/mp4" });
+    const key = pendingVideoObjectKey("user-1", crypto.randomUUID(), "mp4");
     const staged = await runEffect(
       Effect.gen(function* () {
         const storage = yield* StorageModule;
-        return yield* storage.presignVideoUpload("user-1", "mp4");
+        return yield* storage.presignDeterministicVideoUpload(
+          "user-1",
+          key,
+          "video/mp4",
+        );
       }),
     );
     const response = await fetch(staged.url, {
       method: "PUT",
       body: file,
-      headers: { "Content-Type": staged.contentType },
+      headers: staged.requiredHeaders,
     });
     expect(response.ok).toBe(true);
-    return { key: staged.key };
+    return { key };
   };
 
   const makeUploadInput = (videoKey: string) => ({

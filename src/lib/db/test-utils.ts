@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -13,7 +14,10 @@ import { RequestHeadersService } from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
-import { makeRustFSStorageLayer } from "../storage/storage.adapter";
+import {
+  makeRustFSStorageLayer,
+  RUSTFS_TEST_CONNECTION,
+} from "../storage/storage.adapter";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { KyselyDB } from "./context";
 import { makeFromKysely } from "./effect-kysely";
@@ -157,18 +161,6 @@ const journalStorageService = (
           }),
         ),
       ),
-    uploadImage: (userId, file) =>
-      storage
-        .uploadImage(userId, file)
-        .pipe(Effect.tap(({ key }) => recordCreated(key))),
-    uploadThumbnail: (userId, file) =>
-      storage
-        .uploadThumbnail(userId, file)
-        .pipe(Effect.tap(({ key }) => recordCreated(key))),
-    uploadVideo: (userId, file) =>
-      storage
-        .uploadVideo(userId, file)
-        .pipe(Effect.tap(({ key }) => recordCreated(key))),
     putImage: (key, file) =>
       storage
         .putImage(key, file)
@@ -179,10 +171,6 @@ const journalStorageService = (
         .pipe(Effect.tap(({ key: createdKey }) => recordCreated(createdKey))),
     // A presigned PUT writes bytes straight from the test to RustFS without
     // passing through this module, so the staged key is journaled here.
-    presignVideoUpload: (userId, ext) =>
-      storage
-        .presignVideoUpload(userId, ext)
-        .pipe(Effect.tap(({ key }) => recordCreated(key))),
     presignDeterministicVideoUpload: (userId, key, contentType) =>
       storage
         .presignDeterministicVideoUpload(userId, key, contentType)
@@ -190,10 +178,6 @@ const journalStorageService = (
     copyVideoIfMatch: (sourceKey, sourceEtag, finalKey) =>
       storage
         .copyVideoIfMatch(sourceKey, sourceEtag, finalKey)
-        .pipe(Effect.tap(({ key }) => recordCreated(key))),
-    finalizeVideoUpload: (pendingKey) =>
-      storage
-        .finalizeVideoUpload(pendingKey)
         .pipe(Effect.tap(({ key }) => recordCreated(key))),
   };
 };
@@ -228,10 +212,51 @@ type StorageKeyTracker = {
   readonly cleanup: () => Promise<void>;
 };
 
+export type SeedObjectInput = {
+  readonly key: string;
+  readonly body: string;
+  readonly contentType: string;
+};
+
 export type StorageKeyTrackerBundle = {
   storageLayer: Layer.Layer<StorageModule, StorageError>;
   tracker: StorageKeyTracker;
+  seedObject: (input: SeedObjectInput) => Promise<void>;
 };
+
+/**
+ * Writes real bytes at any key through the RustFS connection the test storage
+ * layer uses. Production StorageModule only accepts lifecycle `media/` keys, so
+ * fixtures for legacy keys must bypass it; the write is journaled for cleanup.
+ */
+const makeSeedObject =
+  (journal: StorageKeyJournal) =>
+  async ({ key, body, contentType }: SeedObjectInput): Promise<void> => {
+    const client = new S3Client({
+      credentials: {
+        accessKeyId: RUSTFS_TEST_CONNECTION.accessKeyId,
+        secretAccessKey: RUSTFS_TEST_CONNECTION.secretAccessKey,
+      },
+      endpoint: RUSTFS_TEST_CONNECTION.endpoint,
+      forcePathStyle: true,
+      region: "us-east-1",
+      requestChecksumCalculation: "WHEN_REQUIRED",
+    });
+    try {
+      await client.send(
+        new PutObjectCommand({
+          Body: body,
+          Bucket: RUSTFS_TEST_CONNECTION.bucket,
+          ContentType: contentType,
+          Key: key,
+        }),
+      );
+    } finally {
+      client.destroy();
+    }
+    journal.created.add(key);
+    journal.deleted.delete(key);
+  };
 
 /**
  * Create the journaled storage layer for one test context plus its tracker.
@@ -243,6 +268,7 @@ export const makeStorageKeyTracker = (
 ): StorageKeyTrackerBundle => {
   const journal: StorageKeyJournal = { created: new Set(), deleted: new Set() };
   return {
+    seedObject: makeSeedObject(journal),
     storageLayer: makeJournaledStorageLayer(journal, storageLive),
     tracker: {
       get createdKeys() {
@@ -311,6 +337,7 @@ export type ServiceTestContext<Services = never> = {
   ) => Promise<E>;
   mockGetSession: Mock<AuthSessionProvider["api"]["getSession"]>;
   storageTracker: StorageKeyTracker;
+  seedObject: StorageKeyTrackerBundle["seedObject"];
   close: () => Promise<void>;
 };
 
@@ -333,8 +360,11 @@ export const makeServiceTestLayer = async <ROut, E>(
   const { pg, db } = await getFileDb();
   // Every context starts from an empty database with the current schema.
   await resetTables(pg, db);
-  const { storageLayer: journaledStorageLayer, tracker } =
-    makeStorageKeyTracker();
+  const {
+    seedObject,
+    storageLayer: journaledStorageLayer,
+    tracker,
+  } = makeStorageKeyTracker();
   const wrapStorage = options.wrapStorage;
   const storageLayer = wrapStorage
     ? Layer.effect(
@@ -374,6 +404,7 @@ export const makeServiceTestLayer = async <ROut, E>(
     runEffect,
     runFailure,
     mockGetSession,
+    seedObject,
     storageTracker: tracker,
     close,
   };

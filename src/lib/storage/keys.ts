@@ -15,14 +15,6 @@ export const pendingVideoPrefix = (userId: string): string =>
   `${PENDING_VIDEOS_PREFIX}${userId}/`;
 
 /**
- * Final media key for a pending upload:
- * `videos/_pending/{userId}/{uuid}.{ext}` -> `videos/{userId}/{uuid}.{ext}`.
- * Only meaningful for keys under the staging namespace.
- */
-export const finalizedVideoKey = (pendingKey: string): string =>
-  pendingKey.replace(PENDING_VIDEOS_PREFIX, "videos/");
-
-/**
  * Stable object identity for the lifecycle registry. The operation id is
  * durable, so retries reuse exactly the same key instead of creating a new
  * object. The `media/` namespace is server-managed and is never presigned.

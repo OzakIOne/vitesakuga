@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 import { expect, it } from "vitest";
 
+import { imageObjectKey } from "../storage/keys";
 import { makeRustFSStorageLayer } from "../storage/storage.adapter";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { makeStorageKeyTracker } from "./test-utils";
@@ -34,12 +35,19 @@ it("retries failed cleanup keys while keeping successful deletions complete", as
   const storage = await Effect.runPromise(
     StorageModule.pipe(Effect.provide(storageLayer)),
   );
+  const operationId = `cleanup-retry-${crypto.randomUUID()}`;
   const { key } = await Effect.runPromise(
-    storage.uploadVideo("cleanup-retry", new File(["bytes"], "clip.mp4")),
+    storage.putImage(
+      imageObjectKey(operationId, 0, "png"),
+      new File(["bytes"], "clip.png", { type: "image/png" }),
+    ),
   );
   failingKey = key;
   const other = await Effect.runPromise(
-    storage.uploadVideo("cleanup-retry", new File(["other"], "other.mp4")),
+    storage.putImage(
+      imageObjectKey(operationId, 1, "png"),
+      new File(["other"], "other.png", { type: "image/png" }),
+    ),
   );
   try {
     await expect(tracker.cleanup()).rejects.toThrow("Storage cleanup failed");

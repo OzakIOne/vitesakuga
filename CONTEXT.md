@@ -20,7 +20,7 @@ Terms used consistently across the codebase. Update this file when new concepts 
 
 Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes never transit the Worker), then the form confirm promotes them.
 
-**Presigned Upload** — `createVideoUploadUrl` server fn mints a 15-min presigned PUT scoped to `videos/_pending/{userId}/{uuid}.{ext}` with a server-pinned Content-Type. The browser PUTs the file, then hands the staging key to `uploadPost`. Size/type are verified at confirm against the stored object (`headFile` + `upload-policy.ts`), which **promotes** it to its final key (`finalizeVideoUpload`: copy out of `_pending/`, best-effort staging delete) before any DB write.
+**Presigned Upload** — `createVideoUploadUrl` server fn mints a 15-min presigned PUT scoped to `videos/_pending/{userId}/{uuid}.{ext}` with a server-pinned Content-Type. The browser PUTs the file, then hands the staging key to `uploadPost`. Size/type are verified at confirm against the stored object (`headFile` + `upload-policy.ts`). Promotion happens in `LifecycleService.copyVideoForPost`, which copies the staged object to its final `media/video/…` key, pinned to the verified ETag, before any DB write.
 
 **Staging Namespace & GC** — Unconfirmed direct video uploads use `videos/_pending/`; the R2 lifecycle rule in `infra/alchemy.run.ts` expires staged objects after 48 hours. Durable media-operation and media-object rows track accepted work and reconcile uncertain outcomes, so bucket expiry is not the source of truth for operation state.
 
@@ -106,7 +106,7 @@ See [docs/build-environment.md](./docs/build-environment.md) for the full explan
 
 ## Storage
 
-**StorageModule** — Effect service wrapping video, thumbnail, and gallery-image storage in `src/lib/storage/storage.module.ts`. Besides direct uploads and presigned staging, it supports lifecycle-reserved image/thumbnail writes, deterministic video copies, finalization, and read-only key listing for admin audits. `StorageLive` uses Cloudflare R2; the same S3-protocol adapter targets local RustFS in dev/tests. Durable operation/object ownership and deletion fences live in `src/lib/lifecycle/`; see [`docs/database-conventions.md`](docs/database-conventions.md) for those guarantees.
+**StorageModule** — Effect service wrapping video, thumbnail, and gallery-image storage in `src/lib/storage/storage.module.ts`. It supports lifecycle-reserved image/thumbnail writes, presigned deterministic video staging, ETag-pinned video copies, and read-only key listing for admin audits. `StorageLive` uses Cloudflare R2; the same S3-protocol adapter targets local RustFS in dev/tests. Durable operation/object ownership and deletion fences live in `src/lib/lifecycle/`; see [`docs/database-conventions.md`](docs/database-conventions.md) for those guarantees.
 
 ## Pagination
 

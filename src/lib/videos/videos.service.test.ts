@@ -8,7 +8,11 @@ import {
   makeServiceTestLayer,
   type ServiceTestContext,
 } from "../db/test-utils";
-import { mediaObjectKey, PENDING_VIDEOS_PREFIX } from "../storage/keys";
+import {
+  mediaObjectKey,
+  PENDING_VIDEOS_PREFIX,
+  pendingVideoObjectKey,
+} from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { REVISION_RETENTION_DAYS, DAY_MS } from "./videos.config";
 import { VideosService, VideosServiceLive } from "./videos.service";
@@ -61,19 +65,42 @@ const stageVideo = async (
   userId: string,
   name = "upgrade.mp4",
 ) => {
+  const key = pendingVideoObjectKey(userId, crypto.randomUUID(), "mp4");
   const staged = await ctx.runEffect(
     Effect.gen(function* () {
       const storage = yield* StorageModule;
-      return yield* storage.presignVideoUpload(userId, "mp4");
+      return yield* storage.presignDeterministicVideoUpload(
+        userId,
+        key,
+        "video/mp4",
+      );
     }),
   );
   const response = await fetch(staged.url, {
     method: "PUT",
     body: new File(["new video bytes"], name, { type: "video/mp4" }),
-    headers: { "Content-Type": staged.contentType },
+    headers: staged.requiredHeaders,
   });
   expect(response.ok).toBe(true);
-  return staged.key;
+  return key;
+};
+
+/**
+ * Legacy `videos/` keys are outside the lifecycle namespace, so StorageModule
+ * refuses to write them. Seed real bytes so headFile proves they survive gcRun.
+ */
+const seedLegacyVideo = async ({
+  body,
+  label,
+  seedObject,
+}: {
+  body: string;
+  label: string;
+  seedObject: ServiceTestContext["seedObject"];
+}) => {
+  const key = `videos/${label}/${crypto.randomUUID()}.mp4`;
+  await seedObject({ body, contentType: "video/mp4", key });
+  return key;
 };
 
 const insertReadyVideoObject = async (
@@ -500,16 +527,11 @@ describe("VideosService.gc", () => {
     // A real unreferenced object in this test's listing scope: the preview
     // must flag exactly it as an orphan (a live bucket object, not a vacuous
     // shape check).
-    const orphanKey = await ctx.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        const { key } = yield* storage.uploadVideo(
-          "gc-preview-orphan",
-          new File(["orphan"], "orphan.mp4", { type: "video/mp4" }),
-        );
-        return key;
-      }),
-    );
+    const orphanKey = await seedLegacyVideo({
+      body: "orphan",
+      label: "gc-preview-orphan",
+      seedObject: ctx.seedObject,
+    });
     ownedKeys.push(orphanKey);
 
     // Expired & clean → purgeable.
@@ -598,31 +620,14 @@ describe("VideosService.gc", () => {
 
     const cleanId = await insertVideoPost(db, "author-7", "videos/x/clean.mp4");
 
-    // Seed the purge target as a REAL object: stage, PUT and finalize an
-    // upload, then archive that final key as an expired revision. A purge
-    // must delete bytes that actually exist (S3 deletes of missing keys
-    // always "succeed", so a nonexistent key proves nothing).
-    const presigned = await ctx.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.presignVideoUpload("purge-target", "mp4");
-      }),
-    );
-    const put = await fetch(presigned.url, {
-      body: new File(["purge target bytes"], "purge.mp4", {
-        type: "video/mp4",
-      }),
-      headers: { "Content-Type": presigned.contentType },
-      method: "PUT",
+    // Legacy `videos/` keys have no registry owner, so GC may only report them.
+    // The purge target is a REAL object: S3 deletes of missing keys always
+    // "succeed", so a nonexistent key would prove nothing about the bytes.
+    const purgeTargetKey = await seedLegacyVideo({
+      body: "purge target bytes",
+      label: "gc-purge",
+      seedObject: ctx.seedObject,
     });
-    expect(put.ok).toBe(true);
-    const purgeTargetKey = await ctx.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        const { key } = yield* storage.finalizeVideoUpload(presigned.key);
-        return key;
-      }),
-    );
     ownedKeys.push(purgeTargetKey);
     await seedRevision(db, {
       ageDays: REVISION_RETENTION_DAYS + 2,
@@ -630,16 +635,11 @@ describe("VideosService.gc", () => {
       replacedBy: "author-7",
       videoKey: purgeTargetKey,
     });
-    const keptKey = await ctx.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        const { key } = yield* storage.uploadVideo(
-          "gc-kept",
-          new File(["retained bytes"], "kept.mp4", { type: "video/mp4" }),
-        );
-        return key;
-      }),
-    );
+    const keptKey = await seedLegacyVideo({
+      body: "retained bytes",
+      label: "gc-kept",
+      seedObject: ctx.seedObject,
+    });
     ownedKeys.push(keptKey);
     const reportedId = await insertVideoPost(db, "author-7", "videos/x/r.mp4");
     await seedRevision(db, {
@@ -659,17 +659,12 @@ describe("VideosService.gc", () => {
       .execute();
 
     // A real unreferenced object inside this test's listing scope: gcRun must
-    // delete it as an orphan.
-    const orphanKey = await ctx.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        const { key } = yield* storage.uploadVideo(
-          "gc-orphan",
-          new File(["orphan"], "orphan.mp4", { type: "video/mp4" }),
-        );
-        return key;
-      }),
-    );
+    // report it as an orphan and leave it in place.
+    const orphanKey = await seedLegacyVideo({
+      body: "orphan",
+      label: "gc-orphan",
+      seedObject: ctx.seedObject,
+    });
     ownedKeys.push(orphanKey);
 
     mockGetSession.mockResolvedValue(
@@ -699,6 +694,7 @@ describe("VideosService.gc", () => {
       }),
     );
     expect(kept.contentLength).toBe("retained bytes".length);
+
     const remaining = await db
       .selectFrom("video_revisions")
       .selectAll()
@@ -767,16 +763,11 @@ describe("VideosService.gc", () => {
     closeCtx = ctx.close;
     const { db, mockGetSession } = ctx;
     await insertUser(db, { id: "admin-live-key", role: "admin" });
-    const liveKey = await ctx.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        const { key } = yield* storage.uploadVideo(
-          "gc-live-key",
-          new File(["live bytes"], "live.mp4", { type: "video/mp4" }),
-        );
-        return key;
-      }),
-    );
+    const liveKey = await seedLegacyVideo({
+      body: "live bytes",
+      label: "gc-live-key",
+      seedObject: ctx.seedObject,
+    });
     ownedKeys.push(liveKey);
     const postId = await insertVideoPost(db, "admin-live-key", liveKey);
     await seedRevision(db, {

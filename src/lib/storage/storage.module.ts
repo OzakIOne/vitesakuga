@@ -43,34 +43,9 @@ export type DeterministicVideoCopy = {
   readonly key: string;
 };
 
-export type PresignedVideoUpload = {
-  readonly contentType: string;
-  readonly key: string;
-  readonly url: string;
-};
-
 export class StorageModule extends Context.Service<
   StorageModule,
   {
-    readonly uploadVideo: (
-      userId: string,
-      file: File,
-    ) => Effect.Effect<{ key: string }, StorageError>;
-
-    readonly uploadThumbnail: (
-      userId: string,
-      file: File,
-    ) => Effect.Effect<{ key: string }, StorageError>;
-
-    /**
-     * Store a user-uploaded post image (jpg/png/webp) under the private
-     * `images/{userId}/…` namespace; returns its storage key.
-     */
-    readonly uploadImage: (
-      userId: string,
-      file: File,
-    ) => Effect.Effect<{ key: string }, StorageError>;
-
     /** Store bytes at a lifecycle-reserved image key, hashing before PUT. */
     readonly putImage: (
       key: string,
@@ -89,11 +64,6 @@ export class StorageModule extends Context.Service<
       key: string,
     ) => Effect.Effect<UploadedFileHead, StorageError>;
 
-    readonly presignVideoUpload: (
-      userId: string,
-      ext: string,
-    ) => Effect.Effect<PresignedVideoUpload, StorageError>;
-
     /** Presign only a deterministic staging key; final keys are never signed. */
     readonly presignDeterministicVideoUpload: (
       userId: string,
@@ -107,16 +77,6 @@ export class StorageModule extends Context.Service<
       sourceEtag: string,
       finalKey: string,
     ) => Effect.Effect<DeterministicVideoCopy, StorageError>;
-
-    /**
-     * Promote a pending direct-to-R2 upload out of the staging namespace:
-     * copies the object to its final `videos/{userId}/…` key and best-effort
-     * deletes the pending one (any leftover expires via the bucket lifecycle
-     * rule). Returns the final key to persist in the DB.
-     */
-    readonly finalizeVideoUpload: (
-      pendingKey: string,
-    ) => Effect.Effect<{ key: string }, StorageError>;
 
     /**
      * Lists every live object key under a prefix (all pages). Read-only
