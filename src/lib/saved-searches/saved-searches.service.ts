@@ -8,7 +8,7 @@ import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
 import { UnauthorizedError, ValidationError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { baseLayerFactories } from "../server-fn.handler";
 import {
   deleteSavedSearchInputSchema,
   saveSearchInputSchema,
@@ -55,9 +55,9 @@ export class SavedSearchesService extends Context.Service<
       UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
-    readonly delete_: (
-      id: number,
-    ) => Effect.Effect<
+    readonly delete_: (input: {
+      id: number;
+    }) => Effect.Effect<
       { success: boolean },
       UnauthorizedError | SessionFetchError | SqlError,
       SessionService
@@ -121,9 +121,11 @@ export class SavedSearchesService extends Context.Service<
       return rows.map(toSavedSearch);
     });
 
-    const delete_ = Effect.fn("SavedSearchesService.delete")(function* (
-      id: number,
-    ) {
+    const delete_ = Effect.fn("SavedSearchesService.delete")(function* ({
+      id,
+    }: {
+      id: number;
+    }) {
       const user = yield* requireAuth();
       yield* db.execute(
         db
@@ -166,14 +168,13 @@ export const fetchSavedSearches = createServerFn({
   }),
 );
 
-// Adapter: the wire input is `{ id }`, while the service takes the bare id.
 export const deleteSavedSearch = createServerFn({ method: "POST" })
   .validator(parseStrict(deleteSavedSearchInputSchema))
   .handler(
-    createHandler(
-      SavedSearchesServiceLive,
-      baseLayerFactories.auth,
-    )(({ id }: { id: number }) =>
-      Effect.flatMap(SavedSearchesService, (service) => service.delete_(id)),
-    ),
+    createEndpointHandler({
+      service: SavedSearchesService,
+      operation: "delete_",
+      layer: SavedSearchesServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

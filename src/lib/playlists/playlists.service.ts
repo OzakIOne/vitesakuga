@@ -21,13 +21,13 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors";
-import { asPostId, PlaylistId, PostId } from "../ids";
+import { asPostId, PlaylistId } from "../ids";
 import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
 import { createEndpointHandler } from "../server-endpoint";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { baseLayerFactories } from "../server-fn.handler";
 import {
   addPostToPlaylistInputSchema,
   bulkAddPostsToPlaylistInputSchema,
@@ -146,9 +146,9 @@ export class PlaylistsService extends Context.Service<
       | SqlNoFirstResult,
       SessionService
     >;
-    readonly delete_: (
-      playlistId: PlaylistId,
-    ) => Effect.Effect<
+    readonly delete_: (input: {
+      playlistId: PlaylistId;
+    }) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
       | ForbiddenError
@@ -235,7 +235,7 @@ export class PlaylistsService extends Context.Service<
       SessionService
     >;
     readonly fetchForPost: (
-      postId: PostId,
+      postId: number,
     ) => Effect.Effect<
       readonly PlaylistForPostCheck[],
       UnauthorizedError | SessionFetchError | SqlError,
@@ -382,9 +382,11 @@ export class PlaylistsService extends Context.Service<
       };
     });
 
-    const delete_ = Effect.fn("PlaylistsService.delete_")(function* (
-      playlistId: PlaylistId,
-    ) {
+    const delete_ = Effect.fn("PlaylistsService.delete_")(function* ({
+      playlistId,
+    }: {
+      playlistId: PlaylistId;
+    }) {
       yield* requireOwnedPlaylist(playlistId);
 
       yield* db.execute(
@@ -906,8 +908,9 @@ export class PlaylistsService extends Context.Service<
     });
 
     const fetchForPost = Effect.fn("PlaylistsService.fetchForPost")(function* (
-      postId: PostId,
+      rawPostId: number,
     ) {
+      const postId = asPostId(rawPostId);
       const user = yield* requireAuth();
 
       const playlists = yield* db.execute(
@@ -987,14 +990,12 @@ export const updatePlaylist = createServerFn({ method: "POST" })
 export const deletePlaylist = createServerFn({ method: "POST" })
   .validator(parse(Schema.Struct({ playlistId: PlaylistId })))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )((data: { playlistId: PlaylistId }) =>
-      Effect.flatMap(PlaylistsService, (service) =>
-        service.delete_(data.playlistId),
-      ),
-    ),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "delete_",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const addPostToPlaylist = createServerFn({ method: "POST" })
@@ -1096,12 +1097,10 @@ export const fetchPlaylistsForPost = createServerFn({
 })
   .validator(parse(Schema.Number))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )((data: number) =>
-      Effect.flatMap(PlaylistsService, (service) =>
-        service.fetchForPost(asPostId(data)),
-      ),
-    ),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "fetchForPost",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

@@ -168,7 +168,7 @@ describe("SavedSearchesService.delete_", () => {
     await expect(
       runEffect(
         Effect.flatMap(SavedSearchesService, (service) =>
-          service.delete_(row.id),
+          service.delete_({ id: row.id }),
         ),
       ),
     ).resolves.toEqual({ success: true });
@@ -197,7 +197,7 @@ describe("SavedSearchesService.delete_", () => {
 
     await runEffect(
       Effect.flatMap(SavedSearchesService, (service) =>
-        service.delete_(row.id),
+        service.delete_({ id: row.id }),
       ),
     );
 

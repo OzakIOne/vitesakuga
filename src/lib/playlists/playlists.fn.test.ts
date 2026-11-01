@@ -253,7 +253,7 @@ describe("PlaylistsService.delete_", () => {
 
     const result = await runEffect(
       Effect.flatMap(PlaylistsService, (service) =>
-        service.delete_(playlistId),
+        service.delete_({ playlistId }),
       ),
     );
 
@@ -277,7 +277,7 @@ describe("PlaylistsService.delete_", () => {
 
     await runEffect(
       Effect.flatMap(PlaylistsService, (service) =>
-        service.delete_(playlistId),
+        service.delete_({ playlistId }),
       ),
     );
 
@@ -293,7 +293,7 @@ describe("PlaylistsService.delete_", () => {
 
     const error = await runFailure(
       Effect.flatMap(PlaylistsService, (service) =>
-        service.delete_(playlistId),
+        service.delete_({ playlistId }),
       ),
     );
     expect(error._tag).toBe("ForbiddenError");
@@ -1372,7 +1372,7 @@ describe("PlaylistsService.delete_ cascading", () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
     await runEffect(
       Effect.flatMap(PlaylistsService, (service) =>
-        service.delete_(asPlaylistId(row.id)),
+        service.delete_({ playlistId: asPlaylistId(row.id) }),
       ),
     );
 
