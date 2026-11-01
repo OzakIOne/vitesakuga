@@ -2,15 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { toastError } from "../mutations/mutation-feedback";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
+import { notificationKeys } from "./notifications.queries";
 import {
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "./notifications.service";
-
-export const notificationKeys = {
-  inbox: ["notifications", "inbox"] as const,
-};
 
 const INBOX_STALE_MS = 15_000;
 /** Light polling keeps the badge fresh without websockets or SSE. */

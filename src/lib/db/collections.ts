@@ -5,6 +5,7 @@ import {
 import { createCollection, type Collection } from "@tanstack/react-db";
 
 import { getQueryClient } from "../query-client";
+import { tagsKeys } from "../tags/tags.queries";
 import { getAllTags } from "../tags/tags.service";
 
 const queryClient = getQueryClient();
@@ -18,7 +19,7 @@ type EagerQueryCollection<
 export const tagsCollection: EagerQueryCollection<TagRecord, number> =
   createCollection(
     queryCollectionOptions({
-      queryKey: ["tags", "collection"],
+      queryKey: tagsKeys.collection(),
       queryFn: async (): Promise<TagRecord[]> => getAllTags(),
       queryClient,
       getKey: (item: TagRecord): number => item.id,

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { tagsCollection } from "src/lib/db/collections";
 import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
+import { postsKeys } from "src/lib/posts/posts.queries";
 import type { Tag } from "src/lib/posts/posts.schema";
 
 import {
@@ -60,7 +61,7 @@ export function useSetTagFollowed(tagName: string) {
         queryKey: tagsKeys.followState(tagName),
       });
       await queryClient.invalidateQueries({
-        queryKey: ["posts", "searchInfinite"],
+        queryKey: postsKeys.searchInfiniteAll(),
       });
     },
     successDescription: "Your followed-tag feed will use this preference.",

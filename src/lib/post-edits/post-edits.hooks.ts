@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
+import { postsKeys } from "../posts/posts.queries";
 import { postEditsKeys } from "./post-edits.queries";
 import type { PostEditPayload } from "./post-edits.schema";
 import { approveEdit, proposeEdit, rejectEdit } from "./post-edits.service";
@@ -37,7 +38,7 @@ export function useApprovePostEdit(postId: number) {
           queryKey: postEditsKeys.post(postId),
         }),
         queryClient.invalidateQueries({
-          queryKey: ["posts", "detail", postId],
+          queryKey: postsKeys.detail(postId),
         }),
       ]);
     },
