@@ -93,7 +93,10 @@ export const posts = pgTable(
       .notNull(),
     version: integer().notNull().default(0),
     videoKey: text(),
-    videoMetadata: json().$type<string>().notNull(),
+    videoMetadata: json()
+      .$type<string>()
+      .notNull()
+      .default(sql`'{}'`),
     volumeNumber: integer(),
   },
   (t) => [
@@ -418,7 +421,7 @@ export const videoRevisions = pgTable(
       .notNull(),
     // Media metadata of the archived video at replacement time.
     videoKey: text().notNull(),
-    videoMetadata: json().$type<unknown>().notNull(),
+    videoMetadata: json().$type<string>().notNull(),
   },
   (t) => [index("video_revisions_post_idx").on(t.postId)],
 );

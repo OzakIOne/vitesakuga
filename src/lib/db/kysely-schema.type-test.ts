@@ -16,4 +16,6 @@ export type KyselySchemaChecks = [
   Expect<Equals<DB["playlists"]["description"], string | null>>,
   Expect<Equals<DB["saved_searches"]["tags"], string[]>>,
   Expect<Equals<DB["user"]["role"], Generated<Role>>>,
+  Expect<Equals<DB["posts"]["videoMetadata"], Generated<string>>>,
+  Expect<Equals<DB["video_revisions"]["videoMetadata"], string>>,
 ];
