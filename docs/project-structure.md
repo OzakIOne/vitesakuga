@@ -91,7 +91,7 @@ src/
 
 - Server config in `src/lib/auth/index.ts` (Better Auth with Drizzle adapter)
 - Client config in `src/lib/auth/client.ts` (Better Auth React client)
-- Auth middleware in `src/lib/auth/auth.middleware.ts` (client-safe `getUserSession` server fn) backed by `SessionService` in `src/lib/auth/session.effect.ts` (`getSession`, `getUser`, `requireUser`)
+- Auth middleware in `src/lib/auth/auth.middleware.ts` (client-safe `getUserSession` server fn) backed by `SessionService` in `src/lib/auth/session.effect.ts` (`getSession`, `getUser`, `getActor`, `requireActor`, `requireRreUser`)
 - Auth hooks in `src/lib/auth/auth.hooks.ts` (TanStack Query mutations)
 - Auth schemas in `src/lib/auth/auth.schemas.ts` (Effect Schema)
 

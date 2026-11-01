@@ -126,7 +126,7 @@ Post edits, video replacement/restoration, and post updates also use optimistic 
 
 - Auth-protected mutations use `baseLayerFactories.auth` from `src/lib/server-fn.handler.ts`, which resolves `makeAuthLayer` from `src/lib/db/layer-factories.server`
 - Public reads use `baseLayerFactories.db`; middleware-only session reads use `resolveMiddlewareLayer()`
-- `SessionService` in `src/lib/auth/session.effect.ts` exposes `getSession()`, `getUser()`, and `requireUser()` over Better Auth plus request headers
+- `SessionService` in `src/lib/auth/session.effect.ts` exposes `getSession()`, `getUser()`, `getActor()`, `requireUser()`, `requireActor()` (mutations; refuses unknown roles and suspended accounts), and `requireReadActor()` (reads) over Better Auth plus request headers
 - `src/lib/auth/auth.middleware.ts` exposes the client-safe TanStack server function `getUserSession`, which resolves the middleware layer and reads the session through `SessionService`
 - Ownership checks are performed within the Effect service method using `Effect.fail(new UnauthorizedError({...}))` or `Effect.fail(new ForbiddenError({...}))`
 

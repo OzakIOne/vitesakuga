@@ -6,7 +6,11 @@ import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse } from "../effect/schema.utils";
-import { AccountSuspendedError, ForbiddenError, UnauthorizedError } from "../errors";
+import {
+  AccountSuspendedError,
+  ForbiddenError,
+  UnauthorizedError,
+} from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 
@@ -37,21 +41,21 @@ type InboxError =
   | UnauthorizedError
   | SessionFetchError;
 
-const requireInboxReaderId = Effect.fn("NotificationsService.requireInboxReaderId")(
-  function* (message: string) {
-    const sessions = yield* SessionService;
-    const user = yield* sessions.requireReadActor(message);
-    return user.id;
-  },
-);
+const requireInboxReaderId = Effect.fn(
+  "NotificationsService.requireInboxReaderId",
+)(function* (message: string) {
+  const sessions = yield* SessionService;
+  const user = yield* sessions.requireReadActor(message);
+  return user.id;
+});
 
-const requireInboxWriterId = Effect.fn("NotificationsService.requireInboxWriterId")(
-  function* (message: string) {
-    const sessions = yield* SessionService;
-    const user = yield* sessions.requireActor(message);
-    return user.id;
-  },
-);
+const requireInboxWriterId = Effect.fn(
+  "NotificationsService.requireInboxWriterId",
+)(function* (message: string) {
+  const sessions = yield* SessionService;
+  const user = yield* sessions.requireActor(message);
+  return user.id;
+});
 
 export class NotificationsService extends Context.Service<
   NotificationsService,

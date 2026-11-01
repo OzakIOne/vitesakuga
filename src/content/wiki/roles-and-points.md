@@ -2,12 +2,12 @@ ViteSakuga uses a role ladder to keep the archive safe without slowing contribut
 
 ## Roles
 
-Roles progress from `novice → uploader → moderator → admin`. Each role grants a fixed set of permissions in `src/lib/auth/policy.ts`, and most checks test those permissions. A few decisions still compare the rank itself: staff access (moderator and above), storage cleanup and role assignment (admin only), and the ownership override for staff. Those comparisons follow the same order as the ladder.
+Roles progress from `novice → uploader → moderator → admin`. Each role grants an explicit set of permissions in `src/lib/auth/policy.ts`, and every decision checks one of those permissions, never the rank itself. Some permissions are held only by the higher roles, as listed below.
 
 - **Novice** — newly registered accounts. They can browse, vote, comment, build playlists, and upload their own posts. They cannot suggest edits to other people's posts yet.
 - **Uploader** — novices promoted after review. They can also suggest edits to other people's posts and take part in the wiki-edit workflow.
-- **Moderator** — reviews reports, edit suggestions, and promotion candidates from `/admin`.
-- **Admin** — everything a moderator can do, plus storage cleanup (preview and purge) and manual role assignment from `/admin`. Role changes and account deletion cannot leave the site without an active admin: the last active admin cannot be demoted or delete their account until another admin exists.
+- **Moderator** — reviews reports, edit suggestions, and promotion candidates from `/admin`, and suspends or restores ordinary accounts.
+- **Admin** — everything a moderator can do, plus storage cleanup (preview and purge) and manual role assignment from `/admin`. Role changes and account deletion cannot leave the site without an active admin: the last active admin cannot be demoted or delete their account until another admin exists. Admins also suspend or restore moderators and admins.
 
 ## How promotion works
 
@@ -20,3 +20,7 @@ Points live in an append-only ledger with per-action caps. They are a signal use
 ## Account security
 
 Accounts support email/password (12 characters minimum, approved email providers), GitHub and Google sign-in, passkeys, and two-factor authentication with recovery codes. You can change your username, rotate your password, and delete your account with anonymization — public content stays attributed to “Deleted user”.
+
+## Account suspension
+
+A moderator or admin can suspend an account with a reason. A suspended account can still read and sign in, but it cannot post, comment, vote, report, suggest edits, manage playlists or review anything until the account is restored. The reason is shown to the account so it can see why. Moderators can suspend and restore ordinary accounts; only admins can act on other moderators and admins. Nobody can suspend their own account, and the last active admin cannot be suspended.

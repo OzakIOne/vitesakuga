@@ -6,7 +6,12 @@ import {
 } from "../promotions/promotions.service";
 import { previewGc, runGc } from "../videos/videos.service";
 import type { ModerationFns } from "./moderation.fn-context";
-import { assignUserRole, fetchModerationOverview } from "./moderation.service";
+import {
+  assignUserRole,
+  fetchModerationOverview,
+  suspendUser,
+  unsuspendUser,
+} from "./moderation.service";
 
 export const defaultModerationFns: ModerationFns = {
   approveEdit,
@@ -18,4 +23,6 @@ export const defaultModerationFns: ModerationFns = {
   rejectEdit,
   rejectPromotion,
   runGc,
+  suspendUser,
+  unsuspendUser,
 };

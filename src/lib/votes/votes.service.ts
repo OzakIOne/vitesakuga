@@ -100,14 +100,22 @@ export class PostVotesService extends Context.Service<
       data: RemovePostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
-      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
     readonly fetchLikedPosts: (
       data: FetchLikedPostsInput,
     ) => Effect.Effect<
       LikedPostsResult,
-      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
   }

@@ -130,6 +130,49 @@ export function useRejectEdit() {
 }
 
 /** Admin-only direct rank assignment. */
+/** Suspends an account (moderator or admin). Its queued work stays visible to staff. */
+export function useSuspendUser() {
+  const queryClient = useQueryClient();
+  const { suspendUser } = useModerationFns();
+  return useMutationWithFeedback({
+    errorFallback: "Could not suspend this account.",
+    errorTitle: "Suspension failed",
+    mutationFn: async (input: { reason: string; userId: string }) =>
+      suspendUser({ data: input }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: moderationKeys.overview }),
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.promotionQueue,
+        }),
+      ]);
+    },
+    successDescription: "The account can still sign in but cannot act.",
+    successTitle: "Account suspended",
+  });
+}
+
+/** Lifts a suspension (moderator or admin). */
+export function useUnsuspendUser() {
+  const queryClient = useQueryClient();
+  const { unsuspendUser } = useModerationFns();
+  return useMutationWithFeedback({
+    errorFallback: "Could not restore this account.",
+    errorTitle: "Restore failed",
+    mutationFn: async (userId: string) => unsuspendUser({ data: { userId } }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: moderationKeys.overview }),
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.promotionQueue,
+        }),
+      ]);
+    },
+    successDescription: "The account can act again.",
+    successTitle: "Account restored",
+  });
+}
+
 export function useSetUserRole() {
   const queryClient = useQueryClient();
   const { assignUserRole } = useModerationFns();

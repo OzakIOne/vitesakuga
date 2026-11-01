@@ -10,6 +10,8 @@ import type { previewGc, runGc } from "../videos/videos.service";
 import type {
   assignUserRole,
   fetchModerationOverview,
+  suspendUser,
+  unsuspendUser,
 } from "./moderation.service";
 
 export type ModerationFns = {
@@ -22,6 +24,8 @@ export type ModerationFns = {
   rejectEdit: typeof rejectEdit;
   rejectPromotion: typeof rejectPromotion;
   runGc: typeof runGc;
+  suspendUser: typeof suspendUser;
+  unsuspendUser: typeof unsuspendUser;
 };
 
 export const ModerationFnsContext = createContext<ModerationFns | null>(null);

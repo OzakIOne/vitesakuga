@@ -252,7 +252,11 @@ export class PostsService extends Context.Service<
         readonly requiredHeaders: Readonly<Record<string, string>>;
         readonly url: string;
       },
-      StorageError | AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError,
+      | StorageError
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError,
       SessionService
     >;
     readonly update: (

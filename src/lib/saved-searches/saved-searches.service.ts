@@ -6,7 +6,12 @@ import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
-import { AccountSuspendedError, ForbiddenError, UnauthorizedError, ValidationError } from "../errors";
+import {
+  AccountSuspendedError,
+  ForbiddenError,
+  UnauthorizedError,
+  ValidationError,
+} from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import {
@@ -54,14 +59,22 @@ export class SavedSearchesService extends Context.Service<
     >;
     readonly list: () => Effect.Effect<
       readonly SavedSearch[],
-      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
     readonly delete_: (input: {
       id: number;
     }) => Effect.Effect<
       { success: boolean },
-      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
   }

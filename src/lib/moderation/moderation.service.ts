@@ -287,63 +287,63 @@ export class ModerationService extends Context.Service<
       },
     );
 
-    const suspendUser = Effect.fn("ModerationService.suspendUser")(function* (
-      input: { reason: string; userId: string },
-    ) {
-      const sessions = yield* SessionService;
-      const actor = yield* sessions.requireActor("You must be logged in.");
-      yield* authorize({
-        actor,
-        permission: "users:suspend",
-        forbiddenMessage: "Only moderators and admins can suspend accounts.",
-      });
-      if (input.userId === actor.id) {
-        return yield* new ValidationError({
-          message: "You cannot suspend your own account.",
+    const suspendUser = Effect.fn("ModerationService.suspendUser")(
+      function* (input: { reason: string; userId: string }) {
+        const sessions = yield* SessionService;
+        const actor = yield* sessions.requireActor("You must be logged in.");
+        yield* authorize({
+          actor,
+          permission: "users:suspend",
+          forbiddenMessage: "Only moderators and admins can suspend accounts.",
         });
-      }
-      const reason = input.reason.trim();
-      if (reason === "") {
-        return yield* new ValidationError({
-          message: "A reason is required to suspend an account.",
-        });
-      }
-      const now = yield* DateTime.now;
-
-      yield* db.transaction((trx) =>
-        Effect.gen(function* () {
-          const activeAdminIds = yield* lockActiveAdminIds(trx);
-          const target = yield* lockedTarget(trx, input.userId);
-          yield* requireRightsOver({ actor, targetRole: target.role });
-          if (target.suspendedAt !== null) {
-            return;
-          }
-          yield* ensureAdminRemains({
-            activeAdminIds,
-            departingUserId: input.userId,
-            message:
-              "At least one active admin must remain. Suspend another admin first.",
+        if (input.userId === actor.id) {
+          return yield* new ValidationError({
+            message: "You cannot suspend your own account.",
           });
-          yield* trx.execute(
-            trx
-              .updateTable("user")
-              .set({
-                suspendedAt: DateTime.toDate(now),
-                suspendedReason: reason,
-              })
-              .where("id", "=", input.userId),
-          );
-        }),
-      );
+        }
+        const reason = input.reason.trim();
+        if (reason === "") {
+          return yield* new ValidationError({
+            message: "A reason is required to suspend an account.",
+          });
+        }
+        const now = yield* DateTime.now;
 
-      yield* Effect.logInfo("User suspended").pipe(
-        Effect.annotateLogs({
-          suspendedBy: actor.id,
-          targetUserId: input.userId,
-        }),
-      );
-      return { userId: input.userId };
-    });
+        yield* db.transaction((trx) =>
+          Effect.gen(function* () {
+            const activeAdminIds = yield* lockActiveAdminIds(trx);
+            const target = yield* lockedTarget(trx, input.userId);
+            yield* requireRightsOver({ actor, targetRole: target.role });
+            if (target.suspendedAt !== null) {
+              return;
+            }
+            yield* ensureAdminRemains({
+              activeAdminIds,
+              departingUserId: input.userId,
+              message:
+                "At least one active admin must remain. Suspend another admin first.",
+            });
+            yield* trx.execute(
+              trx
+                .updateTable("user")
+                .set({
+                  suspendedAt: DateTime.toDate(now),
+                  suspendedReason: reason,
+                })
+                .where("id", "=", input.userId),
+            );
+          }),
+        );
+
+        yield* Effect.logInfo("User suspended").pipe(
+          Effect.annotateLogs({
+            suspendedBy: actor.id,
+            targetUserId: input.userId,
+          }),
+        );
+        return { userId: input.userId };
+      },
+    );
 
     const unsuspendUser = Effect.fn("ModerationService.unsuspendUser")(
       function* (input: { userId: string }) {

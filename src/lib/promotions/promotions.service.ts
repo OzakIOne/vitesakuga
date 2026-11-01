@@ -123,7 +123,6 @@ export class PromotionsService extends Context.Service<
     }) => Effect.Effect<
       { userId: string },
       | AccountSuspendedError
-
       | PolicyError
       | PromotionAlreadyReviewedError
       | PromotionNotEligibleError
@@ -139,7 +138,10 @@ export class PromotionsService extends Context.Service<
       userId: string;
     }) => Effect.Effect<
       { userId: string },
-      AccountSuspendedError | PolicyError | PromotionAlreadyReviewedError | SqlError,
+      | AccountSuspendedError
+      | PolicyError
+      | PromotionAlreadyReviewedError
+      | SqlError,
       SessionService
     >;
   }

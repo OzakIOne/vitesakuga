@@ -255,7 +255,11 @@ export class PlaylistsService extends Context.Service<
       postId: number,
     ) => Effect.Effect<
       readonly PlaylistForPostCheck[],
-      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
   }
