@@ -230,4 +230,63 @@ describe("DeleteAccountService.deleteAccount", () => {
     expect(result.deletedUserId).toBe("user-1");
     expect(await db.selectFrom("account").execute()).toHaveLength(0);
   });
+
+  it("refuses to delete the last active admin and leaves the account intact", async () => {
+    await db
+      .updateTable("user")
+      .set({ role: "admin" })
+      .where("id", "=", "user-1")
+      .execute();
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "user-1", role: "admin" }),
+    );
+
+    const error = await runEffect(
+      Effect.flip(
+        Effect.flatMap(DeleteAccountService, (service) =>
+          service.deleteAccount({}),
+        ),
+      ),
+    );
+    expect(error._tag).toBe("LastAdminError");
+    expect(error.message).toBe(
+      "You are the last active admin. Promote another admin before deleting your account.",
+    );
+
+    const user = await db
+      .selectFrom("user")
+      .select(["name", "role", "deletedAt"])
+      .where("id", "=", "user-1")
+      .executeTakeFirstOrThrow();
+    expect(user).toEqual({ deletedAt: null, name: "Alice", role: "admin" });
+    expect(await db.selectFrom("posts").selectAll().execute()).toHaveLength(1);
+  });
+
+  it("lets an admin delete their account while another admin remains", async () => {
+    await db
+      .insertInto("user")
+      .values({
+        email: "bob@test.com",
+        id: "admin-2",
+        name: "Bob",
+        role: "admin",
+        username: "bob",
+      })
+      .execute();
+    await db
+      .updateTable("user")
+      .set({ role: "admin" })
+      .where("id", "=", "user-1")
+      .execute();
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "user-1", role: "admin" }),
+    );
+
+    const result = await runEffect(
+      Effect.flatMap(DeleteAccountService, (service) =>
+        service.deleteAccount({}),
+      ),
+    );
+    expect(result.deletedUserId).toBe("user-1");
+  });
 });

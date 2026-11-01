@@ -6,9 +6,10 @@ import { KyselyDB } from "../db/context";
 import { makeSqlError, type SqlError } from "../db/effect-kysely";
 import { DELETED_USER_NAME } from "../db/schema";
 import { parseStrict } from "../effect/schema.utils";
-import { ForbiddenError, UnauthorizedError } from "../errors";
+import { ForbiddenError, LastAdminError, UnauthorizedError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
+import { ensureAdminRemains, lockActiveAdminIds } from "./admin-continuity";
 import { SessionFetchError, SessionService } from "./session.effect";
 
 export const deleteAccountInputSchema = Schema.Struct({
@@ -39,7 +40,11 @@ export class DeleteAccountService extends Context.Service<
       input: Schema.Schema.Type<typeof deleteAccountInputSchema>,
     ) => Effect.Effect<
       { deletedUserId: string },
-      ForbiddenError | SessionFetchError | SqlError | UnauthorizedError,
+      | ForbiddenError
+      | LastAdminError
+      | SessionFetchError
+      | SqlError
+      | UnauthorizedError,
       SessionService
     >;
   }
@@ -100,6 +105,14 @@ export class DeleteAccountService extends Context.Service<
 
         yield* db.transaction((trx) =>
           Effect.gen(function* () {
+            const activeAdminIds = yield* lockActiveAdminIds(trx);
+            yield* ensureAdminRemains({
+              activeAdminIds,
+              departingUserId: userId,
+              message:
+                "You are the last active admin. Promote another admin before deleting your account.",
+            });
+
             yield* trx.execute(
               trx
                 .updateTable("user")

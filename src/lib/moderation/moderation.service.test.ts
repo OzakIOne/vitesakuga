@@ -425,4 +425,92 @@ describe("ModerationService.setUserRole", () => {
       .executeTakeFirstOrThrow();
     expect(row.role).toBe("moderator");
   });
+
+  it("refuses to demote the last active admin and leaves the role unchanged", async () => {
+    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "only-admin", role: "admin" });
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "only-admin", role: "admin" }),
+    );
+    const error = await ctx.runEffect(
+      Effect.flip(
+        Effect.flatMap(ModerationService, (service) =>
+          service.setUserRole({ role: "moderator", userId: "only-admin" }),
+        ),
+      ),
+    );
+
+    expect(error._tag).toBe("LastAdminError");
+    expect(error.message).toBe(
+      "At least one active admin must remain. Promote another admin first.",
+    );
+    const row = await db
+      .selectFrom("user")
+      .select("role")
+      .where("id", "=", "only-admin")
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("admin");
+  });
+
+  it("demotes one of two admins", async () => {
+    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-1", role: "admin" });
+    await insertUser(db, { id: "admin-2", role: "admin" });
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-1", role: "admin" }),
+    );
+    await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) =>
+        service.setUserRole({ role: "moderator", userId: "admin-2" }),
+      ),
+    );
+
+    const row = await db
+      .selectFrom("user")
+      .select("role")
+      .where("id", "=", "admin-2")
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("moderator");
+  });
+
+  it("keeps one admin when two admins demote each other at the same time", async () => {
+    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-1", role: "admin" });
+    await insertUser(db, { id: "admin-2", role: "admin" });
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-1", role: "admin" }),
+    );
+    const results = await Promise.allSettled([
+      ctx.runEffect(
+        Effect.flatMap(ModerationService, (service) =>
+          service.setUserRole({ role: "moderator", userId: "admin-2" }),
+        ),
+      ),
+      ctx.runEffect(
+        Effect.flatMap(ModerationService, (service) =>
+          service.setUserRole({ role: "moderator", userId: "admin-1" }),
+        ),
+      ),
+    ]);
+
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    const admins = await db
+      .selectFrom("user")
+      .select("id")
+      .where("role", "=", "admin")
+      .where("deletedAt", "is", null)
+      .execute();
+    expect(admins).toHaveLength(1);
+  });
 });

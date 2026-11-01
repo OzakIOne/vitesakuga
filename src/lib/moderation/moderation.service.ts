@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
+import {
+  ensureAdminRemains,
+  lockActiveAdminIds,
+} from "../auth/admin-continuity";
 import { getUserRole, userHasPermission } from "../auth/policy";
 import { RoleSchema, roleAtLeast, type Role } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
@@ -8,7 +12,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
-import { ForbiddenError, UnauthorizedError } from "../errors";
+import { ForbiddenError, LastAdminError, UnauthorizedError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 
@@ -42,6 +46,7 @@ export type ModerationOverview = {
 
 type ModerationFailure =
   | ForbiddenError
+  | LastAdminError
   | SessionFetchError
   | SqlError
   | UnauthorizedError;
@@ -170,30 +175,45 @@ export class ModerationService extends Context.Service<
         // as every other service call site); this cast restates it for getUserRole.
         void userHasPermission;
 
-        const targetOption = yield* db.executeTakeFirstOption(
-          db
-            .selectFrom("user")
-            .select(["id", "role"])
-            .where("id", "=", input.userId),
+        const previousRole = yield* db.transaction((trx) =>
+          Effect.gen(function* () {
+            const activeAdminIds = yield* lockActiveAdminIds(trx);
+            const target = yield* trx.executeTakeFirstOption(
+              trx
+                .selectFrom("user")
+                .select(["id", "role"])
+                .where("id", "=", input.userId),
+            );
+            if (Option.isNone(target) || target.value.role === targetRole) {
+              // Idempotent no-op: assigning the current rank changes nothing.
+              return Option.none<string>();
+            }
+
+            if (targetRole !== "admin") {
+              yield* ensureAdminRemains({
+                activeAdminIds,
+                departingUserId: input.userId,
+                message:
+                  "At least one active admin must remain. Promote another admin first.",
+              });
+            }
+
+            yield* trx.execute(
+              trx
+                .updateTable("user")
+                .set({ role: targetRole })
+                .where("id", "=", input.userId),
+            );
+            return Option.some(target.value.role);
+          }),
         );
-        if (
-          Option.isNone(targetOption) ||
-          targetOption.value.role === targetRole
-        ) {
-          // Idempotent no-op: assigning the current rank changes nothing.
+        if (Option.isNone(previousRole)) {
           return { userId: input.userId };
         }
 
-        yield* db.execute(
-          db
-            .updateTable("user")
-            .set({ role: targetRole })
-            .where("id", "=", input.userId),
-        );
-
         yield* Effect.logInfo("User role set").pipe(
           Effect.annotateLogs({
-            previousRole: targetOption.value.role,
+            previousRole: previousRole.value,
             setBy: actor.id,
             targetRole,
             targetUserId: input.userId,

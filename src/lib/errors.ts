@@ -103,6 +103,15 @@ export class PromotionNotEligibleError extends Schema.TaggedError<PromotionNotEl
   clientSafeAnnotations,
 ) {}
 
+// Admin continuity: the change would leave no active admin to manage roles.
+export class LastAdminError extends Schema.TaggedError<LastAdminError>()(
+  "LastAdminError",
+  {
+    message: Schema.String,
+  },
+  clientSafeAnnotations,
+) {}
+
 // Edit suggestion: the referenced suggestion does not exist.
 export class EditNotFoundError extends Schema.TaggedError<EditNotFoundError>()(
   "EditNotFoundError",
