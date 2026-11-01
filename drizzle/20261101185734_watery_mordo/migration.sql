@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD CONSTRAINT "user_role_check" CHECK ("role" IN ('novice', 'uploader', 'moderator', 'admin'));

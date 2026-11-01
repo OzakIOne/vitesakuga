@@ -37,6 +37,7 @@ This document outlines the conventions and best practices for database interacti
 - The Drizzle TS key must equal the database column name. `src/lib/db/schema/column-names.test.ts` enforces this, so write `created_at: timestamp()`, not `createdAt: timestamp("created_at")`.
 - Declare the real database default in Drizzle (`.defaultNow()`, `.default(...)`), so the type reflects it. A `$defaultFn` also makes the column optional on insert, but it sets no database default.
 - Narrow text and JSON columns with `.$type<T>()` (for example `.$type<Role>()`, `.$type<PostEditPayload>()`), so the type never widens to `string`.
+- Declare database invariants in the Drizzle table's extra config with `check(...)`; `user.role` is checked against `RoleSchema.literals` and keeps its `'novice'` default.
 - A migration that sets a default by hand must also be recorded in the latest `drizzle/*/snapshot.json`. Otherwise `nub run db generate` emits a migration that is already applied.
 - `nub run db generate` must print `No schema changes` after a type-only or `$defaultFn` change. Add type-level expectations to `src/lib/db/kysely-schema.type-test.ts` when a precise type matters.
 

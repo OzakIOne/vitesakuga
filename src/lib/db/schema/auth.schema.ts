@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  check,
   index,
   integer,
   pgTable,
@@ -8,39 +10,51 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { DateTime, Schema } from "effect";
+import { Array, DateTime, Schema, String } from "effect";
 
 import { type Role, RoleSchema } from "../../auth/roles";
 import { TimestampSchema } from "./timestamp";
 
-export const user = pgTable("user", {
-  createdAt: timestamp().defaultNow().notNull(),
-  // Set when the account has been deleted and anonymized: posts and comments
-  // keep referencing this row so they stay public, attributed to
-  // DELETED_USER_NAME ("Deleted user").
-  deletedAt: timestamp(),
-  email: text().notNull().unique(),
-  emailVerified: boolean().notNull().default(false),
-  id: text().primaryKey(),
-  image: text(),
-  name: text().notNull(),
-  // Rank used by the authorization policies (`src/lib/auth/policy.ts`);
-  // promoted through the points system and staff review, never set by users.
-  // Values are constrained at runtime by `RoleSchema` in the select schema.
-  role: text().$type<Role>().notNull().default("novice"),
-  // Set while moderators or admins hold the account: every mutation that needs
-  // an actor is refused, reads and sign-in stay open. The reason is shown to
-  // the suspended user so they can see why.
-  suspendedAt: timestamp({ withTimezone: true }),
-  suspendedReason: text(),
-  twoFactorEnabled: boolean().notNull().default(false),
-  // Unique public handle used for @mentions in comments. Lowercase
-  // `[a-z0-9_]`, 3–30 chars — normalized/validated by Better Auth's username
-  // plugin (src/lib/auth/index.ts). Generated at sign-up, changeable on
-  // /account. Backfilled for existing users by the column's migration.
-  updatedAt: timestamp().defaultNow().notNull(),
-  username: text().notNull().unique(),
-});
+export const user = pgTable(
+  "user",
+  {
+    createdAt: timestamp().defaultNow().notNull(),
+    // Set when the account has been deleted and anonymized: posts and comments
+    // keep referencing this row so they stay public, attributed to
+    // DELETED_USER_NAME ("Deleted user").
+    deletedAt: timestamp(),
+    email: text().notNull().unique(),
+    emailVerified: boolean().notNull().default(false),
+    id: text().primaryKey(),
+    image: text(),
+    name: text().notNull(),
+    // Rank assigned through promotions or staff review, never by users.
+    role: text().$type<Role>().notNull().default("novice"),
+    // Set while moderators or admins hold the account: every mutation that needs
+    // an actor is refused, reads and sign-in stay open. The reason is shown to
+    // the suspended user so they can see why.
+    suspendedAt: timestamp({ withTimezone: true }),
+    suspendedReason: text(),
+    twoFactorEnabled: boolean().notNull().default(false),
+    // Unique public handle used for @mentions in comments. Lowercase
+    // `[a-z0-9_]`, 3–30 chars — normalized/validated by Better Auth's username
+    // plugin (src/lib/auth/index.ts). Generated at sign-up, changeable on
+    // /account. Backfilled for existing users by the column's migration.
+    updatedAt: timestamp().defaultNow().notNull(),
+    username: text().notNull().unique(),
+  },
+  () => [
+    check(
+      "user_role_check",
+      sql`"role" IN (${sql.join(
+        Array.map(RoleSchema.literals, (role) =>
+          sql.raw(`'${String.replaceAll("'", "''")(role)}'`),
+        ),
+        sql`, `,
+      )})`,
+    ),
+  ],
+);
 
 // Display name shown for accounts that were deleted and anonymized.
 export const DELETED_USER_NAME = "Deleted user";

@@ -1,0 +1,42 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7d46f7ab-1e35-4112-a230-349f5131dd13",
+  "prevIds": [
+    "bdd6832f-98b7-4c17-9d39-fb7713369463"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "user"
+      ],
+      "writes": [
+        "s|ck|public.user.user_role_check",
+        "n|ck|public.user.user_role_check",
+        "e|ck|public.user.user_role_check",
+        "n|con|public.user.user_role_check"
+      ],
+      "reads": [
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.user.role"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user",
+        "name": "user_role_check",
+        "value": "\"role\" IN ('novice', 'uploader', 'moderator', 'admin')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}
