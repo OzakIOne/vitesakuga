@@ -7,6 +7,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Option, Redacted, Schema } from "effect";
 import { envServer } from "src/lib/env/server";
 
+import { kysely } from "../db/kysely";
 import { db } from "../db/pool";
 import * as schema from "../db/schema";
 import { USERNAME_MAX_LENGTH } from "../mentions/mentions";
@@ -138,7 +139,10 @@ export const auth = betterAuth({
           return {
             data: {
               ...createdUser,
-              username: await generateUsername(createdUser.name),
+              username: await generateUsername({
+                db: kysely,
+                name: createdUser.name,
+              }),
             },
           };
         },
