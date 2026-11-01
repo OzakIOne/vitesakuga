@@ -60,7 +60,7 @@ La recherche accepte des qualificatifs numériques de style Sakugabooru et l'exc
 | `video_width` / `video_height` | Dimensions de la piste vidéo, en pixels         | `video_width:=1920`       |
 | `-tag`                         | Exclut les posts portant le tag indiqué         | `-movies`                 |
 
-Les qualificatifs peuvent être combinés avec du texte libre (`action width:>1000`) et entre eux. Un token `-tag` exclut tout post qui possède ce tag (`action -movies`). Ils sont extraits côté serveur puis traduits en prédicats SQL avant le comptage et la pagination. Les dimensions d'image sont capturées au moment de l'upload et stockées dans `post_images`; les anciens posts sans dimensions ne correspondent pas aux filtres `width`/`height`.
+Les qualificatifs peuvent être combinés avec du texte libre (`action width:>1000`) et entre eux. Un token `-tag` exclut tout post qui possède ce tag (`action -movies`). Ils sont extraits côté serveur puis traduits en prédicats SQL avant le comptage et la pagination. Les tags populaires affichés avec les résultats utilisent exactement le même périmètre (texte, tags inclus et exclus, période, filtres numériques) que les posts, si bien qu'une période comme « cette semaine » s'applique aux deux. Les dimensions d'image sont capturées au moment de l'upload et stockées dans `post_images`; les anciens posts sans dimensions ne correspondent pas aux filtres `width`/`height`.
 
 Fichiers principaux : `src/lib/posts/search-filters.ts`, `src/lib/posts/posts.service.ts`, `src/components/search/SearchBox.tsx`, `src/lib/upload/useUploadForm.ts`, migration `drizzle/20260906190600_brown_caretaker/migration.sql`.
 

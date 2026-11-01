@@ -60,9 +60,9 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Search & Pagination
 
-**Post Search** — Server-side filtering by text, included and excluded tags, date range, sort order, discovery view, and numeric image/video dimensions or like count. Returns paginated posts (with vote counts) plus popular tags. See the supported query syntax in [`docs/features.md`](docs/features.md).
+**Post Search** — Server-side filtering by text, included and excluded tags, date range, sort order, discovery view, and numeric image/video dimensions or like count. Returns paginated posts (with vote counts) plus popular tags. Count, page rows and popular tags all derive from one scope of predicates in `src/lib/posts/post-page-query.ts`; ordering is per view and applies only to the rows. See the supported query syntax in [`docs/features.md`](docs/features.md).
 
-**Popular Tags** — Aggregation query: top-10 tags by tagged-post count among a filtered post set. Centralized in `fetchPopularTagsForPosts(db, predicates)` (`src/lib/tags/tags.utils.ts`); callers express scope as predicates over the joined `posts` table (post search, by-tag page, user profiles). `TagsService.popular` deliberately builds its own leftJoin variant so zero-count tags appear.
+**Popular Tags** — Aggregation query: top-10 tags by tagged-post count among a filtered post set. Centralized in `fetchPopularTagsForPosts(db, predicates)` (`src/lib/tags/tags.utils.ts`); `fetchPostPage` (`src/lib/posts/post-page-query.ts`) passes it each listing's own scope (post search, by-tag page, user profiles), so popular tags always match the rows. Post search computes them only for the chronological view. `TagsService.popular` deliberately builds its own leftJoin variant so zero-count tags appear.
 
 **Pagination** — Offset-based pagination computed by `computePagination(totalCount, { page, pageSize })`. Returns `{ currentPage, totalPages, hasMore, hasPrevious, offset, limit, total }`.
 

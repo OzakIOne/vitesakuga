@@ -1,20 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
-import { postsSelectSchema, type PostWithVotes } from "src/lib/db/schema";
+import type { PostWithVotes } from "src/lib/db/schema";
 
 import { roleAtLeast, type Role } from "../auth/roles";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
-import type { DB } from "../db/kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
 import { RowParseError, UserNotFoundError } from "../errors";
-import { computePagination } from "../pagination/pagination";
+import {
+  fetchPostPage,
+  includedTagsPredicate,
+  textPredicate,
+  type PostScope,
+} from "../posts/post-page-query";
 import { escapeLikePattern } from "../posts/search-pattern";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
-import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
-import { mergeVoteCounts } from "../votes/votes.utils";
+import type { mapPopularTags } from "../tags/tags.utils";
 import {
   contributorProfileSchema,
   fetchContributorProfileInputSchema,
@@ -26,7 +28,6 @@ import {
   userPublicSchema,
 } from "./users.schema";
 
-const PAGE_SIZE = 30;
 const PROFILE_PLAYLIST_LIMIT = 4;
 // The mention dropdown stays small: the composer shows a handful of
 // candidates for the prefix being typed.
@@ -253,93 +254,22 @@ export class UsersService extends Context.Service<
         onSome: (value) => Effect.succeed(value),
       });
 
-      let query = db
-        .selectFrom("posts")
-        .selectAll()
-        .where("userId", "=", userId);
+      const scope: PostScope = [
+        (eb) => eb("posts.userId", "=", userId),
+        ...(q ? [textPredicate(q)] : []),
+        ...(tags.length > 0 ? [includedTagsPredicate(tags)] : []),
+      ];
 
-      if (q) {
-        const pattern = `%${escapeLikePattern(q)}%`;
-        query = query.where((eb) =>
-          eb("title", "ilike", pattern).or("description", "ilike", pattern),
-        );
-      }
-
-      if (tags.length > 0) {
-        query = query.where("posts.id", "in", (eb) =>
-          eb
-            .selectFrom("post_tags")
-            .innerJoin("tags", "tags.id", "post_tags.tagId")
-            .where("tags.name", "in", tags)
-            .select("post_tags.postId"),
-        );
-      }
-
-      const countQuery = query
-        .clearSelect()
-        .select((eb) => eb.fn.countAll().as("count"));
-      const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
-      const totalCount = Number(countResult?.count ?? 0);
-
-      const pagination = computePagination(totalCount, {
+      const postPage = yield* fetchPostPage(db, {
+        includePopularTags: true,
+        ordering: (query) => query.orderBy("posts.id", "desc"),
         page,
-        pageSize: PAGE_SIZE,
+        scope,
       });
-
-      query = query.orderBy("posts.id", "desc");
-
-      const items = yield* db.execute(
-        query.offset(pagination.offset).limit(PAGE_SIZE),
-      );
-
-      const posts = yield* Effect.try({
-        try: () => parse(Schema.Array(postsSelectSchema))(items),
-        catch: (error) =>
-          new RowParseError({
-            message: "Error processing user posts",
-            cause: error,
-          }),
-      });
-
-      const postsWithVotes = yield* mergeVoteCounts(db, posts);
-
-      const popularTagsPredicates: Array<
-        (eb: ExpressionBuilder<DB, "posts">) => Expression<SqlBool>
-      > = [(eb) => eb("posts.userId", "=", userId)];
-
-      if (q) {
-        const pattern = `%${escapeLikePattern(q)}%`;
-        popularTagsPredicates.push((eb) =>
-          eb.or([
-            eb("posts.title", "ilike", pattern),
-            eb("posts.description", "ilike", pattern),
-          ]),
-        );
-      }
-
-      if (tags.length > 0) {
-        popularTagsPredicates.push((eb) =>
-          eb("posts.id", "in", (nestedEb) =>
-            nestedEb
-              .selectFrom("post_tags")
-              .innerJoin("tags", "tags.id", "post_tags.tagId")
-              .where("tags.name", "in", tags)
-              .select("post_tags.postId"),
-          ),
-        );
-      }
-
-      const popularTags = yield* fetchPopularTagsForPosts(
-        db,
-        popularTagsPredicates,
-      );
 
       return {
-        data: postsWithVotes,
-        meta: {
-          pagination,
-          popularTags,
-        },
+        data: postPage.data,
+        meta: postPage.meta,
         user: userInfo,
       };
     });

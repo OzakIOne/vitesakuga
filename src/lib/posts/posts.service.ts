@@ -1,12 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Clock, Context, Effect, Exit, Layer, Option, Schema } from "effect";
-import {
-  sql,
-  type Expression,
-  type ExpressionBuilder,
-  type Selectable,
-  type SqlBool,
-} from "kysely";
+import { sql, type Selectable } from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 
 import { ensureOwnedOrStaff } from "../auth/ownership";
@@ -39,10 +33,7 @@ import {
   type ObjectFenceInput,
   type StagedVideo,
 } from "../lifecycle/lifecycle.service";
-import {
-  computePagination,
-  type PaginationMeta,
-} from "../pagination/pagination";
+import type { PaginationMeta } from "../pagination/pagination";
 import { PointsService, PointsServiceLive } from "../points/points.service";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import { imageContentType, videoContentType } from "../storage/content-type";
@@ -52,14 +43,28 @@ import {
   thumbnailObjectKey,
 } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
-import { fetchPopularTagsForPosts, mapPopularTags } from "../tags/tags.utils";
+import type { mapPopularTags } from "../tags/tags.utils";
 import { mergeVoteCounts } from "../votes/votes.utils";
 import {
   assertSupportedImageFile,
   assertThumbnailIsJpeg,
 } from "./file-validation";
 import {
+  dateRangePredicate,
+  excludedTagsPredicate,
+  fetchPostPage,
+  includedTagsPredicate,
+  numericFilterPredicate,
+  rankingExpressions,
+  seriesTitlePredicate,
+  textPredicate,
+  viewScope,
+  type PostOrdering,
+  type PostScope,
+} from "./post-page-query";
+import {
   createVideoUploadUrlSchema,
+  type DiscoveryView,
   FormFileUploadSchema,
   postByTagSchema,
   RESERVED_TAG_NAMES,
@@ -71,14 +76,7 @@ import {
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
-import { parseSearchQuery, type NumericSearchFilter } from "./search-filters";
-import { escapeLikePattern } from "./search-pattern";
-
-const PAGE_SIZE = 30;
-const DAY_MS = 86_400_000;
-const FOLLOWED_TAGS_WINDOW_DAYS = 14;
-const UNDER_SEEN_WINDOW_DAYS = 30;
-const UNDER_SEEN_MAX_LIKES = 5;
+import { parseSearchQuery } from "./search-filters";
 
 const fileDigest = (file: File): Effect.Effect<string, FingerprintInputError> =>
   Effect.tryPromise({
@@ -108,47 +106,53 @@ type PostUpdateChanges = {
   volumeNumber: number | null;
 };
 
-const numericFilterExpression = (filter: NumericSearchFilter) => {
-  const comparison = sql.raw(filter.operator);
-  const value = filter.value;
-  switch (filter.field) {
-    case "width":
-      return sql<boolean>`exists (select 1 from post_images pi where pi."postId" = posts.id and pi.width ${comparison} ${value})`;
-    case "height":
-      return sql<boolean>`exists (select 1 from post_images pi where pi."postId" = posts.id and pi.height ${comparison} ${value})`;
-    case "video_width":
-      return sql<boolean>`(posts."videoMetadata"->>'Width')::numeric ${comparison} ${value}`;
-    case "video_height":
-      return sql<boolean>`(posts."videoMetadata"->>'Height')::numeric ${comparison} ${value}`;
-    case "likes":
-    case "score":
-      return sql<boolean>`(select count(*) from post_votes pv where pv."postId" = posts.id and pv.vote = 'like') ${comparison} ${value}`;
+const viewOrdering = ({
+  now,
+  randomSeed,
+  sortBy,
+  view,
+}: {
+  now: Date;
+  randomSeed: number;
+  sortBy: SearchPostsRequest["params"]["sortBy"];
+  view: DiscoveryView;
+}): PostOrdering => {
+  const { allTimeLikes, recentDislikes, recentLikes } = rankingExpressions(now);
+  switch (view) {
+    case "most-liked":
+      return (query) =>
+        query
+          .orderBy(recentLikes, "desc")
+          .orderBy("posts.createdAt", "desc")
+          .orderBy("posts.id", "desc");
+    case "random-study":
+      return (query) =>
+        query
+          .orderBy(randomOrderExpression(randomSeed), "asc")
+          .orderBy("posts.id", "asc");
+    case "trending":
+      return (query) =>
+        query
+          .orderBy(sql<number>`${recentLikes} - ${recentDislikes}`, "desc")
+          .orderBy(recentLikes, "desc")
+          .orderBy("posts.createdAt", "desc")
+          .orderBy("posts.id", "desc");
+    case "under-seen":
+      return (query) =>
+        query
+          .orderBy(allTimeLikes, "asc")
+          .orderBy("posts.createdAt", "desc")
+          .orderBy("posts.id", "desc");
+    case "followed-tags":
+      return (query) =>
+        query.orderBy("posts.createdAt", "desc").orderBy("posts.id", "desc");
+    case "chronological":
+      return (query) =>
+        query
+          .orderBy("posts.createdAt", sortBy === "oldest" ? "asc" : "desc")
+          .orderBy("posts.id", sortBy === "oldest" ? "asc" : "desc");
   }
 };
-
-// oxlint-disable effecttsgo/global-date -- calendar-day boundaries use the server's local timezone so "today"/"this week" match user expectations; Effect DateTime has no local-midnight equivalent
-const computeStartDate = (dateRange: "today" | "week" | "month", now: Date) => {
-  if (dateRange === "today") {
-    return new Date(now.setHours(0, 0, 0, 0));
-  }
-  if (dateRange === "week") {
-    return new Date(now.setDate(now.getDate() - 7));
-  }
-  return new Date(now.setMonth(now.getMonth() - 1));
-};
-// oxlint-enable effecttsgo/global-date
-
-// These windows are deliberately explicit and are mirrored in
-// `posts/discovery.ts`, so every experiment can explain its ranking inputs to
-// the user. Points are intentionally not part of any quality or rank score.
-// oxlint-disable-next-line effecttsgo/global-date -- discovery windows are server-local calendar-relative instants, matching the existing feed date filters
-const computeDaysAgo = (days: number, now: Date) =>
-  new Date(now.valueOf() - days * DAY_MS);
-
-const voteCountExpression = (vote: "like" | "dislike", createdAfter?: Date) =>
-  createdAfter === undefined
-    ? sql<number>`(select count(*) from post_votes pv where pv."postId" = posts.id and pv.vote = ${vote})`
-    : sql<number>`(select count(*) from post_votes pv where pv."postId" = posts.id and pv.vote = ${vote} and pv."createdAt" >= ${createdAfter})`;
 
 const randomOrderExpression = (seed: number) =>
   sql<string>`md5(concat(posts.id, cast(${seed} as text)))`;
@@ -319,245 +323,32 @@ export class PostsService extends Context.Service<
         view = "chronological",
       } = data.params;
       const parsedSearch = parseSearchQuery(data.params.q);
-      const { excludedTags, text: q } = parsedSearch;
+      const { excludedTags, filters, text } = parsedSearch;
       const now = new Date(yield* Clock.currentTimeMillis);
       const sessions = yield* SessionService;
+      const viewer =
+        view === "followed-tags" ? yield* sessions.getUser() : null;
 
-      let query = db.selectFrom("posts").selectAll("posts");
+      const scope: PostScope = [
+        ...viewScope({ now, view, viewerId: viewer?.id ?? null }),
+        ...(text ? [textPredicate(text)] : []),
+        ...(seriesTitle ? [seriesTitlePredicate(seriesTitle)] : []),
+        ...(tags.length > 0 ? [includedTagsPredicate(tags)] : []),
+        ...(excludedTags.length > 0
+          ? [excludedTagsPredicate(excludedTags)]
+          : []),
+        ...(view === "chronological" && dateRange !== "all"
+          ? [dateRangePredicate({ dateRange, now })]
+          : []),
+        ...filters.map(numericFilterPredicate),
+      ];
 
-      if (view === "followed-tags") {
-        const user = yield* sessions.getUser();
-        if (user === null) {
-          // Discovery views are opt-in and public by default. An anonymous
-          // visitor sees an empty personal feed instead of a server error.
-          query = query.where(sql<boolean>`false`);
-        } else {
-          query = query.where("posts.id", "in", (eb) =>
-            eb
-              .selectFrom("post_tags")
-              .where("post_tags.tagId", "in", (eb2) =>
-                eb2
-                  .selectFrom("tag_follows")
-                  .where("tag_follows.userId", "=", user.id)
-                  .select("tag_follows.tagId"),
-              )
-              .select("post_tags.postId"),
-          );
-        }
-      }
-
-      if (q) {
-        const pattern = `%${escapeLikePattern(q)}%`;
-        query = query.where((eb) =>
-          eb("posts.title", "ilike", pattern).or(
-            "posts.description",
-            "ilike",
-            pattern,
-          ),
-        );
-      }
-
-      if (seriesTitle) {
-        query = query.where(
-          sql<boolean>`lower("animeTitle") = lower(${seriesTitle})`,
-        );
-      }
-
-      if (tags.length > 0) {
-        query = query.where("posts.id", "in", (eb) =>
-          eb
-            .selectFrom("post_tags")
-            .innerJoin("tags", "tags.id", "post_tags.tagId")
-            .where("tags.name", "in", tags)
-            .select("post_tags.postId"),
-        );
-      }
-
-      if (excludedTags.length > 0) {
-        query = query.where("posts.id", "not in", (eb) =>
-          eb
-            .selectFrom("post_tags")
-            .innerJoin("tags", "tags.id", "post_tags.tagId")
-            .where("tags.name", "in", excludedTags)
-            .select("post_tags.postId"),
-        );
-      }
-
-      if (view === "chronological" && dateRange !== "all") {
-        query = query.where(
-          "posts.createdAt",
-          ">=",
-          computeStartDate(dateRange, now),
-        );
-      }
-
-      for (const filter of parsedSearch.filters) {
-        query = query.where(numericFilterExpression(filter));
-      }
-
-      const recentVotingStart = computeDaysAgo(7, now);
-      const recentLikes = voteCountExpression("like", recentVotingStart);
-      const recentDislikes = voteCountExpression("dislike", recentVotingStart);
-      const allTimeLikes = voteCountExpression("like");
-
-      switch (view) {
-        case "followed-tags":
-          query = query.where(
-            "posts.createdAt",
-            ">=",
-            computeDaysAgo(FOLLOWED_TAGS_WINDOW_DAYS, now),
-          );
-          break;
-        case "most-liked":
-          query = query.where(sql<boolean>`${recentLikes} > 0`);
-          break;
-        case "random-study":
-          break;
-        case "trending":
-          query = query.where(
-            sql<boolean>`${recentLikes} - ${recentDislikes} > 0`,
-          );
-          break;
-        case "under-seen":
-          query = query
-            .where(
-              "posts.createdAt",
-              ">=",
-              computeDaysAgo(UNDER_SEEN_WINDOW_DAYS, now),
-            )
-            .where(sql<boolean>`${allTimeLikes} <= ${UNDER_SEEN_MAX_LIKES}`);
-          break;
-        case "chronological":
-          break;
-      }
-
-      const countQuery = query
-        .clearSelect()
-        .select((eb) => eb.fn.countAll().as("count"));
-      const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
-      const totalCount = Number(countResult?.count ?? 0);
-
-      const pagination = computePagination(totalCount, {
+      return yield* fetchPostPage(db, {
+        includePopularTags: includePopularTags && view === "chronological",
+        ordering: viewOrdering({ now, randomSeed, sortBy, view }),
         page,
-        pageSize: PAGE_SIZE,
+        scope,
       });
-
-      switch (view) {
-        case "most-liked":
-          query = query
-            .orderBy(recentLikes, "desc")
-            .orderBy("posts.createdAt", "desc")
-            .orderBy("posts.id", "desc");
-          break;
-        case "random-study":
-          query = query
-            .orderBy(randomOrderExpression(randomSeed), "asc")
-            .orderBy("posts.id", "asc");
-          break;
-        case "trending":
-          query = query
-            .orderBy(sql<number>`${recentLikes} - ${recentDislikes}`, "desc")
-            .orderBy(recentLikes, "desc")
-            .orderBy("posts.createdAt", "desc")
-            .orderBy("posts.id", "desc");
-          break;
-        case "under-seen":
-          query = query
-            .orderBy(allTimeLikes, "asc")
-            .orderBy("posts.createdAt", "desc")
-            .orderBy("posts.id", "desc");
-          break;
-        case "followed-tags":
-          query = query
-            .orderBy("posts.createdAt", "desc")
-            .orderBy("posts.id", "desc");
-          break;
-        case "chronological":
-          query = query
-            .orderBy("posts.createdAt", sortBy === "oldest" ? "asc" : "desc")
-            .orderBy("posts.id", sortBy === "oldest" ? "asc" : "desc");
-          break;
-      }
-
-      const items = yield* db.execute(
-        query.offset(pagination.offset).limit(PAGE_SIZE),
-      );
-
-      const parsed = yield* Effect.try({
-        try: () => parse(Schema.Array(postsSelectSchema))(items),
-        catch: (error) =>
-          new RowParseError({
-            message: `Error processing search results: ${String(error)}`,
-          }),
-      });
-
-      const parsedWithVotes = yield* mergeVoteCounts(db, parsed);
-
-      const popularTagsPredicates: ((
-        eb: ExpressionBuilder<DB, "posts">,
-      ) => Expression<SqlBool>)[] = [];
-      if (q) {
-        const pattern = `%${escapeLikePattern(q)}%`;
-        popularTagsPredicates.push((eb) =>
-          eb.or([
-            eb("posts.title", "ilike", pattern),
-            eb("posts.description", "ilike", pattern),
-          ]),
-        );
-      }
-
-      if (seriesTitle) {
-        popularTagsPredicates.push(
-          () => sql<boolean>`lower("animeTitle") = lower(${seriesTitle})`,
-        );
-      }
-
-      if (tags.length > 0) {
-        popularTagsPredicates.push((eb) =>
-          eb("posts.id", "in", (nestedEb) =>
-            nestedEb
-              .selectFrom("post_tags")
-              .innerJoin("tags", "tags.id", "post_tags.tagId")
-              .where("tags.name", "in", tags)
-              .select("post_tags.postId"),
-          ),
-        );
-      }
-
-      if (dateRange !== "all") {
-        popularTagsPredicates.push((eb) =>
-          eb("posts.createdAt", ">=", computeStartDate(dateRange, now)),
-        );
-      }
-
-      if (excludedTags.length > 0) {
-        popularTagsPredicates.push((eb) =>
-          eb("posts.id", "not in", (nestedEb) =>
-            nestedEb
-              .selectFrom("post_tags")
-              .innerJoin("tags", "tags.id", "post_tags.tagId")
-              .where("tags.name", "in", excludedTags)
-              .select("post_tags.postId"),
-          ),
-        );
-      }
-
-      for (const filter of parsedSearch.filters) {
-        popularTagsPredicates.push(() => numericFilterExpression(filter));
-      }
-
-      const popularTags =
-        includePopularTags && view === "chronological"
-          ? yield* fetchPopularTagsForPosts(db, popularTagsPredicates)
-          : [];
-
-      return {
-        data: parsedWithVotes,
-        meta: {
-          pagination,
-          popularTags,
-        },
-      };
     });
 
     const fetchRandomPost = Effect.fn("PostsService.fetchRandomPost")(
@@ -1043,59 +834,12 @@ export class PostsService extends Context.Service<
     ) {
       const { tag: tagName, page } = data;
 
-      let query = db
-        .selectFrom("posts")
-        .innerJoin("post_tags", "post_tags.postId", "posts.id")
-        .innerJoin("tags", "tags.id", "post_tags.tagId")
-        .where("tags.name", "=", tagName)
-        .selectAll("posts");
-
-      const countQuery = query
-        .clearSelect()
-        .select((eb) => eb.fn.countAll().as("count"));
-      const countResult = yield* db.executeTakeFirstOrUndefined(countQuery);
-      const totalCount = Number(countResult?.count ?? 0);
-
-      const pagination = computePagination(totalCount, {
+      return yield* fetchPostPage(db, {
+        includePopularTags: true,
+        ordering: (query) => query.orderBy("posts.createdAt", "desc"),
         page,
-        pageSize: PAGE_SIZE,
+        scope: [includedTagsPredicate([tagName])],
       });
-
-      query = query.orderBy("posts.createdAt", "desc");
-
-      const items = yield* db.execute(
-        query.offset(pagination.offset).limit(PAGE_SIZE),
-      );
-
-      const parsed = yield* Effect.try({
-        try: () => parse(Schema.Array(postsSelectSchema))(items),
-        catch: (error) =>
-          new RowParseError({
-            message: `Error processing posts by tag: ${String(error)}`,
-          }),
-      });
-
-      const parsedWithVotes = yield* mergeVoteCounts(db, parsed);
-
-      const popularTags = yield* fetchPopularTagsForPosts(db, [
-        (eb) =>
-          eb("posts.id", "in", (eb2) =>
-            eb2
-              .selectFrom("posts")
-              .innerJoin("post_tags", "post_tags.postId", "posts.id")
-              .innerJoin("tags", "tags.id", "post_tags.tagId")
-              .where("tags.name", "=", tagName)
-              .select("posts.id"),
-          ),
-      ]);
-
-      return {
-        data: parsedWithVotes,
-        meta: {
-          pagination,
-          popularTags,
-        },
-      };
     });
 
     const fetchDetailVersion = Effect.fn("PostsService.fetchDetailVersion")(
