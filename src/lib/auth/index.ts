@@ -164,6 +164,48 @@ export const makeAuth = (input: MakeAuthInput) =>
             };
           },
         },
+        update: {
+          // oxlint-disable-next-line effecttsgo/async-function -- Better Auth's databaseHooks.user.update.before contract requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
+          before: async (updatedUser, context) => {
+            if (
+              !("name" in updatedUser) &&
+              !("image" in updatedUser) &&
+              !("username" in updatedUser) &&
+              !("displayUsername" in updatedUser)
+            ) {
+              return;
+            }
+            const authContext = context?.context;
+            if (authContext === null || authContext === undefined) {
+              return;
+            }
+            const userId = authContext.session?.user?.id;
+            if (userId === undefined) {
+              return;
+            }
+            const adapter = await getCurrentAdapter(authContext.adapter);
+            const storedUser = await adapter.findOne({
+              model: "user",
+              where: [{ field: "id", value: userId }],
+            });
+            const storedSuspension = Schema.decodeUnknownOption(
+              Schema.Struct({
+                suspendedAt: Schema.NullOr(Schema.Date),
+              }),
+            )(storedUser);
+            if (Option.isNone(storedSuspension)) {
+              throw new APIError("INTERNAL_SERVER_ERROR", {
+                message: "Unable to verify account suspension status.",
+              });
+            }
+            if (storedSuspension.value.suspendedAt !== null) {
+              throw new APIError("FORBIDDEN", {
+                message:
+                  "Your account is suspended and profile changes are disabled.",
+              });
+            }
+          },
+        },
       },
     },
 
