@@ -1,6 +1,4 @@
-import { Pool as NeonPool, neon } from "@neondatabase/serverless";
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
-import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
+import { Pool as NeonPool } from "@neondatabase/serverless";
 import { Effect } from "effect";
 import { Pool as PgPool } from "pg";
 
@@ -30,13 +28,5 @@ function getPool(): PgPool | NeonPool {
 
   return pool;
 }
-
-export const db = isLocal
-  ? drizzleNode({
-      // SAFETY: getPool() constructs a PgPool exactly when DATABASE_DRIVER=local
-      // (isLocal), so this client is always the PgPool node-postgres expects.
-      client: getPool() as PgPool,
-    })
-  : drizzleNeon({ client: neon(envServer.DATABASE_URL) });
 
 export const getKyselyPool = () => getPool();

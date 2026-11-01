@@ -12,7 +12,9 @@ This document outlines the conventions and best practices for database interacti
 
 ## Kysely Client
 
-- Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over the pool from `pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`)
+- Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over the pool from `pool.ts` (local `pg` when `DATABASE_DRIVER=local`) or `NeonTransactionDialect` (Neon serverless)
+- Better Auth runs on `authKysely`, a second raw Kysely over the same dialect. `makeFromKysely` replaces `transaction()` on the shared `kysely` instance with the Effect API, which Better Auth's adapter cannot use. Never hand the shared `kysely` to Better Auth or any other library that calls Kysely's own `transaction()`
+- Username generation for sign-ups checks availability through Better Auth's current transaction adapter (`getCurrentAdapter`), so a sign-up never waits on a connection its own transaction holds
 - `DB` is derived from the Drizzle tables by `KyselyTable` in `src/lib/db/kysely-schema.ts`: select types come from `$inferSelect`, and a column whose Drizzle definition has a default (`hasDefault`, including `$defaultFn`) is `Generated`, so it is optional on insert. `posts.version` and `post_edits.basePostVersion` support optimistic concurrency checks
 - Effect wrapper via `KyselyDB` context tag in `src/lib/db/context.ts` — all domain services inject this
 - `media_operations` and `media_objects` form the durable lifecycle registry. Mutations run through `LifecycleService.runOperation`, which claims a user-scoped operation key, persists a request fingerprint and fence, and replays terminal results decoded by a per-kind result schema. Object deletion uses durable `deleting`/`deleted` tombstones; remote storage I/O happens only after the database transition commits.

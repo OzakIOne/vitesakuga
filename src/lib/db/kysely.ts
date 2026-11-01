@@ -11,17 +11,21 @@ export type DB = {
   [Table in SchemaTable as Table["_"]["name"]]: KyselyTable<Table>;
 };
 
-export const kysely = isLocal
-  ? new Kysely<DB>({
-      dialect: new PostgresDialect({
-        // SAFETY: getKyselyPool() creates a PgPool exactly when DATABASE_DRIVER=local
-        // (isLocal), so this pool is always the PgPool PostgresDialect requires.
-        pool: getKyselyPool() as PgPool,
-      }),
+const kyselyDialect = isLocal
+  ? new PostgresDialect({
+      // SAFETY: getKyselyPool() creates a PgPool exactly when DATABASE_DRIVER=local
+      // (isLocal), so this pool is always the PgPool PostgresDialect requires.
+      pool: getKyselyPool() as PgPool,
     })
-  : new Kysely<DB>({
-      dialect: new NeonTransactionDialect({
-        neon: neon(envServer.DATABASE_URL),
-        connectionString: envServer.DATABASE_URL,
-      }),
+  : new NeonTransactionDialect({
+      neon: neon(envServer.DATABASE_URL),
+      connectionString: envServer.DATABASE_URL,
     });
+
+export const kysely = new Kysely<DB>({ dialect: kyselyDialect });
+
+// Better Auth calls `transaction()` on the instance it is given. The shared
+// `kysely` is wrapped by `makeFromKysely` (layer-factories.server.ts), which
+// replaces that method with the Effect transaction API, so Better Auth gets its
+// own unwrapped instance over the same dialect and pool.
+export const authKysely = new Kysely<DB>({ dialect: kyselyDialect });

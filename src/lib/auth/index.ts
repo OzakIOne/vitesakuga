@@ -1,15 +1,13 @@
 import { getAuthenticatorName, passkey } from "@better-auth/passkey";
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { betterAuth, getCurrentAdapter } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { captcha, emailOTP, twoFactor, username } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Option, Redacted, Schema } from "effect";
+import type { Kysely } from "kysely";
 import { envServer } from "src/lib/env/server";
 
-import { kysely } from "../db/kysely";
-import { db } from "../db/pool";
-import * as schema from "../db/schema";
+import { type DB, authKysely } from "../db/kysely";
 import { USERNAME_MAX_LENGTH } from "../mentions/mentions";
 import { sendVerificationOTP } from "./email-delivery";
 import {
@@ -87,214 +85,238 @@ const twoFactorPluginWithAllSignInMethods = {
   },
 };
 
-export const auth = betterAuth({
-  baseURL: envServer.VITE_BASE_URL,
-  secret: Redacted.value(envServer.BETTER_AUTH_SECRET),
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    schema: {
-      ...schema,
+type MakeAuthInput = {
+  readonly db: Kysely<DB>;
+  readonly sendVerificationOTP: typeof sendVerificationOTP;
+};
+
+// `type` is explicit because Better Auth cannot infer the dialect from the
+// Neon transaction dialect; the Kysely adapter's tables are the model names.
+export const makeAuth = (input: MakeAuthInput) =>
+  betterAuth({
+    baseURL: envServer.VITE_BASE_URL,
+    secret: Redacted.value(envServer.BETTER_AUTH_SECRET),
+    database: {
+      db: input.db,
+      type: "postgres",
+      transaction: true,
     },
-  }),
 
-  // https://www.better-auth.com/docs/concepts/oauth
-  socialProviders,
+    // https://www.better-auth.com/docs/concepts/oauth
+    socialProviders,
 
-  // https://www.better-auth.com/docs/authentication/email-password
-  emailAndPassword: {
-    enabled: true,
-    // Do not create a usable session until the signup email code is entered.
-    requireEmailVerification,
-    // Server-side floor for sign-up, password change and password reset.
-    // Strength (character-class) rules live in hooks.before below.
-    minPasswordLength: MIN_PASSWORD_LENGTH,
-  },
-
-  // The email-OTP plugin replaces Better Auth's default verification link with
-  // a short code. Verification auto-signs the user in after the code is
-  // accepted, so the client never handles an unverified session.
-  emailVerification: {
-    autoSignInAfterVerification: true,
-  },
-
-  // https://www.better-auth.com/docs/concepts/database
-  // Generates the @mention handle for users who never pick one (social
-  // sign-ups); the username plugin normalizes and validates it afterwards.
-  databaseHooks: {
-    user: {
-      create: {
-        // oxlint-disable-next-line effecttsgo/async-function -- Better Auth's databaseHooks.user.create.before contract requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
-        before: async (createdUser) => {
-          if (
-            enforceEmailDomainPolicy &&
-            !isAllowedSignupEmail(createdUser.email)
-          ) {
-            throw new APIError("BAD_REQUEST", {
-              message: EMAIL_DOMAIN_POLICY_MESSAGE,
-            });
-          }
-          if (createdUser["username"]) {
-            return;
-          }
-          return {
-            data: {
-              ...createdUser,
-              username: await generateUsername({
-                db: kysely,
-                name: createdUser.name,
-              }),
-            },
-          };
-        },
-      },
-    },
-  },
-
-  // https://www.better-auth.com/docs/concepts/hooks
-  // Server-side password-strength enforcement on every endpoint that sets a
-  // new password. The client schema mirrors this (auth.schemas.ts), but the
-  // check must not trust the client: this hook is the actual gate.
-  hooks: {
-    // oxlint-disable-next-line effecttsgo/async-function -- createAuthMiddleware requires an async middleware handler per Better Auth's contract; the Effect runtime cannot own this interface boundary
-    before: createAuthMiddleware(async (ctx) => {
-      if (!isPasswordStrengthEnforcedPath(ctx.path)) {
-        return;
-      }
-      // Parse the request here instead of runtime-narrowing `ctx.body`;
-      // requests that don't carry a new password fall through untouched.
-      const candidate = Schema.decodeUnknownOption(NewPasswordBody)(
-        ctx.body,
-      ).pipe(
-        Option.map((body) =>
-          "password" in body ? body.password : body.newPassword,
-        ),
-      );
-      if (Option.isNone(candidate)) {
-        return;
-      }
-      const assessment = assessPassword(candidate.value);
-      if (!assessment.ok) {
-        throw new APIError("BAD_REQUEST", { message: assessment.reason });
-      }
-    }),
-  },
-
-  // https://www.better-auth.com/docs/concepts/rate-limit
-  // Per-path request limits, enforced via an atomic read-and-increment against
-  // the `rateLimit` table (Postgres/Neon). Database storage is globally
-  // consistent across Cloudflare Worker isolates — in-memory storage would be
-  // local to a single isolate and trivially bypassable at scale.
-  rateLimit: {
-    enabled: true,
-    window: 60,
-    max: 100,
-    storage: "database",
-    modelName: "rateLimit",
-    customRules: {
-      // Brute-force / credential-stuffing guards on the auth entry points.
-      "/sign-in/email": { window: 60, max: 10 },
-      "/sign-up/email": { window: 3600, max: 10 },
-      "/request-password-reset": { window: 3600, max: 5 },
-      "/forget-password": { window: 3600, max: 5 },
-      "/email-otp/send-verification-otp": { window: 60, max: 5 },
-      "/two-factor/verify": { window: 60, max: 5 },
-    },
-  },
-
-  // https://www.better-auth.com/docs/plugins/captcha
-  // Invisible Cloudflare Turnstile challenge on the email auth endpoints. The
-  // client renders the widget (sitekey) and forwards the token in the
-  // `x-captcha-response` header; the server verifies it with the secret.
-  plugins: [
-    emailOTP({
-      allowedAttempts: 5,
-      disableSignUp: true,
-      expiresIn: 10 * 60,
-      overrideDefaultEmailVerification: true,
-      resendStrategy: "rotate",
-      sendVerificationOnSignUp: true,
-      sendVerificationOTP,
-      storeOTP: "hashed",
-    }),
-    // Gated to production WITH a configured secret: Turnstile siteverify can't
-    // pass against a localhost origin, so enabling it in dev would block every
-    // sign-in, and enabling it without a secret would break production auth.
-    // Only activates once TURNSTILE_SECRET is set (provisioned via alchemy).
-    ...(envServer.NODE_ENV === "production" &&
-    Redacted.value(envServer.TURNSTILE_SECRET).length > 0
-      ? [
-          captcha({
-            provider: "cloudflare-turnstile",
-            secretKey: Redacted.value(envServer.TURNSTILE_SECRET),
-          }),
-        ]
-      : []),
-    // https://www.better-auth.com/docs/plugins/username
-    // Unique @mention handle on `user.username` (src/lib/db/schema/auth.schema.ts).
-    // Lowercase `[a-z0-9_]` only (dots would complicate mention parsing);
-    // validated after normalization, so `@Jane` mention text matches the
-    // stored `jane`. No separate displayUsername column — the display name
-    // (`user.name`) already handles presentation.
-    username({
-      displayUsername: false,
-      maxUsernameLength: USERNAME_MAX_LENGTH,
-      usernameValidator: (value) => /^[a-z0-9_]+$/.test(value),
-      validationOrder: {
-        username: "post-normalization",
-      },
-    }),
-    // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
-    // https://www.better-auth.com/docs/plugins/2fa
-    twoFactorPluginWithAllSignInMethods,
-    passkey({
-      rpID: passkeyRpID,
-      rpName: "ViteSakuga",
-      origin: envServer.VITE_BASE_URL,
-      registration: {
-        afterVerification: ({ verification }) => {
-          const name = getAuthenticatorName(
-            verification.registrationInfo?.aaguid,
-          );
-          return name ? { name } : {};
-        },
-      },
-    }),
-    // https://www.better-auth.com/docs/plugins/dash
-    // TODO: `dash` is the Better Auth Infrastructure plugin from
-    // `@better-auth/infra`, which is not installed in this project yet.
-    // Re-enable once the dependency and its API key config are provisioned.
-    // dash(dashOptions),
-    // Cookie integration must come last so `Set-Cookie` headers from the
-    // plugins above (2FA challenge, passkey sessions) are forwarded to the
-    // TanStack Start cookie store.
-    tanstackStartCookies(),
-  ],
-
-  // https://www.better-auth.com/docs/concepts/session-management#session-caching
-  session: {
-    cookieCache: {
+    // https://www.better-auth.com/docs/authentication/email-password
+    emailAndPassword: {
       enabled: true,
-      maxAge: 5 * 60, // 5 minutes
+      // Do not create a usable session until the signup email code is entered.
+      requireEmailVerification,
+      // Server-side floor for sign-up, password change and password reset.
+      // Strength (character-class) rules live in hooks.before below.
+      minPasswordLength: MIN_PASSWORD_LENGTH,
     },
-  },
 
-  user: {
-    // `role` backs the authorization policies in `src/lib/auth/policy.ts`.
-    // It is server-managed only (`input: false`): users can never set or
-    // change their rank through a Better Auth endpoint, promotions go
-    // through the points system and staff review instead. The column lives
-    // on `user` in `src/lib/db/schema/auth.schema.ts` with a DB-level
-    // default of "novice".
-    additionalFields: {
-      role: { type: "string", defaultValue: "novice", input: false },
+    // The email-OTP plugin replaces Better Auth's default verification link with
+    // a short code. Verification auto-signs the user in after the code is
+    // accepted, so the client never handles an unverified session.
+    emailVerification: {
+      autoSignInAfterVerification: true,
     },
-    // Account deletion is NOT handled by Better Auth's built-in
-    // `deleteUser` endpoint: it would hard-delete the `user` row and fail
-    // on the posts/comments foreign keys, leaking nothing but errors.
-    // Deletion goes through the custom anonymizing server function in
-    // `src/lib/auth/delete-account.ts` instead.
-    // changeEmail: {
-    //   enabled: true,
-    // },
-  },
+
+    // https://www.better-auth.com/docs/concepts/database
+    // Generates the @mention handle for users who never pick one (social
+    // sign-ups); the username plugin normalizes and validates it afterwards.
+    databaseHooks: {
+      user: {
+        create: {
+          // oxlint-disable-next-line effecttsgo/async-function -- Better Auth's databaseHooks.user.create.before contract requires a Promise-returning callback; the Effect runtime cannot own this interface boundary
+          before: async (createdUser, context) => {
+            if (
+              enforceEmailDomainPolicy &&
+              !isAllowedSignupEmail(createdUser.email)
+            ) {
+              throw new APIError("BAD_REQUEST", {
+                message: EMAIL_DOMAIN_POLICY_MESSAGE,
+              });
+            }
+            if (createdUser["username"]) {
+              return;
+            }
+            if (context === null) {
+              throw new APIError("INTERNAL_SERVER_ERROR", {
+                message: "Username generation needs an auth request context",
+              });
+            }
+            const adapter = await getCurrentAdapter(context.context.adapter);
+            return {
+              data: {
+                ...createdUser,
+                username: await generateUsername({
+                  isTaken: (candidate) =>
+                    adapter
+                      .findOne({
+                        model: "user",
+                        where: [{ field: "username", value: candidate }],
+                      })
+                      .then((holder) => holder !== null),
+                  name: createdUser.name,
+                }),
+              },
+            };
+          },
+        },
+      },
+    },
+
+    // https://www.better-auth.com/docs/concepts/hooks
+    // Server-side password-strength enforcement on every endpoint that sets a
+    // new password. The client schema mirrors this (auth.schemas.ts), but the
+    // check must not trust the client: this hook is the actual gate.
+    hooks: {
+      // oxlint-disable-next-line effecttsgo/async-function -- createAuthMiddleware requires an async middleware handler per Better Auth's contract; the Effect runtime cannot own this interface boundary
+      before: createAuthMiddleware(async (ctx) => {
+        if (!isPasswordStrengthEnforcedPath(ctx.path)) {
+          return;
+        }
+        // Parse the request here instead of runtime-narrowing `ctx.body`;
+        // requests that don't carry a new password fall through untouched.
+        const candidate = Schema.decodeUnknownOption(NewPasswordBody)(
+          ctx.body,
+        ).pipe(
+          Option.map((body) =>
+            "password" in body ? body.password : body.newPassword,
+          ),
+        );
+        if (Option.isNone(candidate)) {
+          return;
+        }
+        const assessment = assessPassword(candidate.value);
+        if (!assessment.ok) {
+          throw new APIError("BAD_REQUEST", { message: assessment.reason });
+        }
+      }),
+    },
+
+    // https://www.better-auth.com/docs/concepts/rate-limit
+    // Per-path request limits, enforced via an atomic read-and-increment against
+    // the `rateLimit` table (Postgres/Neon). Database storage is globally
+    // consistent across Cloudflare Worker isolates — in-memory storage would be
+    // local to a single isolate and trivially bypassable at scale.
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      storage: "database",
+      modelName: "rateLimit",
+      customRules: {
+        // Brute-force / credential-stuffing guards on the auth entry points.
+        "/sign-in/email": { window: 60, max: 10 },
+        "/sign-up/email": { window: 3600, max: 10 },
+        "/request-password-reset": { window: 3600, max: 5 },
+        "/forget-password": { window: 3600, max: 5 },
+        "/email-otp/send-verification-otp": { window: 60, max: 5 },
+        "/two-factor/verify": { window: 60, max: 5 },
+      },
+    },
+
+    // https://www.better-auth.com/docs/plugins/captcha
+    // Invisible Cloudflare Turnstile challenge on the email auth endpoints. The
+    // client renders the widget (sitekey) and forwards the token in the
+    // `x-captcha-response` header; the server verifies it with the secret.
+    plugins: [
+      emailOTP({
+        allowedAttempts: 5,
+        disableSignUp: true,
+        expiresIn: 10 * 60,
+        overrideDefaultEmailVerification: true,
+        resendStrategy: "rotate",
+        sendVerificationOnSignUp: true,
+        sendVerificationOTP: input.sendVerificationOTP,
+        storeOTP: "hashed",
+      }),
+      // Gated to production WITH a configured secret: Turnstile siteverify can't
+      // pass against a localhost origin, so enabling it in dev would block every
+      // sign-in, and enabling it without a secret would break production auth.
+      // Only activates once TURNSTILE_SECRET is set (provisioned via alchemy).
+      ...(envServer.NODE_ENV === "production" &&
+      Redacted.value(envServer.TURNSTILE_SECRET).length > 0
+        ? [
+            captcha({
+              provider: "cloudflare-turnstile",
+              secretKey: Redacted.value(envServer.TURNSTILE_SECRET),
+            }),
+          ]
+        : []),
+      // https://www.better-auth.com/docs/plugins/username
+      // Unique @mention handle on `user.username` (src/lib/db/schema/auth.schema.ts).
+      // Lowercase `[a-z0-9_]` only (dots would complicate mention parsing);
+      // validated after normalization, so `@Jane` mention text matches the
+      // stored `jane`. No separate displayUsername column — the display name
+      // (`user.name`) already handles presentation.
+      username({
+        displayUsername: false,
+        maxUsernameLength: USERNAME_MAX_LENGTH,
+        usernameValidator: (value) => /^[a-z0-9_]+$/.test(value),
+        validationOrder: {
+          username: "post-normalization",
+        },
+      }),
+      // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
+      // https://www.better-auth.com/docs/plugins/2fa
+      twoFactorPluginWithAllSignInMethods,
+      passkey({
+        rpID: passkeyRpID,
+        rpName: "ViteSakuga",
+        origin: envServer.VITE_BASE_URL,
+        registration: {
+          afterVerification: ({ verification }) => {
+            const name = getAuthenticatorName(
+              verification.registrationInfo?.aaguid,
+            );
+            return name ? { name } : {};
+          },
+        },
+      }),
+      // https://www.better-auth.com/docs/plugins/dash
+      // TODO: `dash` is the Better Auth Infrastructure plugin from
+      // `@better-auth/infra`, which is not installed in this project yet.
+      // Re-enable once the dependency and its API key config are provisioned.
+      // dash(dashOptions),
+      // Cookie integration must come last so `Set-Cookie` headers from the
+      // plugins above (2FA challenge, passkey sessions) are forwarded to the
+      // TanStack Start cookie store.
+      tanstackStartCookies(),
+    ],
+
+    // https://www.better-auth.com/docs/concepts/session-management#session-caching
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60, // 5 minutes
+      },
+    },
+
+    user: {
+      // `role` backs the authorization policies in `src/lib/auth/policy.ts`.
+      // It is server-managed only (`input: false`): users can never set or
+      // change their rank through a Better Auth endpoint, promotions go
+      // through the points system and staff review instead. The column lives
+      // on `user` in `src/lib/db/schema/auth.schema.ts` with a DB-level
+      // default of "novice".
+      additionalFields: {
+        role: { type: "string", defaultValue: "novice", input: false },
+      },
+      // Account deletion is NOT handled by Better Auth's built-in
+      // `deleteUser` endpoint: it would hard-delete the `user` row and fail
+      // on the posts/comments foreign keys, leaking nothing but errors.
+      // Deletion goes through the custom anonymizing server function in
+      // `src/lib/auth/delete-account.ts` instead.
+      // changeEmail: {
+      //   enabled: true,
+      // },
+    },
+  });
+
+export const auth = makeAuth({
+  db: authKysely,
+  sendVerificationOTP,
 });

@@ -1,15 +1,26 @@
 import { Layer } from "effect";
+import type { Kysely } from "kysely";
 import { expect, it } from "vitest";
 
+import type { DB } from "../db/kysely";
 import { makeServiceTestLayer } from "../db/test-utils";
 import { USERNAME_MAX_LENGTH, USERNAME_PATTERN } from "../mentions/mentions";
 import { generateUsername } from "./username.server";
+
+const isTakenIn =
+  (db: Kysely<DB>) =>
+  async (candidate: string): Promise<boolean> =>
+    (await db
+      .selectFrom("user")
+      .select("id")
+      .where("username", "=", candidate)
+      .executeTakeFirst()) !== undefined;
 
 it("returns the display name's slug when that handle is free", async () => {
   const ctx = await makeServiceTestLayer(Layer.empty);
   try {
     const username = await generateUsername({
-      db: ctx.db,
+      isTaken: isTakenIn(ctx.db),
       name: "Alice Dupont",
     });
 
@@ -32,7 +43,10 @@ it("never hands out a handle that another user already holds", async () => {
       })
       .execute();
 
-    const username = await generateUsername({ db: ctx.db, name: "Alice" });
+    const username = await generateUsername({
+      isTaken: isTakenIn(ctx.db),
+      name: "Alice",
+    });
     const holder = await ctx.db
       .selectFrom("user")
       .select("id")
@@ -52,7 +66,7 @@ it("keeps a generated handle within the username length limit", async () => {
   const ctx = await makeServiceTestLayer(Layer.empty);
   try {
     const username = await generateUsername({
-      db: ctx.db,
+      isTaken: isTakenIn(ctx.db),
       name: "A".repeat(60),
     });
 

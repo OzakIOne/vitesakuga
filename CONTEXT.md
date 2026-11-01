@@ -52,7 +52,7 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 ## Auth
 
-**Session** — Better Auth session with user info, accessed through `SessionService` (an Effect `Context.Service` in `src/lib/auth/session.effect.ts`, provided by `SessionServiceLive`). Interface: `getSession()` (full session or null), `getUser()` (user or null), and `requireUser(message)` (fails with `UnauthorizedError` when signed out). All mutating services read auth state through this service so the dependency appears in their Effect requirement channel; tests swap in a mocked `AuthService` under the real `SessionServiceLive`.
+**Session** — Better Auth session with user info, persisted by Better Auth's built-in Kysely adapter over `authKysely` (a raw Kysely over the same dialect as `kysely`, see `src/lib/db/kysely.ts`). Sign-up and session writes run inside Better Auth's transaction on that adapter. Accessed through `SessionService` (an Effect `Context.Service` in `src/lib/auth/session.effect.ts`, provided by `SessionServiceLive`). Interface: `getSession()` (full session or null), `getUser()` (user or null), and `requireUser(message)` (fails with `UnauthorizedError` when signed out). All mutating services read auth state through this service so the dependency appears in their Effect requirement channel; tests swap in a mocked `AuthService` under the real `SessionServiceLive`.
 
 **Sign-in Completion** — Password login, email verification, and both manual and conditional passkey sign-in share `useSignInCompletion` (`src/lib/auth/use-sign-in-completion.ts`). It stores the allowlisted return path for a 2FA challenge; after a completed sign-in it clears that value, invalidates the cached user session, then navigates. Signup keeps its separate verified-email gate.
 
@@ -76,7 +76,7 @@ Uploads are two-phase: videos go **direct-to-R2 via presigned PUTs** (bytes neve
 
 **R2** — Cloudflare R2 (S3-compatible) object storage for video and thumbnail files. Accessed via AWS SDK S3Client through `storage.adapter.ts`. Local dev and e2e tests use rustfs (S3-compatible) via the `makeRustFSStorageLayer()` configuration of the same adapter instead.
 
-**Neon** — Serverless PostgreSQL database. Accessed via Neon HTTP driver (Drizzle) and Neon serverless pool (Kysely). Local dev (`DATABASE_DRIVER=local`) uses a `pg` Pool against Docker Postgres instead.
+**Neon** — Serverless PostgreSQL database. Accessed only through Kysely: `NeonTransactionDialect` runs queries over the Neon HTTP driver and opens a dedicated WebSocket connection per interactive transaction. Local dev (`DATABASE_DRIVER=local`) uses a `pg` Pool against Docker Postgres instead. App queries go through Kysely; Drizzle supplies schema definitions, drizzle-kit, the test/e2e migrators and the dev seed script.
 
 **Kysely Schema** — The Kysely `DB` type (`src/lib/db/kysely.ts`) is derived from the Drizzle tables in `src/lib/db/schema/` by `src/lib/db/kysely-schema.ts`, so each Drizzle table definition is the single source for both query builders. Drizzle keys equal database column names.
 
