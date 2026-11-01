@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ConfirmationDialog } from "src/components/ConfirmationDialog";
 import { EmptyState } from "src/components/EmptyState";
@@ -10,10 +9,11 @@ import { Text } from "src/components/ui/typography";
 import { Heading } from "src/components/ui/typography";
 import {
   useApprovePromotion,
+  usePromotionQueue,
   useRejectPromotion,
 } from "src/lib/moderation/moderation.hooks";
 import { PROMOTION_RULES } from "src/lib/promotions/promotions.config";
-import { fetchPromotionQueue } from "src/lib/promotions/promotions.service";
+import type { PromotionCandidate } from "src/lib/promotions/promotions.service";
 
 /**
  * Novices who crossed the points + account-age thresholds and are awaiting
@@ -21,11 +21,7 @@ import { fetchPromotionQueue } from "src/lib/promotions/promotions.service";
  * until they out-earn the rejection snapshot.
  */
 export function PromotionQueuePanel() {
-  const queue = useQuery({
-    queryFn: async ({ signal }) => fetchPromotionQueue({ signal }),
-    queryKey: ["moderation", "promotion-queue"],
-    staleTime: 15_000,
-  });
+  const queue = usePromotionQueue();
   if (queue.isPending) {
     return <ListSkeleton count={3} />;
   }
@@ -67,7 +63,7 @@ export function PromotionQueuePanel() {
 function PromotionCandidateRow({
   candidate,
 }: {
-  candidate: Awaited<ReturnType<typeof fetchPromotionQueue>>[number];
+  candidate: PromotionCandidate;
 }) {
   const approve = useApprovePromotion();
   const reject = useRejectPromotion();

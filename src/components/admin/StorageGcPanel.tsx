@@ -1,5 +1,4 @@
 import { Portal } from "@ark-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ListSkeleton } from "src/components/LoadingSkeletons";
 import { Button, CloseButton } from "src/components/ui/button";
@@ -8,9 +7,10 @@ import { HStack, Stack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
 import { Text } from "src/components/ui/typography";
 import { Heading } from "src/components/ui/typography";
-import { previewGc, runGc } from "src/lib/videos/videos.service";
-
-const GC_STALE_MS = 60_000;
+import {
+  useRunStorageGc,
+  useStorageGcPreview,
+} from "src/lib/moderation/moderation.hooks";
 
 /**
  * Admin-only storage maintenance: a dry-run listing expired video revisions
@@ -19,21 +19,8 @@ const GC_STALE_MS = 60_000;
  */
 export function StorageGcPanel() {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const preview = useQuery({
-    queryFn: async ({ signal }) => previewGc({ signal }),
-    queryKey: ["moderation", "gc-preview"],
-    staleTime: GC_STALE_MS,
-  });
-  const run = useMutation({
-    mutationFn: async () => runGc(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["moderation", "gc-preview"],
-      });
-      setConfirmOpen(false);
-    },
-  });
+  const preview = useStorageGcPreview();
+  const run = useRunStorageGc();
 
   if (preview.isPending) {
     return <ListSkeleton count={3} />;
@@ -161,7 +148,11 @@ export function StorageGcPanel() {
                 <Button
                   colorPalette="red"
                   loading={run.isPending}
-                  onClick={() => run.mutate()}
+                  onClick={() =>
+                    run.mutate(undefined, {
+                      onSuccess: () => setConfirmOpen(false),
+                    })
+                  }
                 >
                   Delete {totalKeys} object(s)
                 </Button>

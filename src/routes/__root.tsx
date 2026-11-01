@@ -39,6 +39,8 @@ import {
   CommentsFnsContext,
   defaultCommentsFns,
 } from "src/lib/comments/comments.fn-context";
+import { ModerationFnsContext } from "src/lib/moderation/moderation.fn-context";
+import { defaultModerationFns } from "src/lib/moderation/moderation.fns";
 import { useUnreadNotificationCount } from "src/lib/notifications/notifications.hooks";
 import {
   PlaylistsFnsContext,
@@ -579,15 +581,17 @@ function RootComponent() {
     <HotkeysProvider>
       <GlobalShortcuts />
       <AuthClientContext.Provider value={authClient}>
-        <CommentsFnsContext.Provider value={defaultCommentsFns}>
-          <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
-            <ReportsFnsContext.Provider value={defaultReportsFns}>
-              <RootDocument>
-                <Outlet />
-              </RootDocument>
-            </ReportsFnsContext.Provider>
-          </PlaylistsFnsContext.Provider>
-        </CommentsFnsContext.Provider>
+        <ModerationFnsContext.Provider value={defaultModerationFns}>
+          <CommentsFnsContext.Provider value={defaultCommentsFns}>
+            <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
+              <ReportsFnsContext.Provider value={defaultReportsFns}>
+                <RootDocument>
+                  <Outlet />
+                </RootDocument>
+              </ReportsFnsContext.Provider>
+            </PlaylistsFnsContext.Provider>
+          </CommentsFnsContext.Provider>
+        </ModerationFnsContext.Provider>
       </AuthClientContext.Provider>
     </HotkeysProvider>
   );

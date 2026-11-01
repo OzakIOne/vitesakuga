@@ -1,24 +1,20 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import {
-  approveEdit as approveEditFn,
-  rejectEdit as rejectEditFn,
-} from "../post-edits/post-edits.service";
-import {
-  approvePromotion as approvePromotionFn,
-  rejectPromotion as rejectPromotionFn,
-} from "../promotions/promotions.service";
-import { assignUserRole, fetchModerationOverview } from "./moderation.service";
+import { useModerationFns } from "./moderation.fn-context";
 
-const moderationKeys = {
+export const moderationKeys = {
+  gcPreview: ["moderation", "gc-preview"] as const,
   overview: ["moderation", "overview"] as const,
+  promotionQueue: ["moderation", "promotion-queue"] as const,
 };
 
 const QUEUE_STALE_MS = 15_000;
+const GC_STALE_MS = 60_000;
 
 /** Staff queue overview (reports + pending edit suggestions). */
 export function useModerationOverview() {
+  const { fetchModerationOverview } = useModerationFns();
   return useQuery({
     queryFn: async ({ signal }) => fetchModerationOverview({ signal }),
     queryKey: moderationKeys.overview,
@@ -26,17 +22,51 @@ export function useModerationOverview() {
   });
 }
 
+/** Staff promotion queue: novices awaiting an approve or reject decision. */
+export function usePromotionQueue() {
+  const { fetchPromotionQueue } = useModerationFns();
+  return useQuery({
+    queryFn: async ({ signal }) => fetchPromotionQueue({ signal }),
+    queryKey: moderationKeys.promotionQueue,
+    staleTime: QUEUE_STALE_MS,
+  });
+}
+
+/** Admin dry-run of storage cleanup: expired revisions and orphaned objects. */
+export function useStorageGcPreview() {
+  const { previewGc } = useModerationFns();
+  return useQuery({
+    queryFn: async ({ signal }) => previewGc({ signal }),
+    queryKey: moderationKeys.gcPreview,
+    staleTime: GC_STALE_MS,
+  });
+}
+
+/** Runs the storage cleanup sweep, then refreshes the dry-run listing. */
+export function useRunStorageGc() {
+  const queryClient = useQueryClient();
+  const { runGc } = useModerationFns();
+  return useMutation({
+    mutationFn: async () => runGc(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: moderationKeys.gcPreview,
+      });
+    },
+  });
+}
+
 /** Approves a promotion candidate (staff). */
 export function useApprovePromotion() {
   const queryClient = useQueryClient();
+  const { approvePromotion } = useModerationFns();
   return useMutationWithFeedback({
     errorFallback: "Could not approve this promotion.",
     errorTitle: "Promotion approval failed",
-    mutationFn: async (userId: string) => approvePromotionFn({ data: userId }),
-    onMutate: () => undefined,
+    mutationFn: async (userId: string) => approvePromotion({ data: userId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: moderationKeys.overview,
+        queryKey: moderationKeys.promotionQueue,
       });
     },
     successDescription: "The user is now an uploader.",
@@ -47,13 +77,14 @@ export function useApprovePromotion() {
 /** Rejects a promotion candidate; they return once they out-earn the snapshot. */
 export function useRejectPromotion() {
   const queryClient = useQueryClient();
+  const { rejectPromotion } = useModerationFns();
   return useMutationWithFeedback({
     errorFallback: "Could not reject this promotion.",
     errorTitle: "Promotion rejection failed",
-    mutationFn: async (userId: string) => rejectPromotionFn({ data: userId }),
+    mutationFn: async (userId: string) => rejectPromotion({ data: userId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: moderationKeys.overview,
+        queryKey: moderationKeys.promotionQueue,
       });
     },
     successDescription:
@@ -65,10 +96,11 @@ export function useRejectPromotion() {
 /** Applies an edit suggestion immediately (staff/owner). */
 export function useApproveEdit() {
   const queryClient = useQueryClient();
+  const { approveEdit } = useModerationFns();
   return useMutationWithFeedback({
     errorFallback: "Could not apply this suggestion.",
     errorTitle: "Suggestion approval failed",
-    mutationFn: async (editId: number) => approveEditFn({ data: { editId } }),
+    mutationFn: async (editId: number) => approveEdit({ data: { editId } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: moderationKeys.overview,
@@ -82,10 +114,11 @@ export function useApproveEdit() {
 /** Rejects a pending edit suggestion. */
 export function useRejectEdit() {
   const queryClient = useQueryClient();
+  const { rejectEdit } = useModerationFns();
   return useMutationWithFeedback({
     errorFallback: "Could not reject this suggestion.",
     errorTitle: "Suggestion rejection failed",
-    mutationFn: async (editId: number) => rejectEditFn({ data: { editId } }),
+    mutationFn: async (editId: number) => rejectEdit({ data: { editId } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: moderationKeys.overview,
@@ -99,6 +132,7 @@ export function useRejectEdit() {
 /** Admin-only direct rank assignment. */
 export function useSetUserRole() {
   const queryClient = useQueryClient();
+  const { assignUserRole } = useModerationFns();
   return useMutationWithFeedback({
     errorFallback: "Could not assign this role.",
     errorTitle: "Role assignment failed",
@@ -106,7 +140,7 @@ export function useSetUserRole() {
       assignUserRole({ data: input }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: moderationKeys.overview,
+        queryKey: moderationKeys.promotionQueue,
       });
     },
     successTitle: "Role assigned",

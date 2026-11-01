@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ConfirmationDialog } from "src/components/ConfirmationDialog";
@@ -11,9 +10,9 @@ import { Text } from "src/components/ui/typography";
 import { Heading } from "src/components/ui/typography";
 import {
   useApproveEdit,
+  useModerationOverview,
   useRejectEdit,
 } from "src/lib/moderation/moderation.hooks";
-import { fetchModerationOverview } from "src/lib/moderation/moderation.service";
 import type { ModerationPendingEditRow } from "src/lib/moderation/moderation.service";
 import { POST_EDIT_REQUIRED_VOTES } from "src/lib/post-edits/post-edits.config";
 
@@ -22,11 +21,7 @@ import { POST_EDIT_REQUIRED_VOTES } from "src/lib/post-edits/post-edits.config";
  * Staff can apply (or discard) each one directly.
  */
 export function SuggestionsPanel() {
-  const overview = useQuery({
-    queryFn: async ({ signal }) => fetchModerationOverview({ signal }),
-    queryKey: ["moderation", "overview"],
-    staleTime: 15_000,
-  });
+  const overview = useModerationOverview();
   if (overview.isPending) {
     return <ListSkeleton count={3} />;
   }

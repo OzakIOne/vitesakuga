@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { EmptyState } from "src/components/EmptyState";
 import { ListSkeleton } from "src/components/LoadingSkeletons";
@@ -8,7 +7,7 @@ import { HStack, Stack } from "src/components/ui/layout";
 import { Text } from "src/components/ui/typography";
 import { Heading } from "src/components/ui/typography";
 import { REPORT_REASON_LABELS } from "src/lib/db/schema/sakuga.utils";
-import { fetchModerationOverview } from "src/lib/moderation/moderation.service";
+import { useModerationOverview } from "src/lib/moderation/moderation.hooks";
 
 const reportReasonLabel = (reason: string): string => {
   switch (reason) {
@@ -25,11 +24,7 @@ const reportReasonLabel = (reason: string): string => {
 
 /** Recent post reports with links to the flagged posts. */
 export function ReportsPanel() {
-  const overview = useQuery({
-    queryFn: async ({ signal }) => fetchModerationOverview({ signal }),
-    queryKey: ["moderation", "overview"],
-    staleTime: 15_000,
-  });
+  const overview = useModerationOverview();
 
   if (overview.isPending) {
     return <ListSkeleton count={3} />;
