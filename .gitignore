@@ -32,4 +32,6 @@ docker/
 .nitro
 dist/
 .neon
+*.tsbuildinfo
+.vitest/
 MediaInfoModule.wasm
