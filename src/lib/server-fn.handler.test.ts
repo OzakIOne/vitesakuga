@@ -13,6 +13,7 @@ import {
   PostNotFoundError,
   PromotionAlreadyReviewedError,
   PromotionNotEligibleError,
+  ReauthenticationRequiredError,
   RowParseError,
   UnauthorizedError,
   UserNotFoundError,
@@ -117,6 +118,15 @@ describe("server-fn failure boundary", () => {
         Effect.fail(new UnauthorizedError({ message: "log in first" })),
       )({ data: "x" }),
     ).rejects.toMatchObject({ _tag: "UnauthorizedError" });
+  });
+
+  it("passes reauthentication errors through with tag and message", async () => {
+    const reauthenticationRequired = new ReauthenticationRequiredError({
+      message: "Sign in again before continuing.",
+    });
+    await expect(
+      makeHandler(Effect.fail(reauthenticationRequired))({ data: "x" }),
+    ).rejects.toBe(reauthenticationRequired);
   });
 
   it("passes concurrent-edit conflicts through with tag and message", async () => {

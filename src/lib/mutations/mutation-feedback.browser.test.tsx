@@ -7,6 +7,7 @@ import { UnauthorizedError } from "../errors";
 import {
   errorMessage,
   errorTag,
+  getReauthenticationLoginUrl,
   toastError,
   toastSuccess,
   useMutationWithFeedback,
@@ -33,6 +34,26 @@ const createWrapper = () => {
 };
 
 const waitFor = vi.waitFor;
+
+describe(getReauthenticationLoginUrl, () => {
+  it("returns to the current allowlisted path and search", () => {
+    expect(
+      getReauthenticationLoginUrl({
+        pathname: "/admin/roles",
+        search: "?tab=staff&page=2",
+      }),
+    ).toBe("/login?redirect=%2Fadmin%2Froles%3Ftab%3Dstaff%26page%3D2");
+  });
+
+  it("uses the sanitizer fallback for an unallowlisted path", () => {
+    expect(
+      getReauthenticationLoginUrl({
+        pathname: "/admin/settings",
+        search: "?tab=staff",
+      }),
+    ).toBe("/login?redirect=%2F");
+  });
+});
 
 describe(errorMessage, () => {
   it("returns the error message when available", () => {

@@ -1,4 +1,5 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import type { Kysely } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -26,6 +27,19 @@ const insertUser = (db: Kysely<DB>, args: { id: string; role: Role }) =>
       username: args.id.toLowerCase(),
     })
     .execute();
+
+const FIXED_NOW = Date.parse("2026-10-31T10:00:00.000Z");
+const FRESHNESS_WINDOW_MS = 15 * 60 * 1_000;
+
+type ServiceOutcome =
+  | { readonly error: unknown; readonly _tag: "failure" }
+  | { readonly value: unknown; readonly _tag: "success" };
+
+const serviceOutcome = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.match(effect, {
+    onFailure: (error): ServiceOutcome => ({ error, _tag: "failure" }),
+    onSuccess: (value): ServiceOutcome => ({ _tag: "success", value }),
+  });
 
 let postSeq = 0;
 
@@ -306,25 +320,110 @@ describe("ModerationService.overview", () => {
 });
 
 describe("ModerationService.setUserRole", () => {
-  it("is admin-only: moderators are forbidden", async () => {
-    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+  it("refuses role assignment from an old session and leaves the role unchanged", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-old", role: "admin" });
+    await insertUser(db, { id: "target-old", role: "novice" });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "admin-old", role: "admin" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1) },
+      ),
+    );
+
+    const result = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* serviceOutcome(
+          Effect.flatMap(ModerationService, (service) =>
+            service.setUserRole({ role: "moderator", userId: "target-old" }),
+          ),
+        );
+      }),
+    );
+
+    expect(result).toMatchObject({
+      _tag: "failure",
+      error: { _tag: "ReauthenticationRequiredError" },
+    });
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
+    const row = await db
+      .selectFrom("user")
+      .select("role")
+      .where("id", "=", "target-old")
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("novice");
+  });
+
+  it("allows role assignment exactly at the freshness boundary", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-boundary", role: "admin" });
+    await insertUser(db, { id: "target-boundary", role: "novice" });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "admin-boundary", role: "admin" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS) },
+      ),
+    );
+
+    const result = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* Effect.flatMap(ModerationService, (service) =>
+          service.setUserRole({
+            role: "moderator",
+            userId: "target-boundary",
+          }),
+        );
+      }),
+    );
+
+    expect(result).toEqual({ userId: "target-boundary" });
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
+    const row = await db
+      .selectFrom("user")
+      .select("role")
+      .where("id", "=", "target-boundary")
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("moderator");
+  });
+
+  it("forbids a moderator with an old session before requesting reauthentication", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
     closeCtx = ctx.close;
     const { db } = ctx;
     await insertUser(db, { id: "mod-1", role: "moderator" });
     await insertUser(db, { id: "target-1", role: "novice" });
 
     ctx.mockGetSession.mockResolvedValue(
-      makeAuthSession({ id: "mod-1", role: "moderator" }),
+      makeAuthSession(
+        { id: "mod-1", role: "moderator" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1) },
+      ),
     );
     const error = await ctx.runEffect(
-      Effect.flip(
-        Effect.flatMap(ModerationService, (service) =>
-          service.setUserRole({ role: "uploader", userId: "target-1" }),
-        ),
-      ),
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* Effect.flip(
+          Effect.flatMap(ModerationService, (service) =>
+            service.setUserRole({ role: "uploader", userId: "target-1" }),
+          ),
+        );
+      }),
     );
 
     expect(error._tag).toBe("ForbiddenError");
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
     expect(error.message).toBe("Only admins can assign roles.");
     const row = await db
       .selectFrom("user")
@@ -512,5 +611,176 @@ describe("ModerationService.setUserRole", () => {
       .where("deletedAt", "is", null)
       .execute();
     expect(admins).toHaveLength(1);
+  });
+});
+
+describe("ModerationService staff suspension freshness", () => {
+  it("forbids a stale moderator from suspending staff before freshness", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "mod-staff-suspend", role: "moderator" });
+    await insertUser(db, { id: "target-staff-suspend", role: "moderator" });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "mod-staff-suspend", role: "moderator" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1) },
+      ),
+    );
+
+    const error = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* Effect.flip(
+          Effect.flatMap(ModerationService, (service) =>
+            service.suspendUser({
+              reason: "Abuse",
+              userId: "target-staff-suspend",
+            }),
+          ),
+        );
+      }),
+    );
+
+    expect(error._tag).toBe("ForbiddenError");
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
+    const target = await db
+      .selectFrom("user")
+      .select(["suspendedAt", "suspendedReason"])
+      .where("id", "=", "target-staff-suspend")
+      .executeTakeFirstOrThrow();
+    expect(target.suspendedAt).toBeNull();
+    expect(target.suspendedReason).toBeNull();
+  });
+
+  it("allows fresh staff suspension at the freshness boundary", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-suspend-boundary", role: "admin" });
+    await insertUser(db, { id: "staff-suspend-boundary", role: "moderator" });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "admin-suspend-boundary", role: "admin" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS) },
+      ),
+    );
+
+    const result = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* Effect.flatMap(ModerationService, (service) =>
+          service.suspendUser({
+            reason: "Abuse",
+            userId: "staff-suspend-boundary",
+          }),
+        );
+      }),
+    );
+
+    expect(result).toEqual({ userId: "staff-suspend-boundary" });
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
+    const row = await db
+      .selectFrom("user")
+      .select(["suspendedAt", "suspendedReason"])
+      .where("id", "=", "staff-suspend-boundary")
+      .executeTakeFirstOrThrow();
+    expect(row.suspendedAt).toEqual(new Date(FIXED_NOW));
+    expect(row.suspendedReason).toBe("Abuse");
+  });
+
+  it("refuses to suspend staff from an old session", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-suspend-old", role: "admin" });
+    await insertUser(db, { id: "staff-suspend-old", role: "moderator" });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "admin-suspend-old", role: "admin" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1) },
+      ),
+    );
+
+    const result = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* serviceOutcome(
+          Effect.flatMap(ModerationService, (service) =>
+            service.suspendUser({
+              reason: "Abuse",
+              userId: "staff-suspend-old",
+            }),
+          ),
+        );
+      }),
+    );
+
+    expect(result).toMatchObject({
+      _tag: "failure",
+      error: { _tag: "ReauthenticationRequiredError" },
+    });
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
+    const row = await db
+      .selectFrom("user")
+      .select(["suspendedAt", "suspendedReason"])
+      .where("id", "=", "staff-suspend-old")
+      .executeTakeFirstOrThrow();
+    expect(row.suspendedAt).toBeNull();
+    expect(row.suspendedReason).toBeNull();
+  });
+
+  it("refuses to restore staff from an old session", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(ModerationServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-restore-old", role: "admin" });
+    await insertUser(db, { id: "staff-restore-old", role: "moderator" });
+    await db
+      .updateTable("user")
+      .set({
+        suspendedAt: new Date(FIXED_NOW - 60_000),
+        suspendedReason: "Abuse",
+      })
+      .where("id", "=", "staff-restore-old")
+      .execute();
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "admin-restore-old", role: "admin" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1) },
+      ),
+    );
+
+    const result = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        return yield* serviceOutcome(
+          Effect.flatMap(ModerationService, (service) =>
+            service.unsuspendUser({ userId: "staff-restore-old" }),
+          ),
+        );
+      }),
+    );
+
+    expect(result).toMatchObject({
+      _tag: "failure",
+      error: { _tag: "ReauthenticationRequiredError" },
+    });
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(1);
+    const row = await db
+      .selectFrom("user")
+      .select(["suspendedAt", "suspendedReason"])
+      .where("id", "=", "staff-restore-old")
+      .executeTakeFirstOrThrow();
+    expect(row.suspendedAt).toEqual(new Date(FIXED_NOW - 60_000));
+    expect(row.suspendedReason).toBe("Abuse");
   });
 });

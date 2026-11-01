@@ -27,6 +27,17 @@ export class ForbiddenError extends Schema.TaggedError<ForbiddenError>()(
   clientSafeAnnotations,
 ) {}
 
+export class ReauthenticationRequiredError extends Schema.TaggedError<
+  ReauthenticationRequiredError,
+  { readonly brand: unique symbol }
+>()(
+  "ReauthenticationRequiredError",
+  {
+    message: Schema.String,
+  },
+  clientSafeAnnotations,
+) {}
+
 export class CommentNotFoundError extends Schema.TaggedError<CommentNotFoundError>()(
   "CommentNotFoundError",
   {

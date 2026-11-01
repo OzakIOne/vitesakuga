@@ -1,8 +1,19 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
+import { useCallback, useContext } from "react";
 import { toaster } from "src/components/ui/toaster";
 
-// The path to the public login route (`src/routes/(auth)/login.tsx`).
+import { getSafeAuthRedirectUrl } from "../auth/auth-redirect";
+import { AuthClientContext } from "../auth/client-context";
+
 const LOGIN_PATH = "/login";
+
+export const getReauthenticationLoginUrl = (location: {
+  readonly pathname: string;
+  readonly search: string;
+}): string =>
+  `${LOGIN_PATH}?redirect=${encodeURIComponent(
+    getSafeAuthRedirectUrl(`${location.pathname}${location.search}`),
+  )}`;
 
 /**
  * Read the discriminant tag off an error that crossed the server-function
@@ -25,7 +36,11 @@ export function errorTag(cause: unknown): string | undefined {
 const actionForTag = (
   tag: string | undefined,
   retry: (() => void) | undefined,
+  reauthenticate: (() => void) | undefined,
 ): { label: string; onClick: () => void } | undefined => {
+  if (tag === "ReauthenticationRequiredError" && reauthenticate) {
+    return { label: "Sign in again", onClick: reauthenticate };
+  }
   // A stale version never succeeds on retry; reloading loads the newer post.
   if (tag === "PostVersionConflictError") {
     return {
@@ -70,9 +85,10 @@ export function toastError(
   cause: unknown,
   fallback: string,
   retry?: () => void,
+  reauthenticate?: () => void,
 ): void {
   toaster.create({
-    action: actionForTag(errorTag(cause), retry),
+    action: actionForTag(errorTag(cause), retry, reauthenticate),
     closable: true,
     description: errorMessage(cause, fallback),
     duration: 5000,
@@ -85,7 +101,7 @@ type MutationFeedbackOptions = {
   readonly errorFallback: string;
   readonly errorTitle: string;
   readonly successDescription?: string;
-  readonly successTitle: string;
+  readonly successTitle?: string;
 };
 
 export function useMutationWithFeedback<
@@ -96,6 +112,15 @@ export function useMutationWithFeedback<
   options: UseMutationOptions<TData, Error, TVariables, TContext> &
     MutationFeedbackOptions,
 ) {
+  const authClient = useContext(AuthClientContext);
+  const reauthenticate = useCallback(() => {
+    const loginUrl = getReauthenticationLoginUrl({
+      pathname: window.location.pathname,
+      search: window.location.search,
+    });
+    const navigateToLogin = () => window.location.assign(loginUrl);
+    void authClient.signOut().then(navigateToLogin, navigateToLogin);
+  }, [authClient]);
   const {
     errorFallback,
     errorTitle,
@@ -109,12 +134,14 @@ export function useMutationWithFeedback<
   return useMutation({
     ...mutationOptions,
     onError: (error, variables, context, meta) => {
-      toastError(errorTitle, error, errorFallback);
+      toastError(errorTitle, error, errorFallback, undefined, reauthenticate);
       onError?.(error, variables, context, meta);
     },
     onSuccess: (data, variables, context, meta) => {
       onSuccess?.(data, variables, context, meta);
-      toastSuccess(successTitle, successDescription);
+      if (successTitle) {
+        toastSuccess(successTitle, successDescription);
+      }
     },
   });
 }

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { useModerationFns } from "./moderation.fn-context";
@@ -46,7 +46,9 @@ export function useStorageGcPreview() {
 export function useRunStorageGc() {
   const queryClient = useQueryClient();
   const { runGc } = useModerationFns();
-  return useMutation({
+  return useMutationWithFeedback({
+    errorFallback: "Could not run storage cleanup.",
+    errorTitle: "Storage cleanup failed",
     mutationFn: async () => runGc(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({

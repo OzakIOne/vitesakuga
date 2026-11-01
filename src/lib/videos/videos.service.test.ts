@@ -1,4 +1,5 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import type { Kysely } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -530,6 +531,58 @@ describe("VideosService.restore", () => {
 });
 
 describe("VideosService.gc", () => {
+  const FIXED_NOW = Date.parse("2026-10-31T10:00:00.000Z");
+  const FRESHNESS_WINDOW_MS = 15 * 60 * 1_000;
+
+  it("requires a fresh session before destructive storage cleanup", async () => {
+    const ctx = await makeServiceTestLayer(
+      Layer.merge(VideosServiceLive, TestClock.layer()),
+    );
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-gc-old", role: "admin" });
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession(
+        { id: "admin-gc-old", role: "admin" },
+        { createdAt: new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1) },
+      ),
+    );
+
+    const result = await ctx.runEffect(
+      Effect.gen(function* () {
+        yield* TestClock.setTime(FIXED_NOW);
+        const preview = yield* Effect.flatMap(VideosService, (service) =>
+          service.gcPreview(),
+        );
+        const gcRun = yield* Effect.match(
+          Effect.flatMap(VideosService, (service) => service.gcRun()),
+          {
+            onFailure: (
+              error,
+            ): { readonly error: unknown; readonly _tag: "failure" } => ({
+              error,
+              _tag: "failure",
+            }),
+            onSuccess: (
+              value,
+            ): { readonly value: unknown; readonly _tag: "success" } => ({
+              _tag: "success",
+              value,
+            }),
+          },
+        );
+        return { gcRun, preview };
+      }),
+    );
+
+    expect(result.preview).toBeDefined();
+    expect(result.gcRun).toMatchObject({
+      _tag: "failure",
+      error: { _tag: "ReauthenticationRequiredError" },
+    });
+    expect(ctx.mockGetSession).toHaveBeenCalledTimes(2);
+  });
+
   const seedRevision = async (
     db: Kysely<DB>,
     args: {

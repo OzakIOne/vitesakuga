@@ -23,13 +23,13 @@ import type { AuthSession, AuthenticatedUser } from "./types";
 export type { AuthSession, AuthenticatedUser } from "./types";
 
 /**
- * The signed-in account as authorization sees it: an id and a role that has
- * been validated against `RoleSchema`. Only `SessionService.requireActor`
- * produces one.
+ * The signed-in account as authorization sees it: a validated role and the
+ * creation time of the Better Auth session. SessionService produces one.
  */
 export type AuthorizedActor = {
   readonly id: string;
   readonly role: Role;
+  readonly signedInAt: Date;
 };
 
 /** Reads the e2e bypass cookie value out of a raw `Cookie` header. */
@@ -260,43 +260,56 @@ export class SessionService extends Context.Service<
     const decodeActor = Schema.decodeUnknownOption(
       Schema.Struct({ id: Schema.String, role: RoleSchema }),
     );
+    const actorFromSession = (session: AuthSession) =>
+      Option.map(decodeActor(session.user), (actor) => ({
+        ...actor,
+        signedInAt: session.session.createdAt,
+      }));
 
-    const toActor = Effect.fn("SessionService.toActor")(function* (
-      user: AuthenticatedUser,
-    ) {
-      const decoded = decodeActor(user);
-      if (Option.isNone(decoded)) {
+    const toActor = Effect.fn("SessionService.toActor")(function* (input: {
+      readonly session: AuthSession;
+    }) {
+      const actor = actorFromSession(input.session);
+      if (Option.isNone(actor)) {
         return yield* new ForbiddenError({
           message:
             "Your account role is not recognised. Contact an administrator.",
         });
       }
-      return decoded.value;
+      return actor.value;
     });
-
-    const requireReadActor = Effect.fn("SessionService.requireReadActor")(
-      function* (message: string) {
-        const user = yield* requireUser(message);
-        return yield* toActor(user);
-      },
-    );
 
     const requireActor = Effect.fn("SessionService.requireActor")(function* (
       message: string,
     ) {
-      const user = yield* requireUser(message);
+      const session = yield* getSession();
+      if (session === null) {
+        return yield* new UnauthorizedError({ message });
+      }
+      const user = session.user;
       if (user.suspendedAt !== null && user.suspendedAt !== undefined) {
         return yield* new AccountSuspendedError({
           message: "Your account is suspended, so this action is not allowed.",
           reason: user.suspendedReason ?? "No reason was given.",
         });
       }
-      return yield* toActor(user);
+      return yield* toActor({ session });
     });
 
+    const requireReadActor = Effect.fn("SessionService.requireReadActor")(
+      function* (message: string) {
+        const session = yield* getSession();
+        if (!session?.user) {
+          return yield* new UnauthorizedError({ message });
+        }
+        return yield* toActor({ session });
+      },
+    );
+
     const getActor = Effect.fn("SessionService.getActor")(function* () {
-      const user = yield* getUser();
-      return user === null ? null : Option.getOrNull(decodeActor(user));
+      const session = yield* getSession();
+      if (session === null) return null;
+      return Option.getOrNull(actorFromSession(session));
     });
 
     return {

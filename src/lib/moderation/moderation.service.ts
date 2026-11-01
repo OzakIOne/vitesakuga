@@ -5,7 +5,11 @@ import {
   ensureAdminRemains,
   lockActiveAdminIds,
 } from "../auth/admin-continuity";
-import { authorize, roleHasPermission } from "../auth/policy";
+import {
+  authorize,
+  requireRecentSignIn,
+  roleHasPermission,
+} from "../auth/policy";
 import { RoleSchema, type Role } from "../auth/roles";
 import {
   SessionFetchError,
@@ -22,6 +26,7 @@ import {
   AccountSuspendedError,
   ForbiddenError,
   LastAdminError,
+  ReauthenticationRequiredError,
   UnauthorizedError,
   UserNotFoundError,
   ValidationError,
@@ -61,6 +66,7 @@ type ModerationFailure =
   | AccountSuspendedError
   | ForbiddenError
   | LastAdminError
+  | ReauthenticationRequiredError
   | SessionFetchError
   | SqlError
   | UnauthorizedError
@@ -187,6 +193,7 @@ export class ModerationService extends Context.Service<
           permission: "roles:assign",
           forbiddenMessage: "Only admins can assign roles.",
         });
+        yield* requireRecentSignIn({ actor });
 
         const targetRole = Option.match(
           Schema.decodeUnknownOption(RoleSchema)(input.role),
@@ -269,7 +276,6 @@ export class ModerationService extends Context.Service<
       return target.value;
     });
 
-    /** Moderators may act on ordinary accounts; only admins may act on staff accounts. */
     const requireRightsOver = Effect.fn("ModerationService.requireRightsOver")(
       function* (input: {
         readonly actor: AuthorizedActor;
@@ -284,6 +290,7 @@ export class ModerationService extends Context.Service<
           forbiddenMessage:
             "Only admins can suspend or restore moderators and admins.",
         });
+        yield* requireRecentSignIn({ actor: input.actor });
       },
     );
 

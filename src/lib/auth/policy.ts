@@ -1,12 +1,17 @@
-import { Effect, Option } from "effect";
+import { DateTime, Effect, Option } from "effect";
 
-import { ForbiddenError, UnauthorizedError } from "../errors";
+import {
+  ForbiddenError,
+  ReauthenticationRequiredError,
+  UnauthorizedError,
+} from "../errors";
 import type { Role } from "./roles";
 import type { AuthorizedActor, SessionFetchError } from "./session.effect";
 
 /** Every failure a signed-in authorization check can produce. */
 export type PolicyError =
   | ForbiddenError
+  | ReauthenticationRequiredError
   | SessionFetchError
   | UnauthorizedError;
 
@@ -105,6 +110,7 @@ export const roleHasPermission = (
 // Enforcement
 // ---------------------------------------------------------------------------
 
+const ADMIN_SESSION_FRESHNESS_WINDOW_MS = 15 * 60 * 1_000;
 const DEFAULT_FORBIDDEN_MESSAGE =
   "You do not have permission to perform this action.";
 
@@ -124,6 +130,24 @@ export const authorize = Effect.fn("authorize")(function* (input: {
     });
   }
 });
+
+export const requireRecentSignIn = Effect.fn("requireRecentSignIn")(
+  function* (input: { readonly actor: AuthorizedActor }) {
+    const now = yield* DateTime.now;
+    const ageMillis =
+      DateTime.toDate(now).getTime() - input.actor.signedInAt.getTime();
+    if (
+      !Number.isFinite(ageMillis) ||
+      ageMillis < 0 ||
+      ageMillis > ADMIN_SESSION_FRESHNESS_WINDOW_MS
+    ) {
+      return yield* new ReauthenticationRequiredError({
+        message:
+          "Your sign-in is too old for this admin action. Please sign in again.",
+      });
+    }
+  },
+);
 
 /**
  * Loads-and-guards a resource the actor may change. Fails with `notFound`

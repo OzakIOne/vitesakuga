@@ -1,14 +1,17 @@
 import { Effect, Option } from "effect";
+import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 
-import { ForbiddenError } from "../errors";
+import { ForbiddenError, ReauthenticationRequiredError } from "../errors";
 import {
   authorize,
   authorizeOwned,
+  requireRecentSignIn,
   roleHasPermission,
   type Permission,
 } from "./policy";
 import type { Role } from "./roles";
+import type { AuthorizedActor } from "./session.effect";
 
 const EVERY_PERMISSION: ReadonlyArray<Permission> = [
   "comments:delete-any",
@@ -123,8 +126,27 @@ describe("role grants", () => {
   );
 });
 
-const novice = { id: "novice-1", role: "novice" } as const;
-const moderator = { id: "moderator-1", role: "moderator" } as const;
+const FIXED_NOW = Date.parse("2026-10-31T10:00:00.000Z");
+const FRESHNESS_WINDOW_MS = 15 * 60 * 1_000;
+const signedInAt = new Date(FIXED_NOW);
+const novice: AuthorizedActor = {
+  id: "novice-1",
+  role: "novice",
+  signedInAt,
+};
+const moderator: AuthorizedActor = {
+  id: "moderator-1",
+  role: "moderator",
+  signedInAt,
+};
+
+const requireRecentSignInAt = (createdAt: Date) =>
+  Effect.gen(function* () {
+    yield* TestClock.setTime(FIXED_NOW);
+    yield* requireRecentSignIn({
+      actor: { id: "admin-1", role: "admin", signedInAt: createdAt },
+    });
+  }).pipe(Effect.provide(TestClock.layer()));
 
 describe("authorize", () => {
   it("fails with the caller's message when the role lacks the permission", async () => {
@@ -156,7 +178,7 @@ const ownedBy = (ownerId: string): Option.Option<OwnedRow> =>
   Option.some({ ownerId });
 
 const guardOwned = (args: {
-  readonly actor: { readonly id: string; readonly role: Role };
+  readonly actor: AuthorizedActor;
   readonly resource: Option.Option<OwnedRow>;
   readonly any?: Permission;
 }) =>
@@ -169,6 +191,38 @@ const guardOwned = (args: {
     notFound: Effect.fail("missing" as const),
     forbidden: Effect.fail("forbidden" as const),
   });
+
+describe("requireRecentSignIn", () => {
+  it("accepts a session created within the freshness window", async () => {
+    await expect(
+      Effect.runPromise(
+        requireRecentSignInAt(new Date(FIXED_NOW - FRESHNESS_WINDOW_MS + 1)),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("accepts a session created exactly at the freshness boundary", async () => {
+    await expect(
+      Effect.runPromise(
+        requireRecentSignInAt(new Date(FIXED_NOW - FRESHNESS_WINDOW_MS)),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    [
+      "older than the freshness window",
+      new Date(FIXED_NOW - FRESHNESS_WINDOW_MS - 1),
+    ],
+    ["in the future", new Date(FIXED_NOW + 1)],
+  ])("requires reauthentication when sign-in is %s", async (_, createdAt) => {
+    const error = await Effect.runPromise(
+      Effect.flip(requireRecentSignInAt(createdAt)),
+    );
+
+    expect(error).toBeInstanceOf(ReauthenticationRequiredError);
+  });
+});
 
 describe("authorizeOwned", () => {
   it("returns the row to its owner when the own permission holds", async () => {

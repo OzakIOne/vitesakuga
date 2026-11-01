@@ -7,7 +7,7 @@ Roles progress from `novice → uploader → moderator → admin`. Each role gra
 - **Novice** — newly registered accounts. They can browse, vote, comment, build playlists, and upload their own posts. They cannot suggest edits to other people's posts yet.
 - **Uploader** — novices promoted after review. They can also suggest edits to other people's posts and take part in the wiki-edit workflow.
 - **Moderator** — reviews reports, edit suggestions, and promotion candidates from `/admin`, and suspends or restores ordinary accounts.
-- **Admin** — everything a moderator can do, plus storage cleanup (preview and purge) and manual role assignment from `/admin`. Role changes and account deletion cannot leave the site without an active admin: the last active admin cannot be demoted or delete their account until another admin exists. Admins also suspend or restore moderators and admins.
+- **Admin** — everything a moderator can do, plus storage cleanup (preview and purge) and manual role assignment from `/admin`. The admin-only preview stays available, but purging stored revisions and objects, assigning roles, and suspending or restoring staff accounts require a sign-in no more than 15 minutes old. If a protected action's session is too old, the action offers to sign in again and returns to `/admin`. Role changes and account deletion cannot leave the site without an active admin: the last active admin cannot be demoted or delete their account until another admin exists. Admins also suspend or restore moderators and admins.
 
 ## How promotion works
 

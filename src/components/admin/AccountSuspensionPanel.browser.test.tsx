@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { Toaster } from "src/components/ui/toaster";
+import { ReauthenticationRequiredError } from "src/lib/errors";
 import {
   ModerationFnsContext,
   type ModerationFns,
@@ -27,7 +29,7 @@ describe(AccountSuspensionPanel, () => {
     });
   });
 
-  const renderPanel = (fns: Record<string, unknown>) => {
+  const renderPanel = (fns: Record<string, unknown>, withToaster = false) => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <ModerationFnsContext.Provider
@@ -41,6 +43,7 @@ describe(AccountSuspensionPanel, () => {
     );
     return render(
       <>
+        {withToaster && <Toaster />}
         <AccountSuspensionPanel />
         <OverviewProbe />
       </>,
@@ -77,6 +80,32 @@ describe(AccountSuspensionPanel, () => {
     await page.getByRole("button", { name: "Suspend" }).click();
 
     await vi.waitFor(() => expect(suspendUser).not.toHaveBeenCalled());
+  });
+
+  it("shows reauthentication guidance and an action for stale sessions", async () => {
+    const fetchModerationOverview = vi.fn(async () => emptyOverview);
+    const suspendUser = vi.fn(async () => {
+      throw new ReauthenticationRequiredError({
+        message:
+          "Your sign-in is too old for this admin action. Please sign in again.",
+      });
+    });
+    renderPanel({ fetchModerationOverview, suspendUser }, true);
+
+    await page.getByLabelText("Account user ID").fill("staff-2");
+    await page.getByLabelText("Suspension reason").fill("Spam links");
+    await page.getByRole("button", { name: "Suspend" }).click();
+
+    await vi.waitFor(() =>
+      expect(
+        page.getByText(
+          "Your sign-in is too old for this admin action. Please sign in again.",
+        ),
+      ).toBeVisible(),
+    );
+    await vi.waitFor(() =>
+      expect(page.getByRole("button", { name: "Sign in again" })).toBeVisible(),
+    );
   });
 
   it("restores a suspended account and refreshes the staff queue", async () => {

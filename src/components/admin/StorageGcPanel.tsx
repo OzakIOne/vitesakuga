@@ -111,8 +111,8 @@ export function StorageGcPanel() {
             <div>
               <Alert.Title>Cleanup failed</Alert.Title>
               <Alert.Description>
-                Cleanup failed partway. Check the server logs and refresh the
-                audit before retrying.
+                Cleanup failed. See the notification for details and any next
+                step.
               </Alert.Description>
             </div>
           </Alert.Content>

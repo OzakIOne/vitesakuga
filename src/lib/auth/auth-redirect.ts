@@ -4,6 +4,12 @@ const allowedAuthRedirectPaths = new Set([
   "/account",
   "/account/playlists",
   "/account/playlists/liked",
+  "/admin",
+  "/admin/promotions",
+  "/admin/reports",
+  "/admin/roles",
+  "/admin/storage",
+  "/admin/suggestions",
   "/upload",
 ]);
 const controlCharacterPattern = /\p{Cc}/u;
@@ -27,11 +33,7 @@ export const getSafeAuthRedirectUrl = (redirectUrl: string | undefined) => {
     return "/";
   }
 
-  if (
-    parsedUrl.origin !== internalOrigin ||
-    parsedUrl.search ||
-    parsedUrl.hash
-  ) {
+  if (parsedUrl.origin !== internalOrigin || parsedUrl.hash) {
     return "/";
   }
 
@@ -43,5 +45,5 @@ export const getSafeAuthRedirectUrl = (redirectUrl: string | undefined) => {
     return "/";
   }
 
-  return pathname;
+  return `${pathname}${parsedUrl.search}`;
 };

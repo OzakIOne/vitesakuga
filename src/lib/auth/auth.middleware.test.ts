@@ -48,6 +48,11 @@ const requireUserProgram = Effect.gen(function* () {
   return yield* sessions.requireUser("You must be logged in to vote");
 });
 
+const requireActorProgram = Effect.gen(function* () {
+  const sessions = yield* SessionService;
+  return yield* sessions.requireActor("You must be logged in to vote");
+});
+
 describe("SessionService.getUser", () => {
   it("returns user when session exists", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
@@ -99,6 +104,26 @@ describe("SessionService.getSession", () => {
       Effect.provide(Effect.flip(getSessionProgram), testLayer),
     );
     expect(error._tag).toBe("SessionFetchError");
+  });
+});
+
+describe("SessionService.requireActor", () => {
+  it("returns the session creation time without fetching another session", async () => {
+    const createdAt = new Date("2026-10-31T09:45:00.000Z");
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "user-1", role: "admin" }, { createdAt }),
+    );
+
+    const actor = await Effect.runPromise(
+      Effect.provide(requireActorProgram, testLayer),
+    );
+
+    expect(actor).toEqual({
+      id: "user-1",
+      role: "admin",
+      signedInAt: createdAt,
+    });
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 });
 

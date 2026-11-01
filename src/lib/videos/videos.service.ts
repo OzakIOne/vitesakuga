@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Clock, Context, Effect, Exit, Layer, Option } from "effect";
 
-import { authorize } from "../auth/policy";
+import { authorize, requireRecentSignIn } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
 import { SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
@@ -11,6 +11,7 @@ import {
   AccountSuspendedError,
   ForbiddenError,
   PostNotFoundError,
+  ReauthenticationRequiredError,
   UnauthorizedError,
   ValidationError,
 } from "../errors";
@@ -55,6 +56,7 @@ type ServiceFailure =
   | AccountSuspendedError
   | ForbiddenError
   | PostNotFoundError
+  | ReauthenticationRequiredError
   | SessionFetchError
   | SqlError
   | SqlNoFirstResult
@@ -468,6 +470,7 @@ export class VideosService extends Context.Service<
         permission: "storage:maintain",
         forbiddenMessage: ADMIN_ONLY_MESSAGE,
       });
+      yield* requireRecentSignIn({ actor: user });
 
       const { orphanKeys, purgeableRevisions } = yield* analyzeGc();
 
