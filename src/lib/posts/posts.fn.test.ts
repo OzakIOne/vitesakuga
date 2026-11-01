@@ -10,6 +10,7 @@ import {
 } from "../db/test-utils";
 import { safeParseStrict } from "../effect/schema.utils";
 import { asPostId } from "../ids";
+import { POINTS_RULES } from "../points/points.config";
 import { pendingVideoObjectKey } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import { FormFileUploadSchema, MAX_IMAGE_SIZE_BYTES } from "./posts.schema";
@@ -1220,6 +1221,25 @@ describe("PostsService.upload", () => {
     expect(post.videoKey).toMatch(/^media\/video\/[A-Za-z0-9_-]+\/\d{4}\.mp4$/);
     expect(post.videoKey).not.toBe(pendingKey);
     expect(post.title).toBe("Uploaded Post");
+  });
+
+  it("credits the uploader with post-upload points for the new post", async () => {
+    const { key: pendingKey } = await uploadVideoToStorage();
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const post = await runEffect(
+      PostsService.upload(makeUploadInput(pendingKey)),
+    );
+
+    const ledger = await db
+      .selectFrom("points_ledger")
+      .selectAll()
+      .where("userId", "=", "user-1")
+      .execute();
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]!.action).toBe("post-upload");
+    expect(ledger[0]!.refId).toBe(post.id);
+    expect(ledger[0]!.points).toBe(POINTS_RULES["post-upload"].points);
   });
 
   it("rejects an upload that references a missing post", async () => {

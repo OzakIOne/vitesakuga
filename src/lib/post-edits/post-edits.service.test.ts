@@ -725,6 +725,47 @@ describe("PostEditsService.reject", () => {
   });
 });
 
+describe("PostEditsService.reject community activity", () => {
+  it("notifies the suggester and awards no points", async () => {
+    const ctx = await makeServiceTestLayer(PostEditsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "owner-3", role: "novice" });
+    await insertUser(db, { id: "uploader-3", role: "uploader" });
+    await insertUser(db, { id: "mod-3", role: "moderator" });
+    const postId = await insertPost(db, "owner-3");
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "uploader-3", role: "uploader" }),
+    );
+    const { editId } = await ctx.runEffect(
+      PostEditsService.propose({ payload: PAYLOAD, postId }),
+    );
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-3", role: "moderator" }),
+    );
+    await ctx.runEffect(PostEditsService.reject(editId));
+
+    const suggesterInbox = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("userId", "=", "uploader-3")
+      .execute();
+    expect(suggesterInbox.map((row) => row.type)).toEqual([
+      "edit-suggestion-rejected",
+    ]);
+    expect(suggesterInbox[0]!.postId).toBe(postId);
+
+    const ledger = await db
+      .selectFrom("points_ledger")
+      .selectAll()
+      .where("userId", "=", "uploader-3")
+      .execute();
+    expect(ledger).toEqual([]);
+  });
+});
+
 describe("PostEditsService.listForPost", () => {
   it("returns suggestion history with its approvals and names", async () => {
     const ctx = await makeServiceTestLayer(PostEditsServiceLive);

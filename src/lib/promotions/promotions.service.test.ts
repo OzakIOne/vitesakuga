@@ -272,4 +272,24 @@ describe("PromotionsService.reject", () => {
     const visibleAgain = await ctx.runEffect(PromotionsService.queue());
     expect(visibleAgain.map((entry) => entry.userId)).toContain("comeback-kid");
   });
+
+  it("notifies the candidate of the rejection", async () => {
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { createdAtDaysAgo: 9, id: "declined-one" });
+    await earn(db, "declined-one", PROMOTION_RULES.minPoints);
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    await ctx.runEffect(PromotionsService.reject("declined-one"));
+
+    const inbox = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("userId", "=", "declined-one")
+      .execute();
+    expect(inbox.map((row) => row.type)).toEqual(["promotion-rejected"]);
+  });
 });

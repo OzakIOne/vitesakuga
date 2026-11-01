@@ -2,6 +2,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeAuthSession } from "../auth/session.fixture";
+import { POINTS_RULES } from "../points/points.config";
 import type { DB } from "../db/kysely";
 import {
   makeServiceTestLayer,
@@ -188,6 +189,71 @@ describe("PostVotesService.remove", () => {
     const result = await runEffect(PostVotesService.remove({ postId }));
 
     expect(result).toEqual({ dislikes: 0, likes: 0, userVote: null });
+  });
+});
+
+describe("PostVotesService.set community activity", () => {
+  const insertVoter = () =>
+    db
+      .insertInto("user")
+      .values({
+        id: "user-2",
+        name: "Bob",
+        email: "bob@test.com",
+        image: null,
+        username: "bob",
+      })
+      .execute();
+
+  it("credits the author with a like-received point, not the voter", async () => {
+    await insertVoter();
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-2" }));
+
+    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+
+    const ledger = await db
+      .selectFrom("points_ledger")
+      .selectAll()
+      .execute();
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]!.userId).toBe("user-1");
+    expect(ledger[0]!.action).toBe("post-like-received");
+    expect(ledger[0]!.actorId).toBe("user-2");
+    expect(ledger[0]!.refId).toBe(postId);
+    expect(ledger[0]!.points).toBe(POINTS_RULES["post-like-received"].points);
+
+    const inbox = await db.selectFrom("notifications").selectAll().execute();
+    expect(inbox).toEqual([]);
+  });
+
+  it("pays the author once when the same like is repeated", async () => {
+    await insertVoter();
+    mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-2" }));
+
+    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+
+    const ledger = await db.selectFrom("points_ledger").selectAll().execute();
+    expect(ledger).toHaveLength(1);
+  });
+
+  it("awards nothing for a dislike", async () => {
+    await insertVoter();
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-2" }));
+
+    await runEffect(PostVotesService.set({ postId, vote: "dislike" }));
+
+    const ledger = await db.selectFrom("points_ledger").selectAll().execute();
+    expect(ledger).toEqual([]);
+  });
+
+  it("awards nothing when the author likes their own post", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    await runEffect(PostVotesService.set({ postId, vote: "like" }));
+
+    const ledger = await db.selectFrom("points_ledger").selectAll().execute();
+    expect(ledger).toEqual([]);
   });
 });
 

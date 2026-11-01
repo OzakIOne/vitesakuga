@@ -10,6 +10,7 @@ import {
 } from "../db/test-utils";
 import type { PostId } from "../ids";
 import { asPostId } from "../ids";
+import { POINTS_RULES } from "../points/points.config";
 import { CommentsService, CommentsServiceLive } from "./comments.service";
 
 let db: Kysely<DB>;
@@ -169,6 +170,24 @@ describe("CommentsService.add", () => {
     expect(error._tag).toBe("SqlError");
   });
 
+  it("credits the author with comment-written points", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const created = await runEffect(
+      CommentsService.add({ content: "Nice", postId }),
+    );
+
+    const ledger = await db
+      .selectFrom("points_ledger")
+      .selectAll()
+      .where("userId", "=", "user-1")
+      .execute();
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]!.action).toBe("comment-written");
+    expect(ledger[0]!.refId).toBe(created.id);
+    expect(ledger[0]!.points).toBe(POINTS_RULES["comment-written"].points);
+  });
+
   it("resolves @mentions into rows and notifies the mentioned user", async () => {
     await db
       .insertInto("user")
@@ -235,6 +254,26 @@ describe("CommentsService.add", () => {
       .selectAll()
       .execute();
     expect(notifications).toEqual([]);
+  });
+
+  it("keeps the comment when the points ledger write fails", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+    await sql`ALTER TABLE points_ledger DROP COLUMN points`.execute(db);
+    try {
+      const created = await runEffect(
+        CommentsService.add({ content: "Still here", postId }),
+      );
+      const rows = await db
+        .selectFrom("comments")
+        .select("content")
+        .where("id", "=", created.id)
+        .execute();
+      expect(rows).toEqual([{ content: "Still here" }]);
+    } finally {
+      await sql`ALTER TABLE points_ledger ADD COLUMN points integer NOT NULL DEFAULT 0`.execute(
+        db,
+      );
+    }
   });
 
   it("leaves unknown handles unmentioned", async () => {
@@ -681,6 +720,28 @@ describe("CommentsService.update mention re-resolution", () => {
         content: "Hey @bob, edited typo",
       }),
     );
+
+    const notifications = await db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("type", "=", "comment-mention")
+      .execute();
+    expect(notifications).toHaveLength(1);
+  });
+
+  it("deletes the mention row of a removed mention without notifying anyone", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    await runEffect(
+      CommentsService.update({ commentId, content: "Nobody mentioned now" }),
+    );
+
+    const mentions = await db
+      .selectFrom("comment_mentions")
+      .selectAll()
+      .where("commentId", "=", commentId)
+      .execute();
+    expect(mentions).toEqual([]);
 
     const notifications = await db
       .selectFrom("notifications")
