@@ -19,6 +19,7 @@ export const lockActiveAdminIds = Effect.fn("lockActiveAdminIds")(function* (
       .select("id")
       .where("role", "=", "admin")
       .where("deletedAt", "is", null)
+      .where("suspendedAt", "is", null)
       .forUpdate(),
   );
   return map(rows, (row) => row.id);

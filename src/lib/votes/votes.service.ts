@@ -12,6 +12,7 @@ import type { PostVote } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
+  AccountSuspendedError,
   ForbiddenError,
   PostNotFoundError,
   UnauthorizedError,
@@ -87,6 +88,7 @@ export class PostVotesService extends Context.Service<
       data: SetPostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
+      | AccountSuspendedError
       | ForbiddenError
       | UnauthorizedError
       | PostNotFoundError
@@ -98,14 +100,14 @@ export class PostVotesService extends Context.Service<
       data: RemovePostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
-      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
     readonly fetchLikedPosts: (
       data: FetchLikedPostsInput,
     ) => Effect.Effect<
       LikedPostsResult,
-      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
   }
@@ -240,7 +242,7 @@ export class PostVotesService extends Context.Service<
     const fetchLikedPosts = Effect.fn("PostVotesService.fetchLikedPosts")(
       function* (data: FetchLikedPostsInput) {
         const sessions = yield* SessionService;
-        const session = yield* sessions.requireActor(
+        const session = yield* sessions.requireReadActor(
           "You must be logged in to view your liked posts",
         );
 

@@ -8,6 +8,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import {
+  AccountSuspendedError,
   ForbiddenError,
   PostNotFoundError,
   UnauthorizedError,
@@ -51,6 +52,7 @@ export type GcRunResult = {
 
 type ServiceFailure =
   | FingerprintInputError
+  | AccountSuspendedError
   | ForbiddenError
   | PostNotFoundError
   | SessionFetchError
@@ -228,7 +230,7 @@ export class VideosService extends Context.Service<
       "VideosService.requireStorageMaintainer",
     )(function* () {
       const sessions = yield* SessionService;
-      const actor = yield* sessions.requireActor("You must be logged in.");
+      const actor = yield* sessions.requireReadActor("You must be logged in.");
       yield* authorize({
         actor,
         permission: "storage:maintain",
@@ -327,7 +329,7 @@ export class VideosService extends Context.Service<
       postId: number,
     ) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireActor(
+      const user = yield* sessions.requireReadActor(
         "You must be logged in to view video history",
       );
 

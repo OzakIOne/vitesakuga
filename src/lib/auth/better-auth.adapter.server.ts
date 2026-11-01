@@ -19,11 +19,13 @@ export const makeBetterAuthSessionProvider = (
       });
       if (!result) return null;
 
-      // SAFETY: `role` and `username` are required by this app's Better Auth
-      // configuration and database schema, while the provider type cannot see
-      // those application-specific plugin fields.
+      // SAFETY: `role`, `username` and the suspension fields are required by
+      // this app's Better Auth configuration and database schema, while the
+      // provider type cannot see those application-specific plugin fields.
       const user = result.user as UserWithTwoFactor & {
         role: string;
+        suspendedAt: Date | null;
+        suspendedReason: string | null;
         username: string;
       };
       return {
@@ -45,6 +47,8 @@ export const makeBetterAuthSessionProvider = (
           image: user.image ?? null,
           name: user.name,
           role: user.role,
+          suspendedAt: user.suspendedAt ?? null,
+          suspendedReason: user.suspendedReason ?? null,
           twoFactorEnabled: user.twoFactorEnabled ?? false,
           updatedAt: user.updatedAt,
           username: user.username,

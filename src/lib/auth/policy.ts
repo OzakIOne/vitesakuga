@@ -36,6 +36,7 @@ const PERMISSION_CONFIG = {
   promotions: ["review"],
   roles: ["assign"],
   storage: ["maintain"],
+  users: ["suspend", "suspend-staff"],
   videos: ["replace-any", "replace-own"],
 } as const;
 
@@ -71,6 +72,7 @@ const MODERATOR_PERMISSIONS: ReadonlyArray<Permission> = [
   "posts:delete-any",
   "posts:edit-any",
   "promotions:review",
+  "users:suspend",
   "videos:replace-any",
 ];
 
@@ -78,6 +80,7 @@ const ADMIN_PERMISSIONS: ReadonlyArray<Permission> = [
   ...MODERATOR_PERMISSIONS,
   "roles:assign",
   "storage:maintain",
+  "users:suspend-staff",
 ];
 
 /**

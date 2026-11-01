@@ -8,7 +8,11 @@ import {
   Schema,
 } from "effect";
 
-import { ForbiddenError, UnauthorizedError } from "../errors";
+import {
+  AccountSuspendedError,
+  ForbiddenError,
+  UnauthorizedError,
+} from "../errors";
 import {
   AuthProviderError,
   AuthService,
@@ -106,11 +110,25 @@ export class SessionService extends Context.Service<
     >;
 
     /**
-     * The signed-in account with a validated role, for every authorization
-     * decision. Fails with `UnauthorizedError` when signed out and with
-     * `ForbiddenError` when the stored role is not a known rank.
+     * The signed-in account with a validated role, for every mutation. Fails
+     * with `UnauthorizedError` when signed out, `ForbiddenError` when the
+     * stored role is not a known rank, and `AccountSuspendedError` when a
+     * moderator or admin has suspended the account.
      */
     readonly requireActor: (
+      message: string,
+    ) => Effect.Effect<
+      AuthorizedActor,
+      | AccountSuspendedError
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError
+    >;
+
+    /**
+     * Like `requireActor` for reads, which stay open to suspended accounts.
+     */
+    readonly requireReadActor: (
       message: string,
     ) => Effect.Effect<
       AuthorizedActor,
@@ -185,6 +203,8 @@ export class SessionService extends Context.Service<
             image: null,
             name: bypassUser.name,
             role: "admin",
+            suspendedAt: null,
+            suspendedReason: null,
             twoFactorEnabled: false,
             updatedAt: DateTime.toDate(now),
             username: bypassUser.username,
@@ -241,10 +261,9 @@ export class SessionService extends Context.Service<
       Schema.Struct({ id: Schema.String, role: RoleSchema }),
     );
 
-    const requireActor = Effect.fn("SessionService.requireActor")(function* (
-      message: string,
+    const toActor = Effect.fn("SessionService.toActor")(function* (
+      user: AuthenticatedUser,
     ) {
-      const user = yield* requireUser(message);
       const decoded = decodeActor(user);
       if (Option.isNone(decoded)) {
         return yield* new ForbiddenError({
@@ -255,12 +274,39 @@ export class SessionService extends Context.Service<
       return decoded.value;
     });
 
+    const requireReadActor = Effect.fn("SessionService.requireReadActor")(
+      function* (message: string) {
+        const user = yield* requireUser(message);
+        return yield* toActor(user);
+      },
+    );
+
+    const requireActor = Effect.fn("SessionService.requireActor")(function* (
+      message: string,
+    ) {
+      const user = yield* requireUser(message);
+      if (user.suspendedAt !== null && user.suspendedAt !== undefined) {
+        return yield* new AccountSuspendedError({
+          message: "Your account is suspended, so this action is not allowed.",
+          reason: user.suspendedReason ?? "No reason was given.",
+        });
+      }
+      return yield* toActor(user);
+    });
+
     const getActor = Effect.fn("SessionService.getActor")(function* () {
       const user = yield* getUser();
       return user === null ? null : Option.getOrNull(decodeActor(user));
     });
 
-    return { getActor, getSession, getUser, requireActor, requireUser };
+    return {
+      getActor,
+      getSession,
+      getUser,
+      requireActor,
+      requireReadActor,
+      requireUser,
+    };
   }),
 }) {}
 

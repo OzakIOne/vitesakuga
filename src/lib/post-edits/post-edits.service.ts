@@ -20,6 +20,7 @@ import { parseStrict } from "../effect/schema.utils";
 import {
   EditAlreadyResolvedError,
   EditNotFoundError,
+  AccountSuspendedError,
   ForbiddenError,
   PostNotFoundError,
   UnauthorizedError,
@@ -85,6 +86,7 @@ export class PostEditsService extends Context.Service<
       postId: number;
     }) => Effect.Effect<
       { editId: number },
+      | AccountSuspendedError
       | ForbiddenError
       | PostNotFoundError
       | SessionFetchError
@@ -108,6 +110,7 @@ export class PostEditsService extends Context.Service<
       { applied: boolean },
       | EditAlreadyResolvedError
       | EditNotFoundError
+      | AccountSuspendedError
       | ForbiddenError
       | PostNotFoundError
       | SessionFetchError
@@ -125,6 +128,7 @@ export class PostEditsService extends Context.Service<
       { rejected: boolean },
       | EditAlreadyResolvedError
       | EditNotFoundError
+      | AccountSuspendedError
       | ForbiddenError
       | PostNotFoundError
       | SessionFetchError

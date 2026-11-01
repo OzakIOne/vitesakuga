@@ -1,18 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 
 import {
   ensureAdminRemains,
   lockActiveAdminIds,
 } from "../auth/admin-continuity";
-import { authorize } from "../auth/policy";
+import { authorize, roleHasPermission } from "../auth/policy";
 import { RoleSchema, type Role } from "../auth/roles";
-import { SessionFetchError, SessionService } from "../auth/session.effect";
+import {
+  SessionFetchError,
+  SessionService,
+  type AuthorizedActor,
+} from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
+import type { EffectTransaction } from "../db/effect-kysely";
 import { SqlError } from "../db/effect-kysely";
+import type { DB } from "../db/kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
-import { ForbiddenError, LastAdminError, UnauthorizedError } from "../errors";
+import {
+  AccountSuspendedError,
+  ForbiddenError,
+  LastAdminError,
+  UnauthorizedError,
+  UserNotFoundError,
+  ValidationError,
+} from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 
@@ -45,11 +58,14 @@ export type ModerationOverview = {
 };
 
 type ModerationFailure =
+  | AccountSuspendedError
   | ForbiddenError
   | LastAdminError
   | SessionFetchError
   | SqlError
-  | UnauthorizedError;
+  | UnauthorizedError
+  | UserNotFoundError
+  | ValidationError;
 
 export class ModerationService extends Context.Service<
   ModerationService,
@@ -70,6 +86,17 @@ export class ModerationService extends Context.Service<
       role: string;
       userId: string;
     }) => Effect.Effect<{ userId: string }, ModerationFailure, SessionService>;
+
+    /** Moderator or admin suspension with a reason; idempotent on an already-suspended account. */
+    readonly suspendUser: (input: {
+      reason: string;
+      userId: string;
+    }) => Effect.Effect<{ userId: string }, ModerationFailure, SessionService>;
+
+    /** Lifts a suspension; idempotent on an account that is not suspended. */
+    readonly unsuspendUser: (input: {
+      userId: string;
+    }) => Effect.Effect<{ userId: string }, ModerationFailure, SessionService>;
   }
 >()("ModerationService", {
   make: Effect.gen(function* () {
@@ -80,7 +107,7 @@ export class ModerationService extends Context.Service<
       message: string,
     ) {
       const sessions = yield* SessionService;
-      const actor = yield* sessions.requireActor(message);
+      const actor = yield* sessions.requireReadActor(message);
       yield* authorize({
         actor,
         permission: "moderation:view",
@@ -222,7 +249,139 @@ export class ModerationService extends Context.Service<
       },
     );
 
-    return { overview, setUserRole };
+    const lockedTarget = Effect.fn("ModerationService.lockedTarget")(function* (
+      trx: EffectTransaction<DB>,
+      userId: string,
+    ) {
+      const target = yield* trx.executeTakeFirstOption(
+        trx
+          .selectFrom("user")
+          .select(["id", "role", "suspendedAt"])
+          .where("id", "=", userId)
+          .forUpdate(),
+      );
+      if (Option.isNone(target)) {
+        return yield* new UserNotFoundError({
+          message: `User ${userId} not found`,
+          userId,
+        });
+      }
+      return target.value;
+    });
+
+    /** Moderators may act on ordinary accounts; only admins may act on staff accounts. */
+    const requireRightsOver = Effect.fn("ModerationService.requireRightsOver")(
+      function* (input: {
+        readonly actor: AuthorizedActor;
+        readonly targetRole: Role;
+      }) {
+        if (!roleHasPermission(input.targetRole, "users:suspend")) {
+          return;
+        }
+        yield* authorize({
+          actor: input.actor,
+          permission: "users:suspend-staff",
+          forbiddenMessage:
+            "Only admins can suspend or restore moderators and admins.",
+        });
+      },
+    );
+
+    const suspendUser = Effect.fn("ModerationService.suspendUser")(function* (
+      input: { reason: string; userId: string },
+    ) {
+      const sessions = yield* SessionService;
+      const actor = yield* sessions.requireActor("You must be logged in.");
+      yield* authorize({
+        actor,
+        permission: "users:suspend",
+        forbiddenMessage: "Only moderators and admins can suspend accounts.",
+      });
+      if (input.userId === actor.id) {
+        return yield* new ValidationError({
+          message: "You cannot suspend your own account.",
+        });
+      }
+      const reason = input.reason.trim();
+      if (reason === "") {
+        return yield* new ValidationError({
+          message: "A reason is required to suspend an account.",
+        });
+      }
+      const now = yield* DateTime.now;
+
+      yield* db.transaction((trx) =>
+        Effect.gen(function* () {
+          const activeAdminIds = yield* lockActiveAdminIds(trx);
+          const target = yield* lockedTarget(trx, input.userId);
+          yield* requireRightsOver({ actor, targetRole: target.role });
+          if (target.suspendedAt !== null) {
+            return;
+          }
+          yield* ensureAdminRemains({
+            activeAdminIds,
+            departingUserId: input.userId,
+            message:
+              "At least one active admin must remain. Suspend another admin first.",
+          });
+          yield* trx.execute(
+            trx
+              .updateTable("user")
+              .set({
+                suspendedAt: DateTime.toDate(now),
+                suspendedReason: reason,
+              })
+              .where("id", "=", input.userId),
+          );
+        }),
+      );
+
+      yield* Effect.logInfo("User suspended").pipe(
+        Effect.annotateLogs({
+          suspendedBy: actor.id,
+          targetUserId: input.userId,
+        }),
+      );
+      return { userId: input.userId };
+    });
+
+    const unsuspendUser = Effect.fn("ModerationService.unsuspendUser")(
+      function* (input: { userId: string }) {
+        const sessions = yield* SessionService;
+        const actor = yield* sessions.requireActor("You must be logged in.");
+        yield* authorize({
+          actor,
+          permission: "users:suspend",
+          forbiddenMessage: "Only moderators and admins can restore accounts.",
+        });
+
+        yield* db.transaction((trx) =>
+          Effect.gen(function* () {
+            const target = yield* lockedTarget(trx, input.userId);
+            yield* requireRightsOver({ actor, targetRole: target.role });
+            if (target.suspendedAt === null) {
+              return;
+            }
+            yield* trx.execute(
+              trx
+                .updateTable("user")
+                .set({ suspendedAt: null, suspendedReason: null })
+                .where("id", "=", input.userId),
+            );
+          }),
+        );
+
+        yield* Effect.logInfo("User unsuspended").pipe(
+          Effect.annotateLogs({
+            restoredBy: actor.id,
+            targetUserId: input.userId,
+          }),
+        );
+        return { userId: input.userId };
+      },
+    );
+
+    return { overview, setUserRole, suspendUser, unsuspendUser };
   }),
 }) {}
 
@@ -239,6 +398,38 @@ export const fetchModerationOverview = createServerFn().handler(
     base: baseLayerFactories.auth,
   }),
 );
+
+export const suspendUser = createServerFn({ method: "POST" })
+  .validator(
+    parseStrict(
+      Schema.Struct({
+        reason: Schema.String.pipe(
+          Schema.check(Schema.isMinLength(3)),
+          Schema.check(Schema.isMaxLength(500)),
+        ),
+        userId: Schema.String,
+      }),
+    ),
+  )
+  .handler(
+    createEndpointHandler({
+      service: ModerationService,
+      operation: "suspendUser",
+      layer: ModerationServiceLive,
+      base: baseLayerFactories.auth,
+    }),
+  );
+
+export const unsuspendUser = createServerFn({ method: "POST" })
+  .validator(parseStrict(Schema.Struct({ userId: Schema.String })))
+  .handler(
+    createEndpointHandler({
+      service: ModerationService,
+      operation: "unsuspendUser",
+      layer: ModerationServiceLive,
+      base: baseLayerFactories.auth,
+    }),
+  );
 
 export const assignUserRole = createServerFn({ method: "POST" })
   .validator(

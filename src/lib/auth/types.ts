@@ -7,6 +7,8 @@ export type AuthenticatedUser = {
   readonly image: string | null;
   readonly name: string;
   readonly role: string;
+  readonly suspendedAt: Date | null;
+  readonly suspendedReason: string | null;
   readonly twoFactorEnabled: boolean;
   readonly updatedAt: Date;
   readonly username: string;

@@ -304,6 +304,8 @@ export const makeAuth = (input: MakeAuthInput) =>
       // default of "novice".
       additionalFields: {
         role: { type: "string", defaultValue: "novice", input: false },
+        suspendedAt: { type: "date", required: false, input: false },
+        suspendedReason: { type: "string", required: false, input: false },
       },
       // Account deletion is NOT handled by Better Auth's built-in
       // `deleteUser` endpoint: it would hard-delete the `user` row and fail

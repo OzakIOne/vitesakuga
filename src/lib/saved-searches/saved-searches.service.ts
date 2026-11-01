@@ -6,7 +6,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
-import { ForbiddenError, UnauthorizedError, ValidationError } from "../errors";
+import { AccountSuspendedError, ForbiddenError, UnauthorizedError, ValidationError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import {
@@ -43,6 +43,7 @@ export class SavedSearchesService extends Context.Service<
       data: Schema.Schema.Type<typeof saveSearchInputSchema>,
     ) => Effect.Effect<
       SavedSearch,
+      | AccountSuspendedError
       | ForbiddenError
       | UnauthorizedError
       | SessionFetchError
@@ -53,14 +54,14 @@ export class SavedSearchesService extends Context.Service<
     >;
     readonly list: () => Effect.Effect<
       readonly SavedSearch[],
-      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
     readonly delete_: (input: {
       id: number;
     }) => Effect.Effect<
       { success: boolean },
-      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
   }
@@ -72,6 +73,13 @@ export class SavedSearchesService extends Context.Service<
       function* () {
         const sessions = yield* SessionService;
         return yield* sessions.requireActor("You must be logged in");
+      },
+    );
+
+    const requireReadAuth = Effect.fn("SavedSearchesService.requireReadAuth")(
+      function* () {
+        const sessions = yield* SessionService;
+        return yield* sessions.requireReadActor("You must be logged in");
       },
     );
 
@@ -110,7 +118,7 @@ export class SavedSearchesService extends Context.Service<
     });
 
     const list = Effect.fn("SavedSearchesService.list")(function* () {
-      const user = yield* requireAuth();
+      const user = yield* requireReadAuth();
       const rows = yield* db.execute(
         db
           .selectFrom("saved_searches")

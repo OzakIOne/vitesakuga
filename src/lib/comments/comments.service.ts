@@ -18,6 +18,7 @@ import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse } from "../effect/schema.utils";
 import {
   CommentNotFoundError,
+  AccountSuspendedError,
   ForbiddenError,
   UnauthorizedError,
 } from "../errors";
@@ -50,6 +51,7 @@ export class CommentsService extends Context.Service<
       Schema.Codec.Encoded<typeof commentsSelectSchema>,
       | SqlError
       | SqlNoFirstResult
+      | AccountSuspendedError
       | ForbiddenError
       | UnauthorizedError
       | SessionFetchError,
@@ -60,6 +62,7 @@ export class CommentsService extends Context.Service<
     }) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | CommentNotFoundError
       | SessionFetchError
@@ -71,6 +74,7 @@ export class CommentsService extends Context.Service<
     ) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | CommentNotFoundError
       | SessionFetchError

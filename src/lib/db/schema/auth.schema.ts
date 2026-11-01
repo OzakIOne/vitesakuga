@@ -28,6 +28,11 @@ export const user = pgTable("user", {
   // promoted through the points system and staff review, never set by users.
   // Values are constrained at runtime by `RoleSchema` in the select schema.
   role: text().$type<Role>().notNull().default("novice"),
+  // Set while moderators or admins hold the account: every mutation that needs
+  // an actor is refused, reads and sign-in stay open. The reason is shown to
+  // the suspended user so they can see why.
+  suspendedAt: timestamp({ withTimezone: true }),
+  suspendedReason: text(),
   twoFactorEnabled: boolean().notNull().default(false),
   // Unique public handle used for @mentions in comments. Lowercase
   // `[a-z0-9_]`, 3–30 chars — normalized/validated by Better Auth's username

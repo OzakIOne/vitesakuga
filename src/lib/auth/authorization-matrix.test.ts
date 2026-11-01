@@ -57,7 +57,8 @@ type Actor =
   | "uploader"
   | "moderator"
   | "admin"
-  | "unknown";
+  | "unknown"
+  | "suspended";
 type Outcome = "allowed" | "denied";
 
 /** `own`: the actor owns the resource; `others`: a novice author owns it. */
@@ -69,6 +70,7 @@ const ACTOR_USER_IDS = {
   novice: "novice-user",
   uploader: "uploader-user",
   unknown: "unknown-user",
+  suspended: "suspended-user",
 } as const satisfies Partial<Record<Actor, string>>;
 
 /** Role label the session presents; `unknown` carries a label outside `RoleSchema`. */
@@ -78,6 +80,7 @@ const SESSION_ROLE_LABEL = {
   novice: "novice",
   uploader: "uploader",
   unknown: "superadmin",
+  suspended: "novice",
 } as const satisfies Partial<Record<Actor, string>>;
 
 const AUTHOR_ID = "author-user";
@@ -97,6 +100,7 @@ const ADMIN_ONLY: ReadonlyArray<Actor> = ["admin"];
 const NOBODY: ReadonlyArray<Actor> = [];
 
 const AUTHZ_DENIALS: ReadonlyArray<string> = [
+  "AccountSuspendedError",
   "ForbiddenError",
   "UnauthorizedError",
 ];
@@ -116,6 +120,7 @@ const USER_ROWS = [
   { id: ACTOR_USER_IDS.uploader, role: "uploader" },
   { id: ACTOR_USER_IDS.novice, role: "novice" },
   { id: ACTOR_USER_IDS.unknown, role: "novice" },
+  { id: ACTOR_USER_IDS.suspended, role: "novice" },
   { id: AUTHOR_ID, role: "novice" },
   { id: SUGGESTER_ID, role: "uploader" },
   { id: CANDIDATE_ID, role: "novice" },
@@ -195,6 +200,8 @@ type Operation = {
   /** Actors allowed to run it, keyed by which resource the actor touches. */
   readonly allowed: Partial<Record<Ownership, ReadonlyArray<Actor>>>;
   readonly denials?: ReadonlyArray<string>;
+  /** Reads stay open to suspended accounts, so they keep the signed-in role's outcome. */
+  readonly readOnly?: true;
   readonly run: (
     world: World,
   ) => Effect.Effect<unknown, unknown, MatrixServices | SessionService>;
@@ -310,6 +317,7 @@ const OPERATIONS: ReadonlyArray<Operation> = [
   },
   {
     name: "promotions.queue",
+    readOnly: true,
     allowed: { any: STAFF },
     run: () => Effect.flatMap(PromotionsService, (service) => service.queue()),
   },
@@ -331,6 +339,7 @@ const OPERATIONS: ReadonlyArray<Operation> = [
   },
   {
     name: "reports.review (moderation overview)",
+    readOnly: true,
     allowed: { any: STAFF },
     run: () =>
       Effect.flatMap(ModerationService, (service) => service.overview()),
@@ -345,6 +354,7 @@ const OPERATIONS: ReadonlyArray<Operation> = [
   },
   {
     name: "storage.gc preview",
+    readOnly: true,
     allowed: { any: ADMIN_ONLY },
     run: () => Effect.flatMap(VideosService, (service) => service.gcPreview()),
   },
@@ -355,6 +365,7 @@ const OPERATIONS: ReadonlyArray<Operation> = [
   },
   {
     name: "videos.listRevisions",
+    readOnly: true,
     allowed: { own: SIGNED_IN, others: STAFF },
     run: () =>
       Effect.flatMap(VideosService, (service) =>
@@ -363,6 +374,7 @@ const OPERATIONS: ReadonlyArray<Operation> = [
   },
   {
     name: "playlists.fetchDetail (private)",
+    readOnly: true,
     allowed: { own: SIGNED_IN, others: NOBODY },
     denials: HIDDEN_PLAYLIST_DENIALS,
     run: (world) =>
@@ -387,6 +399,7 @@ const ALL_ACTORS: ReadonlyArray<Actor> = [
   "moderator",
   "admin",
   "unknown",
+  "suspended",
 ];
 
 type Scenario = {
@@ -402,20 +415,35 @@ type Scenario = {
  * allow-table, so an operation that does not depend on the resource owner
  * produces only the `any` rows.
  */
+/** A suspended account keeps reads open and loses every mutation. */
+const expectedOutcome = (args: {
+  readonly actor: Actor;
+  readonly operation: Operation;
+  readonly ownership: Ownership;
+}): Outcome => {
+  const permitted = args.operation.allowed[args.ownership] ?? [];
+  if (args.actor === "suspended") {
+    return args.operation.readOnly === true && permitted.includes("novice")
+      ? "allowed"
+      : "denied";
+  }
+  return permitted.includes(args.actor) ? "allowed" : "denied";
+};
+
 const scenarios: ReadonlyArray<Scenario> = OPERATIONS.flatMap((operation) =>
   (Object.keys(operation.allowed) as Ownership[]).flatMap((ownership) =>
     ALL_ACTORS.filter(
       (actor) => !(actor === "anonymous" && ownership === "own"),
-    ).map((actor) => {
-      const permitted = operation.allowed[ownership] ?? [];
-      return {
-        actor,
-        expected: permitted.includes(actor) ? "allowed" : "denied",
-        name: `${operation.name} | ${actor} | ${ownership}`,
-        operation,
-        ownership,
-      } satisfies Scenario;
-    }),
+    ).map(
+      (actor) =>
+        ({
+          actor,
+          expected: expectedOutcome({ actor, operation, ownership }),
+          name: `${operation.name} | ${actor} | ${ownership}`,
+          operation,
+          ownership,
+        }) satisfies Scenario,
+    ),
   ),
 );
 
@@ -423,9 +451,12 @@ const actorSession = (actor: Actor) => {
   if (actor === "anonymous") {
     return null;
   }
+  const suspended = actor === "suspended";
   return makeAuthSession({
     id: ACTOR_USER_IDS[actor],
     role: SESSION_ROLE_LABEL[actor],
+    suspendedAt: suspended ? new Date() : null,
+    suspendedReason: suspended ? "Spam" : null,
     username: ACTOR_USER_IDS[actor],
   });
 };

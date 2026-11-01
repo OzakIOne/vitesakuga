@@ -20,6 +20,7 @@ import type { postSourceSchema, PostWithVotes } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
+  AccountSuspendedError,
   ForbiddenError,
   PostNotFoundError,
   RowParseError,
@@ -232,6 +233,7 @@ export class PostsService extends Context.Service<
       | SqlError
       | SqlNoFirstResult
       | StorageError
+      | AccountSuspendedError
       | ForbiddenError
       | UnauthorizedError
       | SessionFetchError
@@ -250,7 +252,7 @@ export class PostsService extends Context.Service<
         readonly requiredHeaders: Readonly<Record<string, string>>;
         readonly url: string;
       },
-      StorageError | ForbiddenError | UnauthorizedError | SessionFetchError,
+      StorageError | AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError,
       SessionService
     >;
     readonly update: (
@@ -258,6 +260,7 @@ export class PostsService extends Context.Service<
     ) => Effect.Effect<
       Schema.Schema.Type<typeof postsSelectSchema>,
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PostNotFoundError
       | SessionFetchError

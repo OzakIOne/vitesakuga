@@ -103,6 +103,16 @@ export class PromotionNotEligibleError extends Schema.TaggedError<PromotionNotEl
   clientSafeAnnotations,
 ) {}
 
+// Account suspension: the signed-in account is suspended, so it cannot change anything.
+export class AccountSuspendedError extends Schema.TaggedError<AccountSuspendedError>()(
+  "AccountSuspendedError",
+  {
+    message: Schema.String,
+    reason: Schema.String,
+  },
+  clientSafeAnnotations,
+) {}
+
 // Admin continuity: the change would leave no active admin to manage roles.
 export class LastAdminError extends Schema.TaggedError<LastAdminError>()(
   "LastAdminError",

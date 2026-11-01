@@ -6,7 +6,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse } from "../effect/schema.utils";
-import { ForbiddenError, UnauthorizedError } from "../errors";
+import { AccountSuspendedError, ForbiddenError, UnauthorizedError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 
@@ -32,11 +32,20 @@ const INBOX_PAGE_SIZE = 50;
 
 type InboxError =
   | SqlError
+  | AccountSuspendedError
   | ForbiddenError
   | UnauthorizedError
   | SessionFetchError;
 
-const requireInboxUserId = Effect.fn("NotificationsService.requireUserId")(
+const requireInboxReaderId = Effect.fn("NotificationsService.requireInboxReaderId")(
+  function* (message: string) {
+    const sessions = yield* SessionService;
+    const user = yield* sessions.requireReadActor(message);
+    return user.id;
+  },
+);
+
+const requireInboxWriterId = Effect.fn("NotificationsService.requireInboxWriterId")(
   function* (message: string) {
     const sessions = yield* SessionService;
     const user = yield* sessions.requireActor(message);
@@ -89,7 +98,7 @@ export class NotificationsService extends Context.Service<
     });
 
     const list = Effect.fn("NotificationsService.list")(function* () {
-      const userId = yield* requireInboxUserId(
+      const userId = yield* requireInboxReaderId(
         "You must be logged in to read your notifications",
       );
       const rows = yield* db.execute(
@@ -109,7 +118,7 @@ export class NotificationsService extends Context.Service<
 
     const markAllRead = Effect.fn("NotificationsService.markAllRead")(
       function* () {
-        const userId = yield* requireInboxUserId(
+        const userId = yield* requireInboxWriterId(
           "You must be logged in to update your notifications",
         );
         const now = yield* DateTime.now;
@@ -126,7 +135,7 @@ export class NotificationsService extends Context.Service<
     const markRead = Effect.fn("NotificationsService.markRead")(function* (
       notificationId: number,
     ) {
-      const userId = yield* requireInboxUserId(
+      const userId = yield* requireInboxWriterId(
         "You must be logged in to update your notifications",
       );
       const now = yield* DateTime.now;

@@ -6,12 +6,13 @@ import {
   CommunityActivityServiceLive,
 } from "../activity/community-activity.service";
 import { authorize, type PolicyError } from "../auth/policy";
-import { SessionService } from "../auth/session.effect";
+import { SessionService, type AuthorizedActor } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError, type EffectTransaction } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
 import { parseStrict } from "../effect/schema.utils";
 import {
+  AccountSuspendedError,
   PromotionAlreadyReviewedError,
   PromotionNotEligibleError,
 } from "../errors";
@@ -121,6 +122,8 @@ export class PromotionsService extends Context.Service<
       userId: string;
     }) => Effect.Effect<
       { userId: string },
+      | AccountSuspendedError
+
       | PolicyError
       | PromotionAlreadyReviewedError
       | PromotionNotEligibleError
@@ -136,7 +139,7 @@ export class PromotionsService extends Context.Service<
       userId: string;
     }) => Effect.Effect<
       { userId: string },
-      PolicyError | PromotionAlreadyReviewedError | SqlError,
+      AccountSuspendedError | PolicyError | PromotionAlreadyReviewedError | SqlError,
       SessionService
     >;
   }
@@ -146,14 +149,29 @@ export class PromotionsService extends Context.Service<
     const sessions = yield* SessionService;
     const community = yield* CommunityActivityService;
 
+    const authorizeReview = Effect.fn("PromotionsService.authorizeReview")(
+      function* (reviewer: AuthorizedActor) {
+        yield* authorize({
+          actor: reviewer,
+          permission: "promotions:review",
+          forbiddenMessage: "Only moderators can review promotion candidates.",
+        });
+        return reviewer;
+      },
+    );
+
+    const gateStaffRead = Effect.fn("PromotionsService.gateStaffRead")(
+      function* () {
+        const reviewer = yield* sessions.requireReadActor(
+          "You must be logged in.",
+        );
+        return yield* authorizeReview(reviewer);
+      },
+    );
+
     const gateStaff = Effect.fn("PromotionsService.gateStaff")(function* () {
       const reviewer = yield* sessions.requireActor("You must be logged in.");
-      yield* authorize({
-        actor: reviewer,
-        permission: "promotions:review",
-        forbiddenMessage: "Only moderators can review promotion candidates.",
-      });
-      return reviewer;
+      return yield* authorizeReview(reviewer);
     });
 
     const latestReviewsFor = (
@@ -243,7 +261,7 @@ export class PromotionsService extends Context.Service<
       );
 
     const queue = Effect.fn("PromotionsService.queue")(function* () {
-      yield* gateStaff();
+      yield* gateStaffRead();
 
       const now = yield* Clock.currentTimeMillis;
       const rows: ReadonlyArray<QueueRow> = yield* db.execute(

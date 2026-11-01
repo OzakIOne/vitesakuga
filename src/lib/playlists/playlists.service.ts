@@ -18,6 +18,7 @@ import type { DB } from "../db/kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
 import {
+  AccountSuspendedError,
   ForbiddenError,
   PlaylistNotFoundError,
   PostAlreadyInPlaylistError,
@@ -136,6 +137,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       PlaylistRow,
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | SessionFetchError
       | SqlError
@@ -147,6 +149,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       PlaylistRow,
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | SessionFetchError
@@ -159,6 +162,7 @@ export class PlaylistsService extends Context.Service<
     }) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | SessionFetchError
@@ -170,6 +174,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       { playlist_id: number; post_id: number; position: number },
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | PostNotFoundError
@@ -184,6 +189,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | SessionFetchError
@@ -195,6 +201,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       BulkAddPostsResult,
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | SessionFetchError
@@ -207,6 +214,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       BulkRemovePostsResult,
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | SessionFetchError
@@ -218,6 +226,7 @@ export class PlaylistsService extends Context.Service<
     ) => Effect.Effect<
       { success: boolean },
       | UnauthorizedError
+      | AccountSuspendedError
       | ForbiddenError
       | PlaylistNotFoundError
       | SessionFetchError
@@ -246,7 +255,7 @@ export class PlaylistsService extends Context.Service<
       postId: number,
     ) => Effect.Effect<
       readonly PlaylistForPostCheck[],
-      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
+      AccountSuspendedError | ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
   }
@@ -258,6 +267,13 @@ export class PlaylistsService extends Context.Service<
       const sessions = yield* SessionService;
       return yield* sessions.requireActor("You must be logged in");
     });
+
+    const requireReadAuth = Effect.fn("PlaylistsService.requireReadAuth")(
+      function* () {
+        const sessions = yield* SessionService;
+        return yield* sessions.requireReadActor("You must be logged in");
+      },
+    );
 
     /** Auth + ownership in one step; every mutation starts with this. */
     const requireOwnedPlaylist = Effect.fn(
@@ -920,7 +936,7 @@ export class PlaylistsService extends Context.Service<
       rawPostId: number,
     ) {
       const postId = asPostId(rawPostId);
-      const user = yield* requireAuth();
+      const user = yield* requireReadAuth();
 
       const playlists = yield* db.execute(
         db

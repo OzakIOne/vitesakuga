@@ -36,6 +36,8 @@ export const makeSessionUser = (
   image: null,
   name: "Test User",
   role: "novice",
+  suspendedAt: null,
+  suspendedReason: null,
   twoFactorEnabled: false,
   updatedAt: new Date(FIXTURE_EPOCH),
   username: "user-1",

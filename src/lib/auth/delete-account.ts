@@ -6,7 +6,7 @@ import { KyselyDB } from "../db/context";
 import { makeSqlError, type SqlError } from "../db/effect-kysely";
 import { DELETED_USER_NAME } from "../db/schema";
 import { parseStrict } from "../effect/schema.utils";
-import { ForbiddenError, LastAdminError, UnauthorizedError } from "../errors";
+import { AccountSuspendedError, ForbiddenError, LastAdminError, UnauthorizedError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import { ensureAdminRemains, lockActiveAdminIds } from "./admin-continuity";
@@ -40,6 +40,7 @@ export class DeleteAccountService extends Context.Service<
       input: Schema.Schema.Type<typeof deleteAccountInputSchema>,
     ) => Effect.Effect<
       { deletedUserId: string },
+      | AccountSuspendedError
       | ForbiddenError
       | LastAdminError
       | SessionFetchError

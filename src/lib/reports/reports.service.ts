@@ -6,6 +6,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
 import {
+  AccountSuspendedError,
   ForbiddenError,
   PostNotFoundError,
   UnauthorizedError,
@@ -30,6 +31,7 @@ export class PostReportsService extends Context.Service<
       data: SubmitPostReportInput,
     ) => Effect.Effect<
       PostReportResult,
+      | AccountSuspendedError
       | ForbiddenError
       | UnauthorizedError
       | PostNotFoundError
