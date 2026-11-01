@@ -391,6 +391,38 @@ describe("PostsService.search", () => {
     expect(await search("all")).toHaveLength(4);
   });
 
+  it("scopes popular tags to the same date range as the rows", async () => {
+    const now = Date.now();
+    const DAY_MS = 86_400_000;
+    const recentPost = await insertPost({
+      createdAt: new Date(now - DAY_MS),
+      title: "Recent post",
+    });
+    const stalePost = await insertPost({
+      createdAt: new Date(now - 10 * DAY_MS),
+      title: "Stale post",
+    });
+    const [recentTag, staleTag] = await Promise.all([
+      insertTag("recent"),
+      insertTag("stale"),
+    ]);
+    await linkTags(recentPost, [recentTag]);
+    await linkTags(stalePost, [staleTag]);
+
+    const result = await runEffect(
+      searchPosts({
+        dateRange: "week",
+        page: 0,
+        q: "",
+        sortBy: "newest",
+        tags: [],
+      }),
+    );
+
+    expect(result.data.map((post) => post.title)).toEqual(["Recent post"]);
+    expect(result.meta.popularTags.map((tag) => tag.name)).toEqual(["recent"]);
+  });
+
   it("sorts by oldest and newest on createdAt", async () => {
     await insertPost({
       title: "Middle",
@@ -1072,7 +1104,9 @@ describe("PostsService.getByTag", () => {
       });
       await linkTags(postId, [animeTag]);
     }
-    const expectedPopularTags = [{ id: animeTag, name: "anime", postCount: 31 }];
+    const expectedPopularTags = [
+      { id: animeTag, name: "anime", postCount: 31 },
+    ];
 
     const firstPage = await runEffect(
       PostsService.getByTag({ tag: "anime", page: 0 }),
