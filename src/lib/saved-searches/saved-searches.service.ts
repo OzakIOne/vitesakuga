@@ -7,6 +7,7 @@ import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
 import { UnauthorizedError, ValidationError } from "../errors";
+import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   deleteSavedSearchInputSchema,
@@ -136,26 +137,7 @@ export class SavedSearchesService extends Context.Service<
 
     return { delete_, list, save };
   }),
-}) {
-  static readonly save = Effect.fn("SavedSearchesService.save")(function* (
-    data: Schema.Schema.Type<typeof saveSearchInputSchema>,
-  ) {
-    const service = yield* SavedSearchesService;
-    return yield* service.save(data);
-  });
-
-  static readonly list = Effect.fn("SavedSearchesService.list")(function* () {
-    const service = yield* SavedSearchesService;
-    return yield* service.list();
-  });
-
-  static readonly delete_ = Effect.fn("SavedSearchesService.delete")(function* (
-    id: number,
-  ) {
-    const service = yield* SavedSearchesService;
-    return yield* service.delete_(id);
-  });
-}
+}) {}
 
 export const SavedSearchesServiceLive = Layer.effect(
   SavedSearchesService,
@@ -165,26 +147,33 @@ export const SavedSearchesServiceLive = Layer.effect(
 export const saveSearch = createServerFn({ method: "POST" })
   .validator(parseStrict(saveSearchInputSchema))
   .handler(
-    createHandler(
-      SavedSearchesServiceLive,
-      baseLayerFactories.auth,
-    )(SavedSearchesService.save),
+    createEndpointHandler({
+      service: SavedSearchesService,
+      operation: "save",
+      layer: SavedSearchesServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const fetchSavedSearches = createServerFn({
   strict: { output: false },
 }).handler(
-  createHandler(
-    SavedSearchesServiceLive,
-    baseLayerFactories.auth,
-  )(() => SavedSearchesService.list()),
+  createEndpointHandler({
+    service: SavedSearchesService,
+    operation: "list",
+    layer: SavedSearchesServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
+// Adapter: the wire input is `{ id }`, while the service takes the bare id.
 export const deleteSavedSearch = createServerFn({ method: "POST" })
   .validator(parseStrict(deleteSavedSearchInputSchema))
   .handler(
     createHandler(
       SavedSearchesServiceLive,
       baseLayerFactories.auth,
-    )(({ id }: { id: number }) => SavedSearchesService.delete_(id)),
+    )(({ id }: { id: number }) =>
+      Effect.flatMap(SavedSearchesService, (service) => service.delete_(id)),
+    ),
   );

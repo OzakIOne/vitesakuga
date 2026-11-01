@@ -6,7 +6,8 @@ import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
 import { UnauthorizedError, ValidationError } from "../errors";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import { setTagFollowedSchema, tagFollowStateSchema } from "./tags.schema";
 import { mapPopularTags } from "./tags.utils";
 
@@ -121,49 +122,37 @@ export class TagsService extends Context.Service<
 
     return { all, getFollowState, popular, setFollowed };
   }),
-}) {
-  static readonly all = Effect.fn("TagsService.all")(function* () {
-    const svc = yield* TagsService;
-    return yield* svc.all();
-  });
-
-  static readonly popular = Effect.fn("TagsService.popular")(function* () {
-    const svc = yield* TagsService;
-    return yield* svc.popular();
-  });
-
-  static readonly getFollowState = Effect.fn("TagsService.getFollowState")(
-    function* (data: Schema.Schema.Type<typeof tagFollowStateSchema>) {
-      const svc = yield* TagsService;
-      return yield* svc.getFollowState(data);
-    },
-  );
-
-  static readonly setFollowed = Effect.fn("TagsService.setFollowed")(function* (
-    data: Schema.Schema.Type<typeof setTagFollowedSchema>,
-  ) {
-    const svc = yield* TagsService;
-    return yield* svc.setFollowed(data);
-  });
-}
+}) {}
 
 export const TagsServiceLive = Layer.effect(TagsService, TagsService.make);
 
 export const getAllTags = createServerFn().handler(
-  createHandler(TagsServiceLive, baseLayerFactories.auth)(TagsService.all),
+  createEndpointHandler({
+    service: TagsService,
+    operation: "all",
+    layer: TagsServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const getAllPopularTags = createServerFn().handler(
-  createHandler(TagsServiceLive, baseLayerFactories.auth)(TagsService.popular),
+  createEndpointHandler({
+    service: TagsService,
+    operation: "popular",
+    layer: TagsServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const getTagFollowState = createServerFn({ strict: { output: false } })
   .validator(parseStrict(tagFollowStateSchema))
   .handler(
-    createHandler(
-      TagsServiceLive,
-      baseLayerFactories.auth,
-    )(TagsService.getFollowState),
+    createEndpointHandler({
+      service: TagsService,
+      operation: "getFollowState",
+      layer: TagsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const setTagFollowed = createServerFn({
@@ -172,8 +161,10 @@ export const setTagFollowed = createServerFn({
 })
   .validator(parseStrict(setTagFollowedSchema))
   .handler(
-    createHandler(
-      TagsServiceLive,
-      baseLayerFactories.auth,
-    )(TagsService.setFollowed),
+    createEndpointHandler({
+      service: TagsService,
+      operation: "setFollowed",
+      layer: TagsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

@@ -61,7 +61,9 @@ describe("PostReportsService.submit", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostReportsService.submit({ postId: asPostId(1), reason: "duplicate" }),
+        Effect.flatMap(PostReportsService, (service) =>
+          service.submit({ postId: asPostId(1), reason: "duplicate" }),
+        ),
       ),
     );
 
@@ -78,10 +80,12 @@ describe("PostReportsService.submit", () => {
 
     const error = await runEffect(
       Effect.flip(
-        PostReportsService.submit({
-          postId: asPostId(999_999),
-          reason: "duplicate",
-        }),
+        Effect.flatMap(PostReportsService, (service) =>
+          service.submit({
+            postId: asPostId(999_999),
+            reason: "duplicate",
+          }),
+        ),
       ),
     );
 
@@ -102,7 +106,9 @@ describe("PostReportsService.submit", () => {
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
 
     const result = await runEffect(
-      PostReportsService.submit({ postId: post.id, reason: "duplicate" }),
+      Effect.flatMap(PostReportsService, (service) =>
+        service.submit({ postId: post.id, reason: "duplicate" }),
+      ),
     );
 
     expect(result).toEqual({ postId: post.id, reported: true });
@@ -124,10 +130,14 @@ describe("PostReportsService.submit", () => {
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
 
     await runEffect(
-      PostReportsService.submit({ postId: post.id, reason: "duplicate" }),
+      Effect.flatMap(PostReportsService, (service) =>
+        service.submit({ postId: post.id, reason: "duplicate" }),
+      ),
     );
     await runEffect(
-      PostReportsService.submit({ postId: post.id, reason: "unrelated" }),
+      Effect.flatMap(PostReportsService, (service) =>
+        service.submit({ postId: post.id, reason: "unrelated" }),
+      ),
     );
 
     const rows = await reportRows(db);
@@ -148,11 +158,15 @@ describe("PostReportsService.submit", () => {
     const post = await insertPost(db, { userId: "user-1" });
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
     await runEffect(
-      PostReportsService.submit({ postId: post.id, reason: "duplicate" }),
+      Effect.flatMap(PostReportsService, (service) =>
+        service.submit({ postId: post.id, reason: "duplicate" }),
+      ),
     );
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-2" }));
     await runEffect(
-      PostReportsService.submit({ postId: post.id, reason: "poor_quality" }),
+      Effect.flatMap(PostReportsService, (service) =>
+        service.submit({ postId: post.id, reason: "poor_quality" }),
+      ),
     );
 
     const rows = await reportRows(db);

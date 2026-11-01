@@ -7,7 +7,8 @@ import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
 import { PostNotFoundError, UnauthorizedError } from "../errors";
 import { PostId } from "../ids";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import {
   submitPostReportSchema,
   type SubmitPostReportInput,
@@ -85,14 +86,7 @@ export class PostReportsService extends Context.Service<
 
     return { submit };
   }),
-}) {
-  static readonly submit = Effect.fn("PostReportsService.submit")(function* (
-    data: SubmitPostReportInput,
-  ) {
-    const svc = yield* PostReportsService;
-    return yield* svc.submit(data);
-  });
-}
+}) {}
 
 export const PostReportsServiceLive = Layer.effect(
   PostReportsService,
@@ -102,8 +96,10 @@ export const PostReportsServiceLive = Layer.effect(
 export const submitPostReport = createServerFn({ method: "POST" })
   .validator(parseStrict(submitPostReportSchema))
   .handler(
-    createHandler(
-      PostReportsServiceLive,
-      baseLayerFactories.auth,
-    )(PostReportsService.submit),
+    createEndpointHandler({
+      service: PostReportsService,
+      operation: "submit",
+      layer: PostReportsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

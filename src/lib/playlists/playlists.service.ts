@@ -26,6 +26,7 @@ import {
   computePagination,
   type PaginationMeta,
 } from "../pagination/pagination";
+import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories, createHandler } from "../server-fn.handler";
 import {
   addPostToPlaylistInputSchema,
@@ -954,97 +955,7 @@ export class PlaylistsService extends Context.Service<
       fetchForPost,
     };
   }),
-}) {
-  static readonly create = Effect.fn("PlaylistsService.create")(function* (
-    data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
-  ) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.create(data);
-  });
-
-  static readonly update = Effect.fn("PlaylistsService.update")(function* (
-    data: Schema.Schema.Type<typeof updatePlaylistInputSchema>,
-  ) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.update(data);
-  });
-
-  static readonly delete_ = Effect.fn("PlaylistsService.delete_")(function* (
-    playlistId: PlaylistId,
-  ) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.delete_(playlistId);
-  });
-
-  static readonly addPost = Effect.fn("PlaylistsService.addPost")(function* (
-    data: Schema.Schema.Type<typeof addPostToPlaylistInputSchema>,
-  ) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.addPost(data);
-  });
-
-  static readonly removePost = Effect.fn("PlaylistsService.removePost")(
-    function* (
-      data: Schema.Schema.Type<typeof removePostFromPlaylistInputSchema>,
-    ) {
-      const svc = yield* PlaylistsService;
-      return yield* svc.removePost(data);
-    },
-  );
-
-  static readonly bulkAddPosts = Effect.fn("PlaylistsService.bulkAddPosts")(
-    function* (
-      data: Schema.Schema.Type<typeof bulkAddPostsToPlaylistInputSchema>,
-    ) {
-      const svc = yield* PlaylistsService;
-      return yield* svc.bulkAddPosts(data);
-    },
-  );
-
-  static readonly bulkRemovePosts = Effect.fn(
-    "PlaylistsService.bulkRemovePosts",
-  )(function* (
-    data: Schema.Schema.Type<typeof bulkRemovePostsFromPlaylistInputSchema>,
-  ) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.bulkRemovePosts(data);
-  });
-
-  static readonly reorder = Effect.fn("PlaylistsService.reorder")(function* (
-    data: Schema.Schema.Type<typeof reorderPlaylistPostsInputSchema>,
-  ) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.reorder(data);
-  });
-
-  static readonly fetchUserPlaylists = Effect.fn(
-    "PlaylistsService.fetchUserPlaylists",
-  )(function* (userId: string) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.fetchUserPlaylists(userId);
-  });
-
-  static readonly fetchPublicPlaylists = Effect.fn(
-    "PlaylistsService.fetchPublicPlaylists",
-  )(function* (data: Schema.Schema.Type<typeof fetchPublicPlaylistsSchema>) {
-    const svc = yield* PlaylistsService;
-    return yield* svc.fetchPublicPlaylists(data);
-  });
-
-  static readonly fetchDetail = Effect.fn("PlaylistsService.fetchDetail")(
-    function* (data: Schema.Schema.Type<typeof fetchPlaylistDetailSchema>) {
-      const svc = yield* PlaylistsService;
-      return yield* svc.fetchDetail(data);
-    },
-  );
-
-  static readonly fetchForPost = Effect.fn("PlaylistsService.fetchForPost")(
-    function* (postId: PostId) {
-      const svc = yield* PlaylistsService;
-      return yield* svc.fetchForPost(postId);
-    },
-  );
-}
+}) {}
 
 export const PlaylistsServiceLive = Layer.effect(
   PlaylistsService,
@@ -1054,19 +965,23 @@ export const PlaylistsServiceLive = Layer.effect(
 export const createPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(createPlaylistInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.create),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "create",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const updatePlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(updatePlaylistInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.update),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "update",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const deletePlaylist = createServerFn({ method: "POST" })
@@ -1076,53 +991,65 @@ export const deletePlaylist = createServerFn({ method: "POST" })
       PlaylistsServiceLive,
       baseLayerFactories.auth,
     )((data: { playlistId: PlaylistId }) =>
-      PlaylistsService.delete_(data.playlistId),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.delete_(data.playlistId),
+      ),
     ),
   );
 
 export const addPostToPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(addPostToPlaylistInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.addPost),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "addPost",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const removePostFromPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(removePostFromPlaylistInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.removePost),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "removePost",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const bulkAddPostsToPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(bulkAddPostsToPlaylistInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.bulkAddPosts),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "bulkAddPosts",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const bulkRemovePostsFromPlaylist = createServerFn({ method: "POST" })
   .validator(parseStrict(bulkRemovePostsFromPlaylistInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.bulkRemovePosts),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "bulkRemovePosts",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const reorderPlaylistPosts = createServerFn({ method: "POST" })
   .validator(parseStrict(reorderPlaylistPostsInputSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.reorder),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "reorder",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const fetchUserPlaylists = createServerFn({
@@ -1130,10 +1057,12 @@ export const fetchUserPlaylists = createServerFn({
 })
   .validator(parse(Schema.String))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )((data: string) => PlaylistsService.fetchUserPlaylists(data)),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "fetchUserPlaylists",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const fetchPublicPlaylists = createServerFn({
@@ -1141,10 +1070,12 @@ export const fetchPublicPlaylists = createServerFn({
 })
   .validator(parseStrict(fetchPublicPlaylistsSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.db,
-    )(PlaylistsService.fetchPublicPlaylists),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "fetchPublicPlaylists",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const fetchPlaylistDetail = createServerFn({
@@ -1152,10 +1083,12 @@ export const fetchPlaylistDetail = createServerFn({
 })
   .validator(parseStrict(fetchPlaylistDetailSchema))
   .handler(
-    createHandler(
-      PlaylistsServiceLive,
-      baseLayerFactories.auth,
-    )(PlaylistsService.fetchDetail),
+    createEndpointHandler({
+      service: PlaylistsService,
+      operation: "fetchDetail",
+      layer: PlaylistsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const fetchPlaylistsForPost = createServerFn({
@@ -1166,5 +1099,9 @@ export const fetchPlaylistsForPost = createServerFn({
     createHandler(
       PlaylistsServiceLive,
       baseLayerFactories.auth,
-    )((data: number) => PlaylistsService.fetchForPost(asPostId(data))),
+    )((data: number) =>
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchForPost(asPostId(data)),
+      ),
+    ),
   );

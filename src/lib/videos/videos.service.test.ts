@@ -168,12 +168,14 @@ describe("VideosService.replace", () => {
     const pendingVideoKey = await stageVideo(ctx, "author-1");
 
     const result = await ctx.runEffect(
-      VideosService.replace({
-        expectedVersion: 0,
-        operationKey: `replace-${postId}`,
-        pendingVideoKey,
-        postId,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.replace({
+          expectedVersion: 0,
+          operationKey: `replace-${postId}`,
+          pendingVideoKey,
+          postId,
+        }),
+      ),
     );
 
     // Post row keeps its id/likes/comments; only the key changed.
@@ -224,12 +226,14 @@ describe("VideosService.replace", () => {
     );
     const foreignKeyError = await ctx.runEffect(
       Effect.flip(
-        VideosService.replace({
-          expectedVersion: 0,
-          operationKey: "foreign",
-          pendingVideoKey: "videos/_pending/someone-else/evil.mp4",
-          postId,
-        }),
+        Effect.flatMap(VideosService, (service) =>
+          service.replace({
+            expectedVersion: 0,
+            operationKey: "foreign",
+            pendingVideoKey: "videos/_pending/someone-else/evil.mp4",
+            postId,
+          }),
+        ),
       ),
     );
     expect(foreignKeyError._tag).toBe("ValidationError");
@@ -240,12 +244,14 @@ describe("VideosService.replace", () => {
     );
     const intruderError = await ctx.runEffect(
       Effect.flip(
-        VideosService.replace({
-          expectedVersion: 0,
-          operationKey: "intruder",
-          pendingVideoKey: "videos/_pending/intruder-2/nope.mp4",
-          postId,
-        }),
+        Effect.flatMap(VideosService, (service) =>
+          service.replace({
+            expectedVersion: 0,
+            operationKey: "intruder",
+            pendingVideoKey: "videos/_pending/intruder-2/nope.mp4",
+            postId,
+          }),
+        ),
       ),
     );
     expect(intruderError._tag).toBe("ForbiddenError");
@@ -269,12 +275,14 @@ describe("VideosService.replace", () => {
     const pendingVideoKey = await stageVideo(ctx, "mod-3");
 
     const result = await ctx.runEffect(
-      VideosService.replace({
-        expectedVersion: 0,
-        operationKey: `replace-${postId}`,
-        pendingVideoKey,
-        postId,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.replace({
+          expectedVersion: 0,
+          operationKey: `replace-${postId}`,
+          pendingVideoKey,
+          postId,
+        }),
+      ),
     );
     expect(result.videoKey).toMatch(/^media\/video\//);
   });
@@ -299,35 +307,45 @@ describe("VideosService.listRevisions", () => {
     );
     const pendingVideoKeyA = await stageVideo(ctx, "mod-4", "a.mp4");
     await ctx.runEffect(
-      VideosService.replace({
-        expectedVersion: 0,
-        operationKey: `replace-a-${postId}`,
-        pendingVideoKey: pendingVideoKeyA,
-        postId,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.replace({
+          expectedVersion: 0,
+          operationKey: `replace-a-${postId}`,
+          pendingVideoKey: pendingVideoKeyA,
+          postId,
+        }),
+      ),
     );
     const pendingVideoKeyB = await stageVideo(ctx, "mod-4", "b.mp4");
     await ctx.runEffect(
-      VideosService.replace({
-        expectedVersion: 1,
-        operationKey: `replace-b-${postId}`,
-        pendingVideoKey: pendingVideoKeyB,
-        postId,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.replace({
+          expectedVersion: 1,
+          operationKey: `replace-b-${postId}`,
+          pendingVideoKey: pendingVideoKeyB,
+          postId,
+        }),
+      ),
     );
 
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "stranger-4", role: "novice" }),
     );
     const listError = await ctx.runEffect(
-      Effect.flip(VideosService.listRevisions(postId)),
+      Effect.flip(
+        Effect.flatMap(VideosService, (service) =>
+          service.listRevisions(postId),
+        ),
+      ),
     );
     expect(listError._tag).toBe("ForbiddenError");
 
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "author-4", role: "novice" }),
     );
-    const revisions = await ctx.runEffect(VideosService.listRevisions(postId));
+    const revisions = await ctx.runEffect(
+      Effect.flatMap(VideosService, (service) => service.listRevisions(postId)),
+    );
     expect(revisions).toHaveLength(2);
     // Newest first: the second replacement archived the first staged video,
     // the oldest entry holds the post's original object.
@@ -376,12 +394,14 @@ describe("VideosService.restore", () => {
     );
     const pendingVideoKey = await stageVideo(ctx, "mod-5");
     await ctx.runEffect(
-      VideosService.replace({
-        expectedVersion: 0,
-        operationKey: `replace-${postId}`,
-        pendingVideoKey,
-        postId,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.replace({
+          expectedVersion: 0,
+          operationKey: `replace-${postId}`,
+          pendingVideoKey,
+          postId,
+        }),
+      ),
     );
 
     // Author cannot restore (novice).
@@ -390,11 +410,13 @@ describe("VideosService.restore", () => {
     );
     const restoreError = await ctx.runEffect(
       Effect.flip(
-        VideosService.restore({
-          expectedVersion: 1,
-          operationKey: "restore-forbidden",
-          revisionId: 1,
-        }),
+        Effect.flatMap(VideosService, (service) =>
+          service.restore({
+            expectedVersion: 1,
+            operationKey: "restore-forbidden",
+            revisionId: 1,
+          }),
+        ),
       ),
     );
     expect(restoreError._tag).toBe("ForbiddenError");
@@ -404,11 +426,13 @@ describe("VideosService.restore", () => {
       makeAuthSession({ id: "mod-5", role: "moderator" }),
     );
     const result = await ctx.runEffect(
-      VideosService.restore({
-        expectedVersion: 1,
-        operationKey: "restore-original",
-        revisionId: 1,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.restore({
+          expectedVersion: 1,
+          operationKey: "restore-original",
+          revisionId: 1,
+        }),
+      ),
     );
     expect(result.restored).toBe(true);
 
@@ -430,11 +454,13 @@ describe("VideosService.restore", () => {
     // A repeated request with the same key replays the stored result without
     // archiving the current video again.
     const replayed = await ctx.runEffect(
-      VideosService.restore({
-        expectedVersion: 1,
-        operationKey: "restore-original",
-        revisionId: 1,
-      }),
+      Effect.flatMap(VideosService, (service) =>
+        service.restore({
+          expectedVersion: 1,
+          operationKey: "restore-original",
+          revisionId: 1,
+        }),
+      ),
     );
     expect(replayed).toEqual({ restored: true });
     const revisionsAfterReplay = await db
@@ -483,11 +509,13 @@ describe("VideosService.restore", () => {
     );
     const error = await ctx.runEffect(
       Effect.flip(
-        VideosService.restore({
-          expectedVersion: 0,
-          operationKey: "restore-missing",
-          revisionId: revision.id,
-        }),
+        Effect.flatMap(VideosService, (service) =>
+          service.restore({
+            expectedVersion: 0,
+            operationKey: "restore-missing",
+            revisionId: revision.id,
+          }),
+        ),
       ),
     );
 
@@ -595,14 +623,18 @@ describe("VideosService.gc", () => {
       makeAuthSession({ id: "mod-6", role: "moderator" }),
     );
     const previewError = await ctx.runEffect(
-      Effect.flip(VideosService.gcPreview()),
+      Effect.flip(
+        Effect.flatMap(VideosService, (service) => service.gcPreview()),
+      ),
     );
     expect(previewError._tag).toBe("ForbiddenError");
 
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "admin-6", role: "admin" }),
     );
-    const preview = await ctx.runEffect(VideosService.gcPreview());
+    const preview = await ctx.runEffect(
+      Effect.flatMap(VideosService, (service) => service.gcPreview()),
+    );
 
     const purgeableIds = preview.purgeableRevisions.map((r) => r.id);
     const allRevisions = await db
@@ -688,7 +720,9 @@ describe("VideosService.gc", () => {
     mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "admin-7", role: "admin" }),
     );
-    const result = await ctx.runEffect(VideosService.gcRun());
+    const result = await ctx.runEffect(
+      Effect.flatMap(VideosService, (service) => service.gcRun()),
+    );
 
     // Legacy revisions and legacy orphan objects are previewed but never
     // auto-deleted.
@@ -758,7 +792,9 @@ describe("VideosService.gc", () => {
       makeAuthSession({ id: "admin-delete-failure", role: "admin" }),
     );
 
-    const result = await ctx.runEffect(VideosService.gcRun());
+    const result = await ctx.runEffect(
+      Effect.flatMap(VideosService, (service) => service.gcRun()),
+    );
 
     expect(result.deletedKeys).toBe(0);
     expect(result.purgedRevisions).toBe(0);
@@ -798,7 +834,9 @@ describe("VideosService.gc", () => {
       makeAuthSession({ id: "admin-live-key", role: "admin" }),
     );
 
-    const result = await ctx.runEffect(VideosService.gcRun());
+    const result = await ctx.runEffect(
+      Effect.flatMap(VideosService, (service) => service.gcRun()),
+    );
 
     expect(result.deletedKeys).toBe(0);
     expect(result.purgedRevisions).toBe(1);
@@ -832,7 +870,9 @@ describe("VideosService.gc", () => {
       makeAuthSession({ id: "admin-pending", role: "admin" }),
     );
 
-    const result = await ctx.runEffect(VideosService.gcPreview());
+    const result = await ctx.runEffect(
+      Effect.flatMap(VideosService, (service) => service.gcPreview()),
+    );
 
     expect(result.orphanKeys).toEqual([]);
   });

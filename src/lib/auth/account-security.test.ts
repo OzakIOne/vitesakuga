@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,13 +61,17 @@ beforeEach(async () => {
 
 afterEach(() => closeCtx());
 
-describe(AccountSecurityService.getHasPassword, () => {
+describe("AccountSecurityService.getHasPassword", () => {
   it("returns hasPassword true when a credential account has a password", async () => {
     await insertAccount({ password: "hashed-password" });
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
-      runEffect(AccountSecurityService.getHasPassword()),
+      runEffect(
+        Effect.flatMap(AccountSecurityService, (service) =>
+          service.getHasPassword(),
+        ),
+      ),
     ).resolves.toEqual({ hasPassword: true });
   });
 
@@ -75,7 +80,11 @@ describe(AccountSecurityService.getHasPassword, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
-      runEffect(AccountSecurityService.getHasPassword()),
+      runEffect(
+        Effect.flatMap(AccountSecurityService, (service) =>
+          service.getHasPassword(),
+        ),
+      ),
     ).resolves.toEqual({ hasPassword: false });
   });
 
@@ -83,14 +92,22 @@ describe(AccountSecurityService.getHasPassword, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
-      runEffect(AccountSecurityService.getHasPassword()),
+      runEffect(
+        Effect.flatMap(AccountSecurityService, (service) =>
+          service.getHasPassword(),
+        ),
+      ),
     ).resolves.toEqual({ hasPassword: false });
   });
 
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    const error = await runFailure(AccountSecurityService.getHasPassword());
+    const error = await runFailure(
+      Effect.flatMap(AccountSecurityService, (service) =>
+        service.getHasPassword(),
+      ),
+    );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
       message: "You must be logged in",

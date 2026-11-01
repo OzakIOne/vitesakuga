@@ -60,7 +60,11 @@ describe("DeleteAccountService.deleteAccount", () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runEffect(
-      Effect.flip(DeleteAccountService.deleteAccount({})),
+      Effect.flip(
+        Effect.flatMap(DeleteAccountService, (service) =>
+          service.deleteAccount({}),
+        ),
+      ),
     );
     expect(error._tag).toBe("UnauthorizedError");
     expect(error.message).toBe("You must be logged in");
@@ -78,7 +82,11 @@ describe("DeleteAccountService.deleteAccount", () => {
       .values({ postId, userId: "user-1", vote: "like" })
       .execute();
 
-    const result = await runEffect(DeleteAccountService.deleteAccount({}));
+    const result = await runEffect(
+      Effect.flatMap(DeleteAccountService, (service) =>
+        service.deleteAccount({}),
+      ),
+    );
 
     expect(result.deletedUserId).toBe("user-1");
 
@@ -154,7 +162,11 @@ describe("DeleteAccountService.deleteAccount", () => {
       .values({ playlist_id: playlist.id, post_id: postId })
       .execute();
 
-    await runEffect(DeleteAccountService.deleteAccount({}));
+    await runEffect(
+      Effect.flatMap(DeleteAccountService, (service) =>
+        service.deleteAccount({}),
+      ),
+    );
 
     expect(await db.selectFrom("session").execute()).toHaveLength(0);
     expect(await db.selectFrom("account").execute()).toHaveLength(0);
@@ -186,7 +198,11 @@ describe("DeleteAccountService.deleteAccount", () => {
       .execute();
 
     const noPasswordError = await runEffect(
-      Effect.flip(DeleteAccountService.deleteAccount({})),
+      Effect.flip(
+        Effect.flatMap(DeleteAccountService, (service) =>
+          service.deleteAccount({}),
+        ),
+      ),
     );
     expect(noPasswordError._tag).toBe("ForbiddenError");
     expect(noPasswordError.message).toBe(
@@ -194,7 +210,11 @@ describe("DeleteAccountService.deleteAccount", () => {
     );
 
     const wrongPasswordError = await runEffect(
-      Effect.flip(DeleteAccountService.deleteAccount({ password: "wrong" })),
+      Effect.flip(
+        Effect.flatMap(DeleteAccountService, (service) =>
+          service.deleteAccount({ password: "wrong" }),
+        ),
+      ),
     );
     expect(wrongPasswordError._tag).toBe("ForbiddenError");
     expect(wrongPasswordError.message).toBe("Incorrect password");
@@ -203,7 +223,9 @@ describe("DeleteAccountService.deleteAccount", () => {
     expect(await db.selectFrom("account").execute()).toHaveLength(1);
 
     const result = await runEffect(
-      DeleteAccountService.deleteAccount({ password: "correct-horse" }),
+      Effect.flatMap(DeleteAccountService, (service) =>
+        service.deleteAccount({ password: "correct-horse" }),
+      ),
     );
     expect(result.deletedUserId).toBe("user-1");
     expect(await db.selectFrom("account").execute()).toHaveLength(0);

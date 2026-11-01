@@ -110,7 +110,9 @@ describe("ModerationService.overview", () => {
       makeAuthSession({ id: "novice-1", role: "novice" }),
     );
     const error = await ctx.runEffect(
-      Effect.flip(ModerationService.overview()),
+      Effect.flip(
+        Effect.flatMap(ModerationService, (service) => service.overview()),
+      ),
     );
 
     expect(error._tag).toBe("ForbiddenError");
@@ -125,7 +127,9 @@ describe("ModerationService.overview", () => {
     ctx.mockGetSession.mockResolvedValue(null);
 
     const error = await ctx.runEffect(
-      Effect.flip(ModerationService.overview()),
+      Effect.flip(
+        Effect.flatMap(ModerationService, (service) => service.overview()),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");
@@ -157,7 +161,9 @@ describe("ModerationService.overview", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-1", role: "moderator" }),
     );
-    const overview = await ctx.runEffect(ModerationService.overview());
+    const overview = await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) => service.overview()),
+    );
 
     expect(overview.reports).toHaveLength(2);
     // Newest report first, joined with the post title and reporter name.
@@ -219,7 +225,9 @@ describe("ModerationService.overview", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-1", role: "admin" }),
     );
-    const overview = await ctx.runEffect(ModerationService.overview());
+    const overview = await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) => service.overview()),
+    );
 
     // Resolved suggestions never appear; pending ones are newest-first.
     expect(overview.pendingEdits).toHaveLength(2);
@@ -271,7 +279,9 @@ describe("ModerationService.overview", () => {
     ctx.mockGetSession.mockResolvedValue(
       makeAuthSession({ id: "mod-1", role: "moderator" }),
     );
-    const overview = await ctx.runEffect(ModerationService.overview());
+    const overview = await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) => service.overview()),
+    );
 
     // Only the 50 newest reports survive the cut, oldest dropped entirely.
     expect(overview.reports).toHaveLength(50);
@@ -308,7 +318,9 @@ describe("ModerationService.setUserRole", () => {
     );
     const error = await ctx.runEffect(
       Effect.flip(
-        ModerationService.setUserRole({ role: "uploader", userId: "target-1" }),
+        Effect.flatMap(ModerationService, (service) =>
+          service.setUserRole({ role: "uploader", userId: "target-1" }),
+        ),
       ),
     );
 
@@ -333,7 +345,9 @@ describe("ModerationService.setUserRole", () => {
     );
     const error = await ctx.runEffect(
       Effect.flip(
-        ModerationService.setUserRole({ role: "superuser", userId: "admin-1" }),
+        Effect.flatMap(ModerationService, (service) =>
+          service.setUserRole({ role: "superuser", userId: "admin-1" }),
+        ),
       ),
     );
 
@@ -351,10 +365,12 @@ describe("ModerationService.setUserRole", () => {
       makeAuthSession({ id: "admin-1", role: "admin" }),
     );
     const result = await ctx.runEffect(
-      ModerationService.setUserRole({
-        role: "moderator",
-        userId: "does-not-exist",
-      }),
+      Effect.flatMap(ModerationService, (service) =>
+        service.setUserRole({
+          role: "moderator",
+          userId: "does-not-exist",
+        }),
+      ),
     );
 
     expect(result).toEqual({ userId: "does-not-exist" });
@@ -371,7 +387,9 @@ describe("ModerationService.setUserRole", () => {
       makeAuthSession({ id: "admin-1", role: "admin" }),
     );
     const result = await ctx.runEffect(
-      ModerationService.setUserRole({ role: "moderator", userId: "mod-1" }),
+      Effect.flatMap(ModerationService, (service) =>
+        service.setUserRole({ role: "moderator", userId: "mod-1" }),
+      ),
     );
 
     expect(result).toEqual({ userId: "mod-1" });
@@ -394,7 +412,9 @@ describe("ModerationService.setUserRole", () => {
       makeAuthSession({ id: "admin-1", role: "admin" }),
     );
     const result = await ctx.runEffect(
-      ModerationService.setUserRole({ role: "moderator", userId: "target-1" }),
+      Effect.flatMap(ModerationService, (service) =>
+        service.setUserRole({ role: "moderator", userId: "target-1" }),
+      ),
     );
 
     expect(result).toEqual({ userId: "target-1" });

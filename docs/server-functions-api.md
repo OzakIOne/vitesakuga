@@ -14,16 +14,17 @@ The old pattern of separate `<feature>.fn.ts` files has been consolidated — se
 
 Each `*.service.ts` file follows this layered pattern (top to bottom):
 
-1. **Imports** — Effect, TanStack Start, domain schemas (Effect Schema), layer factories, `createHandler`
+1. **Imports** — Effect, TanStack Start, domain schemas (Effect Schema), layer factories, `createEndpointHandler` (or `createHandler` for adapters)
 2. **Service class** — Effect `Context.Service<Self, Shape>()("Name", { make })` with the typed interface as `Shape` and the implementation as `make`
-3. **Static accessors** — `Effect.fn` static methods on the service class (e.g., `CommentsService.fetch`) that pull the service from the context
-4. **Live layer** — `Layer.effect(Service, Service.make)` providing the service
-5. **Server functions** — TanStack Start `createServerFn` instances with Effect Schema validators calling `createHandler`
+3. **Live layer** — `Layer.effect(Service, Service.make)` providing the service
+4. **Server functions** — TanStack Start `createServerFn` instances with Effect Schema validators whose `.handler(...)` is `createEndpointHandler({ service, operation, layer, base })`
+
+Service classes have no static accessors. Code that needs an operation outside a server function (tests, other services) yields the service tag: `Effect.flatMap(CommentsService, (service) => service.fetch(postId))`.
 
 Example pattern (from `comments.service.ts`):
 
 ```typescript
-// 2. Service class + 3. static accessors
+// 2. Service class
 export class CommentsService extends Context.Service<CommentsService, {
   readonly fetch: (postId: number) => Effect.Effect<unknown, Error>;
   readonly add: (data: ...) => Effect.Effect<unknown, Error>;
@@ -34,31 +35,35 @@ export class CommentsService extends Context.Service<CommentsService, {
     // ... implementation
     return { fetch, add, delete_ };
   }),
-}) {
-  static readonly fetch = Effect.fn("CommentsService.fetch")(function* (postId: number) {
-    const svc = yield* CommentsService;
-    return yield* svc.fetch(postId);
-  });
-  // ... other static accessors
-}
+}) {}
 
-// 4. Live layer
+// 3. Live layer
 export const CommentsServiceLive = Layer.effect(CommentsService, CommentsService.make);
 
-// 5. Server functions
+// 4. Server functions
 export const fetchComments = createServerFn()
   .validator((input: unknown) => parse(Schema.Number)(input))
   .handler(
-    createHandler(
-      CommentsServiceLive,
-      baseLayerFactories.db,
-    )((postId: number) => CommentsService.fetch(postId)),
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "fetch",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.db,
+    }),
   );
 
 export const addComment = createServerFn({ method: "POST" })
   .validator((input: unknown) => parse(commentInsertSchema)(input))
-  .handler(createHandler(CommentsServiceLive, baseLayerFactories.auth)(CommentsService.add));
+  .handler(
+    createEndpointHandler({
+      service: CommentsService,
+      operation: "add",
+      layer: CommentsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
+  );
 
+// Adapter: the wire input is `{ commentId }`, while the operation takes the bare id.
 export const deleteComment = createServerFn({ method: "POST" })
   .validator((input: unknown) =>
     parse(Schema.Struct({ commentId: Schema.Number }))(input),
@@ -67,9 +72,23 @@ export const deleteComment = createServerFn({ method: "POST" })
     createHandler(
       CommentsServiceLive,
       baseLayerFactories.auth,
-    )((data: { commentId: number }) => CommentsService.delete_(data.commentId)),
+    )((data: { commentId: number }) =>
+      Effect.flatMap(CommentsService, (service) => service.delete_(data.commentId)),
+    ),
   );
 ```
+
+## `createEndpointHandler`
+
+`createEndpointHandler` (`src/lib/server-endpoint.ts`) builds the `.handler(...)` argument for an operation on a service:
+
+- `service`: the service tag; `operation`: a key of its shape whose requirements the layers provide (anything else is a compile error)
+- `layer`: the service's live layer; `base`: the base-layer factory (`baseLayerFactories.auth` or `baseLayerFactories.db`)
+- Input, success and failure types come from the operation's signature.
+
+It wraps `createHandler`, so failures, sanitization and debug IDs behave exactly as described below. The HTTP method and the validator stay on the `createServerFn(...)` chain in the same module: TanStack's compiler only extracts a `.handler(...)` written there, and it strips the server-only handler argument from the client bundle.
+
+Not covered, and kept as `createHandler` with an adapter lambda: handlers that reshape the wire input before calling the operation.
 
 ## `createHandler` Bridge
 

@@ -4,7 +4,8 @@ import { Context, Effect, Layer } from "effect";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { UnauthorizedError } from "../errors";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import { SessionFetchError, SessionService } from "./session.effect";
 
 export class AccountSecurityService extends Context.Service<
@@ -42,14 +43,7 @@ export class AccountSecurityService extends Context.Service<
 
     return { getHasPassword };
   }),
-}) {
-  static readonly getHasPassword = Effect.fn(
-    "AccountSecurityService.getHasPassword",
-  )(function* () {
-    const svc = yield* AccountSecurityService;
-    return yield* svc.getHasPassword();
-  });
-}
+}) {}
 
 export const AccountSecurityServiceLive = Layer.effect(
   AccountSecurityService,
@@ -57,8 +51,10 @@ export const AccountSecurityServiceLive = Layer.effect(
 );
 
 export const getAccountSecurity = createServerFn().handler(
-  createHandler(
-    AccountSecurityServiceLive,
-    baseLayerFactories.auth,
-  )(AccountSecurityService.getHasPassword),
+  createEndpointHandler({
+    service: AccountSecurityService,
+    operation: "getHasPassword",
+    layer: AccountSecurityServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );

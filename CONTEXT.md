@@ -116,7 +116,7 @@ See [docs/build-environment.md](./docs/build-environment.md) for the full explan
 
 ## Conventions
 
-**Server Function** — TanStack Start `createServerFn` with input validator and handler. Server functions are embedded at the bottom of `*.service.ts` files (not separate `.fn.ts` files). Handler calls `createHandler(effect, serviceLayer, optionalBaseLayer)` which bridges Effect programs to async server functions.
+**Server Function** — TanStack Start `createServerFn` with input validator and handler. Server functions are embedded at the bottom of `*.service.ts` files (not separate `.fn.ts` files). The `.handler(...)` is `createEndpointHandler({ service, operation, layer, base })` (`src/lib/server-endpoint.ts`), which wraps `createHandler` to bridge a service operation to an async server function. Service classes have no static accessors.
 
 **Query Options** — TanStack Query `queryOptions` factories in `*.queries.ts` files. Keyed by domain + params. Used by routes via `useQuery`/`useSuspenseQuery`.
 

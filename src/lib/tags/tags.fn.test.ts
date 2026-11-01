@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -26,7 +27,9 @@ afterEach(() => closeCtx());
 
 describe("TagsService.all", () => {
   it("returns empty array when no tags", async () => {
-    const result = await runEffect(TagsService.all());
+    const result = await runEffect(
+      Effect.flatMap(TagsService, (service) => service.all()),
+    );
     expect(result).toEqual([]);
   });
 
@@ -34,7 +37,9 @@ describe("TagsService.all", () => {
     await db.insertInto("tags").values({ name: "anime" }).execute();
     await db.insertInto("tags").values({ name: "sakuga" }).execute();
 
-    const result = await runEffect(TagsService.all());
+    const result = await runEffect(
+      Effect.flatMap(TagsService, (service) => service.all()),
+    );
 
     expect(result).toHaveLength(2);
     expect(result.map((t) => t.name).sort()).toEqual(["anime", "sakuga"]);
@@ -45,7 +50,9 @@ describe("TagsService.all", () => {
 
 describe("TagsService.popular", () => {
   it("returns empty when no tags", async () => {
-    const result = await runEffect(TagsService.popular());
+    const result = await runEffect(
+      Effect.flatMap(TagsService, (service) => service.popular()),
+    );
     expect(result).toEqual([]);
   });
 
@@ -101,7 +108,9 @@ describe("TagsService.popular", () => {
       .values({ postId: post.id, tagId: tag.id })
       .execute();
 
-    const result = await runEffect(TagsService.popular());
+    const result = await runEffect(
+      Effect.flatMap(TagsService, (service) => service.popular()),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]!.name).toBe("anime");
@@ -124,21 +133,37 @@ describe("TagsService tag follows", () => {
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "follow-user" }));
 
     expect(
-      await runEffect(TagsService.getFollowState({ tagName: "sakuga" })),
+      await runEffect(
+        Effect.flatMap(TagsService, (service) =>
+          service.getFollowState({ tagName: "sakuga" }),
+        ),
+      ),
     ).toEqual({ followed: false, tagName: "sakuga" });
 
     await runEffect(
-      TagsService.setFollowed({ followed: true, tagName: "sakuga" }),
+      Effect.flatMap(TagsService, (service) =>
+        service.setFollowed({ followed: true, tagName: "sakuga" }),
+      ),
     );
     expect(
-      await runEffect(TagsService.getFollowState({ tagName: "sakuga" })),
+      await runEffect(
+        Effect.flatMap(TagsService, (service) =>
+          service.getFollowState({ tagName: "sakuga" }),
+        ),
+      ),
     ).toEqual({ followed: true, tagName: "sakuga" });
 
     await runEffect(
-      TagsService.setFollowed({ followed: false, tagName: "sakuga" }),
+      Effect.flatMap(TagsService, (service) =>
+        service.setFollowed({ followed: false, tagName: "sakuga" }),
+      ),
     );
     expect(
-      await runEffect(TagsService.getFollowState({ tagName: "sakuga" })),
+      await runEffect(
+        Effect.flatMap(TagsService, (service) =>
+          service.getFollowState({ tagName: "sakuga" }),
+        ),
+      ),
     ).toEqual({ followed: false, tagName: "sakuga" });
   });
 });

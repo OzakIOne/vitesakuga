@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -88,16 +89,18 @@ beforeEach(async () => {
 
 afterEach(() => closeCtx());
 
-describe(PlaylistsService.create, () => {
+describe("PlaylistsService.create", () => {
   it("creates a playlist for the authenticated user", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.create({
-        title: "My Favs",
-        description: "Best sakuga",
-        isPublic: false,
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.create({
+          title: "My Favs",
+          description: "Best sakuga",
+          isPublic: false,
+        }),
+      ),
     );
 
     expect(result.title).toBe("My Favs");
@@ -113,7 +116,9 @@ describe(PlaylistsService.create, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.create({ title: "Private", isPublic: false }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.create({ title: "Private", isPublic: false }),
+      ),
     );
 
     expect(result.is_public).toBe(false);
@@ -123,7 +128,9 @@ describe(PlaylistsService.create, () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runFailure(
-      PlaylistsService.create({ title: "Nope", isPublic: false }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.create({ title: "Nope", isPublic: false }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
@@ -132,7 +139,7 @@ describe(PlaylistsService.create, () => {
   });
 });
 
-describe(PlaylistsService.update, () => {
+describe("PlaylistsService.update", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -153,11 +160,13 @@ describe(PlaylistsService.update, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.update({
-        playlistId,
-        title: "Updated",
-        description: "New desc",
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.update({
+          playlistId,
+          title: "Updated",
+          description: "New desc",
+        }),
+      ),
     );
 
     expect(result.title).toBe("Updated");
@@ -175,7 +184,9 @@ describe(PlaylistsService.update, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.update({ playlistId, isPublic: true }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.update({ playlistId, isPublic: true }),
+      ),
     );
 
     expect(result.is_public).toBe(true);
@@ -185,7 +196,9 @@ describe(PlaylistsService.update, () => {
     mockGetSession.mockResolvedValueOnce(null);
 
     const error = await runFailure(
-      PlaylistsService.update({ playlistId, title: "Hack" }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.update({ playlistId, title: "Hack" }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
@@ -197,7 +210,9 @@ describe(PlaylistsService.update, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.update({ playlistId, title: "Hack" }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.update({ playlistId, title: "Hack" }),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
   });
@@ -206,7 +221,9 @@ describe(PlaylistsService.update, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const error = await runFailure(
-      PlaylistsService.update({ playlistId: asPlaylistId(9999), title: "X" }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.update({ playlistId: asPlaylistId(9999), title: "X" }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "PlaylistNotFoundError",
@@ -215,7 +232,7 @@ describe(PlaylistsService.update, () => {
   });
 });
 
-describe(PlaylistsService.delete_, () => {
+describe("PlaylistsService.delete_", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -234,7 +251,11 @@ describe(PlaylistsService.delete_, () => {
   it("deletes the playlist", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    const result = await runEffect(PlaylistsService.delete_(playlistId));
+    const result = await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.delete_(playlistId),
+      ),
+    );
 
     expect(result).toEqual({ success: true });
 
@@ -254,7 +275,11 @@ describe(PlaylistsService.delete_, () => {
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await runEffect(PlaylistsService.delete_(playlistId));
+    await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.delete_(playlistId),
+      ),
+    );
 
     const remainingPosts = await db
       .selectFrom("playlist_posts")
@@ -266,12 +291,16 @@ describe(PlaylistsService.delete_, () => {
   it("throws forbidden when not the owner", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    const error = await runFailure(PlaylistsService.delete_(playlistId));
+    const error = await runFailure(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.delete_(playlistId),
+      ),
+    );
     expect(error._tag).toBe("ForbiddenError");
   });
 });
 
-describe(PlaylistsService.addPost, () => {
+describe("PlaylistsService.addPost", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -293,7 +322,9 @@ describe(PlaylistsService.addPost, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.addPost({ playlistId, postId }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId }),
+      ),
     );
 
     expect(result.playlist_id).toBe(playlistId);
@@ -307,12 +338,18 @@ describe(PlaylistsService.addPost, () => {
   it("increments position for subsequent posts", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await runEffect(PlaylistsService.addPost({ playlistId, postId }));
+    await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId }),
+      ),
+    );
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.addPost({ playlistId, postId: postId2 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId: postId2 }),
+      ),
     );
 
     expect(result.position).toBe(1);
@@ -320,12 +357,18 @@ describe(PlaylistsService.addPost, () => {
 
   it("throws when adding a duplicate post", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
-    await runEffect(PlaylistsService.addPost({ playlistId, postId }));
+    await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId }),
+      ),
+    );
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const error = await runFailure(
-      PlaylistsService.addPost({ playlistId, postId }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "PostAlreadyInPlaylistError",
@@ -338,7 +381,9 @@ describe(PlaylistsService.addPost, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const error = await runFailure(
-      PlaylistsService.addPost({ playlistId, postId: asPostId(9999) }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId: asPostId(9999) }),
+      ),
     );
     expect(error).toMatchObject({ _tag: "PostNotFoundError", postId: 9999 });
   });
@@ -347,13 +392,15 @@ describe(PlaylistsService.addPost, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.addPost({ playlistId, postId }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.addPost({ playlistId, postId }),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
   });
 });
 
-describe(PlaylistsService.removePost, () => {
+describe("PlaylistsService.removePost", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -378,7 +425,9 @@ describe(PlaylistsService.removePost, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.removePost({ playlistId, postId }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.removePost({ playlistId, postId }),
+      ),
     );
 
     expect(result).toEqual({ success: true });
@@ -391,10 +440,12 @@ describe(PlaylistsService.removePost, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.removePost({
-        playlistId,
-        postId: postId2,
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.removePost({
+          playlistId,
+          postId: postId2,
+        }),
+      ),
     );
 
     expect(result).toEqual({ success: true });
@@ -404,13 +455,15 @@ describe(PlaylistsService.removePost, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.removePost({ playlistId, postId }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.removePost({ playlistId, postId }),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
   });
 });
 
-describe(PlaylistsService.bulkAddPosts, () => {
+describe("PlaylistsService.bulkAddPosts", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -432,10 +485,12 @@ describe(PlaylistsService.bulkAddPosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.bulkAddPosts({
-        playlistId,
-        postIds: [postId, postId2],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkAddPosts({
+          playlistId,
+          postIds: [postId, postId2],
+        }),
+      ),
     );
 
     expect(result).toEqual({
@@ -470,10 +525,12 @@ describe(PlaylistsService.bulkAddPosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.bulkAddPosts({
-        playlistId,
-        postIds: [postId, postId2],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkAddPosts({
+          playlistId,
+          postIds: [postId, postId2],
+        }),
+      ),
     );
 
     expect(result.added).toBe(1);
@@ -494,10 +551,12 @@ describe(PlaylistsService.bulkAddPosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.bulkAddPosts({
-        playlistId,
-        postIds: [postId, postId, asPostId(9999)],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkAddPosts({
+          playlistId,
+          postIds: [postId, postId, asPostId(9999)],
+        }),
+      ),
     );
 
     expect(result).toEqual({
@@ -523,16 +582,18 @@ describe(PlaylistsService.bulkAddPosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.bulkAddPosts({
-        playlistId,
-        postIds: [postId],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkAddPosts({
+          playlistId,
+          postIds: [postId],
+        }),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
   });
 });
 
-describe(PlaylistsService.bulkRemovePosts, () => {
+describe("PlaylistsService.bulkRemovePosts", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -571,10 +632,12 @@ describe(PlaylistsService.bulkRemovePosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.bulkRemovePosts({
-        playlistId,
-        postIds: [postId],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkRemovePosts({
+          playlistId,
+          postIds: [postId],
+        }),
+      ),
     );
 
     expect(result).toEqual({ playlist_id: playlistId, removed: 1 });
@@ -593,10 +656,12 @@ describe(PlaylistsService.bulkRemovePosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.bulkRemovePosts({
-        playlistId,
-        postIds: [asPostId(9999)],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkRemovePosts({
+          playlistId,
+          postIds: [asPostId(9999)],
+        }),
+      ),
     );
 
     expect(result).toEqual({ playlist_id: playlistId, removed: 0 });
@@ -609,16 +674,18 @@ describe(PlaylistsService.bulkRemovePosts, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.bulkRemovePosts({
-        playlistId,
-        postIds: [postId],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.bulkRemovePosts({
+          playlistId,
+          postIds: [postId],
+        }),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
   });
 });
 
-describe(PlaylistsService.reorder, () => {
+describe("PlaylistsService.reorder", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -651,13 +718,15 @@ describe(PlaylistsService.reorder, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.reorder({
-        playlistId,
-        items: [
-          { postId, position: 1 },
-          { postId: postId2, position: 0 },
-        ],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.reorder({
+          playlistId,
+          items: [
+            { postId, position: 1 },
+            { postId: postId2, position: 0 },
+          ],
+        }),
+      ),
     );
 
     expect(result).toEqual({ success: true });
@@ -676,10 +745,12 @@ describe(PlaylistsService.reorder, () => {
 
     // Missing postId2: the submitted set does not cover the playlist.
     const error = await runFailure(
-      PlaylistsService.reorder({
-        playlistId,
-        items: [{ postId, position: 0 }],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.reorder({
+          playlistId,
+          items: [{ postId, position: 0 }],
+        }),
+      ),
     );
     expect(error._tag).toBe("ValidationError");
     expect(error.message).toBe(
@@ -700,14 +771,16 @@ describe(PlaylistsService.reorder, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const error = await runFailure(
-      PlaylistsService.reorder({
-        playlistId,
-        items: [
-          { postId, position: 0 },
-          { postId: postId2, position: 1 },
-          { postId: asPostId(9999), position: 2 },
-        ],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.reorder({
+          playlistId,
+          items: [
+            { postId, position: 0 },
+            { postId: postId2, position: 1 },
+            { postId: asPostId(9999), position: 2 },
+          ],
+        }),
+      ),
     );
     expect(error._tag).toBe("ValidationError");
   });
@@ -718,13 +791,15 @@ describe(PlaylistsService.reorder, () => {
     // As implemented: positions are written verbatim; colliding positions
     // are the client's problem (ordering falls back to insertion order).
     const result = await runEffect(
-      PlaylistsService.reorder({
-        playlistId,
-        items: [
-          { postId, position: 0 },
-          { postId: postId2, position: 0 },
-        ],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.reorder({
+          playlistId,
+          items: [
+            { postId, position: 0 },
+            { postId: postId2, position: 0 },
+          ],
+        }),
+      ),
     );
     expect(result).toEqual({ success: true });
 
@@ -747,7 +822,9 @@ describe(PlaylistsService.reorder, () => {
     try {
       mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
       const error = await runFailure(
-        PlaylistsService.removePost({ playlistId, postId }),
+        Effect.flatMap(PlaylistsService, (service) =>
+          service.removePost({ playlistId, postId }),
+        ),
       );
       expect(error._tag).toBe("SqlError");
     } finally {
@@ -773,16 +850,18 @@ describe(PlaylistsService.reorder, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.reorder({
-        playlistId,
-        items: [{ postId, position: 0 }],
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.reorder({
+          playlistId,
+          items: [{ postId, position: 0 }],
+        }),
+      ),
     );
     expect(error._tag).toBe("ForbiddenError");
   });
 });
 
-describe(PlaylistsService.fetchUserPlaylists, () => {
+describe("PlaylistsService.fetchUserPlaylists", () => {
   beforeEach(async () => {
     await db
       .insertInto("playlists")
@@ -808,7 +887,9 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.fetchUserPlaylists("user-1"),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchUserPlaylists("user-1"),
+      ),
     );
 
     expect(result).toHaveLength(2);
@@ -820,7 +901,9 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const result = await runEffect(
-      PlaylistsService.fetchUserPlaylists("user-1"),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchUserPlaylists("user-1"),
+      ),
     );
 
     expect(result).toHaveLength(1);
@@ -857,7 +940,9 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.fetchUserPlaylists("user-1"),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchUserPlaylists("user-1"),
+      ),
     );
 
     const publicList = result.find(
@@ -893,7 +978,9 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.fetchUserPlaylists("user-1"),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchUserPlaylists("user-1"),
+      ),
     );
 
     const publicList = result.find(
@@ -903,7 +990,7 @@ describe(PlaylistsService.fetchUserPlaylists, () => {
   });
 });
 
-describe(PlaylistsService.fetchPublicPlaylists, () => {
+describe("PlaylistsService.fetchPublicPlaylists", () => {
   beforeEach(async () => {
     await db
       .insertInto("playlists")
@@ -936,7 +1023,9 @@ describe(PlaylistsService.fetchPublicPlaylists, () => {
 
   it("returns only public playlists ordered newest first", async () => {
     const result = await runEffect(
-      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchPublicPlaylists({ page: 0 }),
+      ),
     );
 
     expect(result.data.map((p) => p.title)).toEqual([
@@ -972,7 +1061,9 @@ describe(PlaylistsService.fetchPublicPlaylists, () => {
       .execute();
 
     const result = await runEffect(
-      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchPublicPlaylists({ page: 0 }),
+      ),
     );
 
     const newer = result.data.find((p) => p.title === "Newer Public")!;
@@ -982,7 +1073,9 @@ describe(PlaylistsService.fetchPublicPlaylists, () => {
 
   it("includes the owner name and image", async () => {
     const result = await runEffect(
-      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchPublicPlaylists({ page: 0 }),
+      ),
     );
 
     const newer = result.data.find((p) => p.title === "Newer Public")!;
@@ -995,7 +1088,9 @@ describe(PlaylistsService.fetchPublicPlaylists, () => {
     await db.deleteFrom("playlists").execute();
 
     const result = await runEffect(
-      PlaylistsService.fetchPublicPlaylists({ page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchPublicPlaylists({ page: 0 }),
+      ),
     );
 
     expect(result.data).toEqual([]);
@@ -1003,7 +1098,7 @@ describe(PlaylistsService.fetchPublicPlaylists, () => {
   });
 });
 
-describe(PlaylistsService.fetchDetail, () => {
+describe("PlaylistsService.fetchDetail", () => {
   let playlistId: PlaylistId;
 
   beforeEach(async () => {
@@ -1040,7 +1135,9 @@ describe(PlaylistsService.fetchDetail, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.fetchDetail({ playlistId, page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchDetail({ playlistId, page: 0 }),
+      ),
     );
 
     expect(result.playlist.title).toBe("Detail List");
@@ -1060,7 +1157,9 @@ describe(PlaylistsService.fetchDetail, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const result = await runEffect(
-      PlaylistsService.fetchDetail({ playlistId, page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchDetail({ playlistId, page: 0 }),
+      ),
     );
 
     expect(result.playlist.title).toBe("Detail List");
@@ -1086,7 +1185,9 @@ describe(PlaylistsService.fetchDetail, () => {
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
     const result = await runEffect(
-      PlaylistsService.fetchDetail({ playlistId, page: 1 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchDetail({ playlistId, page: 1 }),
+      ),
     );
 
     expect(result.data).toHaveLength(1);
@@ -1107,10 +1208,12 @@ describe(PlaylistsService.fetchDetail, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
     const error = await runFailure(
-      PlaylistsService.fetchDetail({
-        playlistId: asPlaylistId(row.id),
-        page: 0,
-      }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchDetail({
+          playlistId: asPlaylistId(row.id),
+          page: 0,
+        }),
+      ),
     );
     expect(error).toMatchObject({
       _tag: "PlaylistNotFoundError",
@@ -1139,7 +1242,9 @@ describe(PlaylistsService.fetchDetail, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     const result = await runEffect(
-      PlaylistsService.fetchDetail({ playlistId, page: 0 }),
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchDetail({ playlistId, page: 0 }),
+      ),
     );
 
     const orphan = result.data.find(
@@ -1161,7 +1266,7 @@ describe(PlaylistsService.fetchDetail, () => {
   });
 });
 
-describe(PlaylistsService.fetchForPost, () => {
+describe("PlaylistsService.fetchForPost", () => {
   let playlistId: PlaylistId;
   let playlistId2: number;
 
@@ -1201,7 +1306,11 @@ describe(PlaylistsService.fetchForPost, () => {
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    const result = await runEffect(PlaylistsService.fetchForPost(postId));
+    const result = await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchForPost(postId),
+      ),
+    );
 
     expect(result).toHaveLength(2);
 
@@ -1219,7 +1328,11 @@ describe(PlaylistsService.fetchForPost, () => {
   it("returns empty array when user has no playlists", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser2));
 
-    const result = await runEffect(PlaylistsService.fetchForPost(postId));
+    const result = await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchForPost(postId),
+      ),
+    );
 
     expect(result).toHaveLength(0);
   });
@@ -1227,7 +1340,11 @@ describe(PlaylistsService.fetchForPost, () => {
   it("throws unauthorized when not logged in", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    const error = await runFailure(PlaylistsService.fetchForPost(postId));
+    const error = await runFailure(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.fetchForPost(postId),
+      ),
+    );
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
       message: "You must be logged in",
@@ -1253,7 +1370,11 @@ describe("PlaylistsService.delete_ cascading", () => {
       .execute();
 
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
-    await runEffect(PlaylistsService.delete_(asPlaylistId(row.id)));
+    await runEffect(
+      Effect.flatMap(PlaylistsService, (service) =>
+        service.delete_(asPlaylistId(row.id)),
+      ),
+    );
 
     const posts = await db
       .selectFrom("posts")

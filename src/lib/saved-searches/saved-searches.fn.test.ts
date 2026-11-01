@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -57,11 +58,13 @@ beforeEach(async () => {
 
 afterEach(() => closeCtx());
 
-describe(SavedSearchesService.save, () => {
+describe("SavedSearchesService.save", () => {
   it("saves the current search for the authenticated user", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    const result = await runEffect(SavedSearchesService.save(search));
+    const result = await runEffect(
+      Effect.flatMap(SavedSearchesService, (service) => service.save(search)),
+    );
 
     expect(result).toMatchObject({
       date_range: "week",
@@ -82,7 +85,9 @@ describe(SavedSearchesService.save, () => {
   it("rejects anonymous users", async () => {
     mockGetSession.mockResolvedValueOnce(null);
 
-    const error = await runFailure(SavedSearchesService.save(search));
+    const error = await runFailure(
+      Effect.flatMap(SavedSearchesService, (service) => service.save(search)),
+    );
 
     expect(error).toMatchObject({
       _tag: "UnauthorizedError",
@@ -92,10 +97,14 @@ describe(SavedSearchesService.save, () => {
 
   it("rejects a duplicate name for the same user", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
-    await runEffect(SavedSearchesService.save(search));
+    await runEffect(
+      Effect.flatMap(SavedSearchesService, (service) => service.save(search)),
+    );
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    const error = await runFailure(SavedSearchesService.save(search));
+    const error = await runFailure(
+      Effect.flatMap(SavedSearchesService, (service) => service.save(search)),
+    );
 
     expect(error).toMatchObject({
       _tag: "ValidationError",
@@ -104,7 +113,7 @@ describe(SavedSearchesService.save, () => {
   });
 });
 
-describe(SavedSearchesService.list, () => {
+describe("SavedSearchesService.list", () => {
   it("lists only the current user's saved searches", async () => {
     await db
       .insertInto("saved_searches")
@@ -130,7 +139,9 @@ describe(SavedSearchesService.list, () => {
       .execute();
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    const result = await runEffect(SavedSearchesService.list());
+    const result = await runEffect(
+      Effect.flatMap(SavedSearchesService, (service) => service.list()),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.name).toBe("Mine");
@@ -138,7 +149,7 @@ describe(SavedSearchesService.list, () => {
   });
 });
 
-describe(SavedSearchesService.delete_, () => {
+describe("SavedSearchesService.delete_", () => {
   it("deletes a saved search owned by the current user", async () => {
     const row = await db
       .insertInto("saved_searches")
@@ -155,7 +166,11 @@ describe(SavedSearchesService.delete_, () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
     await expect(
-      runEffect(SavedSearchesService.delete_(row.id)),
+      runEffect(
+        Effect.flatMap(SavedSearchesService, (service) =>
+          service.delete_(row.id),
+        ),
+      ),
     ).resolves.toEqual({ success: true });
 
     const remaining = await db
@@ -180,7 +195,11 @@ describe(SavedSearchesService.delete_, () => {
       .executeTakeFirstOrThrow();
     mockGetSession.mockResolvedValueOnce(makeAuthSession(testUser));
 
-    await runEffect(SavedSearchesService.delete_(row.id));
+    await runEffect(
+      Effect.flatMap(SavedSearchesService, (service) =>
+        service.delete_(row.id),
+      ),
+    );
 
     const remaining = await db
       .selectFrom("saved_searches")

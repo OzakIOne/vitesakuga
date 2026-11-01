@@ -7,7 +7,8 @@ import { makeSqlError, type SqlError } from "../db/effect-kysely";
 import { DELETED_USER_NAME } from "../db/schema";
 import { parseStrict } from "../effect/schema.utils";
 import { ForbiddenError, UnauthorizedError } from "../errors";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import { SessionFetchError, SessionService } from "./session.effect";
 
 export const deleteAccountInputSchema = Schema.Struct({
@@ -151,14 +152,7 @@ export class DeleteAccountService extends Context.Service<
 
     return { deleteAccount };
   }),
-}) {
-  static readonly deleteAccount = Effect.fn(
-    "DeleteAccountService.deleteAccount",
-  )(function* (input: Schema.Schema.Type<typeof deleteAccountInputSchema>) {
-    const svc = yield* DeleteAccountService;
-    return yield* svc.deleteAccount(input);
-  });
-}
+}) {}
 
 export const DeleteAccountServiceLive = Layer.effect(
   DeleteAccountService,
@@ -170,8 +164,10 @@ export const DeleteAccountServiceLive = Layer.effect(
 export const deleteAccount = createServerFn({ method: "POST" })
   .validator(parseStrict(deleteAccountInputSchema))
   .handler(
-    createHandler(
-      DeleteAccountServiceLive,
-      baseLayerFactories.auth,
-    )(DeleteAccountService.deleteAccount),
+    createEndpointHandler({
+      service: DeleteAccountService,
+      operation: "deleteAccount",
+      layer: DeleteAccountServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

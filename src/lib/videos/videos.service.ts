@@ -21,7 +21,8 @@ import {
   type LifecycleError,
   swapPostVideoInTransaction,
 } from "../lifecycle/lifecycle.service";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import {
   isDeterministicMediaKey,
   PENDING_VIDEOS_PREFIX,
@@ -597,49 +598,7 @@ export class VideosService extends Context.Service<
 
     return { gcPreview, gcRun, listRevisions, replace, restore };
   }),
-}) {
-  static readonly replace = Effect.fn("VideosService.replace")(
-    function* (input: {
-      expectedVersion: number;
-      operationKey: string;
-      pendingVideoKey: string;
-      postId: number;
-    }) {
-      const svc = yield* VideosService;
-      return yield* svc.replace(input);
-    },
-  );
-
-  static readonly listRevisions = Effect.fn("VideosService.listRevisions")(
-    function* (postId: number) {
-      const svc = yield* VideosService;
-      return yield* svc.listRevisions(postId);
-    },
-  );
-
-  static readonly restore = Effect.fn("VideosService.restore")(
-    function* (input: {
-      expectedVersion: number;
-      operationKey: string;
-      revisionId: number;
-    }) {
-      const svc = yield* VideosService;
-      return yield* svc.restore(input);
-    },
-  );
-
-  static readonly gcPreview = Effect.fn("VideosService.gcPreview")(
-    function* () {
-      const svc = yield* VideosService;
-      return yield* svc.gcPreview();
-    },
-  );
-
-  static readonly gcRun = Effect.fn("VideosService.gcRun")(function* () {
-    const svc = yield* VideosService;
-    return yield* svc.gcRun();
-  });
-}
+}) {}
 
 export const VideosServiceLive = Layer.effect(
   VideosService,
@@ -647,15 +606,19 @@ export const VideosServiceLive = Layer.effect(
 ).pipe(Layer.provideMerge(LifecycleServiceLive));
 
 export const previewGc = createServerFn().handler(
-  createHandler(
-    VideosServiceLive,
-    baseLayerFactories.auth,
-  )(VideosService.gcPreview),
+  createEndpointHandler({
+    service: VideosService,
+    operation: "gcPreview",
+    layer: VideosServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const runGc = createServerFn({ method: "POST" }).handler(
-  createHandler(
-    VideosServiceLive,
-    baseLayerFactories.auth,
-  )(VideosService.gcRun),
+  createEndpointHandler({
+    service: VideosService,
+    operation: "gcRun",
+    layer: VideosServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );

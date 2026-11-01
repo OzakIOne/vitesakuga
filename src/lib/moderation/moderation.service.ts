@@ -9,7 +9,8 @@ import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
 import { ForbiddenError, UnauthorizedError } from "../errors";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 
 const MOD_QUEUE_LIMIT = 50;
 
@@ -204,21 +205,7 @@ export class ModerationService extends Context.Service<
 
     return { overview, setUserRole };
   }),
-}) {
-  static readonly overview = Effect.fn("ModerationService.overview")(
-    function* () {
-      const svc = yield* ModerationService;
-      return yield* svc.overview();
-    },
-  );
-
-  static readonly setUserRole = Effect.fn("ModerationService.setUserRole")(
-    function* (input: { role: string; userId: string }) {
-      const svc = yield* ModerationService;
-      return yield* svc.setUserRole(input);
-    },
-  );
-}
+}) {}
 
 export const ModerationServiceLive = Layer.effect(
   ModerationService,
@@ -226,10 +213,12 @@ export const ModerationServiceLive = Layer.effect(
 );
 
 export const fetchModerationOverview = createServerFn().handler(
-  createHandler(
-    ModerationServiceLive,
-    baseLayerFactories.auth,
-  )(ModerationService.overview),
+  createEndpointHandler({
+    service: ModerationService,
+    operation: "overview",
+    layer: ModerationServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const assignUserRole = createServerFn({ method: "POST" })
@@ -237,10 +226,10 @@ export const assignUserRole = createServerFn({ method: "POST" })
     parseStrict(Schema.Struct({ role: Schema.String, userId: Schema.String })),
   )
   .handler(
-    createHandler(
-      ModerationServiceLive,
-      baseLayerFactories.auth,
-    )((input: { role: string; userId: string }) =>
-      ModerationService.setUserRole(input),
-    ),
+    createEndpointHandler({
+      service: ModerationService,
+      operation: "setUserRole",
+      layer: ModerationServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
