@@ -1,15 +1,14 @@
-import { useQueryClient } from "@tanstack/react-query";
-import type { InfiniteData } from "@tanstack/react-query";
-import { useContext } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { PlaylistsFnsContext } from "./playlists.fn-context";
+import { usePlaylistsFns } from "./playlists.fn-context";
 import { playlistsKeys } from "./playlists.queries";
-import type { PlaylistDetailPage } from "./playlists.queries";
+import type { PlaylistDetailPage, PlaylistsForPost } from "./playlists.queries";
 
 export function useUpdatePlaylist(userId: string) {
   const queryClient = useQueryClient();
-  const { updatePlaylist } = useContext(PlaylistsFnsContext);
+  const { updatePlaylist } = usePlaylistsFns();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to update playlist",
@@ -47,7 +46,7 @@ export function useUpdatePlaylist(userId: string) {
  */
 export function useReorderPlaylistPosts() {
   const queryClient = useQueryClient();
-  const { reorderPlaylistPosts } = useContext(PlaylistsFnsContext);
+  const { reorderPlaylistPosts } = usePlaylistsFns();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to reorder the playlist",
@@ -121,5 +120,158 @@ export function useReorderPlaylistPosts() {
     },
     successDescription: "The playlist order has been updated.",
     successTitle: "Playlist reordered",
+  });
+}
+
+const invalidatePlaylistMembershipQueries = (
+  queryClient: QueryClient,
+  {
+    playlistId,
+    postIds,
+    userId,
+  }: { playlistId: number; postIds: number[]; userId: string },
+) => {
+  void queryClient.invalidateQueries({
+    queryKey: playlistsKeys.detailForPlaylist(playlistId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: playlistsKeys.userPlaylists(userId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: playlistsKeys.publicLists,
+  });
+  for (const postId of postIds) {
+    void queryClient.invalidateQueries({
+      queryKey: playlistsKeys.forPost(postId),
+    });
+  }
+};
+
+/**
+ * Checks or unchecks one playlist for a post. The checkbox state is applied
+ * optimistically; every settle refetches the post's playlist list so a failed
+ * change shows the server's state.
+ */
+export function useSetPostPlaylistMembership({
+  postId,
+  userId,
+}: {
+  postId: number;
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const { addPostToPlaylist, removePostFromPlaylist } = usePlaylistsFns();
+
+  return useMutation({
+    mutationFn: async ({
+      contains,
+      playlistId,
+    }: {
+      playlistId: number;
+      contains: boolean;
+    }) =>
+      contains
+        ? addPostToPlaylist({ data: { playlistId, postId } })
+        : removePostFromPlaylist({ data: { playlistId, postId } }),
+    onMutate: ({ contains, playlistId }) => {
+      queryClient.setQueryData<PlaylistsForPost>(
+        playlistsKeys.forPost(postId),
+        (old) =>
+          old?.map((playlist) =>
+            playlist.id === playlistId
+              ? { ...playlist, contains_post: contains }
+              : playlist,
+          ),
+      );
+    },
+    onSettled: (_data, _error, { playlistId }) => {
+      invalidatePlaylistMembershipQueries(queryClient, {
+        playlistId,
+        postIds: [postId],
+        userId,
+      });
+    },
+  });
+}
+
+/** Creates a private playlist from the add-to-playlist dialog. */
+export function useCreatePlaylistForPost({
+  postId,
+  userId,
+}: {
+  postId: number;
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const { createPlaylist } = usePlaylistsFns();
+
+  return useMutation({
+    mutationFn: async (title: string) =>
+      createPlaylist({ data: { isPublic: false, title } }),
+    onError: () => {
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.forPost(postId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.userPlaylists(userId),
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: playlistsKeys.userPlaylists(userId),
+      });
+    },
+  });
+}
+
+export function useBulkAddPostsToPlaylist({
+  playlistId,
+  userId,
+}: {
+  playlistId: number;
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const { bulkAddPostsToPlaylist } = usePlaylistsFns();
+
+  return useMutationWithFeedback({
+    errorFallback: "Failed to add posts to the playlist",
+    errorTitle: "Error adding posts",
+    mutationFn: async (postIds: number[]) =>
+      bulkAddPostsToPlaylist({ data: { playlistId, postIds } }),
+    onSuccess: (_, postIds) => {
+      invalidatePlaylistMembershipQueries(queryClient, {
+        playlistId,
+        postIds,
+        userId,
+      });
+    },
+    successTitle: "Posts added",
+  });
+}
+
+export function useBulkRemovePostsFromPlaylist({
+  playlistId,
+  userId,
+}: {
+  playlistId: number;
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const { bulkRemovePostsFromPlaylist } = usePlaylistsFns();
+
+  return useMutationWithFeedback({
+    errorFallback: "Failed to remove posts from the playlist",
+    errorTitle: "Error removing posts",
+    mutationFn: async (postIds: number[]) =>
+      bulkRemovePostsFromPlaylist({ data: { playlistId, postIds } }),
+    onSuccess: (_, postIds) => {
+      invalidatePlaylistMembershipQueries(queryClient, {
+        playlistId,
+        postIds,
+        userId,
+      });
+    },
+    successTitle: "Posts removed",
   });
 }

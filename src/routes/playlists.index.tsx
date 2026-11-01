@@ -10,7 +10,7 @@ import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { PageNumberWithDefaultSchema } from "src/lib/pagination/pagination.schema";
-import { publicPlaylistsQueryOptions } from "src/lib/playlists/playlists.queries";
+import { publicPlaylistsQueryOptions } from "src/lib/playlists/playlists.query-options";
 import { seo } from "src/utils/seo";
 
 const PlaylistsSearchSchema = Schema.Struct({

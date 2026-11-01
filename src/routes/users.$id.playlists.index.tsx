@@ -8,9 +8,9 @@ import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
-import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
+import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.query-options";
 import { rethrowRouteDataError } from "src/lib/router/not-found";
-import { contributorProfileQueryOptions } from "src/lib/users/users.queries";
+import { contributorProfileQueryOptions } from "src/lib/users/users.query-options";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/users/$id/playlists/")({

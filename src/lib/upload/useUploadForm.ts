@@ -4,7 +4,6 @@ import {
   type FormValidateOrFn,
   type ReactFormExtendedApi,
 } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -16,7 +15,7 @@ import {
   toastError,
   useMutationWithFeedback,
 } from "../mutations/mutation-feedback";
-import { postsKeys } from "../posts/posts.queries";
+import { useInvalidateAllPosts } from "../posts/posts.hooks";
 import {
   FormFileUploadSchema,
   MAX_VIDEO_SIZE_BYTES,
@@ -131,7 +130,7 @@ export function useUploadForm(): UseUploadFormResult {
     onSelectionChanged: cancelCurrentPreparation,
   });
   const { mediaKind, video } = media;
-  const queryClient = useQueryClient();
+  const invalidateAllPosts = useInvalidateAllPosts();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -151,7 +150,7 @@ export function useUploadForm(): UseUploadFormResult {
     onSuccess: (newPost) => {
       form.reset(emptyValues);
       draft.clear();
-      void queryClient.invalidateQueries({ queryKey: postsKeys.all });
+      void invalidateAllPosts();
       void navigate({ to: `/posts/${newPost.id}` });
     },
     successDescription: "Your post has been uploaded successfully.",

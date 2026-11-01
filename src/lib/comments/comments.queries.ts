@@ -1,27 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
-
-import { fetchComments } from "./comments.service";
-
 export const commentsKeys = {
   all: ["comments"] as const,
   post: (postId: number) => [...commentsKeys.all, "post", postId] as const,
 } as const;
-
-// Centralized queryOptions factories for comments feature
-const commentsQueries = {
-  // Comments for a specific post
-  getComments: (postId: number) =>
-    queryOptions({
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      queryFn: async () =>
-        fetchComments({
-          data: postId,
-        }),
-      queryKey: commentsKeys.post(postId),
-      staleTime: 30 * 1000, // 30 seconds
-    }),
-};
-
-// Backward compatibility export
-export const commentsQueryGetComments = (postId: number) =>
-  commentsQueries.getComments(postId);

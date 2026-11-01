@@ -4,7 +4,7 @@ import { SearchBox } from "src/components/search/SearchBox";
 import { PopularTagsSection } from "src/components/tags/PopularTagsSection";
 import { Box, Flex } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
-import { tagsQueryGetPopularTags } from "src/lib/tags/tags.queries";
+import { tagsQueryGetPopularTags } from "src/lib/tags/tags.query-options";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/")({

@@ -1,6 +1,4 @@
 import { Portal } from "@ark-ui/react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { LuCopy, LuKeyRound, LuShieldCheck } from "react-icons/lu";
 import QRCode from "react-qr-code";
@@ -17,9 +15,9 @@ import {
   useDisableTwoFactor,
   useEnableTwoFactor,
   useGenerateBackupCodes,
+  useRefreshSignedInUser,
   useVerifyTotp,
 } from "src/lib/auth/two-factor.hooks";
-import { usersKeys } from "src/lib/users/users.queries";
 
 type EnableStep = "password" | "generating" | "qr" | "backup-codes";
 
@@ -70,8 +68,7 @@ export function TwoFactorSection({
   enabled,
   hasPassword,
 }: TwoFactorSectionProps) {
-  const queryClient = useQueryClient();
-  const router = useRouter();
+  const refreshUser = useRefreshSignedInUser();
   const enableMutation = useEnableTwoFactor();
   const verifyMutation = useVerifyTotp();
   const disableMutation = useDisableTwoFactor();
@@ -102,11 +99,6 @@ export function TwoFactorSection({
     setBackupCodes([]);
     setCode("");
     setEnableError("");
-  };
-
-  const refreshUser = async () => {
-    await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-    await router.invalidate();
   };
 
   const startEnable = (password?: string) => {

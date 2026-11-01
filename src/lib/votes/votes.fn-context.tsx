@@ -1,15 +1,25 @@
-import { createContext } from "react";
+import { createContext, useContext } from "react";
 
-import {
-  fetchPostVotes as _fetchPostVotes,
-  removePostVote as _removePostVote,
-  setPostVote as _setPostVote,
+import type {
+  fetchLikedPosts,
+  fetchPostVotes,
+  removePostVote,
+  setPostVote,
 } from "./votes.service";
 
-export const defaultVotesFns = {
-  fetchPostVotes: _fetchPostVotes,
-  removePostVote: _removePostVote,
-  setPostVote: _setPostVote,
+export type VotesFns = {
+  fetchLikedPosts: typeof fetchLikedPosts;
+  fetchPostVotes: typeof fetchPostVotes;
+  removePostVote: typeof removePostVote;
+  setPostVote: typeof setPostVote;
 };
 
-export const VotesFnsContext = createContext(defaultVotesFns);
+export const VotesFnsContext = createContext<VotesFns | null>(null);
+
+export const useVotesFns = (): VotesFns => {
+  const fns = useContext(VotesFnsContext);
+  if (fns === null) {
+    throw new Error("VotesFnsContext is not provided");
+  }
+  return fns;
+};

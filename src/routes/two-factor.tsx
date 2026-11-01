@@ -1,10 +1,8 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
   redirect,
   useNavigate,
-  useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { LuShieldCheck } from "react-icons/lu";
@@ -15,10 +13,10 @@ import { Heading, Text } from "src/components/ui/typography";
 import {
   clearTwoFactorRedirectUrl,
   getTwoFactorRedirectUrl,
+  useRefreshSignedInUser,
   useVerifyBackupCode,
   useVerifyTotp,
 } from "src/lib/auth/two-factor.hooks";
-import { usersKeys } from "src/lib/users/users.queries";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/two-factor")({
@@ -39,8 +37,7 @@ export const Route = createFileRoute("/two-factor")({
 });
 
 function TwoFactorVerifyPage() {
-  const queryClient = useQueryClient();
-  const router = useRouter();
+  const refreshSignedInUser = useRefreshSignedInUser();
   const navigate = useNavigate();
   const verifyTotp = useVerifyTotp();
   const verifyBackupCode = useVerifyBackupCode();
@@ -67,8 +64,7 @@ function TwoFactorVerifyPage() {
       }
       const redirectUrl = getTwoFactorRedirectUrl();
       clearTwoFactorRedirectUrl();
-      await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-      await router.invalidate();
+      await refreshSignedInUser();
       await navigate({ to: redirectUrl });
     } catch (mutationError) {
       setError(

@@ -7,7 +7,7 @@ import { TagFollowButton } from "src/components/tags/TagFollowButton";
 import { Box, HStack } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
-import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
+import { postsInfiniteQueryOptions } from "src/lib/posts/posts.query-options";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { seo } from "src/utils/seo";
 

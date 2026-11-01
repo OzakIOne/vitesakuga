@@ -6,7 +6,10 @@ import { PostDetailDisplay } from "src/components/posts/PostDetail/PostDetailDis
 import { PostErrorComponent } from "src/components/posts/PostError";
 import { PostsPageLayout } from "src/components/posts/PostsPageLayout";
 import { assetUrl } from "src/lib/assets/url";
-import { postQueryDetail, seriesHubQuery } from "src/lib/posts/posts.queries";
+import {
+  postQueryDetail,
+  seriesHubQuery,
+} from "src/lib/posts/posts.query-options";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { getSeriesNavigation } from "src/lib/posts/series-hubs";
 import { rethrowRouteDataError } from "src/lib/router/not-found";

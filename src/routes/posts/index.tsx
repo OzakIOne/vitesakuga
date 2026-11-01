@@ -11,7 +11,7 @@ import { Box } from "src/components/ui/layout";
 import { Heading } from "src/components/ui/typography";
 import { DISCOVERY_VIEW_INFO } from "src/lib/posts/discovery";
 import { usePostsInfiniteScroll } from "src/lib/posts/posts.hooks";
-import { postsInfiniteQueryOptions } from "src/lib/posts/posts.queries";
+import { postsInfiniteQueryOptions } from "src/lib/posts/posts.query-options";
 import { searchPostsBaseSchema } from "src/lib/posts/posts.schema";
 import { seo } from "src/utils/seo";
 

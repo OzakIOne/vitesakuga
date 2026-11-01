@@ -13,7 +13,7 @@ import {
   useApprovePostEdit,
   useRejectPostEdit,
 } from "src/lib/post-edits/post-edits.hooks";
-import { postEditsQuery } from "src/lib/post-edits/post-edits.queries";
+import { postEditsQuery } from "src/lib/post-edits/post-edits.query-options";
 import type { PostEditHistoryEntry } from "src/lib/post-edits/post-edits.service";
 import { formatDateUtc } from "src/utils/date-format";
 

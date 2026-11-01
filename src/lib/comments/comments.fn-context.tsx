@@ -1,15 +1,25 @@
-import { createContext } from "react";
+import { createContext, useContext } from "react";
 
-import {
-  addComment as _addComment,
-  deleteComment as _deleteComment,
-  updateComment as _updateComment,
+import type {
+  addComment,
+  deleteComment,
+  fetchComments,
+  updateComment,
 } from "./comments.service";
 
-export const defaultCommentsFns = {
-  addComment: _addComment,
-  deleteComment: _deleteComment,
-  updateComment: _updateComment,
+export type CommentsFns = {
+  addComment: typeof addComment;
+  deleteComment: typeof deleteComment;
+  fetchComments: typeof fetchComments;
+  updateComment: typeof updateComment;
 };
 
-export const CommentsFnsContext = createContext(defaultCommentsFns);
+export const CommentsFnsContext = createContext<CommentsFns | null>(null);
+
+export const useCommentsFns = (): CommentsFns => {
+  const fns = useContext(CommentsFnsContext);
+  if (fns === null) {
+    throw new Error("CommentsFnsContext is not provided");
+  }
+  return fns;
+};

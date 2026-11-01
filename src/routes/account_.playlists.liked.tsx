@@ -14,7 +14,8 @@ import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { PageNumberWithDefaultSchema } from "src/lib/pagination/pagination.schema";
-import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
+import { useVotesFns } from "src/lib/votes/votes.fn-context";
+import { votesQueryLikedPosts } from "src/lib/votes/votes.query-options";
 import { formatDateUtc } from "src/utils/date-format";
 import { seo } from "src/utils/seo";
 
@@ -48,7 +49,10 @@ function LikedPostsContent() {
   const { page } = Route.useSearch();
   const navigate = useNavigate();
 
-  const { data } = useSuspenseQuery(votesQueryLikedPosts({ page }));
+  const { fetchLikedPosts } = useVotesFns();
+  const { data } = useSuspenseQuery(
+    votesQueryLikedPosts({ page }, fetchLikedPosts),
+  );
 
   const handlePageChange = useCallback(
     (newPage: number) => {

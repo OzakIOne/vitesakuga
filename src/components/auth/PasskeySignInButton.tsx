@@ -3,7 +3,7 @@ import { LuFingerprint } from "react-icons/lu";
 import { Button } from "src/components/ui/button";
 import { useSignInWithPasskey } from "src/lib/auth/auth.hooks";
 import { AuthClientContext } from "src/lib/auth/client-context";
-import { useSignInCompletion } from "src/lib/auth/use-sign-in-completion";
+import { useSignInCompletion } from "src/lib/auth/sign-in-completion.hooks";
 import { envClient } from "src/lib/env/client";
 
 type PasskeySignInButtonProps = {

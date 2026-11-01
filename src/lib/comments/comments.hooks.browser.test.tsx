@@ -1,16 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { CommentsFnsContext, defaultCommentsFns } from "./comments.fn-context";
+import { CommentsFnsContext, type CommentsFns } from "./comments.fn-context";
 import { useAddComment, useDeleteComment } from "./comments.hooks";
-
-vi.mock("./comments.service", () => ({
-  addComment: vi.fn(),
-  deleteComment: vi.fn(),
-  fetchComments: vi.fn(),
-  updateComment: vi.fn(),
-}));
 
 vi.mock("src/components/ui/toaster", () => ({
   toaster: {
@@ -20,22 +14,21 @@ vi.mock("src/components/ui/toaster", () => ({
 
 const createWrapper = (
   queryClient: QueryClient,
-  fns: Partial<{
-    addComment: ReturnType<typeof vi.fn>;
-    deleteComment: ReturnType<typeof vi.fn>;
-  }> = {},
+  fns: Partial<Record<keyof CommentsFns, unknown>> = {},
 ) => {
-  return ({ children }: { children: React.ReactNode }) => (
+  const fakes = {
+    addComment: vi.fn(),
+    deleteComment: vi.fn(),
+    fetchComments: vi.fn(),
+    updateComment: vi.fn(),
+    ...fns,
+  };
+  return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <CommentsFnsContext.Provider
-        value={
-          // Mocks stand in for the TanStack Start fetchers; the cast keeps
-          // the provider's value type aligned with the context's shape.
-          {
-            addComment: fns.addComment ?? vi.fn(),
-            deleteComment: fns.deleteComment ?? vi.fn(),
-          } as unknown as typeof defaultCommentsFns
-        }
+        // SAFETY: the hooks under test only call the fakes above; the
+        // remaining comment server functions are never invoked.
+        value={fakes as unknown as CommentsFns}
       >
         {children}
       </CommentsFnsContext.Provider>

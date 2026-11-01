@@ -24,7 +24,7 @@ import { rethrowRouteDataError } from "src/lib/router/not-found";
 import {
   contributorProfileQueryOptions,
   userPostsInfiniteQueryOptions,
-} from "src/lib/users/users.queries";
+} from "src/lib/users/users.query-options";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/users/$id")({

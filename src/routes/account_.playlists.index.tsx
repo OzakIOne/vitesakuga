@@ -9,8 +9,9 @@ import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
-import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.queries";
-import { votesQueryLikedPosts } from "src/lib/votes/votes.queries";
+import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.query-options";
+import { useVotesFns } from "src/lib/votes/votes.fn-context";
+import { votesQueryLikedPosts } from "src/lib/votes/votes.query-options";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/account_/playlists/")({
@@ -38,7 +39,10 @@ export const Route = createFileRoute("/account_/playlists/")({
 // Virtual system playlist (YouTube-style): derived from the user's like
 // votes, always private, pinned at the top of the playlists grid.
 function LikedPostsCard() {
-  const { data } = useSuspenseQuery(votesQueryLikedPosts({ page: 0 }));
+  const { fetchLikedPosts } = useVotesFns();
+  const { data } = useSuspenseQuery(
+    votesQueryLikedPosts({ page: 0 }, fetchLikedPosts),
+  );
 
   return (
     <Box

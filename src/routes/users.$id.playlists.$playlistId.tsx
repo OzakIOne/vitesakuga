@@ -12,7 +12,7 @@ import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { asPlaylistId } from "src/lib/ids";
 import { PageNumberWithDefaultSchema } from "src/lib/pagination/pagination.schema";
-import { playlistQueryDetail } from "src/lib/playlists/playlists.queries";
+import { playlistQueryDetail } from "src/lib/playlists/playlists.query-options";
 import { rethrowRouteDataError } from "src/lib/router/not-found";
 import { parsePositiveIntegerRouteParam } from "src/lib/router/route-params";
 import { formatDateUtc } from "src/utils/date-format";

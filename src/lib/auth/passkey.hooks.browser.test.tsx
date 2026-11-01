@@ -10,8 +10,8 @@ import {
   useSignInWithPasskey,
 } from "./auth.hooks";
 import { AuthClientContext } from "./client-context";
+import { useSignInCompletion } from "./sign-in-completion.hooks";
 import { getTwoFactorRedirectUrl } from "./two-factor.hooks";
-import { useSignInCompletion } from "./use-sign-in-completion";
 
 const authNavigation = vi.hoisted(() => {
   const events = new Array<string>();

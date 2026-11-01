@@ -3,7 +3,6 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { PacerDevtoolsPanel } from "@tanstack/react-pacer-devtools";
-import { useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
@@ -31,26 +30,27 @@ import { Box, Center } from "src/components/ui/layout";
 import { Menu } from "src/components/ui/overlay";
 import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
+import { useSignOut } from "src/lib/auth/auth.hooks";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import { AuthClientContext } from "src/lib/auth/client-context";
 import { roleOf } from "src/lib/auth/roles";
-import {
-  CommentsFnsContext,
-  defaultCommentsFns,
-} from "src/lib/comments/comments.fn-context";
+import { CommentsFnsContext } from "src/lib/comments/comments.fn-context";
+import { defaultCommentsFns } from "src/lib/comments/comments.fns";
 import { ModerationFnsContext } from "src/lib/moderation/moderation.fn-context";
 import { defaultModerationFns } from "src/lib/moderation/moderation.fns";
 import { useUnreadNotificationCount } from "src/lib/notifications/notifications.hooks";
-import {
-  PlaylistsFnsContext,
-  defaultPlaylistsFns,
-} from "src/lib/playlists/playlists.fn-context";
-import {
-  ReportsFnsContext,
-  defaultReportsFns,
-} from "src/lib/reports/reports.fn-context";
+import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
+import { defaultPlaylistsFns } from "src/lib/playlists/playlists.fns";
+import { PostEditsFnsContext } from "src/lib/post-edits/post-edits.fn-context";
+import { defaultPostEditsFns } from "src/lib/post-edits/post-edits.fns";
+import { PostsFnsContext } from "src/lib/posts/posts.fn-context";
+import { defaultPostsFns } from "src/lib/posts/posts.fns";
+import { ReportsFnsContext } from "src/lib/reports/reports.fn-context";
+import { defaultReportsFns } from "src/lib/reports/reports.fns";
 import { usersKeys } from "src/lib/users/users.queries";
+import { VotesFnsContext } from "src/lib/votes/votes.fn-context";
+import { defaultVotesFns } from "src/lib/votes/votes.fns";
 import { seo } from "src/utils/seo";
 
 import appCss from "src/styles/app.css?url";
@@ -187,7 +187,7 @@ function ThemeMenuItems() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const ctx = Route.useRouteContext();
-  const queryClient = useQueryClient();
+  const signOut = useSignOut();
   const router = useRouter();
   const isStaff =
     ctx.user !== null && ["moderator", "admin"].includes(roleOf(ctx.user));
@@ -200,13 +200,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     : {};
 
   const handleSignOut = () => {
-    void (async () => {
-      await authClient.signOut();
-      await queryClient.invalidateQueries({
-        queryKey: usersKeys.userInfo,
-      });
-      await router.invalidate();
-    })();
+    void signOut();
   };
 
   return (
@@ -584,11 +578,17 @@ function RootComponent() {
         <ModerationFnsContext.Provider value={defaultModerationFns}>
           <CommentsFnsContext.Provider value={defaultCommentsFns}>
             <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
-              <ReportsFnsContext.Provider value={defaultReportsFns}>
-                <RootDocument>
-                  <Outlet />
-                </RootDocument>
-              </ReportsFnsContext.Provider>
+              <PostEditsFnsContext.Provider value={defaultPostEditsFns}>
+                <PostsFnsContext.Provider value={defaultPostsFns}>
+                  <ReportsFnsContext.Provider value={defaultReportsFns}>
+                    <VotesFnsContext.Provider value={defaultVotesFns}>
+                      <RootDocument>
+                        <Outlet />
+                      </RootDocument>
+                    </VotesFnsContext.Provider>
+                  </ReportsFnsContext.Provider>
+                </PostsFnsContext.Provider>
+              </PostEditsFnsContext.Provider>
             </PlaylistsFnsContext.Provider>
           </CommentsFnsContext.Provider>
         </ModerationFnsContext.Provider>

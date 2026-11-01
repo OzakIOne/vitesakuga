@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useReducer, useState } from "react";
 import { Comments } from "src/components/comments/Comments";
 import { PlaylistAddModal } from "src/components/playlists/PlaylistAddModal";
@@ -22,12 +21,10 @@ import { Box, HStack, VStack } from "src/components/ui/layout";
 import { TagInput } from "src/components/ui/tag-input";
 import { userHasPermission } from "src/lib/auth/policy";
 import { roleOf } from "src/lib/auth/roles";
-import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
-import { postsKeys } from "src/lib/posts/posts.queries";
+import { useUpdatePost } from "src/lib/posts/posts.hooks";
 import type { Tag } from "src/lib/posts/posts.schema";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
 import type { fetchSeriesHub } from "src/lib/posts/posts.service";
-import { updatePost } from "src/lib/posts/posts.service";
 import type { SeriesNavigation } from "src/lib/posts/series-hubs";
 
 type PostDetailDisplayProps = {
@@ -109,7 +106,6 @@ export function PostDetailDisplay({
   currentUserId,
   currentUserRole,
 }: PostDetailDisplayProps) {
-  const queryClient = useQueryClient();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showSuggestionDialog, setShowSuggestionDialog] = useState(false);
@@ -139,39 +135,7 @@ export function PostDetailDisplay({
       "posts:suggest-edit",
     );
 
-  const updatePostMutation = useMutationWithFeedback({
-    errorFallback: "Failed to update post",
-    errorTitle: "Error updating post",
-    mutationFn: async (data: {
-      description: string;
-      operationKey: string;
-      series: ReturnType<typeof toSeriesPayload>;
-      source: string | undefined;
-      tags: { id?: number; name: string }[];
-      title: string;
-    }) =>
-      updatePost({
-        data: {
-          ...data.series,
-          description: data.description,
-          expectedVersion: post.version,
-          operationKey: data.operationKey,
-          postId: post.id,
-          relatedPostId: post.relatedPostId ?? undefined,
-          source: data.source,
-          tags: data.tags,
-          title: data.title,
-        },
-      }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: postsKeys.detail(post.id),
-      });
-      dispatchEdit({ type: "stopEditing" });
-    },
-    successDescription: "Your post has been updated.",
-    successTitle: "Post updated",
-  });
+  const updatePostMutation = useUpdatePost(post);
 
   const startEditing = () => {
     dispatchEdit({
@@ -189,14 +153,17 @@ export function PostDetailDisplay({
     if (!trimmedTitle || descriptionDraft.trim().length < 3) {
       return;
     }
-    updatePostMutation.mutate({
-      description: descriptionDraft,
-      operationKey: `post-update:${post.id}:${post.version}:${crypto.randomUUID()}`,
-      series: toSeriesPayload(seriesDraft),
-      source: sourceDraft.trim() || undefined,
-      tags: tagsDraft,
-      title: trimmedTitle,
-    });
+    updatePostMutation.mutate(
+      {
+        ...toSeriesPayload(seriesDraft),
+        description: descriptionDraft,
+        operationKey: `post-update:${post.id}:${post.version}:${crypto.randomUUID()}`,
+        source: sourceDraft.trim() || undefined,
+        tags: tagsDraft,
+        title: trimmedTitle,
+      },
+      { onSuccess: () => dispatchEdit({ type: "stopEditing" }) },
+    );
   };
 
   return (

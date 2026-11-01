@@ -4,7 +4,7 @@ import { LuAtSign } from "react-icons/lu";
 import { Textarea } from "src/components/ui/field";
 import { Avatar } from "src/components/ui/media";
 import { Text } from "src/components/ui/typography";
-import { mentionSearchQueryOptions } from "src/lib/users/users.queries";
+import { mentionSearchQueryOptions } from "src/lib/users/users.query-options";
 
 type MentionUser = {
   readonly id: string;

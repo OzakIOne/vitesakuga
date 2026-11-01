@@ -132,9 +132,19 @@ export function useGenerateBackupCodes() {
   });
 }
 
-export function useDisableTwoFactor() {
+/** Refetches the signed-in user and route data after a 2FA state change. */
+export function useRefreshSignedInUser() {
   const queryClient = useQueryClient();
   const router = useRouter();
+
+  return async () => {
+    await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
+    await router.invalidate();
+  };
+}
+
+export function useDisableTwoFactor() {
+  const refreshSignedInUser = useRefreshSignedInUser();
   const authClient = useContext(AuthClientContext);
 
   return useMutationWithFeedback({
@@ -153,8 +163,7 @@ export function useDisableTwoFactor() {
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
-      await router.invalidate();
+      await refreshSignedInUser();
     },
     successDescription: "Two-factor authentication has been disabled.",
     successTitle: "2FA disabled",

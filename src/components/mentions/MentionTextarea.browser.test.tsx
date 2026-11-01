@@ -6,7 +6,7 @@ import { page } from "vitest/browser";
 
 import { MentionTextarea } from "./MentionTextarea";
 
-vi.mock("src/lib/users/users.queries", () => ({
+vi.mock("src/lib/users/users.query-options", () => ({
   mentionSearchQueryOptions: (query: string) => ({
     queryFn: async () => [],
     queryKey: ["mention-search", query],

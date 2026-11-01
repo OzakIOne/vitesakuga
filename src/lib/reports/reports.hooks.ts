@@ -1,15 +1,13 @@
-import { useContext } from "react";
-
 import type { PostReportReason } from "../db/schema";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { ReportsFnsContext } from "./reports.fn-context";
+import { useReportsFns } from "./reports.fn-context";
 
 /**
  * Submits (or updates) the current user's report on a post.
  * Pass one of the allowed report reasons.
  */
 export function useSubmitReport(postId: number) {
-  const { submitPostReport } = useContext(ReportsFnsContext);
+  const { submitPostReport } = useReportsFns();
 
   return useMutationWithFeedback({
     errorFallback: "Could not submit your report. Please try again.",

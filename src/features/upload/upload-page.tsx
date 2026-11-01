@@ -30,7 +30,8 @@ import { toaster } from "src/components/ui/toaster";
 import { Heading, Text } from "src/components/ui/typography";
 import { Video, type VideoRef } from "src/components/videos/Video";
 import { VideoMetadataDialog } from "src/components/videos/VideoMetadataDialog";
-import { postQueryDetail, postsKeys } from "src/lib/posts/posts.queries";
+import { postsKeys } from "src/lib/posts/posts.queries";
+import { postQueryDetail } from "src/lib/posts/posts.query-options";
 import {
   getImageFileValidationError,
   MAX_IMAGE_SIZE_BYTES,

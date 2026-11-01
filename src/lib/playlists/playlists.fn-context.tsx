@@ -1,25 +1,33 @@
-import { createContext } from "react";
+import { createContext, useContext } from "react";
 
-import {
-  createPlaylist as _createPlaylist,
-  updatePlaylist as _updatePlaylist,
-  deletePlaylist as _deletePlaylist,
-  addPostToPlaylist as _addPostToPlaylist,
-  bulkAddPostsToPlaylist as _bulkAddPostsToPlaylist,
-  bulkRemovePostsFromPlaylist as _bulkRemovePostsFromPlaylist,
-  removePostFromPlaylist as _removePostFromPlaylist,
-  reorderPlaylistPosts as _reorderPlaylistPosts,
+import type {
+  addPostToPlaylist,
+  bulkAddPostsToPlaylist,
+  bulkRemovePostsFromPlaylist,
+  createPlaylist,
+  deletePlaylist,
+  removePostFromPlaylist,
+  reorderPlaylistPosts,
+  updatePlaylist,
 } from "./playlists.service";
 
-export const defaultPlaylistsFns = {
-  addPostToPlaylist: _addPostToPlaylist,
-  bulkAddPostsToPlaylist: _bulkAddPostsToPlaylist,
-  bulkRemovePostsFromPlaylist: _bulkRemovePostsFromPlaylist,
-  createPlaylist: _createPlaylist,
-  deletePlaylist: _deletePlaylist,
-  removePostFromPlaylist: _removePostFromPlaylist,
-  reorderPlaylistPosts: _reorderPlaylistPosts,
-  updatePlaylist: _updatePlaylist,
+export type PlaylistsFns = {
+  addPostToPlaylist: typeof addPostToPlaylist;
+  bulkAddPostsToPlaylist: typeof bulkAddPostsToPlaylist;
+  bulkRemovePostsFromPlaylist: typeof bulkRemovePostsFromPlaylist;
+  createPlaylist: typeof createPlaylist;
+  deletePlaylist: typeof deletePlaylist;
+  removePostFromPlaylist: typeof removePostFromPlaylist;
+  reorderPlaylistPosts: typeof reorderPlaylistPosts;
+  updatePlaylist: typeof updatePlaylist;
 };
 
-export const PlaylistsFnsContext = createContext(defaultPlaylistsFns);
+export const PlaylistsFnsContext = createContext<PlaylistsFns | null>(null);
+
+export const usePlaylistsFns = (): PlaylistsFns => {
+  const fns = useContext(PlaylistsFnsContext);
+  if (fns === null) {
+    throw new Error("PlaylistsFnsContext is not provided");
+  }
+  return fns;
+};

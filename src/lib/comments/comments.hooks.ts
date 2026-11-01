@@ -1,13 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useContext } from "react";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { CommentsFnsContext } from "./comments.fn-context";
+import { useCommentsFns } from "./comments.fn-context";
 import { commentsKeys } from "./comments.queries";
 
 export function useAddComment(postId: number, userId: string) {
   const queryClient = useQueryClient();
-  const { addComment } = useContext(CommentsFnsContext);
+  const { addComment } = useCommentsFns();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to add comment",
@@ -53,7 +52,7 @@ export function useAddComment(postId: number, userId: string) {
 
 export function useUpdateComment(postId: number) {
   const queryClient = useQueryClient();
-  const { updateComment } = useContext(CommentsFnsContext);
+  const { updateComment } = useCommentsFns();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to update comment",
@@ -89,7 +88,7 @@ export function useUpdateComment(postId: number) {
 
 export function useDeleteComment(postId: number) {
   const queryClient = useQueryClient();
-  const { deleteComment } = useContext(CommentsFnsContext);
+  const { deleteComment } = useCommentsFns();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to delete comment",

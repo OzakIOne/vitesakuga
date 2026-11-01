@@ -7,11 +7,11 @@ import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { getSafeAuthRedirectUrl } from "./auth-redirect";
 import { AuthClientContext } from "./client-context";
 import { deleteAccount } from "./delete-account";
+import { useSignInCompletion } from "./sign-in-completion.hooks";
 import {
   clearTwoFactorRedirectUrl,
   setTwoFactorRedirectUrl,
 } from "./two-factor.hooks";
-import { useSignInCompletion } from "./use-sign-in-completion";
 
 const passkeysKeys = {
   all: ["auth", "passkeys"] as const,
@@ -221,6 +221,19 @@ export function useChangePassword() {
 export type DeleteAccountInput = {
   password?: string | undefined;
 };
+
+/** Signs out, then refetches the cached user and route data so the header reflects the signed-out state. */
+export function useSignOut() {
+  const authClient = useContext(AuthClientContext);
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return async () => {
+    await authClient.signOut();
+    await queryClient.invalidateQueries({ queryKey: usersKeys.userInfo });
+    await router.invalidate();
+  };
+}
 
 export function useDeleteAccount() {
   const navigate = useNavigate();

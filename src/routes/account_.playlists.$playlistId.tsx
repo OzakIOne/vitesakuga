@@ -1,10 +1,7 @@
 import { Portal } from "@ark-ui/react";
-import {
-  useQueryClient,
-  useSuspenseInfiniteQuery,
-} from "@tanstack/react-query";
+import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { EmptyState } from "src/components/EmptyState";
 import { PlaylistPostsTable } from "src/components/playlists/PlaylistPostsTable";
 import type { PlaylistPostTableRow } from "src/components/playlists/PlaylistPostsTable";
@@ -14,16 +11,13 @@ import { Field, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
-import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
-import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
 import {
-  useUpdatePlaylist,
+  useBulkAddPostsToPlaylist,
+  useBulkRemovePostsFromPlaylist,
   useReorderPlaylistPosts,
+  useUpdatePlaylist,
 } from "src/lib/playlists/playlists.hooks";
-import {
-  playlistsKeys,
-  playlistsQueryDetailInfinite,
-} from "src/lib/playlists/playlists.queries";
+import { playlistsQueryDetailInfinite } from "src/lib/playlists/playlists.query-options";
 import { rethrowRouteDataError } from "src/lib/router/not-found";
 import { parsePositiveIntegerRouteParam } from "src/lib/router/route-params";
 import { seo } from "src/utils/seo";
@@ -90,11 +84,16 @@ function ManagePlaylistContent() {
   const params = Route.useParams();
   const playlistId = parsePositiveIntegerRouteParam(params.playlistId);
 
-  const queryClient = useQueryClient();
-  const { bulkAddPostsToPlaylist, bulkRemovePostsFromPlaylist } =
-    useContext(PlaylistsFnsContext);
   const updatePlaylist = useUpdatePlaylist(user.id);
   const reorderPosts = useReorderPlaylistPosts();
+  const addPostsMutation = useBulkAddPostsToPlaylist({
+    playlistId,
+    userId: user.id,
+  });
+  const removePostsMutation = useBulkRemovePostsFromPlaylist({
+    playlistId,
+    userId: user.id,
+  });
 
   const [selectedPostIds, setSelectedPostIds] = useState<ReadonlySet<number>>(
     new Set(),
@@ -152,43 +151,6 @@ function ManagePlaylistContent() {
     [setSelectedPostIds],
   );
 
-  const invalidatePlaylistQueries = useCallback(() => {
-    void queryClient.invalidateQueries({
-      queryKey: playlistsKeys.detailForPlaylist(playlistId),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: playlistsKeys.userPlaylists(user.id),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: playlistsKeys.all,
-    });
-  }, [playlistId, queryClient, user.id]);
-
-  const addPostsMutation = useMutationWithFeedback({
-    errorFallback: "Failed to add posts to the playlist",
-    errorTitle: "Error adding posts",
-    mutationFn: async (postIds: number[]) =>
-      bulkAddPostsToPlaylist({ data: { playlistId, postIds } }),
-    onSuccess: () => {
-      setPostIdsInput("");
-      setAddError(null);
-      invalidatePlaylistQueries();
-    },
-    successTitle: "Posts added",
-  });
-
-  const removePostsMutation = useMutationWithFeedback({
-    errorFallback: "Failed to remove posts from the playlist",
-    errorTitle: "Error removing posts",
-    mutationFn: async (postIds: number[]) =>
-      bulkRemovePostsFromPlaylist({ data: { playlistId, postIds } }),
-    onSuccess: () => {
-      setSelectedPostIds(new Set());
-      invalidatePlaylistQueries();
-    },
-    successTitle: "Posts removed",
-  });
-
   const handleAddPosts = () => {
     const ids = parsePostIds(postIdsInput);
     if (ids.length === 0) {
@@ -196,7 +158,12 @@ function ManagePlaylistContent() {
       return;
     }
     setAddError(null);
-    addPostsMutation.mutate(ids);
+    addPostsMutation.mutate(ids, {
+      onSuccess: () => {
+        setPostIdsInput("");
+        setAddError(null);
+      },
+    });
   };
 
   if (!playlist || playlist.user_id !== user.id) {
@@ -354,7 +321,9 @@ function ManagePlaylistContent() {
                     colorPalette="red"
                     loading={removePostsMutation.isPending}
                     onClick={() => {
-                      removePostsMutation.mutate([...selectedPostIds]);
+                      removePostsMutation.mutate([...selectedPostIds], {
+                        onSuccess: () => setSelectedPostIds(new Set()),
+                      });
                       setRemoveConfirmOpen(false);
                     }}
                   >

@@ -14,7 +14,7 @@ import {
   useDeleteSavedSearch,
   useSaveSearch,
 } from "src/lib/saved-searches/saved-searches.hooks";
-import { savedSearchesQueryOptions } from "src/lib/saved-searches/saved-searches.queries";
+import { savedSearchesQueryOptions } from "src/lib/saved-searches/saved-searches.query-options";
 import type {
   SavedSearch,
   SaveSearchInput,

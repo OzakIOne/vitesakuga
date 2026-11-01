@@ -1,16 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { VotesFnsContext, defaultVotesFns } from "./votes.fn-context";
+import { VotesFnsContext, type VotesFns } from "./votes.fn-context";
 import { usePostVotes, useSetVote } from "./votes.hooks";
-
-vi.mock("src/lib/votes/votes.service", () => ({
-  fetchLikedPosts: vi.fn(),
-  fetchPostVotes: vi.fn(),
-  removePostVote: vi.fn(),
-  setPostVote: vi.fn(),
-}));
 
 vi.mock("src/components/ui/toaster", () => ({
   toaster: {
@@ -18,30 +12,25 @@ vi.mock("src/components/ui/toaster", () => ({
   },
 }));
 
-import { fetchPostVotes } from "src/lib/votes/votes.service";
-
 const summary = { dislikes: 0, likes: 0, userVote: null as null };
 
 const createWrapper = (
   queryClient: QueryClient,
-  fns: Partial<{
-    fetchPostVotes: ReturnType<typeof vi.fn>;
-    removePostVote: ReturnType<typeof vi.fn>;
-    setPostVote: ReturnType<typeof vi.fn>;
-  }> = {},
+  fns: Partial<Record<keyof VotesFns, unknown>> = {},
 ) => {
-  return ({ children }: { children: React.ReactNode }) => (
+  const fakes = {
+    fetchLikedPosts: vi.fn(),
+    fetchPostVotes: vi.fn(),
+    removePostVote: vi.fn(),
+    setPostVote: vi.fn(),
+    ...fns,
+  };
+  return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <VotesFnsContext.Provider
-        value={
-          // Mocks stand in for the TanStack Start fetchers; the cast keeps
-          // the provider's value type aligned with the context's shape.
-          {
-            fetchPostVotes: fns.fetchPostVotes ?? vi.fn(),
-            removePostVote: fns.removePostVote ?? vi.fn(),
-            setPostVote: fns.setPostVote ?? vi.fn(),
-          } as unknown as typeof defaultVotesFns
-        }
+        // SAFETY: the hooks under test only call the fakes above; the
+        // remaining vote server functions are never invoked.
+        value={fakes as unknown as VotesFns}
       >
         {children}
       </VotesFnsContext.Provider>
@@ -154,22 +143,23 @@ describe(usePostVotes, () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    vi.mocked(fetchPostVotes).mockReset();
   });
 
   it("fetches the vote summary for a post", async () => {
-    vi.mocked(fetchPostVotes).mockResolvedValueOnce({
+    const mockFetchPostVotes = vi.fn().mockResolvedValueOnce({
       dislikes: 2,
       likes: 5,
       userVote: "like",
     });
     const { result } = await renderHook(() => usePostVotes(42), {
-      wrapper: createWrapper(queryClient),
+      wrapper: createWrapper(queryClient, {
+        fetchPostVotes: mockFetchPostVotes,
+      }),
     });
 
     await waitFor(() => expect(result.current.data).toBeDefined());
 
-    expect(fetchPostVotes).toHaveBeenCalledWith({ data: 42 });
+    expect(mockFetchPostVotes).toHaveBeenCalledWith({ data: 42 });
     expect(result.current.data).toEqual({
       dislikes: 2,
       likes: 5,

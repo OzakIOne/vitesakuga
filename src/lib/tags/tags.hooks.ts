@@ -7,11 +7,8 @@ import { useMutationWithFeedback } from "src/lib/mutations/mutation-feedback";
 import { postsKeys } from "src/lib/posts/posts.queries";
 import type { Tag } from "src/lib/posts/posts.schema";
 
-import {
-  tagFollowStateQuery,
-  tagsKeys,
-  updateTagFollowed,
-} from "./tags.queries";
+import { tagsKeys } from "./tags.queries";
+import { tagFollowStateQuery, updateTagFollowed } from "./tags.query-options";
 
 export function useTagCollection(options: {
   search: string;

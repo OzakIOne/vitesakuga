@@ -8,8 +8,11 @@ import { useNavigate, type RegisteredRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PostWithVotes } from "../db/schema";
+import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import type { PaginationMeta } from "../pagination/pagination";
-import { computeAnchorPostIndex } from "./posts.queries";
+import { usePostsFns } from "./posts.fn-context";
+import { computeAnchorPostIndex, postsKeys } from "./posts.queries";
+import type { updatePost as updatePostFn } from "./posts.service";
 
 type PopularTag = {
   id: number;
@@ -27,6 +30,51 @@ type InfinitePostsPage = {
 
 type RegisteredFullPaths =
   RegisteredRouter["routesByPath"][keyof RegisteredRouter["routesByPath"]]["fullPath"];
+
+type PostUpdateFields = Omit<
+  NonNullable<Parameters<typeof updatePostFn>[0]>["data"],
+  "expectedVersion" | "postId" | "relatedPostId"
+>;
+
+/** Saves an edit to a post the viewer owns; the detail cache is refetched on success. */
+export function useUpdatePost(post: {
+  id: number;
+  relatedPostId: number | null;
+  version: number;
+}) {
+  const queryClient = useQueryClient();
+  const { updatePost } = usePostsFns();
+
+  return useMutationWithFeedback({
+    errorFallback: "Failed to update post",
+    errorTitle: "Error updating post",
+    mutationFn: async (fields: PostUpdateFields) =>
+      updatePost({
+        data: {
+          ...fields,
+          expectedVersion: post.version,
+          postId: post.id,
+          relatedPostId: post.relatedPostId ?? undefined,
+        },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: postsKeys.detail(post.id),
+      });
+    },
+    successDescription: "Your post has been updated.",
+    successTitle: "Post updated",
+  });
+}
+
+/** Refetches every cached post query, used after a new post is created. */
+export function useInvalidateAllPosts() {
+  const queryClient = useQueryClient();
+
+  return async () => {
+    await queryClient.invalidateQueries({ queryKey: postsKeys.all });
+  };
+}
 
 export type PostsInfiniteState<
   TData extends InfinitePostsPage = InfinitePostsPage,

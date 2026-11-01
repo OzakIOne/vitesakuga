@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useContext } from "react";
 
 import type { PostVote } from "../db/schema";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { VotesFnsContext } from "./votes.fn-context";
-import { votesKeys, votesQueryGetVotes } from "./votes.queries";
+import { useVotesFns } from "./votes.fn-context";
+import { votesKeys } from "./votes.queries";
+import { votesQueryOptions } from "./votes.query-options";
 
 export type PostVotesSummary = {
   dislikes: number;
@@ -13,7 +13,8 @@ export type PostVotesSummary = {
 };
 
 export function usePostVotes(postId: number) {
-  return useQuery(votesQueryGetVotes(postId));
+  const { fetchPostVotes } = useVotesFns();
+  return useQuery(votesQueryOptions(postId, fetchPostVotes));
 }
 
 const applyVote = (
@@ -46,7 +47,7 @@ const applyVote = (
  */
 export function useSetVote(postId: number) {
   const queryClient = useQueryClient();
-  const { removePostVote, setPostVote } = useContext(VotesFnsContext);
+  const { removePostVote, setPostVote } = useVotesFns();
 
   return useMutationWithFeedback({
     errorFallback: "Failed to update your vote",

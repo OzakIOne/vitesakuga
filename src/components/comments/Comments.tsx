@@ -14,12 +14,13 @@ import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
 import { isStaffRole, roleOf } from "src/lib/auth/roles";
+import { useCommentsFns } from "src/lib/comments/comments.fn-context";
 import {
   useAddComment,
   useDeleteComment,
   useUpdateComment,
 } from "src/lib/comments/comments.hooks";
-import { commentsQueryGetComments } from "src/lib/comments/comments.queries";
+import { commentsQueryOptions } from "src/lib/comments/comments.query-options";
 import type { fetchComments } from "src/lib/comments/comments.service";
 import { useCommentDraft } from "src/lib/comments/useCommentDraft";
 import { deTokenizeForEditing } from "src/lib/mentions/mentions";
@@ -42,7 +43,10 @@ function CommentsContent({
     null,
   );
 
-  const { data: comments } = useSuspenseQuery(commentsQueryGetComments(postId));
+  const { fetchComments: fetchCommentsFn } = useCommentsFns();
+  const { data: comments } = useSuspenseQuery(
+    commentsQueryOptions(postId, fetchCommentsFn),
+  );
 
   const deleteCommentMutation = useDeleteComment(postId);
 
