@@ -50,7 +50,14 @@ const MATRIX_LIVE = Layer.mergeAll(
 
 type MatrixServices = Layer.Success<typeof MATRIX_LIVE>;
 
-type Actor = "anonymous" | "novice" | "uploader" | "moderator" | "admin";
+/** `unknown`: signed in with a role label that is not a known rank. */
+type Actor =
+  | "anonymous"
+  | "novice"
+  | "uploader"
+  | "moderator"
+  | "admin"
+  | "unknown";
 type Outcome = "allowed" | "denied";
 
 /** `own`: the actor owns the resource; `others`: a novice author owns it. */
@@ -61,6 +68,16 @@ const ACTOR_USER_IDS = {
   moderator: "moderator-user",
   novice: "novice-user",
   uploader: "uploader-user",
+  unknown: "unknown-user",
+} as const satisfies Partial<Record<Actor, string>>;
+
+/** Role label the session presents; `unknown` carries a label outside `RoleSchema`. */
+const SESSION_ROLE_LABEL = {
+  admin: "admin",
+  moderator: "moderator",
+  novice: "novice",
+  uploader: "uploader",
+  unknown: "superadmin",
 } as const satisfies Partial<Record<Actor, string>>;
 
 const AUTHOR_ID = "author-user";
@@ -98,13 +115,11 @@ const USER_ROWS = [
   { id: ACTOR_USER_IDS.moderator, role: "moderator" },
   { id: ACTOR_USER_IDS.uploader, role: "uploader" },
   { id: ACTOR_USER_IDS.novice, role: "novice" },
+  { id: ACTOR_USER_IDS.unknown, role: "novice" },
   { id: AUTHOR_ID, role: "novice" },
   { id: SUGGESTER_ID, role: "uploader" },
   { id: CANDIDATE_ID, role: "novice" },
 ] as const;
-
-const actorId = (actor: Actor): string | null =>
-  actor === "anonymous" ? null : ACTOR_USER_IDS[actor];
 
 /** Owner of the seeded post, comment and playlist for one ownership case. */
 const resourceOwnerId = (actor: Actor, ownership: Ownership): string =>
@@ -371,6 +386,7 @@ const ALL_ACTORS: ReadonlyArray<Actor> = [
   "uploader",
   "moderator",
   "admin",
+  "unknown",
 ];
 
 type Scenario = {
@@ -404,11 +420,14 @@ const scenarios: ReadonlyArray<Scenario> = OPERATIONS.flatMap((operation) =>
 );
 
 const actorSession = (actor: Actor) => {
-  const id = actorId(actor);
-  if (id === null) {
+  if (actor === "anonymous") {
     return null;
   }
-  return makeAuthSession({ id, role: actor, username: id });
+  return makeAuthSession({
+    id: ACTOR_USER_IDS[actor],
+    role: SESSION_ROLE_LABEL[actor],
+    username: ACTOR_USER_IDS[actor],
+  });
 };
 
 const hasTag = (error: unknown): error is { readonly _tag: string } =>
