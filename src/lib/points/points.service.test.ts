@@ -71,7 +71,9 @@ describe("PointsService.award", () => {
     await insertUser(db, "user-1");
 
     const outcome = await runEffect(
-      PointsService.award({ userId: "user-1", action: "post-upload" }),
+      Effect.flatMap(PointsService, (service) =>
+        service.award({ userId: "user-1", action: "post-upload" }),
+      ),
     );
 
     expect(outcome).toEqual({
@@ -96,9 +98,13 @@ describe("PointsService.award", () => {
       refId: 42,
       actorId: "voter-1",
     } as const;
-    await runEffect(PointsService.award(input));
+    await runEffect(
+      Effect.flatMap(PointsService, (service) => service.award(input)),
+    );
     // The voter toggles to dislike and back — or removes and re-likes.
-    const second = await runEffect(PointsService.award(input));
+    const second = await runEffect(
+      Effect.flatMap(PointsService, (service) => service.award(input)),
+    );
 
     expect(second).toEqual({ kind: "already-earned" });
     expect(await ledgerRows(db, "author-1")).toHaveLength(1);
@@ -112,12 +118,14 @@ describe("PointsService.award", () => {
 
     for (const actor of ["voter-1", "voter-2"]) {
       await runEffect(
-        PointsService.award({
-          userId: "author-1",
-          action: "post-like-received",
-          refId: 42,
-          actorId: actor,
-        }),
+        Effect.flatMap(PointsService, (service) =>
+          service.award({
+            userId: "author-1",
+            action: "post-like-received",
+            refId: 42,
+            actorId: actor,
+          }),
+        ),
       );
     }
 
@@ -135,12 +143,14 @@ describe("PointsService.award", () => {
     let lastKind = "";
     for (let i = 0; i < rule.dailyCap + 2; i++) {
       const outcome = await runEffect(
-        PointsService.award({
-          userId: "user-1",
-          action,
-          refId: i,
-          actorId: "user-1",
-        }),
+        Effect.flatMap(PointsService, (service) =>
+          service.award({
+            userId: "user-1",
+            action,
+            refId: i,
+            actorId: "user-1",
+          }),
+        ),
       );
       lastKind = outcome.kind;
     }
@@ -163,12 +173,14 @@ describe("PointsService.award", () => {
     const outcomes = await Promise.all(
       Array.from({ length: rule.dailyCap + 1 }, (_, refId) =>
         runEffect(
-          PointsService.award({
-            userId: "user-1",
-            action,
-            refId,
-            actorId: "user-1",
-          }),
+          Effect.flatMap(PointsService, (service) =>
+            service.award({
+              userId: "user-1",
+              action,
+              refId,
+              actorId: "user-1",
+            }),
+          ),
         ),
       ),
     );
@@ -194,12 +206,14 @@ describe("PointsService.award (daily-cap window)", () => {
   const FIXED_NEXT_MIDNIGHT = nextLocalMidnight(FIXED_NOW);
 
   const award = (refId: number) =>
-    PointsService.award({
-      userId: "user-1",
-      action: "post-upload",
-      refId,
-      actorId: "user-1",
-    });
+    Effect.flatMap(PointsService, (service) =>
+      service.award({
+        userId: "user-1",
+        action: "post-upload",
+        refId,
+        actorId: "user-1",
+      }),
+    );
 
   it("resets the daily cap once the clock passes local midnight", async () => {
     const ctx = await makeCtx();
@@ -275,18 +289,30 @@ describe("PointsService.total", () => {
     const { db, runEffect } = ctx;
     await insertUser(db, "user-1");
     await runEffect(
-      PointsService.award({ userId: "user-1", action: "post-upload" }),
+      Effect.flatMap(PointsService, (service) =>
+        service.award({ userId: "user-1", action: "post-upload" }),
+      ),
     );
     await runEffect(
-      PointsService.award({ userId: "user-1", action: "comment-written" }),
+      Effect.flatMap(PointsService, (service) =>
+        service.award({ userId: "user-1", action: "comment-written" }),
+      ),
     );
 
     const expected =
       POINTS_RULES["post-upload"].points +
       POINTS_RULES["comment-written"].points;
 
-    expect(await runEffect(PointsService.total("user-1"))).toBe(expected);
-    expect(await runEffect(PointsService.total("nobody"))).toBe(0);
+    expect(
+      await runEffect(
+        Effect.flatMap(PointsService, (service) => service.total("user-1")),
+      ),
+    ).toBe(expected);
+    expect(
+      await runEffect(
+        Effect.flatMap(PointsService, (service) => service.total("nobody")),
+      ),
+    ).toBe(0);
   });
 });
 
@@ -308,7 +334,9 @@ describe("PointsService.award (broken ledger)", () => {
     try {
       const error = await runEffect(
         Effect.flip(
-          PointsService.award({ userId: "user-1", action: "post-upload" }),
+          Effect.flatMap(PointsService, (service) =>
+            service.award({ userId: "user-1", action: "post-upload" }),
+          ),
         ),
       );
       expect(error._tag).toBe("SqlError");
@@ -332,7 +360,9 @@ describe("service hooks", () => {
       makeAuthSession({ id: "commenter-1" }),
     );
     await runEffect(
-      Effect.flatMap(CommentsService, (service) => service.add({ content: "nice sakuga", postId: post.id })),
+      Effect.flatMap(CommentsService, (service) =>
+        service.add({ content: "nice sakuga", postId: post.id }),
+      ),
     );
 
     const rows = await ledgerRows(db, "commenter-1");
@@ -351,12 +381,20 @@ describe("service hooks", () => {
 
     // A self-like earns nothing.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "author-1" }));
-    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "like" })));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId: post.id, vote: "like" }),
+      ),
+    );
     expect(await ledgerRows(db, "author-1")).toHaveLength(0);
 
     // Another user's like pays out once.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));
-    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "like" })));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId: post.id, vote: "like" }),
+      ),
+    );
     let rows = await ledgerRows(db, "author-1");
     expect(rows).toHaveLength(1);
     expect(rows[0]!.action).toBe("post-like-received");
@@ -364,9 +402,17 @@ describe("service hooks", () => {
 
     // Dislike then re-like never pays twice.
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));
-    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "dislike" })));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId: post.id, vote: "dislike" }),
+      ),
+    );
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "voter-1" }));
-    await runEffect(Effect.flatMap(PostVotesService, (service) => service.set({ postId: post.id, vote: "like" })));
+    await runEffect(
+      Effect.flatMap(PostVotesService, (service) =>
+        service.set({ postId: post.id, vote: "like" }),
+      ),
+    );
     rows = await ledgerRows(db, "author-1");
     expect(rows).toHaveLength(1);
   });

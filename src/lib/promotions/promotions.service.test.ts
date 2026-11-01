@@ -63,7 +63,9 @@ describe("PromotionsService.queue", () => {
       makeAuthSession({ id: "novice-1", role: "novice" }),
     );
     const queueError = await ctx.runEffect(
-      Effect.flip(PromotionsService.queue()),
+      Effect.flip(
+        Effect.flatMap(PromotionsService, (service) => service.queue()),
+      ),
     );
     expect(queueError._tag).toBe("ForbiddenError");
   });
@@ -104,7 +106,9 @@ describe("PromotionsService.queue", () => {
 
     await earn(db, "candidate-1", PROMOTION_RULES.minPoints);
 
-    const queue = await ctx.runEffect(PromotionsService.queue());
+    const queue = await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) => service.queue()),
+    );
     expect(queue).toHaveLength(1);
     expect(queue[0]!.userId).toBe("candidate-1");
     expect(queue[0]!.activity.uploads).toBeGreaterThanOrEqual(1);
@@ -128,7 +132,9 @@ describe("PromotionsService.queue", () => {
     await insertUser(db, { createdAtDaysAgo: 30, id: "patient-crawler" });
     await earn(db, "patient-crawler", PROMOTION_RULES.minPoints - 200);
 
-    const queue = await ctx.runEffect(PromotionsService.queue());
+    const queue = await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) => service.queue()),
+    );
     expect(queue.map((entry) => entry.userId)).toEqual([]);
   });
 });
@@ -145,7 +151,9 @@ describe("PromotionsService.approve", () => {
     );
 
     const result = await ctx.runEffect(
-      PromotionsService.approve("future-uploader"),
+      Effect.flatMap(PromotionsService, (service) =>
+        service.approve({ userId: "future-uploader" }),
+      ),
     );
     expect(result.userId).toBe("future-uploader");
 
@@ -188,9 +196,17 @@ describe("PromotionsService.approve", () => {
       makeAuthSession({ id: "mod-1", role: "moderator" }),
     );
 
-    await ctx.runEffect(PromotionsService.approve("once-only"));
+    await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) =>
+        service.approve({ userId: "once-only" }),
+      ),
+    );
     const reviewedError = await ctx.runEffect(
-      Effect.flip(PromotionsService.reject("once-only")),
+      Effect.flip(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.reject({ userId: "once-only" }),
+        ),
+      ),
     );
     expect(reviewedError._tag).toBe("PromotionAlreadyReviewedError");
     expect(reviewedError.message).toBe(
@@ -209,8 +225,16 @@ describe("PromotionsService.approve", () => {
     );
 
     const results = await Promise.allSettled([
-      ctx.runEffect(PromotionsService.approve("race-candidate")),
-      ctx.runEffect(PromotionsService.approve("race-candidate")),
+      ctx.runEffect(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "race-candidate" }),
+        ),
+      ),
+      ctx.runEffect(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "race-candidate" }),
+        ),
+      ),
     ]);
 
     expect(
@@ -238,7 +262,11 @@ describe("PromotionsService.approve", () => {
     );
 
     const eligibilityError = await ctx.runEffect(
-      Effect.flip(PromotionsService.approve("stale-entry")),
+      Effect.flip(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "stale-entry" }),
+        ),
+      ),
     );
     expect(eligibilityError._tag).toBe("PromotionNotEligibleError");
     // The live total (0 — the queue never persisted a snapshot), drives the
@@ -260,16 +288,24 @@ describe("PromotionsService.reject", () => {
       makeAuthSession({ id: "mod-1", role: "moderator" }),
     );
 
-    await ctx.runEffect(PromotionsService.reject("comeback-kid"));
+    await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) =>
+        service.reject({ userId: "comeback-kid" }),
+      ),
+    );
 
-    const stillHidden = await ctx.runEffect(PromotionsService.queue());
+    const stillHidden = await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) => service.queue()),
+    );
     expect(stillHidden.map((entry) => entry.userId)).not.toContain(
       "comeback-kid",
     );
 
     // Earn more than the snapshot → back in the queue for a second chance.
     await earn(db, "comeback-kid", 200);
-    const visibleAgain = await ctx.runEffect(PromotionsService.queue());
+    const visibleAgain = await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) => service.queue()),
+    );
     expect(visibleAgain.map((entry) => entry.userId)).toContain("comeback-kid");
   });
 
@@ -283,7 +319,11 @@ describe("PromotionsService.reject", () => {
       makeAuthSession({ id: "mod-1", role: "moderator" }),
     );
 
-    await ctx.runEffect(PromotionsService.reject("declined-one"));
+    await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) =>
+        service.reject({ userId: "declined-one" }),
+      ),
+    );
 
     const inbox = await db
       .selectFrom("notifications")

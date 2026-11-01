@@ -14,7 +14,8 @@ import {
   PromotionAlreadyReviewedError,
   PromotionNotEligibleError,
 } from "../errors";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 import { PROMOTION_RULES } from "./promotions.config";
 
 /** Account age floor in wall-clock milliseconds. */
@@ -58,9 +59,9 @@ export class PromotionsService extends Context.Service<
      * Staff-only: promotes a novice to uploader. Re-checks eligibility so a
      * stale queue entry cannot promote an under-qualified user.
      */
-    readonly approve: (
-      targetUserId: string,
-    ) => Effect.Effect<
+    readonly approve: (input: {
+      userId: string;
+    }) => Effect.Effect<
       { userId: string },
       | PolicyError
       | PromotionAlreadyReviewedError
@@ -73,9 +74,9 @@ export class PromotionsService extends Context.Service<
      * Staff-only: declines a candidate. Records their current points so they
      * re-enter the queue only after earning more than that snapshot.
      */
-    readonly reject: (
-      targetUserId: string,
-    ) => Effect.Effect<
+    readonly reject: (input: {
+      userId: string;
+    }) => Effect.Effect<
       { userId: string },
       PolicyError | PromotionAlreadyReviewedError | SqlError,
       SessionService
@@ -223,9 +224,11 @@ export class PromotionsService extends Context.Service<
           ),
         );
 
-    const approve = Effect.fn("PromotionsService.approve")(function* (
-      targetUserId: string,
-    ) {
+    const approve = Effect.fn("PromotionsService.approve")(function* ({
+      userId: targetUserId,
+    }: {
+      userId: string;
+    }) {
       yield* gateStaff();
       const reviewer = yield* sessions.requireUser(
         "You must be logged in to review promotions",
@@ -296,9 +299,11 @@ export class PromotionsService extends Context.Service<
       return { userId: targetUserId };
     });
 
-    const reject = Effect.fn("PromotionsService.reject")(function* (
-      targetUserId: string,
-    ) {
+    const reject = Effect.fn("PromotionsService.reject")(function* ({
+      userId: targetUserId,
+    }: {
+      userId: string;
+    }) {
       yield* gateStaff();
       const reviewer = yield* sessions.requireUser(
         "You must be logged in to review promotions",
@@ -334,26 +339,7 @@ export class PromotionsService extends Context.Service<
 
     return { queue, approve, reject };
   }),
-}) {
-  static readonly queue = Effect.fn("PromotionsService.queue")(function* () {
-    const svc = yield* PromotionsService;
-    return yield* svc.queue();
-  });
-
-  static readonly approve = Effect.fn("PromotionsService.approve")(function* (
-    targetUserId: string,
-  ) {
-    const svc = yield* PromotionsService;
-    return yield* svc.approve(targetUserId);
-  });
-
-  static readonly reject = Effect.fn("PromotionsService.reject")(function* (
-    targetUserId: string,
-  ) {
-    const svc = yield* PromotionsService;
-    return yield* svc.reject(targetUserId);
-  });
-}
+}) {}
 
 export const PromotionsServiceLive = Layer.effect(
   PromotionsService,
@@ -361,30 +347,32 @@ export const PromotionsServiceLive = Layer.effect(
 ).pipe(Layer.provideMerge(CommunityActivityServiceLive));
 
 export const fetchPromotionQueue = createServerFn().handler(
-  createHandler(
-    PromotionsServiceLive,
-    baseLayerFactories.auth,
-  )(PromotionsService.queue),
+  createEndpointHandler({
+    service: PromotionsService,
+    operation: "queue",
+    layer: PromotionsServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const approvePromotion = createServerFn({ method: "POST" })
   .validator(parseStrict(Schema.Struct({ userId: Schema.String })))
   .handler(
-    createHandler(
-      PromotionsServiceLive,
-      baseLayerFactories.auth,
-    )((payload: { userId: string }) =>
-      PromotionsService.approve(payload.userId),
-    ),
+    createEndpointHandler({
+      service: PromotionsService,
+      operation: "approve",
+      layer: PromotionsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
 
 export const rejectPromotion = createServerFn({ method: "POST" })
   .validator(parseStrict(Schema.Struct({ userId: Schema.String })))
   .handler(
-    createHandler(
-      PromotionsServiceLive,
-      baseLayerFactories.auth,
-    )((payload: { userId: string }) =>
-      PromotionsService.reject(payload.userId),
-    ),
+    createEndpointHandler({
+      service: PromotionsService,
+      operation: "reject",
+      layer: PromotionsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );

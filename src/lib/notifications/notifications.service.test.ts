@@ -145,7 +145,9 @@ describe("NotificationsService.list", () => {
     }
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
 
-    const rows = await runEffect(NotificationsService.list());
+    const rows = await runEffect(
+      Effect.flatMap(NotificationsService, (service) => service.list()),
+    );
 
     expect(rows).toHaveLength(50);
     expect(rows.map((row) => row.id)).toEqual([...ids].reverse().slice(0, 50));
@@ -167,7 +169,9 @@ describe("NotificationsService.list", () => {
     await insertNotification(db, { type: "comment-mention", userId: "user-1" });
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-1" }));
 
-    const rows = await runEffect(NotificationsService.list());
+    const rows = await runEffect(
+      Effect.flatMap(NotificationsService, (service) => service.list()),
+    );
 
     expect(rows).toHaveLength(2);
     const readRow = rows.find((row) => row.readAt !== null);
@@ -219,7 +223,9 @@ describe("NotificationsService.list", () => {
     }
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-a" }));
 
-    const rows = await runEffect(NotificationsService.list());
+    const rows = await runEffect(
+      Effect.flatMap(NotificationsService, (service) => service.list()),
+    );
 
     expect(rows.map((row) => row.id).sort()).toEqual(ownIds.sort());
   });
@@ -230,7 +236,11 @@ describe("NotificationsService.list", () => {
     const { runEffect, mockGetSession } = ctx;
     mockGetSession.mockResolvedValue(null);
 
-    const error = await runEffect(Effect.flip(NotificationsService.list()));
+    const error = await runEffect(
+      Effect.flip(
+        Effect.flatMap(NotificationsService, (service) => service.list()),
+      ),
+    );
 
     expect(error._tag).toBe("UnauthorizedError");
     expect(error.message).toBe(
@@ -264,7 +274,9 @@ describe("NotificationsService.markAllRead", () => {
       .executeTakeFirstOrThrow();
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-a" }));
 
-    await runEffect(NotificationsService.markAllRead());
+    await runEffect(
+      Effect.flatMap(NotificationsService, (service) => service.markAllRead()),
+    );
 
     const rows = await notificationRows(db);
     const [firstUnread, secondUnread, alreadyRead, otherUser] = rows;
@@ -289,7 +301,11 @@ describe("NotificationsService.markAllRead", () => {
     mockGetSession.mockResolvedValue(null);
 
     const error = await runEffect(
-      Effect.flip(NotificationsService.markAllRead()),
+      Effect.flip(
+        Effect.flatMap(NotificationsService, (service) =>
+          service.markAllRead(),
+        ),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");
@@ -320,8 +336,16 @@ describe("NotificationsService.markRead", () => {
     });
     mockGetSession.mockResolvedValue(makeAuthSession({ id: "user-a" }));
 
-    await runEffect(NotificationsService.markRead(target.id));
-    await runEffect(NotificationsService.markRead(otherUser.id));
+    await runEffect(
+      Effect.flatMap(NotificationsService, (service) =>
+        service.markRead(target.id),
+      ),
+    );
+    await runEffect(
+      Effect.flatMap(NotificationsService, (service) =>
+        service.markRead(otherUser.id),
+      ),
+    );
 
     const rows = await notificationRows(db);
     expect(rows.find((row) => row.id === target.id)?.readAt).not.toBeNull();
@@ -339,7 +363,9 @@ describe("NotificationsService.markRead", () => {
     mockGetSession.mockResolvedValue(null);
 
     const error = await runEffect(
-      Effect.flip(NotificationsService.markRead(1)),
+      Effect.flip(
+        Effect.flatMap(NotificationsService, (service) => service.markRead(1)),
+      ),
     );
 
     expect(error._tag).toBe("UnauthorizedError");

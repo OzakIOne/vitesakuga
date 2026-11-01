@@ -166,21 +166,7 @@ export class PointsService extends Context.Service<
 
     return { award, total };
   }),
-}) {
-  static readonly award = Effect.fn("PointsService.award")(function* (
-    input: AwardInput,
-  ) {
-    const svc = yield* PointsService;
-    return yield* svc.award(input);
-  });
-
-  static readonly total = Effect.fn("PointsService.total")(function* (
-    userId: string,
-  ) {
-    const svc = yield* PointsService;
-    return yield* svc.total(userId);
-  });
-}
+}) {}
 
 export const PointsServiceLive = Layer.effect(
   PointsService,

@@ -1,12 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Context, DateTime, Effect, Layer, Schema } from "effect";
 
-import { SessionService } from "../auth/session.effect";
+import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse } from "../effect/schema.utils";
-import { baseLayerFactories, createHandler } from "../server-fn.handler";
+import { UnauthorizedError } from "../errors";
+import { createEndpointHandler } from "../server-endpoint";
+import { baseLayerFactories } from "../server-fn.handler";
 
 export type NotificationType =
   | "comment-mention"
@@ -28,6 +30,16 @@ export type NotificationRow = {
 
 const INBOX_PAGE_SIZE = 50;
 
+type InboxError = SqlError | UnauthorizedError | SessionFetchError;
+
+const requireInboxUserId = Effect.fn("NotificationsService.requireUserId")(
+  function* (message: string) {
+    const sessions = yield* SessionService;
+    const user = yield* sessions.requireUser(message);
+    return user.id;
+  },
+);
+
 export class NotificationsService extends Context.Service<
   NotificationsService,
   {
@@ -40,18 +52,19 @@ export class NotificationsService extends Context.Service<
     }) => Effect.Effect<void, SqlError>;
 
     /** Newest-first inbox for one user. */
-    readonly list: (
-      userId: string,
-    ) => Effect.Effect<ReadonlyArray<NotificationRow>, SqlError>;
+    readonly list: () => Effect.Effect<
+      ReadonlyArray<NotificationRow>,
+      InboxError,
+      SessionService
+    >;
 
     /** Flips `readAt` on every unread row of the user. */
-    readonly markAllRead: (userId: string) => Effect.Effect<void, SqlError>;
+    readonly markAllRead: () => Effect.Effect<void, InboxError, SessionService>;
 
     /** Flips one notification's `readAt`, scoped to its owner. */
     readonly markRead: (
-      userId: string,
       notificationId: number,
-    ) => Effect.Effect<void, SqlError>;
+    ) => Effect.Effect<void, InboxError, SessionService>;
   }
 >()("NotificationsService", {
   make: Effect.gen(function* () {
@@ -71,9 +84,10 @@ export class NotificationsService extends Context.Service<
       );
     });
 
-    const list = Effect.fn("NotificationsService.list")(function* (
-      userId: string,
-    ) {
+    const list = Effect.fn("NotificationsService.list")(function* () {
+      const userId = yield* requireInboxUserId(
+        "You must be logged in to read your notifications",
+      );
       const rows = yield* db.execute(
         db
           .selectFrom("notifications")
@@ -90,7 +104,10 @@ export class NotificationsService extends Context.Service<
     });
 
     const markAllRead = Effect.fn("NotificationsService.markAllRead")(
-      function* (userId: string) {
+      function* () {
+        const userId = yield* requireInboxUserId(
+          "You must be logged in to update your notifications",
+        );
         const now = yield* DateTime.now;
         yield* db.execute(
           db
@@ -103,9 +120,11 @@ export class NotificationsService extends Context.Service<
     );
 
     const markRead = Effect.fn("NotificationsService.markRead")(function* (
-      userId: string,
       notificationId: number,
     ) {
+      const userId = yield* requireInboxUserId(
+        "You must be logged in to update your notifications",
+      );
       const now = yield* DateTime.now;
       yield* db.execute(
         db
@@ -119,38 +138,7 @@ export class NotificationsService extends Context.Service<
 
     return { notify, list, markAllRead, markRead };
   }),
-}) {
-  static readonly list = Effect.fn("NotificationsService.list")(function* () {
-    const sessions = yield* SessionService;
-    const user = yield* sessions.requireUser(
-      "You must be logged in to read your notifications",
-    );
-    const svc = yield* NotificationsService;
-    return yield* svc.list(user.id);
-  });
-
-  static readonly markAllRead = Effect.fn("NotificationsService.markAllRead")(
-    function* () {
-      const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
-        "You must be logged in to update your notifications",
-      );
-      const svc = yield* NotificationsService;
-      return yield* svc.markAllRead(user.id);
-    },
-  );
-
-  static readonly markRead = Effect.fn("NotificationsService.markRead")(
-    function* (notificationId: number) {
-      const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
-        "You must be logged in to update your notifications",
-      );
-      const svc = yield* NotificationsService;
-      return yield* svc.markRead(user.id, notificationId);
-    },
-  );
-}
+}) {}
 
 export const NotificationsServiceLive = Layer.effect(
   NotificationsService,
@@ -160,26 +148,32 @@ export const NotificationsServiceLive = Layer.effect(
 export const fetchNotifications = createServerFn({
   strict: { output: false },
 }).handler(
-  createHandler(
-    NotificationsServiceLive,
-    baseLayerFactories.auth,
-  )(NotificationsService.list),
+  createEndpointHandler({
+    service: NotificationsService,
+    operation: "list",
+    layer: NotificationsServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const markAllNotificationsRead = createServerFn({
   method: "POST",
 }).handler(
-  createHandler(
-    NotificationsServiceLive,
-    baseLayerFactories.auth,
-  )(NotificationsService.markAllRead),
+  createEndpointHandler({
+    service: NotificationsService,
+    operation: "markAllRead",
+    layer: NotificationsServiceLive,
+    base: baseLayerFactories.auth,
+  }),
 );
 
 export const markNotificationRead = createServerFn({ method: "POST" })
   .validator(parse(Schema.Number))
   .handler(
-    createHandler(
-      NotificationsServiceLive,
-      baseLayerFactories.auth,
-    )(NotificationsService.markRead),
+    createEndpointHandler({
+      service: NotificationsService,
+      operation: "markRead",
+      layer: NotificationsServiceLive,
+      base: baseLayerFactories.auth,
+    }),
   );
