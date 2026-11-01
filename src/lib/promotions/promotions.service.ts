@@ -8,7 +8,8 @@ import {
 import { requirePermission, type PolicyError } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
-import { SqlError } from "../db/effect-kysely";
+import { SqlError, type EffectTransaction } from "../db/effect-kysely";
+import type { DB } from "../db/kysely";
 import { parseStrict } from "../effect/schema.utils";
 import {
   PromotionAlreadyReviewedError,
@@ -35,8 +36,65 @@ export type PromotionCandidate = {
 type QueueRow = {
   readonly userId: string;
   readonly name: string;
+  readonly role: string;
   readonly createdAt: Date;
+  readonly deletedAt: Date | null;
   readonly totalPoints: number | null;
+};
+
+/** Both the root connection and an open transaction satisfy these reads. */
+type PromotionExecutor = Pick<
+  EffectTransaction<DB>,
+  | "execute"
+  | "executeTakeFirstOption"
+  | "executeTakeFirstOrUndefined"
+  | "selectFrom"
+>;
+
+type LatestReview = {
+  readonly pointsAtReview: number;
+  readonly status: string;
+};
+
+type EligibilityFacts = {
+  readonly createdAt: Date;
+  readonly deletedAt: Date | null;
+  readonly latestReview: LatestReview | undefined;
+  readonly role: string;
+  readonly totalPoints: number;
+};
+
+/**
+ * The one promotion rule, shared by the queue and approval so they cannot
+ * drift. Returns the first unmet condition, worded for the reviewer, or
+ * `undefined` when the candidate may be promoted.
+ */
+const unmetPromotionCondition = (
+  facts: EligibilityFacts,
+  now: number,
+): string | undefined => {
+  if (facts.role !== "novice") {
+    return "Candidate is no longer a novice";
+  }
+  if (facts.deletedAt !== null) {
+    return "Account has been deleted";
+  }
+  if (now - facts.createdAt.getTime() < MIN_ACCOUNT_AGE_MS) {
+    return `Account must be at least ${PROMOTION_RULES.minAccountAgeDays} days old`;
+  }
+  if (facts.totalPoints < PROMOTION_RULES.minPoints) {
+    return `Candidate has ${facts.totalPoints} points but ${PROMOTION_RULES.minPoints} are required`;
+  }
+  if (facts.latestReview?.status === "approved") {
+    return "Candidate was already approved";
+  }
+  if (
+    facts.latestReview?.status === "rejected" &&
+    facts.totalPoints <= facts.latestReview.pointsAtReview
+  ) {
+    return `Candidate was rejected at ${facts.latestReview.pointsAtReview} points and needs more than that to be reconsidered`;
+  }
+  return undefined;
 };
 
 // oxlint-disable effecttsgo/global-date -- account-age and readAt math compare wall-clock timestamps against Postgres Date rows; the Effect DateTime equivalent needs the same Date round-trip
@@ -93,23 +151,64 @@ export class PromotionsService extends Context.Service<
         forbiddenMessage: "Only moderators can review promotion candidates.",
       });
 
-    const isOldEnough = (createdAt: Date, now: number): boolean =>
-      // SAFETY: createdAt comes from Postgres timestamps; valueOf() is finite
-      // for every row we insert, so subtraction cannot produce NaN here.
-      now - new Date(createdAt).valueOf() >= MIN_ACCOUNT_AGE_MS;
+    const latestReviewsFor = (
+      executor: PromotionExecutor,
+      userIds: ReadonlyArray<string>,
+    ) =>
+      Effect.gen(function* () {
+        const latest = new Map<string, LatestReview>();
+        if (userIds.length === 0) {
+          return latest;
+        }
+        const reviews = yield* executor.execute(
+          executor
+            .selectFrom("promotion_reviews")
+            .select(["userId", "status", "pointsAtReview"])
+            .where(
+              "userId",
+              "in",
+              userIds.map((id) => id),
+            )
+            .orderBy("createdAt", "asc"),
+        );
+        for (const review of reviews) {
+          latest.set(review.userId, review);
+        }
+        return latest;
+      });
 
-    const reviewsForUsers = (userIds: ReadonlyArray<string>) =>
-      db.execute(
-        db
-          .selectFrom("promotion_reviews")
-          .select(["userId", "status", "pointsAtReview", "createdAt"])
-          .where(
-            "userId",
-            "in",
-            userIds.map((id) => id),
-          )
-          .orderBy("createdAt", "asc"),
-      );
+    const lifetimePoints = (executor: PromotionExecutor, userId: string) =>
+      executor
+        .executeTakeFirstOrUndefined(
+          executor
+            .selectFrom("points_ledger")
+            .select((eb) => eb.fn.sum<number>("points").as("total"))
+            .where("userId", "=", userId),
+        )
+        .pipe(Effect.map((row) => Number(row?.total ?? 0)));
+
+    /** Locks the candidate row and fails unless they are still awaiting review. */
+    const lockAwaitingCandidate = (
+      executor: PromotionExecutor,
+      targetUserId: string,
+    ) =>
+      executor
+        .executeTakeFirstOption(
+          executor
+            .selectFrom("user")
+            .select(["id", "role", "createdAt", "deletedAt"])
+            .where("id", "=", targetUserId)
+            .forUpdate(),
+        )
+        .pipe(
+          Effect.flatMap((target) =>
+            Option.isSome(target) && target.value.role === "novice"
+              ? Effect.succeed(target.value)
+              : new PromotionAlreadyReviewedError({
+                  message: `User ${targetUserId} is not awaiting promotion`,
+                }),
+          ),
+        );
 
     const uploadsCount = (candidateId: string) =>
       db.executeTakeFirstOrUndefined(
@@ -149,7 +248,9 @@ export class PromotionsService extends Context.Service<
           .select((eb) => [
             "user.id as userId",
             "user.name",
+            "user.role",
             "user.createdAt",
+            "user.deletedAt",
             eb.fn.sum<number>("points").as("totalPoints"),
           ])
           .where("user.role", "=", "novice")
@@ -157,34 +258,25 @@ export class PromotionsService extends Context.Service<
           .groupBy(["user.id", "user.name", "user.createdAt"]),
       );
 
-      // Points + age thresholds first — the cheap filters.
+      const latestReviews = yield* latestReviewsFor(
+        db,
+        rows.map((row) => row.userId),
+      );
       const eligible = rows.filter(
         (row) =>
-          Number(row.totalPoints ?? 0) >= PROMOTION_RULES.minPoints &&
-          isOldEnough(row.createdAt, now),
+          unmetPromotionCondition(
+            {
+              createdAt: row.createdAt,
+              deletedAt: row.deletedAt,
+              latestReview: latestReviews.get(row.userId),
+              role: row.role,
+              totalPoints: Number(row.totalPoints ?? 0),
+            },
+            now,
+          ) === undefined,
       );
-      if (eligible.length === 0) {
-        return [];
-      }
 
-      const ids = eligible.map((row) => row.userId);
-      const reviews = yield* reviewsForUsers(ids);
-      // Latest review per candidate decides whether they stay hidden.
-      const lastReviewById = new Map<string, (typeof reviews)[number]>();
-      for (const review of reviews) {
-        lastReviewById.set(review.userId, review);
-      }
-
-      const queued = eligible.filter((row) => {
-        const lastReview = lastReviewById.get(row.userId);
-        if (!lastReview) return true;
-        if (lastReview.status === "approved") return false;
-        // Rejected candidates come back once they out-earn their rejection
-        // snapshot, so progress is never permanently locked away.
-        return Number(row.totalPoints ?? 0) > lastReview.pointsAtReview;
-      });
-
-      return yield* Effect.forEach(queued, (row) =>
+      return yield* Effect.forEach(eligible, (row) =>
         Effect.gen(function* () {
           const [uploads, likesReceived, comments] = yield* Effect.all([
             uploadsCount(row.userId),
@@ -205,25 +297,6 @@ export class PromotionsService extends Context.Service<
       );
     });
 
-    /** Fetches the candidate and fails unless they are still awaiting review. */
-    const requireAwaitingNovice = (targetUserId: string) =>
-      db
-        .executeTakeFirstOption(
-          db
-            .selectFrom("user")
-            .select(["id", "role"])
-            .where("id", "=", targetUserId),
-        )
-        .pipe(
-          Effect.flatMap((target) =>
-            Option.isSome(target) && target.value.role === "novice"
-              ? Effect.succeed(target.value)
-              : new PromotionAlreadyReviewedError({
-                  message: `User ${targetUserId} is not awaiting promotion`,
-                }),
-          ),
-        );
-
     const approve = Effect.fn("PromotionsService.approve")(function* ({
       userId: targetUserId,
     }: {
@@ -234,34 +307,26 @@ export class PromotionsService extends Context.Service<
         "You must be logged in to review promotions",
       );
 
+      const now = yield* Clock.currentTimeMillis;
       // Re-check eligibility and consume the novice state atomically: two
       // moderators may approve the same stale queue entry at the same time.
       const total = yield* db.transaction((trx) =>
         Effect.gen(function* () {
-          const target = yield* trx.executeTakeFirstOption(
-            trx
-              .selectFrom("user")
-              .select(["id", "role"])
-              .where("id", "=", targetUserId)
-              .forUpdate(),
+          const target = yield* lockAwaitingCandidate(trx, targetUserId);
+          const totalPoints = yield* lifetimePoints(trx, targetUserId);
+          const latestReviews = yield* latestReviewsFor(trx, [targetUserId]);
+          const unmet = unmetPromotionCondition(
+            {
+              createdAt: target.createdAt,
+              deletedAt: target.deletedAt,
+              latestReview: latestReviews.get(targetUserId),
+              role: target.role,
+              totalPoints,
+            },
+            now,
           );
-          if (Option.isNone(target) || target.value.role !== "novice") {
-            return yield* new PromotionAlreadyReviewedError({
-              message: `User ${targetUserId} is not awaiting promotion`,
-            });
-          }
-
-          const pointsRow = yield* trx.executeTakeFirstOrUndefined(
-            trx
-              .selectFrom("points_ledger")
-              .select((eb) => eb.fn.sum<number>("points").as("total"))
-              .where("userId", "=", targetUserId),
-          );
-          const total = Number(pointsRow?.total ?? 0);
-          if (total < PROMOTION_RULES.minPoints) {
-            return yield* new PromotionNotEligibleError({
-              message: `Candidate has ${total} points but ${PROMOTION_RULES.minPoints} are required`,
-            });
+          if (unmet !== undefined) {
+            return yield* new PromotionNotEligibleError({ message: unmet });
           }
 
           yield* trx.execute(
@@ -274,13 +339,13 @@ export class PromotionsService extends Context.Service<
 
           yield* trx.execute(
             trx.insertInto("promotion_reviews").values({
-              pointsAtReview: total,
+              pointsAtReview: totalPoints,
               reviewedBy: reviewer.id,
               status: "approved",
               userId: targetUserId,
             }),
           );
-          return total;
+          return totalPoints;
         }),
       );
 
@@ -309,16 +374,21 @@ export class PromotionsService extends Context.Service<
         "You must be logged in to review promotions",
       );
 
-      yield* requireAwaitingNovice(targetUserId);
-
-      const total = yield* community.totalPoints(targetUserId);
-
-      yield* db.execute(
-        db.insertInto("promotion_reviews").values({
-          pointsAtReview: total,
-          reviewedBy: reviewer.id,
-          status: "rejected",
-          userId: targetUserId,
+      // Locks the candidate like approval does, so a concurrent approval and
+      // rejection cannot both record a decision.
+      const total = yield* db.transaction((trx) =>
+        Effect.gen(function* () {
+          yield* lockAwaitingCandidate(trx, targetUserId);
+          const totalPoints = yield* lifetimePoints(trx, targetUserId);
+          yield* trx.execute(
+            trx.insertInto("promotion_reviews").values({
+              pointsAtReview: totalPoints,
+              reviewedBy: reviewer.id,
+              status: "rejected",
+              userId: targetUserId,
+            }),
+          );
+          return totalPoints;
         }),
       );
 

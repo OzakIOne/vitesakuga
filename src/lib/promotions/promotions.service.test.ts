@@ -275,6 +275,134 @@ describe("PromotionsService.approve", () => {
       `Candidate has 0 points but ${PROMOTION_RULES.minPoints} are required`,
     );
   });
+
+  it("refuses a candidate whose account is younger than the age floor", async () => {
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { createdAtDaysAgo: 1, id: "too-young" });
+    await earn(db, "too-young", PROMOTION_RULES.minPoints);
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    const error = await ctx.runEffect(
+      Effect.flip(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "too-young" }),
+        ),
+      ),
+    );
+    expect(error._tag).toBe("PromotionNotEligibleError");
+    expect(error.message).toBe(
+      `Account must be at least ${PROMOTION_RULES.minAccountAgeDays} days old`,
+    );
+    const row = await db
+      .selectFrom("user")
+      .select("role")
+      .where("id", "=", "too-young")
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("novice");
+  });
+
+  it("refuses a deleted candidate", async () => {
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { createdAtDaysAgo: 9, id: "deleted-candidate" });
+    await earn(db, "deleted-candidate", PROMOTION_RULES.minPoints);
+    await db
+      .updateTable("user")
+      .set({ deletedAt: new Date() })
+      .where("id", "=", "deleted-candidate")
+      .execute();
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    const error = await ctx.runEffect(
+      Effect.flip(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "deleted-candidate" }),
+        ),
+      ),
+    );
+    expect(error._tag).toBe("PromotionNotEligibleError");
+    expect(error.message).toBe("Account has been deleted");
+  });
+
+  it("refuses a candidate rejected after the queue was read", async () => {
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { createdAtDaysAgo: 9, id: "rejected-meanwhile" });
+    await earn(db, "rejected-meanwhile", PROMOTION_RULES.minPoints);
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    const queued = await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) => service.queue()),
+    );
+    expect(queued.map((entry) => entry.userId)).toContain("rejected-meanwhile");
+    await ctx.runEffect(
+      Effect.flatMap(PromotionsService, (service) =>
+        service.reject({ userId: "rejected-meanwhile" }),
+      ),
+    );
+
+    const error = await ctx.runEffect(
+      Effect.flip(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "rejected-meanwhile" }),
+        ),
+      ),
+    );
+    expect(error._tag).toBe("PromotionNotEligibleError");
+    expect(error.message).toBe(
+      `Candidate was rejected at ${PROMOTION_RULES.minPoints} points and needs more than that to be reconsidered`,
+    );
+    const row = await db
+      .selectFrom("user")
+      .select("role")
+      .where("id", "=", "rejected-meanwhile")
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("novice");
+  });
+
+  it("keeps exactly one decision when approve and reject race", async () => {
+    const ctx = await makeServiceTestLayer(PromotionsServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { createdAtDaysAgo: 9, id: "contested" });
+    await earn(db, "contested", PROMOTION_RULES.minPoints);
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    const results = await Promise.allSettled([
+      ctx.runEffect(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.approve({ userId: "contested" }),
+        ),
+      ),
+      ctx.runEffect(
+        Effect.flatMap(PromotionsService, (service) =>
+          service.reject({ userId: "contested" }),
+        ),
+      ),
+    ]);
+
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    const reviews = await db
+      .selectFrom("promotion_reviews")
+      .selectAll()
+      .where("userId", "=", "contested")
+      .execute();
+    expect(reviews).toHaveLength(1);
+  });
 });
 
 describe("PromotionsService.reject", () => {
