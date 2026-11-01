@@ -5,8 +5,8 @@ import {
   ensureAdminRemains,
   lockActiveAdminIds,
 } from "../auth/admin-continuity";
-import { getUserRole, userHasPermission } from "../auth/policy";
-import { RoleSchema, roleAtLeast, type Role } from "../auth/roles";
+import { authorize } from "../auth/policy";
+import { RoleSchema, type Role } from "../auth/roles";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
@@ -75,15 +75,19 @@ export class ModerationService extends Context.Service<
   make: Effect.gen(function* () {
     const db = yield* KyselyDB;
 
-    /** Shared staff gate: signed-in user at moderator rank or above. */
-    const requireStaff = (message: string) =>
-      Effect.flatMap(SessionService, (sessions) =>
-        Effect.flatMap(sessions.requireUser(message), (user) =>
-          roleAtLeast(getUserRole(user), "moderator")
-            ? Effect.succeed(user)
-            : new ForbiddenError({ message }),
-        ),
-      );
+    /** Shared staff gate: a signed-in actor who may view the moderation queues. */
+    const requireStaff = Effect.fn("ModerationService.requireStaff")(function* (
+      message: string,
+    ) {
+      const sessions = yield* SessionService;
+      const actor = yield* sessions.requireActor(message);
+      yield* authorize({
+        actor,
+        permission: "moderation:view",
+        forbiddenMessage: message,
+      });
+      return actor;
+    });
 
     const overview = Effect.fn("ModerationService.overview")(function* () {
       yield* requireStaff("Only moderators can view the moderation queues.");
@@ -150,13 +154,12 @@ export class ModerationService extends Context.Service<
     const setUserRole = Effect.fn("ModerationService.setUserRole")(
       function* (input: { role: string; userId: string }) {
         const sessions = yield* SessionService;
-        const actor = yield* sessions.requireUser("You must be logged in.");
-
-        if (!roleAtLeast(getUserRole(actor), "admin")) {
-          return yield* new ForbiddenError({
-            message: "Only admins can assign roles.",
-          });
-        }
+        const actor = yield* sessions.requireActor("You must be logged in.");
+        yield* authorize({
+          actor,
+          permission: "roles:assign",
+          forbiddenMessage: "Only admins can assign roles.",
+        });
 
         const targetRole = Option.match(
           Schema.decodeUnknownOption(RoleSchema)(input.role),
@@ -170,10 +173,6 @@ export class ModerationService extends Context.Service<
             message: `Unknown role "${input.role}".`,
           });
         }
-
-        // SAFETY: the actor's shape satisfies the policy decoder (same contract
-        // as every other service call site); this cast restates it for getUserRole.
-        void userHasPermission;
 
         const previousRole = yield* db.transaction((trx) =>
           Effect.gen(function* () {

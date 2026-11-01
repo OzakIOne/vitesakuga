@@ -14,6 +14,7 @@ import {
   TABS_TRIGGER_SELECTED,
 } from "src/components/ui/tabs";
 import { Text } from "src/components/ui/typography";
+import { roleHasPermission } from "src/lib/auth/policy";
 import { roleOf } from "src/lib/auth/roles";
 import { seo } from "src/utils/seo";
 
@@ -32,8 +33,7 @@ export const Route = createFileRoute("/admin")({
     }
     // Staff gate mirrors the server-side checks; every queue endpoint is
     // also staff-gated, so a stale client cannot read anything anyway.
-    const staffRanks = ["moderator", "admin"];
-    if (!staffRanks.includes(roleOf(context.user))) {
+    if (!roleHasPermission(roleOf(context.user), "moderation:view")) {
       throw redirect({ to: "/" });
     }
   },

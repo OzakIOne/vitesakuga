@@ -2,8 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, DateTime, Effect, Layer, Option, Schema } from "effect";
 import { UpdateObject } from "kysely";
 
-import { ensureOwned } from "../auth/ownership";
-import { SessionFetchError, SessionService } from "../auth/session.effect";
+import { authorizeOwned } from "../auth/policy";
+import {
+  SessionFetchError,
+  SessionService,
+  type AuthorizedActor,
+} from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import {
   SqlError,
@@ -131,7 +135,11 @@ export class PlaylistsService extends Context.Service<
       data: Schema.Schema.Type<typeof createPlaylistInputSchema>,
     ) => Effect.Effect<
       PlaylistRow,
-      UnauthorizedError | SessionFetchError | SqlError | SqlNoFirstResult,
+      | UnauthorizedError
+      | ForbiddenError
+      | SessionFetchError
+      | SqlError
+      | SqlNoFirstResult,
       SessionService
     >;
     readonly update: (
@@ -238,7 +246,7 @@ export class PlaylistsService extends Context.Service<
       postId: number,
     ) => Effect.Effect<
       readonly PlaylistForPostCheck[],
-      UnauthorizedError | SessionFetchError | SqlError,
+      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
   }
@@ -248,20 +256,20 @@ export class PlaylistsService extends Context.Service<
 
     const requireAuth = Effect.fn("PlaylistsService.requireAuth")(function* () {
       const sessions = yield* SessionService;
-      return yield* sessions.requireUser("You must be logged in");
+      return yield* sessions.requireActor("You must be logged in");
     });
 
     /** Auth + ownership in one step; every mutation starts with this. */
     const requireOwnedPlaylist = Effect.fn(
       "PlaylistsService.requireOwnedPlaylist",
     )(function* (playlistId: PlaylistId) {
-      const user = yield* requireAuth();
-      return yield* requirePlaylistOwnership(playlistId, user.id);
+      const actor = yield* requireAuth();
+      return yield* requirePlaylistOwnership(playlistId, actor);
     });
 
     const requirePlaylistOwnership = Effect.fn(
       "PlaylistsService.requirePlaylistOwnership",
-    )(function* (playlistId: PlaylistId, userId: string) {
+    )(function* (playlistId: PlaylistId, actor: AuthorizedActor) {
       const playlistOption = yield* db.executeTakeFirstOption(
         db
           .selectFrom("playlists")
@@ -269,10 +277,11 @@ export class PlaylistsService extends Context.Service<
           .where("id", "=", playlistId),
       );
 
-      return yield* ensureOwned({
+      return yield* authorizeOwned({
+        actor,
         resource: playlistOption,
         selectOwnerId: (row) => row.user_id,
-        userId,
+        own: "playlists:edit-own",
         notFound: new PlaylistNotFoundError({
           message: `Playlist ${playlistId} not found`,
           playlistId,
@@ -688,8 +697,8 @@ export class PlaylistsService extends Context.Service<
     const fetchUserPlaylists = Effect.fn("PlaylistsService.fetchUserPlaylists")(
       function* (userId: string) {
         const sessions = yield* SessionService;
-        const user = yield* sessions.getUser();
-        const isOwner = user?.id === userId;
+        const actor = yield* sessions.getActor();
+        const isOwner = actor?.id === userId;
 
         let query = db
           .selectFrom("playlists")
@@ -788,8 +797,8 @@ export class PlaylistsService extends Context.Service<
     ) {
       const { playlistId, page } = data;
       const sessions = yield* SessionService;
-      const user = yield* sessions.getUser();
-      const currentUserId = user?.id;
+      const actor = yield* sessions.getActor();
+      const currentUserId = actor?.id;
 
       const playlistOption = yield* db.executeTakeFirstOption(
         db.selectFrom("playlists").selectAll().where("id", "=", playlistId),

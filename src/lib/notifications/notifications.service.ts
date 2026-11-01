@@ -6,7 +6,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse } from "../effect/schema.utils";
-import { UnauthorizedError } from "../errors";
+import { ForbiddenError, UnauthorizedError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 
@@ -30,12 +30,16 @@ export type NotificationRow = {
 
 const INBOX_PAGE_SIZE = 50;
 
-type InboxError = SqlError | UnauthorizedError | SessionFetchError;
+type InboxError =
+  | SqlError
+  | ForbiddenError
+  | UnauthorizedError
+  | SessionFetchError;
 
 const requireInboxUserId = Effect.fn("NotificationsService.requireUserId")(
   function* (message: string) {
     const sessions = yield* SessionService;
-    const user = yield* sessions.requireUser(message);
+    const user = yield* sessions.requireActor(message);
     return user.id;
   },
 );

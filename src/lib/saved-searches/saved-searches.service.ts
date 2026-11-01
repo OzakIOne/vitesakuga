@@ -6,7 +6,7 @@ import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
-import { UnauthorizedError, ValidationError } from "../errors";
+import { ForbiddenError, UnauthorizedError, ValidationError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import {
@@ -43,6 +43,7 @@ export class SavedSearchesService extends Context.Service<
       data: Schema.Schema.Type<typeof saveSearchInputSchema>,
     ) => Effect.Effect<
       SavedSearch,
+      | ForbiddenError
       | UnauthorizedError
       | SessionFetchError
       | SqlError
@@ -52,14 +53,14 @@ export class SavedSearchesService extends Context.Service<
     >;
     readonly list: () => Effect.Effect<
       readonly SavedSearch[],
-      UnauthorizedError | SessionFetchError | SqlError,
+      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
     readonly delete_: (input: {
       id: number;
     }) => Effect.Effect<
       { success: boolean },
-      UnauthorizedError | SessionFetchError | SqlError,
+      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
   }
@@ -70,7 +71,7 @@ export class SavedSearchesService extends Context.Service<
     const requireAuth = Effect.fn("SavedSearchesService.requireAuth")(
       function* () {
         const sessions = yield* SessionService;
-        return yield* sessions.requireUser("You must be logged in");
+        return yield* sessions.requireActor("You must be logged in");
       },
     );
 

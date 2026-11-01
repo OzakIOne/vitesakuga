@@ -13,7 +13,8 @@ import { Box, HStack, Stack } from "src/components/ui/layout";
 import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
-import { isStaffRole, roleOf } from "src/lib/auth/roles";
+import { roleHasPermission } from "src/lib/auth/policy";
+import { roleOf } from "src/lib/auth/roles";
 import { useCommentsFns } from "src/lib/comments/comments.fn-context";
 import {
   useAddComment,
@@ -165,8 +166,9 @@ function CommentItem({
 
   const updateCommentMutation = useUpdateComment(comment.postId);
   const isOwn = currentUserId === comment.userId;
-  const canModerate = isStaffRole(
+  const canModerate = roleHasPermission(
     roleOf({ id: currentUserId, role: currentUserRole }),
+    "comments:delete-any",
   );
 
   const handleSave = () => {

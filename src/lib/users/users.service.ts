@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { PostWithVotes } from "src/lib/db/schema";
 
-import { roleAtLeast, type Role } from "../auth/roles";
+import type { Role } from "../auth/roles";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
@@ -33,6 +33,14 @@ const PROFILE_PLAYLIST_LIMIT = 4;
 // The mention dropdown stays small: the composer shows a handful of
 // candidates for the prefix being typed.
 const MENTION_SEARCH_LIMIT = 8;
+
+/** Public profile badge per role: display only, never an authorization input. */
+const ROLE_BADGES = {
+  admin: { color: "red", id: "admin", label: "Admin" },
+  moderator: { color: "orange", id: "moderator", label: "Moderator" },
+  novice: null,
+  uploader: { color: "blue", id: "uploader", label: "Uploader" },
+} as const satisfies Record<Role, ContributorProfileBadge | null>;
 
 export class UsersService extends Context.Service<
   UsersService,
@@ -87,16 +95,9 @@ export class UsersService extends Context.Service<
     ): ReadonlyArray<ContributorProfileBadge> => {
       const badges: ContributorProfileBadge[] = [];
 
-      if (roleAtLeast(role, "admin")) {
-        badges.push({ color: "red", id: "admin", label: "Admin" });
-      } else if (roleAtLeast(role, "moderator")) {
-        badges.push({
-          color: "orange",
-          id: "moderator",
-          label: "Moderator",
-        });
-      } else if (roleAtLeast(role, "uploader")) {
-        badges.push({ color: "blue", id: "uploader", label: "Uploader" });
+      const roleBadge = ROLE_BADGES[role];
+      if (roleBadge !== null) {
+        badges.push(roleBadge);
       }
 
       if (acceptedEdits > 0) {

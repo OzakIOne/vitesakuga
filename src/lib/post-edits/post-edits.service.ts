@@ -5,10 +5,9 @@ import {
   CommunityActivityService,
   CommunityActivityServiceLive,
 } from "../activity/community-activity.service";
-import { getUserRole, userHasPermission } from "../auth/policy";
-import { isStaffRole } from "../auth/roles";
+import { authorize, roleHasPermission } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
-import type { AuthenticatedUser } from "../auth/session.effect";
+import type { AuthorizedActor } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import {
   type EffectTransaction,
@@ -149,7 +148,7 @@ export class PostEditsService extends Context.Service<
     // (repo-wide contract style; see CommentsService).
     const requireSignedIn = () =>
       Effect.flatMap(SessionService, (sessions) =>
-        sessions.requireUser(
+        sessions.requireActor(
           "You must be logged in to review edit suggestions",
         ),
       );
@@ -202,12 +201,10 @@ export class PostEditsService extends Context.Service<
      */
     const resolveDecisionContext = (
       editId: number,
-      user: AuthenticatedUser,
+      user: AuthorizedActor,
       trx: EffectTransaction<DB>,
     ) =>
       Effect.gen(function* () {
-        const role = getUserRole(user);
-
         const editOption = yield* loadEdit(editId, trx);
         if (Option.isNone(editOption)) {
           return yield* new EditNotFoundError({
@@ -239,9 +236,11 @@ export class PostEditsService extends Context.Service<
         }
 
         const isOwner = postOption.value.userId === user.id;
-        const isStaff = isStaffRole(role);
+        const canStaffDecide = roleHasPermission(user.role, "edits:approve");
         const canVote =
-          isStaff || isOwner || userHasPermission(role, "posts:suggest-edit");
+          isOwner ||
+          canStaffDecide ||
+          roleHasPermission(user.role, "posts:suggest-edit");
         if (!canVote) {
           return yield* new ForbiddenError({
             message:
@@ -251,8 +250,8 @@ export class PostEditsService extends Context.Service<
 
         return {
           edit,
-          isInstantDecider: isStaff || isOwner,
-          isStaffOrOwner: isStaff || isOwner,
+          isInstantDecider: isOwner || canStaffDecide,
+          isStaffOrOwner: isOwner || canStaffDecide,
           postOwnerId: postOption.value.userId,
           userId: user.id,
         };
@@ -264,7 +263,7 @@ export class PostEditsService extends Context.Service<
       postId: number;
     }) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to suggest an edit",
       );
 
@@ -284,11 +283,11 @@ export class PostEditsService extends Context.Service<
         });
       }
 
-      if (!userHasPermission(getUserRole(user), "posts:suggest-edit")) {
-        return yield* new ForbiddenError({
-          message: "You need the uploader rank to suggest edits.",
-        });
-      }
+      yield* authorize({
+        actor: user,
+        permission: "posts:suggest-edit",
+        forbiddenMessage: "You need the uploader rank to suggest edits.",
+      });
 
       const post = postOption.value;
       const operationKey =

@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Clock, Context, Effect, Exit, Layer, Option } from "effect";
 
-import { getUserRole, userHasPermission } from "../auth/policy";
-import { roleAtLeast } from "../auth/roles";
+import { authorize } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
 import { SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
@@ -130,13 +129,6 @@ export class VideosService extends Context.Service<
       "Only moderators and admins can manage other users' videos.";
     const ADMIN_ONLY_MESSAGE = "Only admins can run storage maintenance.";
 
-    const currentUserWithRank = () =>
-      Effect.gen(function* () {
-        const sessions = yield* SessionService;
-        const user = yield* sessions.requireUser("You must be logged in.");
-        return { role: getUserRole(user), userId: user.id };
-      });
-
     const loadPost = (postId: number) =>
       db.executeTakeFirstOption(
         db.selectFrom("posts").selectAll().where("id", "=", postId),
@@ -232,13 +224,16 @@ export class VideosService extends Context.Service<
       } satisfies GcPreviewResult;
     });
 
-    const requireAdmin = Effect.fn("VideosService.requireAdmin")(function* () {
-      const { role } = yield* currentUserWithRank();
-      if (!roleAtLeast(role, "admin")) {
-        return yield* new ForbiddenError({
-          message: ADMIN_ONLY_MESSAGE,
-        });
-      }
+    const requireStorageMaintainer = Effect.fn(
+      "VideosService.requireStorageMaintainer",
+    )(function* () {
+      const sessions = yield* SessionService;
+      const actor = yield* sessions.requireActor("You must be logged in.");
+      yield* authorize({
+        actor,
+        permission: "storage:maintain",
+        forbiddenMessage: ADMIN_ONLY_MESSAGE,
+      });
     });
 
     const replace = Effect.fn("VideosService.replace")(function* (input: {
@@ -248,10 +243,9 @@ export class VideosService extends Context.Service<
       postId: number;
     }) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to replace a video",
       );
-      const role = getUserRole(user);
 
       return yield* lifecycle.runOperation({
         kind: "video-replace",
@@ -284,12 +278,11 @@ export class VideosService extends Context.Service<
             const oldVideoKey = post.videoKey;
 
             // Author replaces their own video at any rank; non-authors need staff.
-            if (
-              post.userId !== user.id &&
-              !userHasPermission(role, "videos:replace-any")
-            ) {
-              return yield* new ForbiddenError({
-                message: STAFF_ONLY_MESSAGE,
+            if (post.userId !== user.id) {
+              yield* authorize({
+                actor: user,
+                permission: "videos:replace-any",
+                forbiddenMessage: STAFF_ONLY_MESSAGE,
               });
             }
             const staged = yield* lifecycle.verifyStagedVideo({
@@ -334,10 +327,9 @@ export class VideosService extends Context.Service<
       postId: number,
     ) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to view video history",
       );
-      const role = getUserRole(user);
 
       const postOption = yield* loadPost(postId);
       if (Option.isNone(postOption)) {
@@ -346,12 +338,11 @@ export class VideosService extends Context.Service<
           postId,
         });
       }
-      if (
-        postOption.value.userId !== user.id &&
-        !userHasPermission(role, "videos:replace-any")
-      ) {
-        return yield* new ForbiddenError({
-          message: STAFF_ONLY_MESSAGE,
+      if (postOption.value.userId !== user.id) {
+        yield* authorize({
+          actor: user,
+          permission: "videos:replace-any",
+          forbiddenMessage: STAFF_ONLY_MESSAGE,
         });
       }
       return yield* revisionsForPost(postId);
@@ -363,8 +354,7 @@ export class VideosService extends Context.Service<
       revisionId: number;
     }) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(STAFF_ONLY_MESSAGE);
-      const role = getUserRole(user);
+      const user = yield* sessions.requireActor(STAFF_ONLY_MESSAGE);
       return yield* lifecycle.runOperation({
         kind: "video-restore",
         operationKey: input.operationKey,
@@ -397,11 +387,11 @@ export class VideosService extends Context.Service<
             }
 
             // Restoring other users' videos mirrors the replace-any gate.
-            if (!userHasPermission(role, "videos:replace-any")) {
-              return yield* new ForbiddenError({
-                message: STAFF_ONLY_MESSAGE,
-              });
-            }
+            yield* authorize({
+              actor: user,
+              permission: "videos:replace-any",
+              forbiddenMessage: STAFF_ONLY_MESSAGE,
+            });
 
             // Guard against a just-purged or legacy object being restored. A
             // revision is restorable only when its durable registry row is ready and
@@ -464,18 +454,18 @@ export class VideosService extends Context.Service<
     });
 
     const gcPreview = Effect.fn("VideosService.gcPreview")(function* () {
-      yield* requireAdmin();
+      yield* requireStorageMaintainer();
       return yield* analyzeGc();
     });
 
     const gcRun = Effect.fn("VideosService.gcRun")(function* () {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(ADMIN_ONLY_MESSAGE);
-      if (!roleAtLeast(getUserRole(user), "admin")) {
-        return yield* new ForbiddenError({
-          message: ADMIN_ONLY_MESSAGE,
-        });
-      }
+      const user = yield* sessions.requireActor(ADMIN_ONLY_MESSAGE);
+      yield* authorize({
+        actor: user,
+        permission: "storage:maintain",
+        forbiddenMessage: ADMIN_ONLY_MESSAGE,
+      });
 
       const { orphanKeys, purgeableRevisions } = yield* analyzeGc();
 

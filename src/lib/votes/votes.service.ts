@@ -11,7 +11,11 @@ import { SqlError } from "../db/effect-kysely";
 import type { PostVote } from "../db/schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parse, parseStrict } from "../effect/schema.utils";
-import { PostNotFoundError, UnauthorizedError } from "../errors";
+import {
+  ForbiddenError,
+  PostNotFoundError,
+  UnauthorizedError,
+} from "../errors";
 import { asPostId, PostId } from "../ids";
 import {
   computePagination,
@@ -83,21 +87,25 @@ export class PostVotesService extends Context.Service<
       data: SetPostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
-      UnauthorizedError | PostNotFoundError | SessionFetchError | SqlError,
+      | ForbiddenError
+      | UnauthorizedError
+      | PostNotFoundError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
     readonly remove: (
       data: RemovePostVoteInput,
     ) => Effect.Effect<
       PostVotesSummary,
-      UnauthorizedError | SessionFetchError | SqlError,
+      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
     readonly fetchLikedPosts: (
       data: FetchLikedPostsInput,
     ) => Effect.Effect<
       LikedPostsResult,
-      UnauthorizedError | SessionFetchError | SqlError,
+      ForbiddenError | UnauthorizedError | SessionFetchError | SqlError,
       SessionService
     >;
   }
@@ -150,7 +158,7 @@ export class PostVotesService extends Context.Service<
       data: SetPostVoteInput,
     ) {
       const sessions = yield* SessionService;
-      const session = yield* sessions.requireUser(
+      const session = yield* sessions.requireActor(
         "You must be logged in to vote on posts",
       );
 
@@ -205,7 +213,7 @@ export class PostVotesService extends Context.Service<
       data: RemovePostVoteInput,
     ) {
       const sessions = yield* SessionService;
-      const session = yield* sessions.requireUser(
+      const session = yield* sessions.requireActor(
         "You must be logged in to vote on posts",
       );
 
@@ -232,7 +240,7 @@ export class PostVotesService extends Context.Service<
     const fetchLikedPosts = Effect.fn("PostVotesService.fetchLikedPosts")(
       function* (data: FetchLikedPostsInput) {
         const sessions = yield* SessionService;
-        const session = yield* sessions.requireUser(
+        const session = yield* sessions.requireActor(
           "You must be logged in to view your liked posts",
         );
 

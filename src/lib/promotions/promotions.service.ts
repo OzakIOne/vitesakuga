@@ -5,7 +5,7 @@ import {
   CommunityActivityService,
   CommunityActivityServiceLive,
 } from "../activity/community-activity.service";
-import { requirePermission, type PolicyError } from "../auth/policy";
+import { authorize, type PolicyError } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError, type EffectTransaction } from "../db/effect-kysely";
@@ -146,10 +146,15 @@ export class PromotionsService extends Context.Service<
     const sessions = yield* SessionService;
     const community = yield* CommunityActivityService;
 
-    const gateStaff = () =>
-      requirePermission("promotions:review", {
+    const gateStaff = Effect.fn("PromotionsService.gateStaff")(function* () {
+      const reviewer = yield* sessions.requireActor("You must be logged in.");
+      yield* authorize({
+        actor: reviewer,
+        permission: "promotions:review",
         forbiddenMessage: "Only moderators can review promotion candidates.",
       });
+      return reviewer;
+    });
 
     const latestReviewsFor = (
       executor: PromotionExecutor,
@@ -302,10 +307,7 @@ export class PromotionsService extends Context.Service<
     }: {
       userId: string;
     }) {
-      yield* gateStaff();
-      const reviewer = yield* sessions.requireUser(
-        "You must be logged in to review promotions",
-      );
+      const reviewer = yield* gateStaff();
 
       const now = yield* Clock.currentTimeMillis;
       // Re-check eligibility and consume the novice state atomically: two
@@ -369,10 +371,7 @@ export class PromotionsService extends Context.Service<
     }: {
       userId: string;
     }) {
-      yield* gateStaff();
-      const reviewer = yield* sessions.requireUser(
-        "You must be logged in to review promotions",
-      );
+      const reviewer = yield* gateStaff();
 
       // Locks the candidate like approval does, so a concurrent approval and
       // rejection cannot both record a decision.

@@ -5,7 +5,7 @@ import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
-import { UnauthorizedError, ValidationError } from "../errors";
+import { ForbiddenError, UnauthorizedError, ValidationError } from "../errors";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import { setTagFollowedSchema, tagFollowStateSchema } from "./tags.schema";
@@ -30,7 +30,11 @@ export class TagsService extends Context.Service<
       data: Schema.Schema.Type<typeof setTagFollowedSchema>,
     ) => Effect.Effect<
       { readonly followed: boolean; readonly tagName: string },
-      SqlError | SessionFetchError | UnauthorizedError | ValidationError,
+      | SqlError
+      | SessionFetchError
+      | ForbiddenError
+      | UnauthorizedError
+      | ValidationError,
       SessionService
     >;
   }
@@ -89,7 +93,7 @@ export class TagsService extends Context.Service<
     const setFollowed = Effect.fn("TagsService.setFollowed")(function* (
       data: Schema.Schema.Type<typeof setTagFollowedSchema>,
     ) {
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to follow tags",
       );
       const tag = yield* db.executeTakeFirstOption(

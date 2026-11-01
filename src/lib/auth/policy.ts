@@ -1,27 +1,30 @@
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 
 import { ForbiddenError, UnauthorizedError } from "../errors";
-import { roleAtLeast, roleOf, type Role } from "./roles";
-import {
-  SessionFetchError,
-  SessionService,
-  type SessionUser,
-} from "./session.effect";
+import type { Role } from "./roles";
+import type { AuthorizedActor, SessionFetchError } from "./session.effect";
 
-/** The signed-in user a policy predicate receives. */
-type PolicyUser = NonNullable<SessionUser>;
+/** Every failure a signed-in authorization check can produce. */
+export type PolicyError =
+  | ForbiddenError
+  | SessionFetchError
+  | UnauthorizedError;
 
 // ---------------------------------------------------------------------------
 // Permissions
 // ---------------------------------------------------------------------------
 
 /**
- * Single source of truth for every permission in the app, as `domain:action`
- * pairs. Adding an entry here widens the `Permission` union at compile time;
- * a typo is a type error, not a silent authorization hole.
+ * Single source of truth for every enforced right in the app, as `domain:action`
+ * pairs. A right that a service checks must be named here; a name that no
+ * service checks grants nothing. Adding an entry widens the `Permission` union
+ * at compile time, so a typo is a type error, not an authorization hole.
  */
 const PERMISSION_CONFIG = {
+  comments: ["delete-any", "delete-own", "edit-any", "edit-own"],
   edits: ["approve"],
+  moderation: ["view"],
+  playlists: ["edit-own"],
   posts: [
     "create",
     "delete-any",
@@ -31,6 +34,8 @@ const PERMISSION_CONFIG = {
     "suggest-edit",
   ],
   promotions: ["review"],
+  roles: ["assign"],
+  storage: ["maintain"],
   videos: ["replace-any", "replace-own"],
 } as const;
 
@@ -43,6 +48,9 @@ type InferPermissions<T extends PermissionConfig> = {
 export type Permission = InferPermissions<typeof PERMISSION_CONFIG>;
 
 const NOVICE_PERMISSIONS: ReadonlyArray<Permission> = [
+  "comments:delete-own",
+  "comments:edit-own",
+  "playlists:edit-own",
   "posts:create",
   "posts:delete-own",
   "posts:edit-own",
@@ -56,130 +64,87 @@ const UPLOADER_PERMISSIONS: ReadonlyArray<Permission> = [
 
 const MODERATOR_PERMISSIONS: ReadonlyArray<Permission> = [
   ...UPLOADER_PERMISSIONS,
+  "comments:delete-any",
+  "comments:edit-any",
   "edits:approve",
+  "moderation:view",
   "posts:delete-any",
   "posts:edit-any",
   "promotions:review",
   "videos:replace-any",
 ];
 
+const ADMIN_PERMISSIONS: ReadonlyArray<Permission> = [
+  ...MODERATOR_PERMISSIONS,
+  "roles:assign",
+  "storage:maintain",
+];
+
 /**
- * Permissions granted by each rank. The sets are cumulative — every rank
- * includes the permissions of the ranks below it. Keep the mapping in sync
- * with `RoleSchema`: authorization code checks these permissions, never the
- * role labels themselves.
+ * Permissions granted by each role. Each role lists its full set (no inherited
+ * ranks), so changing one role never silently changes another. Authorization
+ * code checks these permissions, never the role labels themselves.
  */
 const PERMISSIONS_BY_ROLE = {
-  admin: new Set(MODERATOR_PERMISSIONS),
+  admin: new Set(ADMIN_PERMISSIONS),
   moderator: new Set(MODERATOR_PERMISSIONS),
   novice: new Set(NOVICE_PERMISSIONS),
   uploader: new Set(UPLOADER_PERMISSIONS),
 } as const satisfies Record<Role, ReadonlySet<Permission>>;
 
-/**
- * Extracts a user's rank. Anything missing or unrecognized fails closed to
- * `"novice"` (decoding lives in `roleOf`, client-safe).
- */
-export const getUserRole = (user: PolicyUser): Role => roleOf(user);
-
-/** Pure, synchronous permission lookup for a known role. */
-export const userHasPermission = (
+/** Pure permission lookup for a known role; used by UI and by the checks below. */
+export const roleHasPermission = (
   role: Role,
   permission: Permission,
 ): boolean => PERMISSIONS_BY_ROLE[role].has(permission);
 
 // ---------------------------------------------------------------------------
-// Policies
+// Enforcement
 // ---------------------------------------------------------------------------
 
-/** Every failure a policy can produce on its own. */
-export type PolicyError =
-  | ForbiddenError
-  | SessionFetchError
-  | UnauthorizedError;
+const DEFAULT_FORBIDDEN_MESSAGE =
+  "You do not have permission to perform this action.";
 
 /**
- * An access policy: succeeds with `void` when access is granted, or fails
- * with a policy error otherwise. Composable via `allPolicies`/`anyPolicies`
- * and attachable to any Effect with `withPolicy` (pipe it last so it runs
- * first and fails fast).
+ * Fails with `ForbiddenError` unless the actor's role grants `permission`.
+ * The actor must come from `SessionService.requireActor`, so the role is
+ * already validated and the caller is signed in.
  */
-export type Policy<E = never, R = never> = Effect.Effect<
-  void,
-  PolicyError | E,
-  SessionService | R
->;
+export const authorize = Effect.fn("authorize")(function* (input: {
+  readonly actor: AuthorizedActor;
+  readonly permission: Permission;
+  readonly forbiddenMessage?: string | undefined;
+}) {
+  if (!roleHasPermission(input.actor.role, input.permission)) {
+    return yield* new ForbiddenError({
+      message: input.forbiddenMessage ?? DEFAULT_FORBIDDEN_MESSAGE,
+    });
+  }
+});
 
 /**
- * Builds a policy from a predicate over the current signed-in user. Not being
- * signed in and failing the check both surface to the caller: `UnauthorizedError`
- * keeps existing sign-in redirects working, `ForbiddenError` explains denial.
+ * Loads-and-guards a resource the actor may change. Fails with `notFound`
+ * when the row is absent. When the actor owns it, the `own` permission must
+ * hold; otherwise the `any` permission, when given, grants access to others'
+ * rows and everything else fails with `forbidden`. Returns the owned row.
  */
-export const policy = <E, R>(
-  predicate: (user: PolicyUser) => Effect.Effect<boolean, E, R>,
-  options?: { readonly forbiddenMessage?: string | undefined },
-): Policy<E, R> =>
-  Effect.gen(function* () {
-    const sessions = yield* SessionService;
-    const user = yield* sessions.requireUser("You must be logged in.");
-    const granted = yield* predicate(user);
-    if (!granted) {
-      return yield* new ForbiddenError({
-        message:
-          options?.forbiddenMessage ??
-          "You do not have permission to perform this action.",
-      });
-    }
+export const authorizeOwned = <A, ENotFound, EForbidden>(input: {
+  readonly actor: AuthorizedActor;
+  readonly resource: Option.Option<A>;
+  readonly selectOwnerId: (row: NoInfer<A>) => string;
+  readonly own: Permission;
+  readonly any?: Permission | undefined;
+  readonly notFound: Effect.Effect<NoInfer<A>, ENotFound>;
+  readonly forbidden: Effect.Effect<never, EForbidden>;
+}): Effect.Effect<A, ENotFound | EForbidden> =>
+  Option.match(input.resource, {
+    onNone: () => input.notFound,
+    onSome: (row) => {
+      const ownsRow = input.selectOwnerId(row) === input.actor.id;
+      const granted = ownsRow
+        ? roleHasPermission(input.actor.role, input.own)
+        : input.any !== undefined &&
+          roleHasPermission(input.actor.role, input.any);
+      return granted ? Effect.succeed(row) : input.forbidden;
+    },
   });
-
-/** Policy that holds when the current user's rank is at least `minRole`. */
-export const requireRole = (
-  minRole: Role,
-  options?: { readonly forbiddenMessage?: string | undefined },
-): Policy =>
-  policy(
-    (user) => Effect.succeed(roleAtLeast(getUserRole(user), minRole)),
-    options,
-  );
-
-/** Policy that holds when the current user's rank grants `permission`. */
-export const requirePermission = (
-  permission: Permission,
-  options?: { readonly forbiddenMessage?: string | undefined },
-): Policy =>
-  policy(
-    (user) => Effect.succeed(userHasPermission(getUserRole(user), permission)),
-    options,
-  );
-
-/**
- * Composes policies with AND semantics: all must pass. Policies run in order
- * and short-circuit on the first failure.
- */
-export const allPolicies = <E, R>(
-  first: Policy<E, R>,
-  ...rest: ReadonlyArray<Policy<E, R>>
-): Policy<E, R> =>
-  Effect.all([first, ...rest], { concurrency: 1, discard: true });
-
-/**
- * Composes policies with OR semantics: at least one must pass. The error is
- * taken from the last policy tried.
- */
-export const anyPolicies = <E, R>(
-  policies: readonly [Policy<E, R>, ...Array<Policy<E, R>>],
-): Policy<E, R> => Effect.firstSuccessOf(policies);
-
-/**
- * Attaches a guard to an Effect: the effect runs only if the policy passes.
- * Pipe it as the last step so the guard evaluates before any expensive work.
- *
- * @example
- * postsService.deletePost(postId).pipe(withPolicy(requirePermission("posts:delete-any")))
- */
-export const withPolicy =
-  <E, R>(guard: Policy<E, R>) =>
-  <A, E2, R2>(
-    self: Effect.Effect<A, E2, R2>,
-  ): Effect.Effect<A, PolicyError | E | E2, SessionService | R | R2> =>
-    guard.pipe(Effect.andThen(() => self));

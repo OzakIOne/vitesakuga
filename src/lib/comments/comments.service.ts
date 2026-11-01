@@ -5,8 +5,7 @@ import {
   CommunityActivityService,
   CommunityActivityServiceLive,
 } from "../activity/community-activity.service";
-import { ensureOwnedOrStaff } from "../auth/ownership";
-import { getUserRole } from "../auth/policy";
+import { authorizeOwned } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
@@ -49,7 +48,11 @@ export class CommentsService extends Context.Service<
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) => Effect.Effect<
       Schema.Codec.Encoded<typeof commentsSelectSchema>,
-      SqlError | SqlNoFirstResult | UnauthorizedError | SessionFetchError,
+      | SqlError
+      | SqlNoFirstResult
+      | ForbiddenError
+      | UnauthorizedError
+      | SessionFetchError,
       SessionService
     >;
     readonly delete_: (input: {
@@ -145,7 +148,7 @@ export class CommentsService extends Context.Service<
       data: Schema.Schema.Type<typeof commentInsertSchema>,
     ) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to comment",
       );
 
@@ -205,7 +208,7 @@ export class CommentsService extends Context.Service<
       commentId: number;
     }) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to delete a comment",
       );
 
@@ -216,11 +219,12 @@ export class CommentsService extends Context.Service<
           .where("id", "=", commentId),
       );
 
-      yield* ensureOwnedOrStaff({
+      yield* authorizeOwned({
+        actor: user,
         resource: commentOption,
         selectOwnerId: (row) => row.userId,
-        userId: user.id,
-        userRole: getUserRole(user),
+        own: "comments:delete-own",
+        any: "comments:delete-any",
         notFound: new CommentNotFoundError({
           commentId,
           message: `Comment ${commentId} not found`,
@@ -246,7 +250,7 @@ export class CommentsService extends Context.Service<
       data: Schema.Schema.Type<typeof commentUpdateSchema>,
     ) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to edit a comment",
       );
 
@@ -257,11 +261,12 @@ export class CommentsService extends Context.Service<
           .where("id", "=", data.commentId),
       );
 
-      const comment = yield* ensureOwnedOrStaff({
+      const comment = yield* authorizeOwned({
+        actor: user,
         resource: commentOption,
         selectOwnerId: (row) => row.userId,
-        userId: user.id,
-        userRole: getUserRole(user),
+        own: "comments:edit-own",
+        any: "comments:edit-any",
         notFound: new CommentNotFoundError({
           commentId: data.commentId,
           message: `Comment ${data.commentId} not found`,

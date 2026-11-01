@@ -55,7 +55,7 @@ export class DeleteAccountService extends Context.Service<
     const deleteAccount = Effect.fn("DeleteAccountService.deleteAccount")(
       function* (input: Schema.Schema.Type<typeof deleteAccountInputSchema>) {
         const sessions = yield* SessionService;
-        const user = yield* sessions.requireUser("You must be logged in");
+        const user = yield* sessions.requireActor("You must be logged in");
         const userId = user.id;
 
         // Mirrors Better Auth's `shouldRequirePassword`: a password is only

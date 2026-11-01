@@ -1,13 +1,32 @@
-import { Config, Context, DateTime, Effect, Layer, Schema } from "effect";
+import {
+  Config,
+  Context,
+  DateTime,
+  Effect,
+  Layer,
+  Option,
+  Schema,
+} from "effect";
 
-import { UnauthorizedError } from "../errors";
+import { ForbiddenError, UnauthorizedError } from "../errors";
 import {
   AuthProviderError,
   AuthService,
   RequestHeadersService,
 } from "./context";
+import { RoleSchema, type Role } from "./roles";
 import type { AuthSession, AuthenticatedUser } from "./types";
 export type { AuthSession, AuthenticatedUser } from "./types";
+
+/**
+ * The signed-in account as authorization sees it: an id and a role that has
+ * been validated against `RoleSchema`. Only `SessionService.requireActor`
+ * produces one.
+ */
+export type AuthorizedActor = {
+  readonly id: string;
+  readonly role: Role;
+};
 
 /** Reads the e2e bypass cookie value out of a raw `Cookie` header. */
 const E2E_BYPASS_COOKIE_PATTERN = /(?:^|;\s*)e2e-test-auth=([^;\s]+)/;
@@ -84,6 +103,28 @@ export class SessionService extends Context.Service<
     ) => Effect.Effect<
       AuthenticatedUser,
       UnauthorizedError | SessionFetchError
+    >;
+
+    /**
+     * The signed-in account with a validated role, for every authorization
+     * decision. Fails with `UnauthorizedError` when signed out and with
+     * `ForbiddenError` when the stored role is not a known rank.
+     */
+    readonly requireActor: (
+      message: string,
+    ) => Effect.Effect<
+      AuthorizedActor,
+      ForbiddenError | UnauthorizedError | SessionFetchError
+    >;
+
+    /**
+     * The signed-in account with a validated role, or null when signed out or
+     * when the stored role is unknown. For reads that only need to know who is
+     * asking, such as owner visibility; a mutation uses `requireActor`.
+     */
+    readonly getActor: () => Effect.Effect<
+      AuthorizedActor | null,
+      SessionFetchError
     >;
   }
 >()("SessionService", {
@@ -196,7 +237,30 @@ export class SessionService extends Context.Service<
       return session.user;
     });
 
-    return { getSession, getUser, requireUser };
+    const decodeActor = Schema.decodeUnknownOption(
+      Schema.Struct({ id: Schema.String, role: RoleSchema }),
+    );
+
+    const requireActor = Effect.fn("SessionService.requireActor")(function* (
+      message: string,
+    ) {
+      const user = yield* requireUser(message);
+      const decoded = decodeActor(user);
+      if (Option.isNone(decoded)) {
+        return yield* new ForbiddenError({
+          message:
+            "Your account role is not recognised. Contact an administrator.",
+        });
+      }
+      return decoded.value;
+    });
+
+    const getActor = Effect.fn("SessionService.getActor")(function* () {
+      const user = yield* getUser();
+      return user === null ? null : Option.getOrNull(decodeActor(user));
+    });
+
+    return { getActor, getSession, getUser, requireActor, requireUser };
   }),
 }) {}
 

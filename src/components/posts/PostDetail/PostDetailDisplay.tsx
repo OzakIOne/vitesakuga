@@ -19,7 +19,7 @@ import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { TagInput } from "src/components/ui/tag-input";
-import { userHasPermission } from "src/lib/auth/policy";
+import { roleHasPermission } from "src/lib/auth/policy";
 import { roleOf } from "src/lib/auth/roles";
 import { useUpdatePost } from "src/lib/posts/posts.hooks";
 import type { Tag } from "src/lib/posts/posts.schema";
@@ -130,7 +130,7 @@ export function PostDetailDisplay({
   const canSuggestEdit =
     currentUserId !== undefined &&
     !isOwner &&
-    userHasPermission(
+    roleHasPermission(
       roleOf({ id: currentUserId, role: currentUserRole }),
       "posts:suggest-edit",
     );

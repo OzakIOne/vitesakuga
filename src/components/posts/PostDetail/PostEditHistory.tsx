@@ -6,8 +6,8 @@ import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Box, HStack, Stack } from "src/components/ui/layout";
 import { Heading, Text } from "src/components/ui/typography";
-import { userHasPermission } from "src/lib/auth/policy";
-import { isStaffRole, roleOf } from "src/lib/auth/roles";
+import { roleHasPermission } from "src/lib/auth/policy";
+import { roleOf } from "src/lib/auth/roles";
 import { POST_EDIT_REQUIRED_VOTES } from "src/lib/post-edits/post-edits.config";
 import {
   useApprovePostEdit,
@@ -104,9 +104,9 @@ function HistoryEntry({
   const reject = useRejectPostEdit(postId);
   const [rejectOpen, setRejectOpen] = useState(false);
   const role = roleOf({ id: currentUserId, role: currentUserRole });
-  const isStaff = isStaffRole(role);
+  const isStaff = roleHasPermission(role, "edits:approve");
   const isEligibleContributor =
-    isStaff || isPostOwner || userHasPermission(role, "posts:suggest-edit");
+    isStaff || isPostOwner || roleHasPermission(role, "posts:suggest-edit");
   const canDecide =
     entry.status === "pending" &&
     currentUserId !== undefined &&

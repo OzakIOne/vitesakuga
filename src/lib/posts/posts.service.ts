@@ -7,8 +7,7 @@ import {
   CommunityActivityService,
   CommunityActivityServiceLive,
 } from "../activity/community-activity.service";
-import { ensureOwnedOrStaff } from "../auth/ownership";
-import { getUserRole } from "../auth/policy";
+import { authorize, authorizeOwned } from "../auth/policy";
 import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import {
@@ -233,6 +232,7 @@ export class PostsService extends Context.Service<
       | SqlError
       | SqlNoFirstResult
       | StorageError
+      | ForbiddenError
       | UnauthorizedError
       | SessionFetchError
       | ValidationError
@@ -250,7 +250,7 @@ export class PostsService extends Context.Service<
         readonly requiredHeaders: Readonly<Record<string, string>>;
         readonly url: string;
       },
-      StorageError | UnauthorizedError | SessionFetchError,
+      StorageError | ForbiddenError | UnauthorizedError | SessionFetchError,
       SessionService
     >;
     readonly update: (
@@ -544,9 +544,10 @@ export class PostsService extends Context.Service<
       data: Schema.Schema.Type<typeof FormFileUploadSchema>,
     ) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to upload a post",
       );
+      yield* authorize({ actor: user, permission: "posts:create" });
 
       const userId = user.id;
       const operationKey = data.operationKey ?? crypto.randomUUID();
@@ -815,9 +816,10 @@ export class PostsService extends Context.Service<
     const createVideoUploadUrl = Effect.fn("PostsService.createVideoUploadUrl")(
       function* (data: Schema.Schema.Type<typeof createVideoUploadUrlSchema>) {
         const sessions = yield* SessionService;
-        const user = yield* sessions.requireUser(
+        const user = yield* sessions.requireActor(
           "You must be logged in to upload a post",
         );
+        yield* authorize({ actor: user, permission: "posts:create" });
 
         const ext = data.fileName.split(".").pop() ?? "";
         const key = pendingVideoObjectKey(
@@ -869,7 +871,7 @@ export class PostsService extends Context.Service<
       data: Schema.Schema.Type<typeof updatePostInputSchema>,
     ) {
       const sessions = yield* SessionService;
-      const user = yield* sessions.requireUser(
+      const user = yield* sessions.requireActor(
         "You must be logged in to update a post",
       );
 
@@ -902,11 +904,12 @@ export class PostsService extends Context.Service<
           .where("id", "=", postId),
       );
 
-      yield* ensureOwnedOrStaff({
+      yield* authorizeOwned({
+        actor: user,
         resource: postOption,
         selectOwnerId: (row) => row.userId,
-        userId: user.id,
-        userRole: getUserRole(user),
+        own: "posts:edit-own",
+        any: "posts:edit-any",
         notFound: new PostNotFoundError({
           message: `Post ${postId} not found`,
           postId,

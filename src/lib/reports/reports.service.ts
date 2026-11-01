@@ -5,7 +5,11 @@ import { SessionFetchError, SessionService } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError } from "../db/effect-kysely";
 import { parseStrict } from "../effect/schema.utils";
-import { PostNotFoundError, UnauthorizedError } from "../errors";
+import {
+  ForbiddenError,
+  PostNotFoundError,
+  UnauthorizedError,
+} from "../errors";
 import { PostId } from "../ids";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
@@ -26,7 +30,11 @@ export class PostReportsService extends Context.Service<
       data: SubmitPostReportInput,
     ) => Effect.Effect<
       PostReportResult,
-      UnauthorizedError | PostNotFoundError | SessionFetchError | SqlError,
+      | ForbiddenError
+      | UnauthorizedError
+      | PostNotFoundError
+      | SessionFetchError
+      | SqlError,
       SessionService
     >;
   }
@@ -38,7 +46,7 @@ export class PostReportsService extends Context.Service<
       data: SubmitPostReportInput,
     ) {
       const sessions = yield* SessionService;
-      const session = yield* sessions.requireUser(
+      const session = yield* sessions.requireActor(
         "You must be logged in to report posts",
       );
 

@@ -34,6 +34,7 @@ import { useSignOut } from "src/lib/auth/auth.hooks";
 import { getUserSession } from "src/lib/auth/auth.middleware";
 import authClient from "src/lib/auth/client";
 import { AuthClientContext } from "src/lib/auth/client-context";
+import { roleHasPermission } from "src/lib/auth/policy";
 import { roleOf } from "src/lib/auth/roles";
 import { CommentsFnsContext } from "src/lib/comments/comments.fn-context";
 import { defaultCommentsFns } from "src/lib/comments/comments.fns";
@@ -190,7 +191,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const signOut = useSignOut();
   const router = useRouter();
   const isStaff =
-    ctx.user !== null && ["moderator", "admin"].includes(roleOf(ctx.user));
+    ctx.user !== null && roleHasPermission(roleOf(ctx.user), "moderation:view");
 
   const currentPath = router.state.location.pathname;
   const authPaths = ["/login", "/signup"];
