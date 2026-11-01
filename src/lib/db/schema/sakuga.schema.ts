@@ -149,19 +149,19 @@ export const postReports = pgTable(
 export const playlists = pgTable(
   "playlists",
   {
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    description: text("description"),
+    created_at: timestamp().defaultNow().notNull(),
+    description: text(),
     id: serial("id").primaryKey(),
-    isPublic: boolean("is_public").notNull().default(false),
-    title: text("title").notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    userId: text("user_id")
+    is_public: boolean().notNull().default(false),
+    title: text().notNull(),
+    updated_at: timestamp().defaultNow().notNull(),
+    user_id: text()
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
   },
   (t) => [
-    index("playlists_user_created_at_idx").on(t.userId, t.createdAt),
-    index("playlists_public_created_at_idx").on(t.isPublic, t.createdAt),
+    index("playlists_user_created_at_idx").on(t.user_id, t.created_at),
+    index("playlists_public_created_at_idx").on(t.is_public, t.created_at),
   ],
 );
 
@@ -171,32 +171,32 @@ export const playlists = pgTable(
 export const savedSearches = pgTable(
   "saved_searches",
   {
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    dateRange: text("date_range").notNull(),
+    created_at: timestamp().defaultNow().notNull(),
+    date_range: text().notNull(),
     id: serial("id").primaryKey(),
     name: text().notNull(),
     q: text().notNull(),
-    sortBy: text("sort_by").notNull(),
+    sort_by: text().notNull(),
     tags: json().$type<string[]>().notNull(),
-    userId: text("user_id")
+    user_id: text()
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
   },
-  (t) => [uniqueIndex("saved_searches_user_name_unique").on(t.userId, t.name)],
+  (t) => [uniqueIndex("saved_searches_user_name_unique").on(t.user_id, t.name)],
 );
 
 export const playlistPosts = pgTable(
   "playlist_posts",
   {
-    playlistId: integer("playlist_id")
+    playlist_id: integer()
       .references(() => playlists.id, { onDelete: "cascade" })
       .notNull(),
-    postId: integer("post_id").notNull(),
-    position: integer("position").notNull().default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    post_id: integer().notNull(),
+    position: integer().notNull().default(0),
+    created_at: timestamp().defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("unique_playlist_post").on(table.playlistId, table.postId),
+    uniqueIndex("unique_playlist_post").on(table.playlist_id, table.post_id),
   ],
 );
 
@@ -358,7 +358,7 @@ export const postEdits = pgTable(
     createdAt: timestamp().defaultNow().notNull(),
     id: serial().primaryKey(),
     payload: json().$type<string>().notNull(),
-    previousPayload: json("previous_payload").$type<string>().notNull(),
+    previous_payload: json().$type<string>().notNull(),
     postId: integer()
       .references(() => posts.id, { onDelete: "cascade" })
       .notNull(),
