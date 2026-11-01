@@ -11,6 +11,7 @@ import {
 import type { Selectable } from "kysely";
 import { sql } from "kysely";
 
+import { clientSafeAnnotations } from "../client-safe-error";
 import { KyselyDB } from "../db/context";
 import {
   SqlError,
@@ -293,6 +294,7 @@ export class OperationConflictError extends Schema.TaggedError<OperationConflict
     message: Schema.String,
     operationKey: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class OperationReplayError extends Schema.TaggedError<OperationReplayError>()(
@@ -365,6 +367,7 @@ export class PostVersionConflictError extends Schema.TaggedError<PostVersionConf
     message: Schema.String,
     postId: Schema.Number,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class PostNotFoundForVersionError extends Schema.TaggedError<PostNotFoundForVersionError>()(

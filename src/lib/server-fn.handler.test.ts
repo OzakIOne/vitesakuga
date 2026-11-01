@@ -1,21 +1,49 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import { SessionFetchError } from "./auth/session.effect";
 import { makeSqlError, SqlError } from "./db/effect-kysely";
 import {
+  CommentNotFoundError,
+  EditAlreadyResolvedError,
+  EditNotFoundError,
   ForbiddenError,
+  PlaylistNotFoundError,
+  PostAlreadyInPlaylistError,
   PostNotFoundError,
+  PromotionAlreadyReviewedError,
+  PromotionNotEligibleError,
   RowParseError,
   UnauthorizedError,
+  UserNotFoundError,
   ValidationError,
 } from "./errors";
 import {
   ObjectProtectedError,
   OperationConflictError,
+  OperationReplayError,
   PostVersionConflictError,
 } from "./lifecycle/lifecycle.service";
 import { createHandler } from "./server-fn.handler";
+
+// Migration oracle: the tags that the hand-maintained client-safe list held
+// before client-safety moved onto the error classes. Each must still be
+// declared client-safe on its class, so the migration preserved exposure.
+const formerClientSafeErrorClasses = [
+  ["CommentNotFoundError", CommentNotFoundError],
+  ["EditAlreadyResolvedError", EditAlreadyResolvedError],
+  ["EditNotFoundError", EditNotFoundError],
+  ["ForbiddenError", ForbiddenError],
+  ["OperationConflictError", OperationConflictError],
+  ["PlaylistNotFoundError", PlaylistNotFoundError],
+  ["PostAlreadyInPlaylistError", PostAlreadyInPlaylistError],
+  ["PostNotFoundError", PostNotFoundError],
+  ["PostVersionConflictError", PostVersionConflictError],
+  ["PromotionAlreadyReviewedError", PromotionAlreadyReviewedError],
+  ["PromotionNotEligibleError", PromotionNotEligibleError],
+  ["UnauthorizedError", UnauthorizedError],
+  ["UserNotFoundError", UserNotFoundError],
+] as const;
 
 // The boundary is exercised as a pure function: `createHandler` with empty
 // layers maps a failing effect exactly the way a real server function would,
@@ -44,6 +72,15 @@ const DEBUG_ID_PATTERN =
   /^Something went wrong\. Debug ID: [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 describe("server-fn failure boundary", () => {
+  it("declares every formerly hand-listed error client-safe on its class", () => {
+    for (const [tag, errorClass] of formerClientSafeErrorClasses) {
+      expect(Schema.resolveAnnotations(errorClass)).toMatchObject({
+        clientSafe: true,
+        identifier: tag,
+      });
+    }
+  });
+
   // NOTE: the boundary tests intentionally use `rejects` — they assert the
   // WIRE contract (what the promise rethrows across the TanStack Start
   // transport), where an `Effect.flip` runner does not apply.
@@ -168,6 +205,15 @@ describe("server-fn failure boundary", () => {
         new ObjectProtectedError({
           key: "media/raw/secret-key.mp4",
           message: "Object is protected",
+        }),
+    ],
+    [
+      "OperationReplayError",
+      () =>
+        new OperationReplayError({
+          cause: "stored result decode failed",
+          message: "Operation result cannot be replayed",
+          operationId: "op-1",
         }),
     ],
     ["plain Error", () => new Error("boom: internal detail")],

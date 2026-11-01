@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 
+import { isClientSafeError } from "./client-safe-error";
 import { ValidationError } from "./errors";
 
 export const baseLayerFactories = {
@@ -9,29 +10,6 @@ export const baseLayerFactories = {
   auth: () =>
     import("./db/layer-factories.server").then((m) => m.makeAuthLayer()),
 };
-
-/**
- * Error tags whose `message` is authored by this app and intended for the
- * user. Everything else (SqlError, RowParseError, SessionFetchError, unknown
- * throws, framework errors) may embed internals — DB driver text, schema
- * decode output, stack context — and is replaced with a generic message
- * carrying a debug ID.
- */
-const CLIENT_SAFE_ERROR_TAGS = new Set([
-  "CommentNotFoundError",
-  "EditAlreadyResolvedError",
-  "EditNotFoundError",
-  "ForbiddenError",
-  "OperationConflictError",
-  "PlaylistNotFoundError",
-  "PostAlreadyInPlaylistError",
-  "PostNotFoundError",
-  "PostVersionConflictError",
-  "PromotionAlreadyReviewedError",
-  "PromotionNotEligibleError",
-  "UnauthorizedError",
-  "UserNotFoundError",
-]);
 
 const isTaggedError = (error: Error): error is TaggedFailure => {
   // A `_tag` property must be a string discriminator: any `Error` that
@@ -60,7 +38,7 @@ const toClientSafeError = (error: unknown, debugId: string): Error => {
     if (error._tag === "ValidationError") {
       return new ValidationError({ message: error.message });
     }
-    if (CLIENT_SAFE_ERROR_TAGS.has(error._tag)) {
+    if (isClientSafeError(error)) {
       return error;
     }
   }

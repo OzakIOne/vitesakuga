@@ -81,7 +81,7 @@ The `createHandler` function (`src/lib/server-fn.handler.ts`) bridges TanStack S
 - Second call: an effect function taking `TParams` and returning `Effect<A, E, R>` whose requirements are checked against the supplied layers
 - Server functions use `parse`/`parseStrict` with Effect Schema validators; scalar payloads may use `strict: { output: false }` where TanStack's wire format cannot preserve branded primitives
 
-The handler logs failures with a per-request debug ID and sanitizes internal failures before they cross the server-function boundary. Known user-facing tagged errors pass through; validation errors keep their message without internal causes; database, layer, defect, and unknown failures become a generic message containing the debug ID.
+The handler logs failures with a per-request debug ID and sanitizes internal failures before they cross the server-function boundary. Tagged errors whose class is declared client-safe (`clientSafeAnnotations` from `src/lib/client-safe-error.ts`) pass through; validation errors keep their message without internal causes; database, layer, defect, and unknown failures become a generic message containing the debug ID.
 
 At runtime, it:
 
@@ -145,4 +145,4 @@ Post edits, video replacement/restoration, and post updates also use optimistic 
 - `RowParseError` — a database row failed to decode against its domain schema. This is an internal data-integrity defect, not bad user input; never render it as validation feedback.
 - Every other tag names one specific failure (`PostNotFoundError`, `ForbiddenError`, …) and carries its entity ID for context.
 
-Tagged errors survive the server-function round trip: TanStack Start serializes own properties, so the client receives an `Error` with `_tag` intact even though class identity is lost. Discriminate with `errorTag(cause)` from `src/lib/mutations/mutation-feedback.ts`; `toastError` already turns `UnauthorizedError` into a "Log in" action and `PostVersionConflictError` into a "Reload" action automatically. Concurrent-edit conflicts (`PostVersionConflictError`, `OperationConflictError`) are client-safe and reach the user with their message.
+Tagged errors survive the server-function round trip: TanStack Start serializes own properties, so the client receives an `Error` with `_tag` intact even though class identity is lost. Discriminate with `errorTag(cause)` from `src/lib/mutations/mutation-feedback.ts`; `toastError` already turns `UnauthorizedError` into a "Log in" action and `PostVersionConflictError` into a "Reload" action automatically. Concurrent-edit conflicts (`PostVersionConflictError`, `OperationConflictError`) are declared client-safe on their classes and reach the user with their message. To expose a new error's message, add `clientSafeAnnotations` as the third argument of its `Schema.TaggedError`; only mark errors whose message is written for the user.

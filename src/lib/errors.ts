@@ -1,11 +1,14 @@
 import { Schema } from "effect";
 
+import { clientSafeAnnotations } from "./client-safe-error";
+
 export class PostNotFoundError extends Schema.TaggedError<PostNotFoundError>()(
   "PostNotFoundError",
   {
     message: Schema.String,
     postId: Schema.Number,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
@@ -13,6 +16,7 @@ export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
   {
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class ForbiddenError extends Schema.TaggedError<ForbiddenError>()(
@@ -20,6 +24,7 @@ export class ForbiddenError extends Schema.TaggedError<ForbiddenError>()(
   {
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class CommentNotFoundError extends Schema.TaggedError<CommentNotFoundError>()(
@@ -28,6 +33,7 @@ export class CommentNotFoundError extends Schema.TaggedError<CommentNotFoundErro
     commentId: Schema.Number,
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class UserNotFoundError extends Schema.TaggedError<UserNotFoundError>()(
@@ -36,6 +42,7 @@ export class UserNotFoundError extends Schema.TaggedError<UserNotFoundError>()(
     message: Schema.String,
     userId: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class ValidationError extends Schema.TaggedError<ValidationError>()(
@@ -63,6 +70,7 @@ export class PlaylistNotFoundError extends Schema.TaggedError<PlaylistNotFoundEr
     message: Schema.String,
     playlistId: Schema.Number,
   },
+  clientSafeAnnotations,
 ) {}
 
 export class PostAlreadyInPlaylistError extends Schema.TaggedError<PostAlreadyInPlaylistError>()(
@@ -72,6 +80,7 @@ export class PostAlreadyInPlaylistError extends Schema.TaggedError<PostAlreadyIn
     playlistId: Schema.Number,
     postId: Schema.Number,
   },
+  clientSafeAnnotations,
 ) {}
 
 // Promotion review: the candidate was already moved out of "novice" by a
@@ -81,6 +90,7 @@ export class PromotionAlreadyReviewedError extends Schema.TaggedError<PromotionA
   {
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 // Promotion review: the candidate no longer (or never did) meet the
@@ -90,6 +100,7 @@ export class PromotionNotEligibleError extends Schema.TaggedError<PromotionNotEl
   {
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 // Edit suggestion: the referenced suggestion does not exist.
@@ -99,6 +110,7 @@ export class EditNotFoundError extends Schema.TaggedError<EditNotFoundError>()(
     editId: Schema.Number,
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
 
 // Edit suggestion: a decision (approval/rejection) was already applied, so
@@ -109,4 +121,5 @@ export class EditAlreadyResolvedError extends Schema.TaggedError<EditAlreadyReso
     editId: Schema.Number,
     message: Schema.String,
   },
+  clientSafeAnnotations,
 ) {}
