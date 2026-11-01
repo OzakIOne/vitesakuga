@@ -26,6 +26,7 @@ export const playlistsKeys = {
     [...playlistsKeys.all, "detail", { playlistId }] as const,
   forPost: (postId: number) =>
     [...playlistsKeys.all, "forPost", postId] as const,
+  postMemberships: ["playlists", "forPost"] as const,
   publicLists: ["playlists", "public"] as const,
   public: (params: Schema.Schema.Type<typeof fetchPublicPlaylistsSchema>) =>
     [...playlistsKeys.publicLists, params] as const,

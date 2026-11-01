@@ -14,10 +14,12 @@ import {
   useBulkRemovePostsFromPlaylist,
   useReorderPlaylistPosts,
   useSetPostPlaylistMembership,
+  useUpdatePlaylist,
 } from "./playlists.hooks";
 import { playlistsKeys } from "./playlists.queries";
 
 const USER_ID = "user-1";
+const OTHER_USER_ID = "user-2";
 const PLAYLIST_ID = 7;
 const OTHER_PLAYLIST_ID = 8;
 const POST_ID = 42;
@@ -25,13 +27,21 @@ const OTHER_POST_ID = 43;
 
 const emptyPage = { data: [], meta: { pagination: { hasMore: false } } };
 
-type FetchCounts = {
-  detail: number;
-  forPost: number;
-  otherDetail: number;
-  otherForPost: number;
-  userPlaylists: number;
-};
+const CACHE_NAMES = [
+  "detail",
+  "forPost",
+  "otherDetail",
+  "otherForPost",
+  "otherUserPlaylists",
+  "publicLists",
+  "userPlaylists",
+] as const;
+
+type CacheName = (typeof CACHE_NAMES)[number];
+type FetchCounts = Record<CacheName, number>;
+
+const refetchedSince = (fetches: FetchCounts, before: FetchCounts) =>
+  CACHE_NAMES.filter((name) => fetches[name] > before[name]);
 
 const createFixture = (queryClient: QueryClient) => {
   const memberships = new Set<number>();
@@ -40,6 +50,8 @@ const createFixture = (queryClient: QueryClient) => {
     forPost: 0,
     otherDetail: 0,
     otherForPost: 0,
+    otherUserPlaylists: 0,
+    publicLists: 0,
     userPlaylists: 0,
   };
   const observedDuringRequest: unknown[] = [];
@@ -64,6 +76,7 @@ const createFixture = (queryClient: QueryClient) => {
   const bulkAddPostsToPlaylist = vi.fn(async () => ({ ok: true }));
   const bulkRemovePostsFromPlaylist = vi.fn(async () => ({ ok: true }));
   const reorderPlaylistPosts = vi.fn(async () => ({ ok: true }));
+  const updatePlaylist = vi.fn(async () => ({ ok: true }));
 
   const fns = {
     addPostToPlaylist,
@@ -71,6 +84,7 @@ const createFixture = (queryClient: QueryClient) => {
     bulkRemovePostsFromPlaylist,
     removePostFromPlaylist,
     reorderPlaylistPosts,
+    updatePlaylist,
   };
 
   const useObservedCaches = () => ({
@@ -92,13 +106,6 @@ const createFixture = (queryClient: QueryClient) => {
       },
       queryKey: playlistsKeys.detailForPlaylist(OTHER_PLAYLIST_ID),
     }),
-    otherForPost: useQuery({
-      queryFn: async () => {
-        fetches.otherForPost += 1;
-        return [];
-      },
-      queryKey: playlistsKeys.forPost(OTHER_POST_ID),
-    }),
     forPost: useQuery({
       queryFn: async () => {
         fetches.forPost += 1;
@@ -112,12 +119,33 @@ const createFixture = (queryClient: QueryClient) => {
       },
       queryKey: playlistsKeys.forPost(POST_ID),
     }),
+    otherForPost: useQuery({
+      queryFn: async () => {
+        fetches.otherForPost += 1;
+        return [];
+      },
+      queryKey: playlistsKeys.forPost(OTHER_POST_ID),
+    }),
+    publicLists: useQuery({
+      queryFn: async () => {
+        fetches.publicLists += 1;
+        return [];
+      },
+      queryKey: playlistsKeys.public({ page: 0 }),
+    }),
     userPlaylists: useQuery({
       queryFn: async () => {
         fetches.userPlaylists += 1;
         return [];
       },
       queryKey: playlistsKeys.userPlaylists(USER_ID),
+    }),
+    otherUserPlaylists: useQuery({
+      queryFn: async () => {
+        fetches.otherUserPlaylists += 1;
+        return [];
+      },
+      queryKey: playlistsKeys.userPlaylists(OTHER_USER_ID),
     }),
   });
 
@@ -151,21 +179,12 @@ const waitForInitialLoad = async (
     const observed = getObserved();
     expect(observed.detail.data).toBeDefined();
     expect(observed.forPost.data).toBeDefined();
+    expect(observed.otherForPost.data).toBeDefined();
+    expect(observed.publicLists.data).toBeDefined();
     expect(observed.userPlaylists.data).toBeDefined();
     expect(observed.otherDetail.data).toBeDefined();
-    expect(observed.otherForPost.data).toBeDefined();
+    expect(observed.otherUserPlaylists.data).toBeDefined();
   });
-};
-
-const expectOnlyTargetedCachesRefetched = (
-  fetches: FetchCounts,
-  before: FetchCounts,
-) => {
-  expect(fetches.detail).toBeGreaterThan(before.detail);
-  expect(fetches.forPost).toBeGreaterThan(before.forPost);
-  expect(fetches.userPlaylists).toBeGreaterThan(before.userPlaylists);
-  expect(fetches.otherDetail).toBe(before.otherDetail);
-  expect(fetches.otherForPost).toBe(before.otherForPost);
 };
 
 describe(useSetPostPlaylistMembership, () => {
@@ -204,7 +223,12 @@ describe(useSetPostPlaylistMembership, () => {
       { contains_post: true, id: PLAYLIST_ID, title: "Favorites" },
     ]);
     await vi.waitFor(() =>
-      expectOnlyTargetedCachesRefetched(fixture.fetches, before),
+      expect(refetchedSince(fixture.fetches, before)).toEqual([
+        "detail",
+        "forPost",
+        "publicLists",
+        "userPlaylists",
+      ]),
     );
   });
 
@@ -238,13 +262,18 @@ describe(useSetPostPlaylistMembership, () => {
       { contains_post: false, id: PLAYLIST_ID, title: "Favorites" },
     ]);
     await vi.waitFor(() =>
-      expectOnlyTargetedCachesRefetched(fixture.fetches, before),
+      expect(refetchedSince(fixture.fetches, before)).toEqual([
+        "detail",
+        "forPost",
+        "publicLists",
+        "userPlaylists",
+      ]),
     );
   });
 });
 
 describe(useBulkAddPostsToPlaylist, () => {
-  it("refreshes the playlist, the user's playlists and the post's playlist list", async () => {
+  it("refreshes the playlist, the user's playlists, public lists and the posts' playlist lists", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -265,13 +294,18 @@ describe(useBulkAddPostsToPlaylist, () => {
     result.current.bulkAdd.mutate([POST_ID]);
 
     await vi.waitFor(() =>
-      expectOnlyTargetedCachesRefetched(fixture.fetches, before),
+      expect(refetchedSince(fixture.fetches, before)).toEqual([
+        "detail",
+        "forPost",
+        "publicLists",
+        "userPlaylists",
+      ]),
     );
   });
 });
 
 describe(useBulkRemovePostsFromPlaylist, () => {
-  it("refreshes the playlist, the user's playlists and the post's playlist list", async () => {
+  it("refreshes the playlist, the user's playlists, public lists and the posts' playlist lists", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -292,13 +326,18 @@ describe(useBulkRemovePostsFromPlaylist, () => {
     result.current.bulkRemove.mutate([POST_ID]);
 
     await vi.waitFor(() =>
-      expectOnlyTargetedCachesRefetched(fixture.fetches, before),
+      expect(refetchedSince(fixture.fetches, before)).toEqual([
+        "detail",
+        "forPost",
+        "publicLists",
+        "userPlaylists",
+      ]),
     );
   });
 });
 
-describe(useReorderPlaylistPosts, () => {
-  it("refreshes the playlist detail and the post's playlist list once the order is saved", async () => {
+describe(useUpdatePlaylist, () => {
+  it("refreshes the playlist, the owner's lists, public lists and every post's playlist list after an update", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -306,7 +345,41 @@ describe(useReorderPlaylistPosts, () => {
     const { result } = await renderHook(
       () => ({
         observed: fixture.useObservedCaches(),
-        reorder: useReorderPlaylistPosts(),
+        update: useUpdatePlaylist(USER_ID),
+      }),
+      { wrapper: fixture.wrapper },
+    );
+    await waitForInitialLoad(() => result.current.observed);
+    const before = { ...fixture.fetches };
+
+    result.current.update.mutate({
+      isPublic: true,
+      playlistId: PLAYLIST_ID,
+      title: "Renamed",
+    });
+
+    await vi.waitFor(() =>
+      expect(refetchedSince(fixture.fetches, before)).toEqual([
+        "detail",
+        "forPost",
+        "otherForPost",
+        "publicLists",
+        "userPlaylists",
+      ]),
+    );
+  });
+});
+
+describe(useReorderPlaylistPosts, () => {
+  it("refreshes the playlist, the owner's lists and public lists once the order is saved, leaving post checklists alone", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const fixture = createFixture(queryClient);
+    const { result } = await renderHook(
+      () => ({
+        observed: fixture.useObservedCaches(),
+        reorder: useReorderPlaylistPosts(USER_ID),
       }),
       { wrapper: fixture.wrapper },
     );
@@ -319,10 +392,11 @@ describe(useReorderPlaylistPosts, () => {
     });
 
     await vi.waitFor(() =>
-      expect(fixture.fetches.detail).toBeGreaterThan(before.detail),
-    );
-    await vi.waitFor(() =>
-      expect(fixture.fetches.forPost).toBeGreaterThan(before.forPost),
+      expect(refetchedSince(fixture.fetches, before)).toEqual([
+        "detail",
+        "publicLists",
+        "userPlaylists",
+      ]),
     );
   });
 });

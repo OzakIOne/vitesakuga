@@ -6,6 +6,28 @@ import { usePlaylistsFns } from "./playlists.fn-context";
 import { playlistsKeys } from "./playlists.queries";
 import type { PlaylistDetailPage, PlaylistsForPost } from "./playlists.queries";
 
+const invalidatePlaylistQueries = (
+  queryClient: QueryClient,
+  queryKeys: readonly (readonly unknown[])[],
+) => {
+  for (const queryKey of queryKeys) {
+    void queryClient.invalidateQueries({ queryKey });
+  }
+};
+
+/** The queries that render a playlist's title, thumbnail, or visibility. */
+const playlistSummaryKeys = ({
+  playlistId,
+  userId,
+}: {
+  playlistId: number;
+  userId: string;
+}) => [
+  playlistsKeys.detailForPlaylist(playlistId),
+  playlistsKeys.userPlaylists(userId),
+  playlistsKeys.publicLists,
+];
+
 export function useUpdatePlaylist(userId: string) {
   const queryClient = useQueryClient();
   const { updatePlaylist } = usePlaylistsFns();
@@ -20,15 +42,14 @@ export function useUpdatePlaylist(userId: string) {
       isPublic?: boolean;
     }) => updatePlaylist({ data }),
     onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: playlistsKeys.userPlaylists(userId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: playlistsKeys.detailForPlaylist(variables.playlistId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: playlistsKeys.all,
-      });
+      // Post checklists read the whole playlist row, so any field change reaches them.
+      invalidatePlaylistQueries(queryClient, [
+        ...playlistSummaryKeys({
+          playlistId: variables.playlistId,
+          userId,
+        }),
+        playlistsKeys.postMemberships,
+      ]);
     },
     successDescription: "Your playlist has been updated.",
     successTitle: "Playlist updated",
@@ -44,7 +65,7 @@ export function useUpdatePlaylist(userId: string) {
  * The reorder is applied optimistically: cached detail pages are re-chunked
  * in the new order and rolled back if the server call fails.
  */
-export function useReorderPlaylistPosts() {
+export function useReorderPlaylistPosts(userId: string) {
   const queryClient = useQueryClient();
   const { reorderPlaylistPosts } = usePlaylistsFns();
 
@@ -111,12 +132,10 @@ export function useReorderPlaylistPosts() {
       });
     },
     onSuccess: (_, { playlistId }) => {
-      void queryClient.invalidateQueries({
-        queryKey: playlistsKeys.detailForPlaylist(playlistId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: playlistsKeys.all,
-      });
+      invalidatePlaylistQueries(
+        queryClient,
+        playlistSummaryKeys({ playlistId, userId }),
+      );
     },
     successDescription: "The playlist order has been updated.",
     successTitle: "Playlist reordered",
@@ -131,15 +150,10 @@ const invalidatePlaylistMembershipQueries = (
     userId,
   }: { playlistId: number; postIds: number[]; userId: string },
 ) => {
-  void queryClient.invalidateQueries({
-    queryKey: playlistsKeys.detailForPlaylist(playlistId),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: playlistsKeys.userPlaylists(userId),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: playlistsKeys.publicLists,
-  });
+  invalidatePlaylistQueries(
+    queryClient,
+    playlistSummaryKeys({ playlistId, userId }),
+  );
   for (const postId of postIds) {
     void queryClient.invalidateQueries({
       queryKey: playlistsKeys.forPost(postId),

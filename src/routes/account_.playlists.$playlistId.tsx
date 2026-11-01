@@ -85,7 +85,7 @@ function ManagePlaylistContent() {
   const playlistId = parsePositiveIntegerRouteParam(params.playlistId);
 
   const updatePlaylist = useUpdatePlaylist(user.id);
-  const reorderPosts = useReorderPlaylistPosts();
+  const reorderPosts = useReorderPlaylistPosts(user.id);
   const addPostsMutation = useBulkAddPostsToPlaylist({
     playlistId,
     userId: user.id,
