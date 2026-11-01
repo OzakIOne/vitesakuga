@@ -67,6 +67,7 @@ import {
   searchPostsRequestSchema,
   seriesHubSchema,
   type SearchPostsRequest,
+  type SeriesSourceType,
   updatePostInputSchema,
   VideoMetadataSchema,
 } from "./posts.schema";
@@ -95,10 +96,16 @@ const fileDigest = (file: File): Effect.Effect<string, FingerprintInputError> =>
   });
 
 type PostUpdateChanges = {
+  animeTitle: string | null;
+  chapterNumber: number | null;
   description: string;
+  episodeNumber: number | null;
   relatedPostId?: number | null;
+  seasonNumber: number | null;
   source?: string | null;
+  sourceType: SeriesSourceType | null;
   title: string;
+  volumeNumber: number | null;
 };
 
 const numericFilterExpression = (filter: NumericSearchFilter) => {
@@ -1117,7 +1124,20 @@ export class PostsService extends Context.Service<
         "You must be logged in to update a post",
       );
 
-      const { postId, title, description, source, relatedPostId, tags } = data;
+      const {
+        animeTitle,
+        chapterNumber,
+        description,
+        episodeNumber,
+        postId,
+        relatedPostId,
+        seasonNumber,
+        source,
+        sourceType,
+        tags,
+        title,
+        volumeNumber,
+      } = data;
 
       yield* Effect.logInfo("Post update started").pipe(
         Effect.annotateLogs({
@@ -1156,18 +1176,33 @@ export class PostsService extends Context.Service<
         userId: user.id,
         request: {
           payload: {
+            animeTitle,
+            chapterNumber,
             description,
+            episodeNumber,
             postId,
             relatedPostId: relatedPostId ?? null,
+            seasonNumber,
             source: source ?? null,
+            sourceType,
             tags: tags.map((tag) => ({ id: tag.id ?? null, name: tag.name })),
             title,
+            volumeNumber,
           },
           version: data.expectedVersion,
         },
         run: (operation) =>
           Effect.gen(function* () {
-            const changes: PostUpdateChanges = { description, title };
+            const changes: PostUpdateChanges = {
+              animeTitle,
+              chapterNumber,
+              description,
+              episodeNumber,
+              seasonNumber,
+              sourceType,
+              title,
+              volumeNumber,
+            };
             if (relatedPostId !== undefined)
               changes.relatedPostId = relatedPostId;
             if (source !== undefined) changes.source = source;

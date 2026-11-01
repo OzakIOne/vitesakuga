@@ -1109,6 +1109,15 @@ describe("PostsService.createVideoUploadUrl", () => {
 });
 
 describe("PostsService.update", () => {
+  const noSeriesMetadata = {
+    animeTitle: null,
+    chapterNumber: null,
+    episodeNumber: null,
+    seasonNumber: null,
+    sourceType: null,
+    volumeNumber: null,
+  };
+
   it("fails with UnauthorizedError when no session", async () => {
     mockGetSession.mockResolvedValueOnce(null);
     const postId = await insertPost();
@@ -1118,6 +1127,7 @@ describe("PostsService.update", () => {
         PostsService.update({
           expectedVersion: 0,
           operationKey: "test-update",
+          ...noSeriesMetadata,
           postId,
           title: "Hacked",
           description: "Bad",
@@ -1141,6 +1151,7 @@ describe("PostsService.update", () => {
         PostsService.update({
           expectedVersion: 0,
           operationKey: "test-update",
+          ...noSeriesMetadata,
           postId,
           title: "Hacked",
           description: "Bad",
@@ -1163,6 +1174,7 @@ describe("PostsService.update", () => {
       PostsService.update({
         expectedVersion: 0,
         operationKey: "test-update",
+        ...noSeriesMetadata,
         postId,
         title: "Updated",
         description: "New description",
@@ -1177,6 +1189,47 @@ describe("PostsService.update", () => {
     expect(result.source).toBe("https://new.example.com");
   });
 
+  it("persists series metadata the owner corrects", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+    const postId = await insertPost({
+      animeTitle: "Wrong Show",
+      episodeNumber: 1,
+      seasonNumber: 1,
+      sourceType: "tv_series",
+    });
+
+    await runEffect(
+      PostsService.update({
+        animeTitle: "Right Show",
+        chapterNumber: null,
+        episodeNumber: 5,
+        expectedVersion: 0,
+        operationKey: "test-update",
+        postId,
+        seasonNumber: 2,
+        sourceType: "tv_series",
+        title: "Series fix",
+        description: "Corrected series metadata",
+        source: "",
+        relatedPostId: undefined,
+        tags: [],
+        volumeNumber: null,
+      }),
+    );
+
+    const post = await db
+      .selectFrom("posts")
+      .select(["animeTitle", "episodeNumber", "seasonNumber", "sourceType"])
+      .where("id", "=", postId)
+      .executeTakeFirstOrThrow();
+    expect(post).toStrictEqual({
+      animeTitle: "Right Show",
+      episodeNumber: 5,
+      seasonNumber: 2,
+      sourceType: "tv_series",
+    });
+  });
+
   it("rejects an update that references a missing post", async () => {
     mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
     const postId = await insertPost();
@@ -1186,6 +1239,7 @@ describe("PostsService.update", () => {
         PostsService.update({
           expectedVersion: 0,
           operationKey: "test-update",
+          ...noSeriesMetadata,
           postId,
           title: "Updated",
           description: "New description",
@@ -1209,6 +1263,7 @@ describe("PostsService.update", () => {
       PostsService.update({
         expectedVersion: 0,
         operationKey: "test-update",
+        ...noSeriesMetadata,
         postId,
         title: "Tagged",
         description: "Content",
@@ -1242,6 +1297,7 @@ describe("PostsService.update", () => {
       PostsService.update({
         expectedVersion: 0,
         operationKey: "test-update",
+        ...noSeriesMetadata,
         postId,
         title: "Repeated tags",
         description: "Content",
@@ -1271,6 +1327,7 @@ describe("PostsService.update", () => {
         PostsService.update({
           expectedVersion: 0,
           operationKey: "test-update",
+          ...noSeriesMetadata,
           postId,
           title: "Should roll back",
           description: "Updated description",

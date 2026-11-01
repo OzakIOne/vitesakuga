@@ -143,7 +143,16 @@ describe("searchPostsBaseSchema", () => {
 });
 
 describe("updatePostInputSchema", () => {
+  const noSeriesMetadata = {
+    animeTitle: null,
+    chapterNumber: null,
+    episodeNumber: null,
+    seasonNumber: null,
+    sourceType: null,
+    volumeNumber: null,
+  };
   const defaultValues = {
+    ...noSeriesMetadata,
     description: "qwe",
     postId: 1,
     relatedPostId: undefined,
@@ -156,6 +165,7 @@ describe("updatePostInputSchema", () => {
 
   it("should validate correct inputs", () => {
     const input = {
+      ...noSeriesMetadata,
       expectedVersion: 0,
       operationKey: "test-update",
       description: "description",
@@ -172,6 +182,63 @@ describe("updatePostInputSchema", () => {
     };
     const result = parseStrict(updatePostInputSchema)(input);
     expect(result).toStrictEqual(input);
+  });
+
+  it("should accept a TV series edit with an anime title, season and episode", () => {
+    const result = parseStrict(updatePostInputSchema)({
+      ...defaultValues,
+      animeTitle: "Show",
+      episodeNumber: 2,
+      seasonNumber: 1,
+      sourceType: "tv_series",
+    });
+    expect(result.sourceType).toBe("tv_series");
+  });
+
+  it("should throw when a series source type has no anime title", () => {
+    expect(() =>
+      parseStrict(updatePostInputSchema)({
+        ...defaultValues,
+        sourceType: "movie",
+      }),
+    ).toThrow();
+  });
+
+  it("should throw when a TV series edit has no season and episode", () => {
+    expect(() =>
+      parseStrict(updatePostInputSchema)({
+        ...defaultValues,
+        animeTitle: "Show",
+        sourceType: "tv_series",
+        seasonNumber: 1,
+      }),
+    ).toThrow();
+  });
+
+  it("trims the anime title", () => {
+    const result = parseStrict(updatePostInputSchema)({
+      ...defaultValues,
+      animeTitle: "  Show  ",
+    });
+    expect(result.animeTitle).toBe("Show");
+  });
+
+  it("decodes a whitespace-only anime title to null", () => {
+    const result = parseStrict(updatePostInputSchema)({
+      ...defaultValues,
+      animeTitle: "   ",
+    });
+    expect(result.animeTitle).toBeNull();
+  });
+
+  it("rejects a movie whose anime title is only whitespace", () => {
+    expect(() =>
+      parseStrict(updatePostInputSchema)({
+        ...defaultValues,
+        animeTitle: "   ",
+        sourceType: "movie",
+      }),
+    ).toThrow();
   });
 
   it("should throw on invalid postId (< 0)", () => {

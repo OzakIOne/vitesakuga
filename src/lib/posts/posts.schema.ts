@@ -170,13 +170,34 @@ const ImageDimensions = Schema.Struct({
   width: CoerceNumber.pipe(Schema.check(Schema.isGreaterThan(0))),
 });
 
-const PostSourceUploadSchema = Schema.optional(
-  Schema.Literals(["movie", "tv_series"]),
+const SeriesSourceTypeSchema = Schema.Literals(["movie", "tv_series"]);
+
+export type SeriesSourceType = Schema.Schema.Type<
+  typeof SeriesSourceTypeSchema
+>;
+
+const PostSourceUploadSchema = Schema.optional(SeriesSourceTypeSchema);
+
+const TrimmedString = Schema.String.pipe(
+  Schema.decode({
+    decode: SchemaGetter.transform((value) => value.trim()),
+    encode: SchemaGetter.transform((value) => value),
+  }),
+);
+
+// Blank anime titles are stored as null so Series Hub grouping never sees "".
+const SeriesAnimeTitleSchema = Schema.NullOr(
+  sanitizeString(TrimmedString),
+).pipe(
+  Schema.decode({
+    decode: SchemaGetter.transform((value) => (value === "" ? null : value)),
+    encode: SchemaGetter.transform((value) => value),
+  }),
 );
 
 const SharedUploadFields = {
   operationKey: Schema.optionalKey(uploadOperationKey),
-  animeTitle: Schema.optional(sanitizeString(Schema.String)),
+  animeTitle: Schema.optional(SeriesAnimeTitleSchema),
   // Chapter/volume identify manga image posts; season/episode identify
   // anime video posts. Both stay optional either way.
   chapterNumber: Schema.optional(CoerceNumber),
@@ -189,6 +210,32 @@ const SharedUploadFields = {
   tags: PostTagsSchema,
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
   volumeNumber: Schema.optional(CoerceNumber),
+};
+
+type SeriesMetadataInput = {
+  readonly animeTitle?: string | null | undefined;
+  readonly episodeNumber?: number | null | undefined;
+  readonly seasonNumber?: number | null | undefined;
+  readonly sourceType?: SeriesSourceType | null | undefined;
+};
+
+const isNumberPresent = (value: number | null | undefined): boolean =>
+  value !== undefined && value !== null;
+
+// Shared by upload and owner edit so both write paths enforce the same series rules.
+const seriesMetadataIssues = (value: SeriesMetadataInput): string[] => {
+  const issues: string[] = [];
+  if (value.sourceType && !value.animeTitle) {
+    issues.push("Anime title is required when the source type is set");
+  }
+  if (
+    value.sourceType === "tv_series" &&
+    (!isNumberPresent(value.seasonNumber) ||
+      !isNumberPresent(value.episodeNumber))
+  ) {
+    issues.push("Season and episode numbers are required for TV series posts");
+  }
+  return issues;
 };
 
 export const FormFileUploadSchema = Schema.Struct({
@@ -216,17 +263,7 @@ export const FormFileUploadSchema = Schema.Struct({
       if ((value.images?.length ?? 0) > MAX_IMAGES_PER_POST) {
         issues.push(`At most ${MAX_IMAGES_PER_POST} images per post`);
       }
-      if (value.sourceType && !value.animeTitle) {
-        issues.push("Anime title is required when the source type is set");
-      }
-      if (
-        value.sourceType === "tv_series" &&
-        (value.seasonNumber === undefined || value.episodeNumber === undefined)
-      ) {
-        issues.push(
-          "Season and episode numbers are required for TV series posts",
-        );
-      }
+      issues.push(...seriesMetadataIssues(value));
       return issues;
     }),
   ),
@@ -245,8 +282,13 @@ export const createVideoUploadUrlSchema = Schema.Struct({
   operationKey: Schema.optionalKey(uploadOperationKey),
 });
 
+// Series fields are always sent in full (null clears) so the cross-field rule
+// judges the post's complete resulting state, never a partial merge.
 export const updatePostInputSchema = Schema.Struct({
+  animeTitle: SeriesAnimeTitleSchema,
+  chapterNumber: Schema.NullOr(Schema.Number),
   description: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
+  episodeNumber: Schema.NullOr(Schema.Number),
   expectedVersion: Schema.Number.pipe(
     Schema.check(Schema.isGreaterThanOrEqualTo(0)),
   ),
@@ -256,16 +298,17 @@ export const updatePostInputSchema = Schema.Struct({
   ),
   postId: PostId.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
   relatedPostId: Schema.optional(RelatedPostId),
+  seasonNumber: Schema.NullOr(Schema.Number),
   source: Schema.optional(Schema.Union([HttpsUrl, Schema.Literal("")])),
+  sourceType: Schema.NullOr(SeriesSourceTypeSchema),
   tags: PostTagsSchema,
   title: sanitizeString(Schema.String.pipe(Schema.check(MinLen3))),
-});
+  volumeNumber: Schema.NullOr(Schema.Number),
+}).pipe(
+  Schema.check(Schema.makeFilter((value) => seriesMetadataIssues(value))),
+);
 
-const SeriesTitleSchema = Schema.String.pipe(
-  Schema.decode({
-    decode: SchemaGetter.transform((value) => value.trim()),
-    encode: SchemaGetter.transform((value) => value),
-  }),
+const SeriesTitleSchema = TrimmedString.pipe(
   Schema.check(
     Schema.isMinLength(1, {
       message: "Series title must not be empty",

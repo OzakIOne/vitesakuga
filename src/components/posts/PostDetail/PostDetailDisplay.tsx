@@ -3,6 +3,12 @@ import { useReducer, useState } from "react";
 import { Comments } from "src/components/comments/Comments";
 import { PlaylistAddModal } from "src/components/playlists/PlaylistAddModal";
 import { Post } from "src/components/posts/Post";
+import {
+  PostSeriesMetadataFields,
+  toSeriesDraft,
+  toSeriesPayload,
+  type SeriesDraft,
+} from "src/components/posts/PostDetail/post-series-metadata-fields";
 import { PostEditHistory } from "src/components/posts/PostDetail/PostEditHistory";
 import { PostEditSuggestionDialog } from "src/components/posts/PostDetail/PostEditSuggestionDialog";
 import {
@@ -40,6 +46,7 @@ type EditState = {
   isEditing: boolean;
   titleDraft: string;
   descriptionDraft: string;
+  seriesDraft: SeriesDraft;
   sourceDraft: string;
   tagsDraft: Tag[];
 };
@@ -49,9 +56,11 @@ type EditAction =
       type: "startEditing";
       title: string;
       description: string;
+      series: SeriesDraft;
       source: string;
       tags: Tag[];
     }
+  | { type: "updateSeries"; field: keyof SeriesDraft; value: string }
   | { type: "updateTitle"; title: string }
   | { type: "updateDescription"; description: string }
   | { type: "updateSource"; source: string }
@@ -65,8 +74,14 @@ function editReducer(state: EditState, action: EditAction): EditState {
         isEditing: true,
         titleDraft: action.title,
         descriptionDraft: action.description,
+        seriesDraft: action.series,
         sourceDraft: action.source,
         tagsDraft: action.tags,
+      };
+    case "updateSeries":
+      return {
+        ...state,
+        seriesDraft: { ...state.seriesDraft, [action.field]: action.value },
       };
     case "updateTitle":
       return { ...state, titleDraft: action.title };
@@ -102,11 +117,18 @@ export function PostDetailDisplay({
     isEditing: false,
     titleDraft: post.title ?? "",
     descriptionDraft: post.description ?? "",
+    seriesDraft: toSeriesDraft(post),
     sourceDraft: post.source ?? "",
     tagsDraft: initialTags,
   });
-  const { isEditing, titleDraft, descriptionDraft, sourceDraft, tagsDraft } =
-    editState;
+  const {
+    isEditing,
+    titleDraft,
+    descriptionDraft,
+    seriesDraft,
+    sourceDraft,
+    tagsDraft,
+  } = editState;
 
   const isOwner = currentUserId === user.id;
   const canSuggestEdit =
@@ -123,12 +145,14 @@ export function PostDetailDisplay({
     mutationFn: async (data: {
       description: string;
       operationKey: string;
+      series: ReturnType<typeof toSeriesPayload>;
       source: string | undefined;
       tags: { id?: number; name: string }[];
       title: string;
     }) =>
       updatePost({
         data: {
+          ...data.series,
           description: data.description,
           expectedVersion: post.version,
           operationKey: data.operationKey,
@@ -154,6 +178,7 @@ export function PostDetailDisplay({
       type: "startEditing",
       title: post.title ?? "",
       description: post.description ?? "",
+      series: toSeriesDraft(post),
       source: post.source ?? "",
       tags: initialTags,
     });
@@ -167,6 +192,7 @@ export function PostDetailDisplay({
     updatePostMutation.mutate({
       description: descriptionDraft,
       operationKey: `post-update:${post.id}:${post.version}:${crypto.randomUUID()}`,
+      series: toSeriesPayload(seriesDraft),
       source: sourceDraft.trim() || undefined,
       tags: tagsDraft,
       title: trimmedTitle,
@@ -217,6 +243,13 @@ export function PostDetailDisplay({
                 value={sourceDraft}
               />
             </Field.Root>
+            <PostSeriesMetadataFields
+              disabled={updatePostMutation.isPending}
+              draft={seriesDraft}
+              onChange={(field, value) => {
+                dispatchEdit({ type: "updateSeries", field, value });
+              }}
+            />
             <Field.Root>
               <Field.Label>Tags</Field.Label>
               <TagInput
