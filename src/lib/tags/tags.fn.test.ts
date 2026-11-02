@@ -76,7 +76,7 @@ describe("TagsService.popular", () => {
         userId: user.id,
         videoKey: "videos/k.mp4",
         thumbnailKey: "thumbnails/k.jpg",
-        videoMetadata: JSON.stringify({
+        videoMetadata: {
           BitDepth: 8,
           BitRate: 1000,
           ChromaSubsampling: "4:2:0",
@@ -92,7 +92,7 @@ describe("TagsService.popular", () => {
           Height: 720,
           Width: 1280,
           colour_primaries: "bt709",
-        }),
+        },
       })
       .returning("id")
       .executeTakeFirstOrThrow();

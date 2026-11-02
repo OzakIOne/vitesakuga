@@ -48,7 +48,7 @@ beforeEach(async () => {
       userId: "user-1",
       videoKey: "videos/abc.mp4",
       thumbnailKey: "thumbnails/abc.jpg",
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -350,7 +350,7 @@ describe("PostVotesService.fetchLikedPosts", () => {
         userId: "user-1",
         videoKey: "videos/disliked.mp4",
         thumbnailKey: "thumbnails/disliked.jpg",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -389,7 +389,7 @@ describe("PostVotesService.fetchLikedPosts", () => {
         userId: "user-1",
         videoKey: "videos/older.mp4",
         thumbnailKey: "thumbnails/older.jpg",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();

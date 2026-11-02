@@ -55,7 +55,7 @@ const insertVideoPost = async (
       title: "Post",
       userId: ownerId,
       videoKey,
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .execute();
   return postSeq;
@@ -148,6 +148,12 @@ describe("VideosService.replace", () => {
       "author-1",
       "videos/author-1/old.mp4",
     );
+    const metadata = { FrameRate: 24, Height: 1080, Width: 1920 };
+    await db
+      .updateTable("posts")
+      .set({ videoMetadata: metadata })
+      .where("id", "=", postId)
+      .execute();
     await db
       .insertInto("post_votes")
       .values({ postId, userId: "fan-1", vote: "like" })
@@ -193,6 +199,7 @@ describe("VideosService.replace", () => {
       .where("postId", "=", postId)
       .executeTakeFirstOrThrow();
     expect(revision.videoKey).toBe("videos/author-1/old.mp4");
+    expect(revision.videoMetadata).toStrictEqual(metadata);
     expect(revision.replacedBy).toBe("author-1");
 
     const votes = await db
@@ -500,7 +507,7 @@ describe("VideosService.restore", () => {
         postId,
         replacedBy: "mod-6",
         videoKey: missingKey,
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -599,7 +606,7 @@ describe("VideosService.gc", () => {
         postId: args.postId,
         replacedBy: args.replacedBy,
         videoKey: args.videoKey,
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .execute();
   };

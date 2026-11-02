@@ -69,7 +69,7 @@ const createPost = (options: {
                     thumbnailKey: "thumb.jpg",
                     title: options.title,
                     userId,
-                    videoMetadata: "{}",
+                    videoMetadata: {},
                   })
                   .returning("id"),
               );
@@ -103,7 +103,7 @@ const createPostWithThumbnailKey = (thumbnailKey: string) =>
                   thumbnailKey,
                   title: "url key",
                   userId,
-                  videoMetadata: "{}",
+                  videoMetadata: {},
                 })
                 .returning("id"),
             );

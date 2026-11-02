@@ -40,7 +40,7 @@ const insertPost = async (
       title: "Post",
       userId: args.userId,
       videoKey: null,
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .returning("id")
     .executeTakeFirstOrThrow();

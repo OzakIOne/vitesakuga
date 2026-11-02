@@ -22,6 +22,7 @@ import type {
   PostEditPayload,
   PostEditPreviousPayload,
 } from "../../post-edits/post-edits.schema";
+import type { VideoMetadata } from "../../posts/posts.schema";
 import { sanitize } from "../../sanitize";
 import type {
   SavedSearchDateRange,
@@ -94,7 +95,7 @@ export const posts = pgTable(
     version: integer().notNull().default(0),
     videoKey: text(),
     videoMetadata: json()
-      .$type<string>()
+      .$type<VideoMetadata>()
       .notNull()
       .default(sql`'{}'`),
     volumeNumber: integer(),
@@ -421,7 +422,7 @@ export const videoRevisions = pgTable(
       .notNull(),
     // Media metadata of the archived video at replacement time.
     videoKey: text().notNull(),
-    videoMetadata: json().$type<string>().notNull(),
+    videoMetadata: json().$type<VideoMetadata>().notNull(),
   },
   (t) => [index("video_revisions_post_idx").on(t.postId)],
 );

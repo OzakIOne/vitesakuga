@@ -54,7 +54,7 @@ const seedPost = async (db: Kysely<DB>, userId: string) => {
       title: "Title",
       userId,
       videoKey: "video.mp4",
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .returning("id")
     .executeTakeFirstOrThrow();

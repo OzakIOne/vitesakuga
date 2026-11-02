@@ -154,7 +154,7 @@ const seedWorld = async (db: Kysely<DB>, ownerId: string) => {
       title: "Original title",
       userId: ownerId,
       videoKey: null,
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .execute();
   await db

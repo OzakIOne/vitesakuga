@@ -54,7 +54,7 @@ const insertPost = async (db: Kysely<DB>, ownerId: string) => {
       title: `Post ${postSeq}`,
       userId: ownerId,
       videoKey: null,
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .execute();
   return postSeq;

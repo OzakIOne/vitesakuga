@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeAuthSession } from "../auth/session.fixture";
@@ -13,7 +13,11 @@ import { asPostId } from "../ids";
 import { POINTS_RULES } from "../points/points.config";
 import { pendingVideoObjectKey } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
-import { FormFileUploadSchema, MAX_IMAGE_SIZE_BYTES } from "./posts.schema";
+import {
+  FormFileUploadSchema,
+  MAX_IMAGE_SIZE_BYTES,
+  type VideoMetadata,
+} from "./posts.schema";
 import { PostsService, PostsServiceLive } from "./posts.service";
 
 let db: Kysely<DB>;
@@ -41,7 +45,7 @@ beforeEach(async () => {
 
 afterEach(() => closeCtx());
 
-const defaultVideoMetadata = JSON.stringify({
+const defaultVideoMetadata: VideoMetadata = {
   BitDepth: 8,
   BitRate: 1000000,
   ChromaSubsampling: "4:2:0",
@@ -57,7 +61,7 @@ const defaultVideoMetadata = JSON.stringify({
   Height: 1080,
   Width: 1920,
   colour_primaries: "bt709",
-});
+};
 
 const insertPost = async (
   overrides: Partial<{
@@ -74,7 +78,7 @@ const insertPost = async (
     relatedPostId: number | null;
     seasonNumber: number | null;
     sourceType: "movie" | "tv_series" | null;
-    videoMetadata: string;
+    videoMetadata: VideoMetadata;
     volumeNumber: number | null;
     createdAt: Date;
   }> = {},
@@ -739,7 +743,7 @@ describe("PostsService.search", () => {
 
     const videoPost = await insertPost({
       title: "Wide video",
-      videoMetadata: JSON.stringify({ Width: 1920, Height: 1080 }),
+      videoMetadata: { Width: 1920, Height: 1080 },
     });
     const likedPost = await insertPost({ title: "Liked post" });
     await db
@@ -1255,6 +1259,36 @@ describe("PostsService.upload", () => {
     expect(post.videoKey).toMatch(/^media\/video\/[A-Za-z0-9_-]+\/\d{4}\.mp4$/);
     expect(post.videoKey).not.toBe(pendingKey);
     expect(post.title).toBe("Uploaded Post");
+  });
+
+  it("stores and reads video metadata as a JSON object", async () => {
+    const metadata = { FrameRate: 24, Height: 1080, Width: 1920 };
+    const { key: pendingKey } = await uploadVideoToStorage();
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const post = await runEffect(
+      Effect.flatMap(PostsService, (service) =>
+        service.upload({
+          ...makeUploadInput(pendingKey),
+          videoMetadata: metadata,
+        }),
+      ),
+    );
+    const stored = await db
+      .selectFrom("posts")
+      .select([
+        "videoMetadata",
+        sql<string>`json_typeof("videoMetadata")`.as("metadataType"),
+      ])
+      .where("id", "=", post.id)
+      .executeTakeFirstOrThrow();
+    const detail = await runEffect(
+      Effect.flatMap(PostsService, (service) => service.fetchDetail(post.id)),
+    );
+
+    expect(stored.metadataType).toBe("object");
+    expect(stored.videoMetadata).toStrictEqual(metadata);
+    expect(detail.post.videoMetadata).toStrictEqual(metadata);
   });
 
   it("credits the uploader with post-upload points for the new post", async () => {

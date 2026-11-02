@@ -7,6 +7,7 @@ import { SessionFetchError } from "../auth/session.effect";
 import { KyselyDB } from "../db/context";
 import { SqlError, SqlNoFirstResult } from "../db/effect-kysely";
 import { toIsoTimestamp } from "../db/schema/timestamp";
+import { parse } from "../effect/schema.utils";
 import {
   AccountSuspendedError,
   ForbiddenError,
@@ -22,6 +23,7 @@ import {
   type LifecycleError,
   swapPostVideoInTransaction,
 } from "../lifecycle/lifecycle.service";
+import { VideoMetadataSchema } from "../posts/posts.schema";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import {
@@ -134,9 +136,21 @@ export class VideosService extends Context.Service<
     const ADMIN_ONLY_MESSAGE = "Only admins can run storage maintenance.";
 
     const loadPost = (postId: number) =>
-      db.executeTakeFirstOption(
-        db.selectFrom("posts").selectAll().where("id", "=", postId),
-      );
+      db
+        .executeTakeFirstOption(
+          db
+            .selectFrom("posts")
+            .select(["id", "userId", "videoKey", "videoMetadata", "version"])
+            .where("id", "=", postId),
+        )
+        .pipe(
+          Effect.map((post) =>
+            Option.map(post, (row) => ({
+              ...row,
+              videoMetadata: parse(VideoMetadataSchema)(row.videoMetadata),
+            })),
+          ),
+        );
 
     const revisionsForPost = (postId: number) =>
       db
@@ -172,7 +186,9 @@ export class VideosService extends Context.Service<
       // oxlint-enable effecttsgo/global-date-in-effect
 
       const allRevisions = yield* db.execute(
-        db.selectFrom("video_revisions").selectAll(),
+        db
+          .selectFrom("video_revisions")
+          .select(["createdAt", "id", "postId", "replacedBy", "videoKey"]),
       );
       const recentReports = yield* db.execute(
         db
@@ -373,7 +389,7 @@ export class VideosService extends Context.Service<
             const revisionOption = yield* db.executeTakeFirstOption(
               db
                 .selectFrom("video_revisions")
-                .selectAll()
+                .select(["postId", "videoKey"])
                 .where("id", "=", input.revisionId),
             );
             if (Option.isNone(revisionOption)) {

@@ -45,7 +45,7 @@ beforeEach(async () => {
       userId: "user-1",
       videoKey: "videos/abc.mp4",
       thumbnailKey: "thumbnails/abc.jpg",
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .returning("id")
     .executeTakeFirstOrThrow();

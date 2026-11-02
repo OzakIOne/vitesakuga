@@ -51,7 +51,7 @@ const insertPost = (db: Kysely<DB>, ownerId: string) =>
       title: "Title",
       userId: ownerId,
       videoKey: null,
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .execute();
 

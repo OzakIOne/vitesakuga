@@ -45,7 +45,7 @@ const insertPost = async (db: Kysely<DB>, ownerId: string) => {
       title: "Original title",
       userId: ownerId,
       videoKey: null,
-      videoMetadata: "{}",
+      videoMetadata: {},
     })
     .execute();
   // Services take the branded PostId; brand the seed id so callers stay typed.

@@ -87,7 +87,7 @@ describe("PromotionsService.queue", () => {
         thumbnailKey: "t.jpg",
         title: "P",
         userId: "candidate-1",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .execute();
     const post = await db

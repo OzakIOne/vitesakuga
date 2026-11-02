@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect";
 
 import { PostId } from "../../ids";
+import { VideoMetadataSchema } from "../../posts/posts.schema";
 import type { userInsertSchema, userSelectSchema } from "./auth.schema";
 import { TimestampSchema } from "./timestamp";
 
@@ -38,7 +39,7 @@ export const postsSelectSchema = Schema.Struct({
   // old driver fixtures/read paths compatible during the rollout.
   version: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(0))),
   videoKey: Schema.NullOr(Schema.String),
-  videoMetadata: Schema.Json,
+  videoMetadata: VideoMetadataSchema,
   volumeNumber: Schema.NullOr(Schema.Number),
 });
 
@@ -58,7 +59,7 @@ export const postsInsertSchema = Schema.Struct({
   userId: Schema.String,
   version: Schema.optionalKey(Schema.Number),
   videoKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  videoMetadata: Schema.Json,
+  videoMetadata: VideoMetadataSchema,
   volumeNumber: Schema.optionalKey(Schema.NullOr(Schema.Number)),
 });
 

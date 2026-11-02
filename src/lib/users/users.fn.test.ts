@@ -158,7 +158,7 @@ describe("UsersService.userPosts", () => {
         userId: "user-1",
         videoKey: "videos/k.mp4",
         thumbnailKey: "thumbnails/k.jpg",
-        videoMetadata: JSON.stringify({
+        videoMetadata: {
           BitDepth: 8,
           BitRate: 1000,
           ChromaSubsampling: "4:2:0",
@@ -174,7 +174,7 @@ describe("UsersService.userPosts", () => {
           Height: 720,
           Width: 1280,
           colour_primaries: "bt709",
-        }),
+        },
       })
       .execute();
 
@@ -199,7 +199,7 @@ describe("UsersService.userPosts", () => {
           userId: "user-1",
           videoKey: `videos/k-${i}.mp4`,
           thumbnailKey: `thumbnails/k-${i}.jpg`,
-          videoMetadata: JSON.stringify({
+          videoMetadata: {
             BitDepth: 8,
             BitRate: 1000,
             ChromaSubsampling: "4:2:0",
@@ -215,7 +215,7 @@ describe("UsersService.userPosts", () => {
             Height: 720,
             Width: 1280,
             colour_primaries: "bt709",
-          }),
+          },
         })
         .execute();
     }
@@ -251,7 +251,7 @@ describe("UsersService.userPosts", () => {
         userId: "user-1",
         videoKey: "videos/one.mp4",
         thumbnailKey: "thumbnails/one.jpg",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -299,7 +299,7 @@ describe("UsersService.userPosts", () => {
         userId: "user-1",
         videoKey: "videos/selected.mp4",
         thumbnailKey: "thumbnails/selected.jpg",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -311,7 +311,7 @@ describe("UsersService.userPosts", () => {
         userId: "user-1",
         videoKey: "videos/other.mp4",
         thumbnailKey: "thumbnails/other.jpg",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -356,7 +356,7 @@ describe("UsersService.userPosts", () => {
           userId: "user-1",
           videoKey: `videos/bulk-${index}.mp4`,
           thumbnailKey: `thumbnails/bulk-${index}.jpg`,
-          videoMetadata: "{}",
+          videoMetadata: {},
         })
         .returning("id")
         .executeTakeFirstOrThrow();
@@ -373,7 +373,7 @@ describe("UsersService.userPosts", () => {
         userId: "user-2",
         videoKey: "videos/other-user.mp4",
         thumbnailKey: "thumbnails/other-user.jpg",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -428,7 +428,7 @@ describe("UsersService.contributorProfile", () => {
         title: "Profile post",
         userId: "user-1",
         videoKey: "videos/profile.mp4",
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();

@@ -26,6 +26,7 @@ import type {
   MediaOperationStatus,
 } from "../db/schema/sakuga.schema";
 import { ValidationError } from "../errors";
+import type { VideoMetadata } from "../posts/posts.schema";
 import {
   isDeterministicMediaKey,
   type DeterministicMediaKind,
@@ -164,7 +165,7 @@ export type ReplaceVideoInput = Omit<
   readonly operation: OperationHandle<OperationResultOf<"video-replace">>;
   readonly postId: number;
   readonly replacedBy: string;
-  readonly videoMetadata: string;
+  readonly videoMetadata: VideoMetadata;
 };
 
 export type VerifyStagedVideoInput = {
@@ -1291,7 +1292,7 @@ export type SwapPostVideoInput = {
   readonly postId: number;
   readonly previousVideo: {
     readonly videoKey: string;
-    readonly videoMetadata: string;
+    readonly videoMetadata: VideoMetadata;
   } | null;
   readonly replacedBy: string;
 };

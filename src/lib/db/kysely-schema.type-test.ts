@@ -1,6 +1,7 @@
 import type { Generated } from "kysely";
 
 import type { Role } from "../auth/roles";
+import type { VideoMetadata } from "../posts/posts.schema";
 import type { DB } from "./kysely";
 
 type Equals<A, B> =
@@ -16,6 +17,6 @@ export type KyselySchemaChecks = [
   Expect<Equals<DB["playlists"]["description"], string | null>>,
   Expect<Equals<DB["saved_searches"]["tags"], string[]>>,
   Expect<Equals<DB["user"]["role"], Generated<Role>>>,
-  Expect<Equals<DB["posts"]["videoMetadata"], Generated<string>>>,
-  Expect<Equals<DB["video_revisions"]["videoMetadata"], string>>,
+  Expect<Equals<DB["posts"]["videoMetadata"], Generated<VideoMetadata>>>,
+  Expect<Equals<DB["video_revisions"]["videoMetadata"], VideoMetadata>>,
 ];

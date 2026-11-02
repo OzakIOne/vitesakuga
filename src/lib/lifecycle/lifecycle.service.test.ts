@@ -449,7 +449,7 @@ describe("LifecycleService operation claims", () => {
                         title: "atomic post",
                         userId: claimInput.userId,
                         videoKey: object.key,
-                        videoMetadata: "{}",
+                        videoMetadata: {},
                       })
                       .returning("id"),
                   );
@@ -504,7 +504,7 @@ describe("LifecycleService operation claims", () => {
         thumbnailKey: "legacy-thumbnail",
         title: "before",
         userId: claimInput.userId,
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning(["id", "version"])
       .executeTakeFirstOrThrow();
@@ -602,7 +602,7 @@ describe("LifecycleService operation claims", () => {
         thumbnailKey: object.key,
         title: "protected reference",
         userId: claimInput.userId,
-        videoMetadata: "{}",
+        videoMetadata: {},
       })
       .returning("id")
       .executeTakeFirstOrThrow();
