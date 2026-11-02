@@ -26,13 +26,20 @@ Vitest. The local server uses Nitro's `node-server` preset and disables the
 Turnstile requirement so the browser tests exercise the same authentication
 path as the test server.
 
+Pages are server-rendered, so elements are visible about a second before React
+hydrates them, and clicks, fills or file selections made earlier are dropped.
+Before interacting, call `waitForHydration(locator)` from
+`e2e/wait-for-hydration.ts` on a control the test is about to use. It waits until
+React has attached its props to that element. Older specs still wait for
+`networkidle` instead, which also covers their data loading.
+
 ## Last recorded verification
 
 On **2026-09-15**, `nub exec vitest run --maxWorkers=1` passed **611 tests in
 62 files**. Browser Mode passed **88 tests in 14 files** with
 `nub run test:browser` (**699 Vitest tests total**). The latest recorded full
-Playwright run was **2026-10-02**, with **58/58 tests in 15 files** passing via
-`nub run test:ee`. These are point-in-time results; rerun the commands after
+Playwright run was **2026-11-02**, with **60/60 tests** passing via
+`nub run test:ee` with retries disabled. These are point-in-time results; rerun the commands after
 code or dependency changes.
 
 The deployment monitor and rollback command construction are covered by the

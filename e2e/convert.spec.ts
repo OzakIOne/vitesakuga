@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForHydration } from "./wait-for-hydration";
+
 const TEST_VIDEO = "e2e/test.mp4";
 
 test.describe("Convert page", () => {
@@ -16,6 +18,9 @@ test.describe("Convert page", () => {
     await expect(
       page.getByRole("heading", { name: "Video/Audio Converter" }),
     ).toBeVisible({ timeout: 15000 });
+    await waitForHydration(
+      page.getByRole("combobox", { name: "Output Format" }),
+    );
   });
 
   test("page loads with converter form", async ({ page }) => {
