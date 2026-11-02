@@ -2,7 +2,7 @@ ViteSakuga uses a role ladder to keep the archive safe without slowing contribut
 
 ## Roles
 
-Roles progress from `novice → uploader → moderator → admin`. Each role grants an explicit set of permissions in `src/lib/auth/policy.ts`, and every decision checks one of those permissions, never the rank itself. Some permissions are held only by the higher roles, as listed below.
+Roles progress from `novice → uploader → moderator → admin`. The permission catalog lives in `src/lib/auth/capabilities.ts`. `src/lib/auth/policy.ts` defines each role's grants, and every decision checks a permission instead of the rank. Some permissions are held only by higher roles, as listed below.
 
 - **Novice** — newly registered accounts. They can browse, vote, comment, build playlists, and upload their own posts. They cannot suggest edits to other people's posts yet.
 - **Uploader** — novices promoted after review. They can also suggest edits to other people's posts and take part in the wiki-edit workflow.

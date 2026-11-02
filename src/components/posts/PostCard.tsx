@@ -1,5 +1,5 @@
 import { Portal } from "@ark-ui/react";
-import { Link, useRouteContext } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { memo, useState } from "react";
 import {
   LuEllipsisVertical,
@@ -18,6 +18,7 @@ import { Menu } from "src/components/ui/overlay";
 import { toaster } from "src/components/ui/toaster";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import type { PostWithVotes } from "src/lib/db/schema";
 import { formatEpisodeInfo } from "src/lib/posts/episode-info";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
@@ -29,8 +30,7 @@ type PostListProps = {
 };
 
 function PostCardMenu({ post }: { post: PostWithVotes }) {
-  const { user } = useRouteContext({ from: "__root__" });
-  const currentUserId = user?.id;
+  const { actorId, can, hasMutationActor } = useCapabilities();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
 
@@ -71,7 +71,7 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
                 <LuShare2 />
                 Share
               </Menu.Item>
-              {currentUserId && (
+              {can("playlists:edit-own") && actorId !== null && (
                 <Menu.Item
                   onClick={() => {
                     setShowPlaylistModal(true);
@@ -82,7 +82,7 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
                   Add to playlist
                 </Menu.Item>
               )}
-              {currentUserId && (
+              {hasMutationActor && (
                 <Menu.Item
                   onClick={() => {
                     setShowReportDialog(true);
@@ -97,16 +97,16 @@ function PostCardMenu({ post }: { post: PostWithVotes }) {
           </Menu.Positioner>
         </Portal>
       </Menu.Root>
-      {showPlaylistModal && currentUserId && (
+      {showPlaylistModal && actorId !== null && can("playlists:edit-own") && (
         <PlaylistAddModal
           onCancel={() => {
             setShowPlaylistModal(false);
           }}
           postId={post.id}
-          userId={currentUserId}
+          userId={actorId}
         />
       )}
-      {showReportDialog && currentUserId && (
+      {showReportDialog && hasMutationActor && (
         <ReportDialog
           onCancel={() => {
             setShowReportDialog(false);

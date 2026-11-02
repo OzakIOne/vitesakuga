@@ -21,8 +21,9 @@ import {
   useDeleteAccount,
   useUpdateProfile,
 } from "src/lib/auth/auth.hooks";
-import type { getUserSession } from "src/lib/auth/auth.middleware";
+import type { getUserSessionContext } from "src/lib/auth/auth.middleware";
 import { passwordSchema, profileSchema } from "src/lib/auth/auth.schemas";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import { toStandardSchemaV1Strict } from "src/lib/effect/schema.utils";
 
 const memberSinceFormatter = new Intl.DateTimeFormat("en-US", {
@@ -150,10 +151,11 @@ function DeleteAccountDialog({
 
 type AccountPageProps = {
   hasPassword: boolean;
-  user: NonNullable<Awaited<ReturnType<typeof getUserSession>>>;
+  user: NonNullable<Awaited<ReturnType<typeof getUserSessionContext>>["user"]>;
 };
 
 export const AccountPage = ({ hasPassword, user }: AccountPageProps) => {
+  const { hasMutationActor } = useCapabilities();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
   const deleteAccountMutation = useDeleteAccount();
@@ -231,158 +233,164 @@ export const AccountPage = ({ hasPassword, user }: AccountPageProps) => {
                 Playlists
               </Heading>
               <Text color="gray.500" fontSize="sm">
-                Toggle visibility and manage the posts in your playlists.
+                {hasMutationActor
+                  ? "Toggle visibility and manage the posts in your playlists."
+                  : "Your playlists are available in read-only mode."}
               </Text>
             </div>
-            <Button asChild colorPalette="blue" size="sm">
-              <Link to="/account/playlists">Manage playlists</Link>
-            </Button>
+            {hasMutationActor && (
+              <Button asChild colorPalette="blue" size="sm">
+                <Link to="/account/playlists">Manage playlists</Link>
+              </Button>
+            )}
           </section>
 
-          <section>
-            <Heading as="h2" mb={1} size="md">
-              Profile information
-            </Heading>
-            <Text color="gray.500" fontSize="sm" mb={5}>
-              Update your display name, @mention handle and avatar.
-            </Text>
-            <form
-              className="space-y-5"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void profileForm.handleSubmit();
-              }}
-            >
-              <profileForm.Field name="name">
-                {(field) => (
-                  <Field.Root
-                    id={field.name}
-                    invalid={!field.state.meta.isValid}
-                  >
-                    <Field.Label>Display name</Field.Label>
-                    <InputGroup startElement={<LuUser />}>
-                      <Input
-                        autoComplete="name"
-                        className="h-12 w-full"
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value);
-                        }}
-                        placeholder="Enter your display name"
-                        value={field.state.value}
-                      />
-                    </InputGroup>
-                    <FieldInfo field={field} />
-                  </Field.Root>
-                )}
-              </profileForm.Field>
-
-              <profileForm.Field name="username">
-                {(field) => (
-                  <Field.Root
-                    id={field.name}
-                    invalid={!field.state.meta.isValid}
-                  >
-                    <Field.Label>Username</Field.Label>
-                    <InputGroup startElement={<LuAtSign />}>
-                      <Input
-                        autoComplete="username"
-                        className="h-12 w-full"
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value.toLowerCase());
-                        }}
-                        placeholder="unique_handle"
-                        value={field.state.value}
-                      />
-                    </InputGroup>
-                    <FieldInfo field={field} />
-                  </Field.Root>
-                )}
-              </profileForm.Field>
-
-              <profileForm.Field name="image">
-                {(field) => (
-                  <Field.Root
-                    id={field.name}
-                    invalid={!field.state.meta.isValid}
-                  >
-                    <Field.Label>Profile picture URL</Field.Label>
-                    <InputGroup startElement={<LuImage />}>
-                      <Input
-                        autoComplete="off"
-                        className="h-12 w-full"
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => {
-                          field.handleChange(e.target.value);
-                        }}
-                        placeholder="https://example.com/avatar.jpg"
-                        type="url"
-                        value={field.state.value}
-                      />
-                    </InputGroup>
-                    {!field.state.meta.errors &&
-                      field.state.value !== user.image && (
-                        <div className="dark:bg-tone-800 mt-3 flex items-center gap-3 rounded-lg bg-white p-4">
-                          <Text color="gray.500" fontSize="sm">
-                            Preview
-                          </Text>
-                          <AvatarGroup>
-                            <Avatar.Root size="lg">
-                              <Avatar.Fallback name={user.name} />
-                              <Avatar.Image
-                                alt={`${user.name} preview`}
-                                src={field.state.value || undefined}
-                              />
-                            </Avatar.Root>
-                          </AvatarGroup>
-                        </div>
-                      )}
-                    <FieldInfo field={field} />
-                  </Field.Root>
-                )}
-              </profileForm.Field>
-
-              <profileForm.Subscribe
-                selector={(state) => ({
-                  canSubmit: state.canSubmit,
-                  isDirty: state.isDirty,
-                })}
+          {hasMutationActor && (
+            <section>
+              <Heading as="h2" mb={1} size="md">
+                Profile information
+              </Heading>
+              <Text color="gray.500" fontSize="sm" mb={5}>
+                Update your display name, @mention handle and avatar.
+              </Text>
+              <form
+                className="space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void profileForm.handleSubmit();
+                }}
               >
-                {({ canSubmit, isDirty }) => (
-                  <div className="flex justify-end gap-3 pt-2">
-                    <Button
-                      disabled={!isDirty || isUpdatePending}
-                      fontWeight="medium"
-                      px={6}
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        profileForm.reset();
-                      }}
+                <profileForm.Field name="name">
+                  {(field) => (
+                    <Field.Root
+                      id={field.name}
+                      invalid={!field.state.meta.isValid}
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      disabled={!canSubmit || !isDirty || isUpdatePending}
-                      loading={isUpdatePending}
-                      fontWeight="medium"
-                      px={6}
-                      type="submit"
+                      <Field.Label>Display name</Field.Label>
+                      <InputGroup startElement={<LuUser />}>
+                        <Input
+                          autoComplete="name"
+                          className="h-12 w-full"
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value);
+                          }}
+                          placeholder="Enter your display name"
+                          value={field.state.value}
+                        />
+                      </InputGroup>
+                      <FieldInfo field={field} />
+                    </Field.Root>
+                  )}
+                </profileForm.Field>
+
+                <profileForm.Field name="username">
+                  {(field) => (
+                    <Field.Root
+                      id={field.name}
+                      invalid={!field.state.meta.isValid}
                     >
-                      {isUpdatePending ? "Saving\u2026" : "Save changes"}
-                    </Button>
-                  </div>
-                )}
-              </profileForm.Subscribe>
-            </form>
-          </section>
+                      <Field.Label>Username</Field.Label>
+                      <InputGroup startElement={<LuAtSign />}>
+                        <Input
+                          autoComplete="username"
+                          className="h-12 w-full"
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value.toLowerCase());
+                          }}
+                          placeholder="unique_handle"
+                          value={field.state.value}
+                        />
+                      </InputGroup>
+                      <FieldInfo field={field} />
+                    </Field.Root>
+                  )}
+                </profileForm.Field>
+
+                <profileForm.Field name="image">
+                  {(field) => (
+                    <Field.Root
+                      id={field.name}
+                      invalid={!field.state.meta.isValid}
+                    >
+                      <Field.Label>Profile picture URL</Field.Label>
+                      <InputGroup startElement={<LuImage />}>
+                        <Input
+                          autoComplete="off"
+                          className="h-12 w-full"
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value);
+                          }}
+                          placeholder="https://example.com/avatar.jpg"
+                          type="url"
+                          value={field.state.value}
+                        />
+                      </InputGroup>
+                      {!field.state.meta.errors &&
+                        field.state.value !== user.image && (
+                          <div className="dark:bg-tone-800 mt-3 flex items-center gap-3 rounded-lg bg-white p-4">
+                            <Text color="gray.500" fontSize="sm">
+                              Preview
+                            </Text>
+                            <AvatarGroup>
+                              <Avatar.Root size="lg">
+                                <Avatar.Fallback name={user.name} />
+                                <Avatar.Image
+                                  alt={`${user.name} preview`}
+                                  src={field.state.value || undefined}
+                                />
+                              </Avatar.Root>
+                            </AvatarGroup>
+                          </div>
+                        )}
+                      <FieldInfo field={field} />
+                    </Field.Root>
+                  )}
+                </profileForm.Field>
+
+                <profileForm.Subscribe
+                  selector={(state) => ({
+                    canSubmit: state.canSubmit,
+                    isDirty: state.isDirty,
+                  })}
+                >
+                  {({ canSubmit, isDirty }) => (
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button
+                        disabled={!isDirty || isUpdatePending}
+                        fontWeight="medium"
+                        px={6}
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          profileForm.reset();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        disabled={!canSubmit || !isDirty || isUpdatePending}
+                        loading={isUpdatePending}
+                        fontWeight="medium"
+                        px={6}
+                        type="submit"
+                      >
+                        {isUpdatePending ? "Saving\u2026" : "Save changes"}
+                      </Button>
+                    </div>
+                  )}
+                </profileForm.Subscribe>
+              </form>
+            </section>
+          )}
 
           <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
             <Heading as="h2" mb={1} size="md">
@@ -484,38 +492,40 @@ export const AccountPage = ({ hasPassword, user }: AccountPageProps) => {
             hasPassword={hasPassword}
           />
 
-          <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
-            <Heading as="h2" mb={1} size="md">
-              Danger zone
-            </Heading>
-            <Text
-              className="dark:text-tone-400"
-              color="gray.500"
-              fontSize="sm"
-              mb={4}
-            >
-              Deleting your account is permanent. Your posts and comments stay
-              public under the name &ldquo;Deleted user&rdquo;.
-            </Text>
-            <div className="border-danger-100 bg-danger-50 dark:border-danger-900 dark:bg-danger-950/40 flex flex-col items-start justify-between gap-4 rounded-lg border p-4 sm:flex-row sm:items-center">
+          {hasMutationActor && (
+            <section className="border-tone-200 dark:border-tone-700 border-t pt-12">
+              <Heading as="h2" mb={1} size="md">
+                Danger zone
+              </Heading>
               <Text
-                className="dark:text-danger-300"
-                color="red.700"
+                className="dark:text-tone-400"
+                color="gray.500"
                 fontSize="sm"
+                mb={4}
               >
-                This removes your account and personal data for good. Public
-                content is anonymized, not deleted.
+                Deleting your account is permanent. Your posts and comments stay
+                public under the name &ldquo;Deleted user&rdquo;.
               </Text>
-              <DeleteAccountDialog
-                email={user.email}
-                hasPassword={hasPassword}
-                isPending={deleteAccountMutation.isPending}
-                onConfirm={(password) =>
-                  deleteAccountMutation.mutate({ password })
-                }
-              />
-            </div>
-          </section>
+              <div className="border-danger-100 bg-danger-50 dark:border-danger-900 dark:bg-danger-950/40 flex flex-col items-start justify-between gap-4 rounded-lg border p-4 sm:flex-row sm:items-center">
+                <Text
+                  className="dark:text-danger-300"
+                  color="red.700"
+                  fontSize="sm"
+                >
+                  This removes your account and personal data for good. Public
+                  content is anonymized, not deleted.
+                </Text>
+                <DeleteAccountDialog
+                  email={user.email}
+                  hasPassword={hasPassword}
+                  isPending={deleteAccountMutation.isPending}
+                  onConfirm={(password) =>
+                    deleteAccountMutation.mutate({ password })
+                  }
+                />
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </Box>

@@ -8,6 +8,7 @@ import { Box, HStack, SimpleGrid, VStack } from "src/components/ui/layout";
 import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.query-options";
 import { useVotesFns } from "src/lib/votes/votes.fn-context";
@@ -110,6 +111,7 @@ function LikedPostsCard() {
 
 function ManagePlaylistsContent() {
   const { user } = Route.useRouteContext();
+  const { canOnOwned } = useCapabilities();
   const updatePlaylist = useUpdatePlaylist(user.id);
 
   const { data: playlists } = useSuspenseQuery(
@@ -201,34 +203,39 @@ function ManagePlaylistsContent() {
                 </Badge>
               </HStack>
 
-              <HStack gap={2}>
-                <Button
-                  aria-pressed={playlist.is_public}
-                  colorPalette={playlist.is_public ? "gray" : "green"}
-                  loading={
-                    updatePlaylist.isPending &&
-                    updatePlaylist.variables?.playlistId === playlist.id
-                  }
-                  onClick={() =>
-                    updatePlaylist.mutate({
-                      isPublic: !playlist.is_public,
-                      playlistId: playlist.id,
-                    })
-                  }
-                  size="xs"
-                  variant={playlist.is_public ? "outline" : "solid"}
-                >
-                  {playlist.is_public ? "Make private" : "Make public"}
-                </Button>
-                <Button asChild size="xs" variant="ghost">
-                  <Link
-                    params={{ playlistId: String(playlist.id) }}
-                    to="/account/playlists/$playlistId"
+              {canOnOwned({
+                ownerId: playlist.user_id,
+                own: "playlists:edit-own",
+              }) && (
+                <HStack gap={2}>
+                  <Button
+                    aria-pressed={playlist.is_public}
+                    colorPalette={playlist.is_public ? "gray" : "green"}
+                    loading={
+                      updatePlaylist.isPending &&
+                      updatePlaylist.variables?.playlistId === playlist.id
+                    }
+                    onClick={() =>
+                      updatePlaylist.mutate({
+                        isPublic: !playlist.is_public,
+                        playlistId: playlist.id,
+                      })
+                    }
+                    size="xs"
+                    variant={playlist.is_public ? "outline" : "solid"}
                   >
-                    Manage
-                  </Link>
-                </Button>
-              </HStack>
+                    {playlist.is_public ? "Make private" : "Make public"}
+                  </Button>
+                  <Button asChild size="xs" variant="ghost">
+                    <Link
+                      params={{ playlistId: String(playlist.id) }}
+                      to="/account/playlists/$playlistId"
+                    >
+                      Manage
+                    </Link>
+                  </Button>
+                </HStack>
+              )}
             </VStack>
           </Box>
         ))}

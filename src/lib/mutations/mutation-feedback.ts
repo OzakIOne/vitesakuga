@@ -4,8 +4,14 @@ import { toaster } from "src/components/ui/toaster";
 
 import { getSafeAuthRedirectUrl } from "../auth/auth-redirect";
 import { AuthClientContext } from "../auth/client-context";
+import { useRefreshUserInfo } from "../users/users.hooks";
 
 const LOGIN_PATH = "/login";
+const SESSION_REFRESH_ERROR_TAGS: ReadonlySet<string> = new Set([
+  "AccountSuspendedError",
+  "ForbiddenError",
+  "ReauthenticationRequiredError",
+]);
 
 export const getReauthenticationLoginUrl = (location: {
   readonly pathname: string;
@@ -113,6 +119,7 @@ export function useMutationWithFeedback<
     MutationFeedbackOptions,
 ) {
   const authClient = useContext(AuthClientContext);
+  const refreshUserInfo = useRefreshUserInfo();
   const reauthenticate = useCallback(() => {
     const loginUrl = getReauthenticationLoginUrl({
       pathname: window.location.pathname,
@@ -134,6 +141,9 @@ export function useMutationWithFeedback<
   return useMutation({
     ...mutationOptions,
     onError: (error, variables, context, meta) => {
+      if (SESSION_REFRESH_ERROR_TAGS.has(errorTag(error) ?? "")) {
+        void refreshUserInfo();
+      }
       toastError(errorTitle, error, errorFallback, undefined, reauthenticate);
       onError?.(error, variables, context, meta);
     },

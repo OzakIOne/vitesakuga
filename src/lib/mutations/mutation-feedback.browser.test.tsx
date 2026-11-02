@@ -3,7 +3,13 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { UnauthorizedError } from "../errors";
+import {
+  AccountSuspendedError,
+  ForbiddenError,
+  ReauthenticationRequiredError,
+  UnauthorizedError,
+} from "../errors";
+import { usersKeys } from "../users/users.queries";
 import {
   errorMessage,
   errorTag,
@@ -227,4 +233,59 @@ describe(useMutationWithFeedback, () => {
       }),
     );
   });
+
+  it.each([
+    {
+      error: new AccountSuspendedError({
+        message: "Your account is suspended",
+        reason: "Review required",
+      }),
+      name: "suspended",
+    },
+    {
+      error: new ForbiddenError({ message: "You do not have permission" }),
+      name: "forbidden",
+    },
+    {
+      error: new ReauthenticationRequiredError({
+        message: "Sign in again to continue",
+      }),
+      name: "reauthentication-required",
+    },
+  ])(
+    "refetches the cached session after a $name mutation error",
+    async ({ error }) => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      const sessionQuery = vi.fn(async () => ({ user: null }));
+      await queryClient.query({
+        queryFn: sessionQuery,
+        queryKey: usersKeys.userInfo,
+        staleTime: 60 * 60 * 1000,
+      });
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      );
+      const { result } = await renderHook(
+        () =>
+          useMutationWithFeedback({
+            errorFallback: "fallback",
+            errorTitle: "Error",
+            mutationFn: async () => {
+              throw error;
+            },
+          }),
+        { wrapper },
+      );
+
+      result.current.mutate();
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      await waitFor(() => expect(sessionQuery).toHaveBeenCalledTimes(2));
+      expect(sessionQuery).toHaveBeenCalledTimes(2);
+    },
+  );
 });

@@ -1,6 +1,6 @@
 import { Portal } from "@ark-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useRouteContext } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { LuBookmark, LuBookmarkPlus, LuPlay, LuTrash2 } from "react-icons/lu";
 import { EmptyState } from "src/components/EmptyState";
@@ -10,6 +10,7 @@ import { Field, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import {
   useDeleteSavedSearch,
   useSaveSearch,
@@ -27,18 +28,20 @@ type SaveSearchDialogProps = {
 };
 
 export function SaveSearchDialog({ values }: SaveSearchDialogProps) {
-  const { user } = useRouteContext({ from: "__root__" });
+  const { actorId, hasMutationActor } = useCapabilities();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const saveMutation = useSaveSearch();
 
-  if (!user) {
+  if (actorId === null) {
     return (
       <Button asChild size="sm" variant="outline">
         <Link to="/login">Log in to save</Link>
       </Button>
     );
   }
+
+  if (!hasMutationActor) return null;
 
   return (
     <Dialog.Root
@@ -126,15 +129,15 @@ type SavedSearchesDialogProps = {
 };
 
 export function SavedSearchesDialog({ onApply }: SavedSearchesDialogProps) {
-  const { user } = useRouteContext({ from: "__root__" });
+  const { actorId, hasMutationActor } = useCapabilities();
   const [open, setOpen] = useState(false);
   const savedSearchesQuery = useQuery({
     ...savedSearchesQueryOptions(),
-    enabled: Boolean(user) && open,
+    enabled: hasMutationActor && open,
   });
   const deleteMutation = useDeleteSavedSearch();
 
-  if (!user) return null;
+  if (actorId === null || !hasMutationActor) return null;
 
   const savedSearches = savedSearchesQuery.data ?? [];
 

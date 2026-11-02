@@ -7,7 +7,10 @@ import {
   RequestHeadersService,
 } from "../auth/context";
 import type { AuthSessionProvider } from "../auth/context";
+import { PERMISSION_CATALOG } from "./capabilities";
+import { authorize } from "./policy";
 import { SessionService, SessionServiceLive } from "./session.effect";
+import type { AuthorizedActor } from "./session.effect";
 import { makeAuthSession, makeSessionUser } from "./session.fixture";
 
 type GetSessionFn = AuthSessionProvider["api"]["getSession"];
@@ -43,6 +46,11 @@ const getUserProgram = Effect.gen(function* () {
   return yield* sessions.getUser();
 });
 
+const getClientSessionProgram = Effect.gen(function* () {
+  const sessions = yield* SessionService;
+  return yield* sessions.getClientSession();
+});
+
 const requireUserProgram = Effect.gen(function* () {
   const sessions = yield* SessionService;
   return yield* sessions.requireUser("You must be logged in to vote");
@@ -51,6 +59,99 @@ const requireUserProgram = Effect.gen(function* () {
 const requireActorProgram = Effect.gen(function* () {
   const sessions = yield* SessionService;
   return yield* sessions.requireActor("You must be logged in to vote");
+});
+
+describe("SessionService.getClientSession", () => {
+  it.each(["novice", "uploader", "moderator", "admin"] as const)(
+    "returns the permissions authorize grants for %s",
+    async (role) => {
+      const session = makeAuthSession({ id: `${role}-1`, role });
+      mockGetSession.mockResolvedValueOnce(session);
+
+      const result = await Effect.runPromise(
+        Effect.provide(getClientSessionProgram, testLayer),
+      );
+      const actor: AuthorizedActor = {
+        id: session.user.id,
+        role,
+        signedInAt: session.session.createdAt,
+      };
+
+      expect(result.user).toEqual(session.user);
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(result.capabilities.hasMutationActor).toBe(true);
+      expect(result.capabilities.suspended).toBe(false);
+      for (const permission of PERMISSION_CATALOG) {
+        const authorized = await Effect.runPromise(
+          authorize({ actor, permission }).pipe(
+            Effect.match({ onFailure: () => false, onSuccess: () => true }),
+          ),
+        );
+        expect(result.capabilities.permissions.includes(permission)).toBe(
+          authorized,
+        );
+      }
+    },
+  );
+
+  it("returns no permissions for a suspended user and keeps the reason", async () => {
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({
+        id: "suspended-1",
+        suspendedAt: new Date("2026-10-31T09:00:00.000Z"),
+        suspendedReason: "Spam",
+      }),
+    );
+
+    const result = await Effect.runPromise(
+      Effect.provide(getClientSessionProgram, testLayer),
+    );
+
+    expect(result.capabilities).toEqual({
+      actorId: "suspended-1",
+      hasMutationActor: false,
+      permissions: [],
+      suspended: true,
+      suspensionReason: "Spam",
+    });
+  });
+
+  it("returns no permissions for an unrecognized role", async () => {
+    mockGetSession.mockResolvedValueOnce(
+      makeAuthSession({ id: "unknown-1", role: "unrecognized" }),
+    );
+
+    const result = await Effect.runPromise(
+      Effect.provide(getClientSessionProgram, testLayer),
+    );
+
+    expect(result.capabilities).toEqual({
+      actorId: "unknown-1",
+      hasMutationActor: false,
+      permissions: [],
+      suspended: false,
+      suspensionReason: null,
+    });
+  });
+
+  it("returns no permissions when signed out", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
+
+    const result = await Effect.runPromise(
+      Effect.provide(getClientSessionProgram, testLayer),
+    );
+
+    expect(result).toEqual({
+      capabilities: {
+        actorId: null,
+        hasMutationActor: false,
+        permissions: [],
+        suspended: false,
+        suspensionReason: null,
+      },
+      user: null,
+    });
+  });
 });
 
 describe("SessionService.getUser", () => {

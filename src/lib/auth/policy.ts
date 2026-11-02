@@ -5,6 +5,7 @@ import {
   ReauthenticationRequiredError,
   UnauthorizedError,
 } from "../errors";
+import type { Permission } from "./capabilities";
 import type { Role } from "./roles";
 import type { AuthorizedActor, SessionFetchError } from "./session.effect";
 
@@ -18,41 +19,6 @@ export type PolicyError =
 // ---------------------------------------------------------------------------
 // Permissions
 // ---------------------------------------------------------------------------
-
-/**
- * Single source of truth for every enforced right in the app, as `domain:action`
- * pairs. A right that a service checks must be named here; a name that no
- * service checks grants nothing. Adding an entry widens the `Permission` union
- * at compile time, so a typo is a type error, not an authorization hole.
- */
-const PERMISSION_CONFIG = {
-  audit: ["view"],
-  comments: ["delete-any", "delete-own", "edit-any", "edit-own"],
-  edits: ["approve"],
-  moderation: ["view"],
-  playlists: ["edit-own"],
-  posts: [
-    "create",
-    "delete-any",
-    "delete-own",
-    "edit-any",
-    "edit-own",
-    "suggest-edit",
-  ],
-  promotions: ["review"],
-  roles: ["assign"],
-  storage: ["maintain"],
-  users: ["suspend", "suspend-staff"],
-  videos: ["replace-any", "replace-own"],
-} as const;
-
-type PermissionConfig = Record<string, ReadonlyArray<string>>;
-
-type InferPermissions<T extends PermissionConfig> = {
-  [K in keyof T]: `${K & string}:${T[K][number]}`;
-}[keyof T];
-
-export type Permission = InferPermissions<typeof PERMISSION_CONFIG>;
 
 const NOVICE_PERMISSIONS: ReadonlyArray<Permission> = [
   "comments:delete-own",
@@ -96,17 +62,20 @@ const ADMIN_PERMISSIONS: ReadonlyArray<Permission> = [
  * code checks these permissions, never the role labels themselves.
  */
 const PERMISSIONS_BY_ROLE = {
-  admin: new Set(ADMIN_PERMISSIONS),
-  moderator: new Set(MODERATOR_PERMISSIONS),
-  novice: new Set(NOVICE_PERMISSIONS),
-  uploader: new Set(UPLOADER_PERMISSIONS),
-} as const satisfies Record<Role, ReadonlySet<Permission>>;
+  admin: ADMIN_PERMISSIONS,
+  moderator: MODERATOR_PERMISSIONS,
+  novice: NOVICE_PERMISSIONS,
+  uploader: UPLOADER_PERMISSIONS,
+} as const satisfies Record<Role, ReadonlyArray<Permission>>;
 
-/** Pure permission lookup for a known role; used by UI and by the checks below. */
+export const permissionsForRole = (role: Role): ReadonlyArray<Permission> =>
+  PERMISSIONS_BY_ROLE[role];
+
+/** Pure permission lookup for the server-side authorization policy. */
 export const roleHasPermission = (
   role: Role,
   permission: Permission,
-): boolean => PERMISSIONS_BY_ROLE[role].has(permission);
+): boolean => permissionsForRole(role).includes(permission);
 
 // ---------------------------------------------------------------------------
 // Enforcement

@@ -1,39 +1,24 @@
 import { ClientOnly } from "@ark-ui/react";
-import {
-  Link,
-  Outlet,
-  createFileRoute,
-  redirect,
-} from "@tanstack/react-router";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { Suspense } from "react";
+import { AdminTabs } from "src/components/admin/AdminTabs";
 import { AdminSkeleton } from "src/components/LoadingSkeletons";
 import { Container, Stack } from "src/components/ui/layout";
-import {
-  TABS_LIST_BASE,
-  TABS_TRIGGER_BASE,
-  TABS_TRIGGER_SELECTED,
-} from "src/components/ui/tabs";
 import { Text } from "src/components/ui/typography";
-import { roleHasPermission } from "src/lib/auth/policy";
-import { roleOf } from "src/lib/auth/roles";
+import { hasPermission } from "src/lib/auth/capabilities";
 import { seo } from "src/utils/seo";
-
-const ADMIN_TABS = [
-  { label: "Promotions", to: "/admin/promotions" },
-  { label: "Reports", to: "/admin/reports" },
-  { label: "Suggestions", to: "/admin/suggestions" },
-  { label: "Storage", to: "/admin/storage" },
-  { label: "Roles", to: "/admin/roles" },
-] as const;
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async ({ context }) => {
     if (!context.user) {
       throw redirect({ to: "/login" });
     }
-    // Staff gate mirrors the server-side checks; every queue endpoint is
-    // also staff-gated, so a stale client cannot read anything anyway.
-    if (!roleHasPermission(roleOf(context.user), "moderation:view")) {
+    if (
+      !hasPermission({
+        capabilities: context.capabilities,
+        permission: "moderation:view",
+      })
+    ) {
       throw redirect({ to: "/" });
     }
   },
@@ -68,21 +53,7 @@ function AdminLayout() {
               healthy.
             </p>
           </header>
-          <nav aria-label="Admin sections">
-            <div className={TABS_LIST_BASE}>
-              {ADMIN_TABS.map((tab) => (
-                <Link
-                  activeOptions={{ exact: true }}
-                  activeProps={{ className: TABS_TRIGGER_SELECTED }}
-                  className={TABS_TRIGGER_BASE}
-                  key={tab.to}
-                  to={tab.to}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-            </div>
-          </nav>
+          <AdminTabs />
           <Suspense fallback={<AdminLoading />}>
             <Outlet />
           </Suspense>

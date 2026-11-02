@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { hasPermission } from "src/lib/auth/capabilities";
 import { seo } from "src/utils/seo";
 
 export const Route = createFileRoute("/upload")({
@@ -8,6 +9,14 @@ export const Route = createFileRoute("/upload")({
         search: { redirect: location.pathname },
         to: "/login",
       });
+    }
+    if (
+      !hasPermission({
+        capabilities: context.capabilities,
+        permission: "posts:create",
+      })
+    ) {
+      throw redirect({ to: "/" });
     }
     return { user: context.user };
   },

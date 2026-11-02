@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useRouteContext } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Schema } from "effect";
 import { NotFound } from "src/components/NotFound";
 import { PostDetailDisplay } from "src/components/posts/PostDetail/PostDetailDisplay";
@@ -56,8 +56,6 @@ function PostComponent() {
   const { postId: rawPostId } = Route.useParams();
   const postId = parsePositiveIntegerRouteParam(rawPostId);
   const { dateRange, q, seriesTitle, sortBy, tags, view } = Route.useSearch();
-  const context = useRouteContext({ from: "/posts/$postId" });
-
   const {
     data: { post, user, tags: initialTags, relatedPost, images },
   } = useSuspenseQuery(postQueryDetail(postId));
@@ -68,8 +66,6 @@ function PostComponent() {
   const seriesNavigation = seriesQuery.data
     ? getSeriesNavigation(seriesQuery.data.posts, post.id)
     : null;
-
-  const currentUserId = context.user?.id;
 
   return (
     <PostsPageLayout
@@ -84,14 +80,12 @@ function PostComponent() {
       videoMetadata={post.videoMetadata}
     >
       <PostDetailDisplay
-        currentUserId={currentUserId}
         images={images}
         initialTags={initialTags}
         post={post}
         relatedPost={relatedPost}
         seriesNavigation={seriesNavigation}
         seriesPosts={seriesQuery.data?.posts}
-        currentUserRole={context.user?.role}
         user={user}
       />
     </PostsPageLayout>

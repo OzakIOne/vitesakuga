@@ -3,39 +3,15 @@ import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 
 import { ForbiddenError, ReauthenticationRequiredError } from "../errors";
+import { PERMISSION_CATALOG, type Permission } from "./capabilities";
 import {
   authorize,
   authorizeOwned,
   requireRecentSignIn,
   roleHasPermission,
-  type Permission,
 } from "./policy";
 import type { Role } from "./roles";
 import type { AuthorizedActor } from "./session.effect";
-
-const EVERY_PERMISSION: ReadonlyArray<Permission> = [
-  "audit:view",
-  "comments:delete-any",
-  "comments:delete-own",
-  "comments:edit-any",
-  "comments:edit-own",
-  "edits:approve",
-  "moderation:view",
-  "playlists:edit-own",
-  "posts:create",
-  "posts:delete-any",
-  "posts:delete-own",
-  "posts:edit-any",
-  "posts:edit-own",
-  "posts:suggest-edit",
-  "promotions:review",
-  "roles:assign",
-  "storage:maintain",
-  "users:suspend",
-  "users:suspend-staff",
-  "videos:replace-any",
-  "videos:replace-own",
-];
 
 const GRANTS_BY_ROLE: ReadonlyArray<{
   readonly role: Role;
@@ -120,7 +96,7 @@ describe("role grants", () => {
   it.each(GRANTS_BY_ROLE)(
     "grants $role exactly its permissions",
     ({ role, granted }) => {
-      const actual = EVERY_PERMISSION.filter((permission) =>
+      const actual = PERMISSION_CATALOG.filter((permission) =>
         roleHasPermission(role, permission),
       );
       expect([...actual].sort()).toEqual([...granted].sort());

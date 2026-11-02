@@ -17,7 +17,6 @@ export function Post({
   user,
   tags,
   relatedPost,
-  currentUserId,
   images,
   onEditClick,
   onAddToPlaylist,
@@ -28,14 +27,12 @@ export function Post({
   user: Awaited<ReturnType<typeof fetchPostDetail>>["user"];
   tags: Awaited<ReturnType<typeof fetchPostDetail>>["tags"];
   relatedPost: Awaited<ReturnType<typeof fetchPostDetail>>["relatedPost"];
-  currentUserId?: string | undefined;
   images?: string[] | undefined;
   onEditClick?: (() => void) | undefined;
   onAddToPlaylist?: (() => void) | undefined;
   onReportClick?: (() => void) | undefined;
   onSuggestEditClick?: (() => void) | undefined;
 }) {
-  const isOwner = currentUserId === user.id;
   const episodeInfo = formatEpisodeInfo(post);
 
   return (
@@ -68,18 +65,18 @@ export function Post({
             )}
           </VStack>
           <HStack flexWrap="wrap" gap={2}>
-            {isOwner && onEditClick && (
+            {onEditClick && (
               <Button onClick={onEditClick} size="sm" variant="outline">
                 Edit Post
               </Button>
             )}
-            {!isOwner && onSuggestEditClick && (
+            {!onEditClick && onSuggestEditClick && (
               <Button onClick={onSuggestEditClick} size="sm" variant="outline">
                 Suggest an edit
               </Button>
             )}
-            <PostVoteButtons currentUserId={currentUserId} postId={post.id} />
-            {currentUserId && onAddToPlaylist && (
+            <PostVoteButtons postId={post.id} />
+            {onAddToPlaylist && (
               <Button
                 colorPalette="blue"
                 onClick={onAddToPlaylist}
@@ -89,7 +86,7 @@ export function Post({
                 Add to playlist
               </Button>
             )}
-            {currentUserId && onReportClick && (
+            {onReportClick && (
               <Button
                 colorPalette="red"
                 onClick={onReportClick}

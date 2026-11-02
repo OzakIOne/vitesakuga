@@ -4,6 +4,7 @@ import { Button } from "src/components/ui/button";
 import { Alert } from "src/components/ui/feedback";
 import { Container, HStack, Stack } from "src/components/ui/layout";
 import { Heading, Text } from "src/components/ui/typography";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -61,6 +62,7 @@ function formatWhen(date: Date | string): string {
 }
 
 function NotificationsPage() {
+  const { hasMutationActor } = useCapabilities();
   const inbox = useNotifications();
   const markAllRead = useMarkAllNotificationsRead();
   const markRead = useMarkNotificationRead();
@@ -78,7 +80,7 @@ function NotificationsPage() {
         <Heading as="h1" size="xl">
           Notifications
         </Heading>
-        {unreadCount > 0 && (
+        {hasMutationActor && unreadCount > 0 && (
           <Button
             loading={markAllRead.isPending}
             onClick={handleMarkAllRead}
@@ -140,7 +142,7 @@ function NotificationsPage() {
                     {label}
                   </Text>
                 )}
-                {row.readAt === null && (
+                {hasMutationActor && row.readAt === null && (
                   <Button
                     loading={
                       markRead.isPending && markRead.variables === row.id

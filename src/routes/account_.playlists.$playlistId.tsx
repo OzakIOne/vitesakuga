@@ -11,6 +11,7 @@ import { Field, Input } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import {
   useBulkAddPostsToPlaylist,
   useBulkRemovePostsFromPlaylist,
@@ -81,6 +82,7 @@ function parsePostIds(raw: string): number[] {
 
 function ManagePlaylistContent() {
   const { user } = Route.useRouteContext();
+  const { canOnOwned } = useCapabilities();
   const params = Route.useParams();
   const playlistId = parsePositiveIntegerRouteParam(params.playlistId);
 
@@ -173,6 +175,19 @@ function ManagePlaylistContent() {
         <Link to="/account/playlists">
           <Text color="blue.500">Back to my playlists</Text>
         </Link>
+      </Box>
+    );
+  }
+
+  if (
+    !canOnOwned({
+      ownerId: playlist.user_id,
+      own: "playlists:edit-own",
+    })
+  ) {
+    return (
+      <Box p={4}>
+        <Text>Playlist editing is unavailable for this account.</Text>
       </Box>
     );
   }

@@ -4,6 +4,7 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 import { DefaultCatchBoundary } from "./components/DefaultCatchBoundary";
 import { NotFound } from "./components/NotFound";
 import { RoutePending } from "./components/RoutePending";
+import { EMPTY_USER_CAPABILITIES } from "./lib/auth/capabilities";
 import { getQueryClient } from "./lib/query-client";
 import { routeTree } from "./routeTree.gen";
 
@@ -12,6 +13,7 @@ export function getRouter() {
 
   const router = createTanStackRouter({
     context: {
+      capabilities: EMPTY_USER_CAPABILITIES,
       queryClient,
       user: null,
     },

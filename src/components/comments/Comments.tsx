@@ -13,8 +13,7 @@ import { Box, HStack, Stack } from "src/components/ui/layout";
 import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
-import { roleHasPermission } from "src/lib/auth/policy";
-import { roleOf } from "src/lib/auth/roles";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import { useCommentsFns } from "src/lib/comments/comments.fn-context";
 import {
   useAddComment,
@@ -29,17 +28,12 @@ import { formatDateUtc } from "src/utils/date-format";
 
 type CommentsProps = {
   postId: number;
-  currentUserId?: string | undefined;
-  currentUserRole?: string | undefined;
 };
 
 type CommentRow = Awaited<ReturnType<typeof fetchComments>>[number];
 
-function CommentsContent({
-  postId,
-  currentUserId,
-  currentUserRole,
-}: CommentsProps) {
+function CommentsContent({ postId }: CommentsProps) {
+  const { actorId, canOnOwned, hasMutationActor } = useCapabilities();
   const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(
     null,
   );
@@ -50,9 +44,22 @@ function CommentsContent({
   );
 
   const deleteCommentMutation = useDeleteComment(postId);
+  let selectedComment: CommentRow | undefined;
+  for (const comment of comments) {
+    if (comment.id !== commentIdToDelete) continue;
+    selectedComment = comment;
+    break;
+  }
+  const canDeleteSelected =
+    selectedComment !== undefined &&
+    canOnOwned({
+      ownerId: selectedComment.userId,
+      own: "comments:delete-own",
+      any: "comments:delete-any",
+    });
 
   const handleDeleteComment = () => {
-    if (commentIdToDelete !== null) {
+    if (commentIdToDelete !== null && canDeleteSelected) {
       deleteCommentMutation.mutate(
         { commentId: commentIdToDelete },
         { onSuccess: () => setCommentIdToDelete(null) },
@@ -66,11 +73,12 @@ function CommentsContent({
         Comments
       </Heading>
 
-      {currentUserId ? (
+      {hasMutationActor && actorId !== null && (
         <ClientOnly fallback={null}>
-          <CommentComposer currentUserId={currentUserId} postId={postId} />
+          <CommentComposer currentUserId={actorId} postId={postId} />
         </ClientOnly>
-      ) : (
+      )}
+      {actorId === null && (
         <Box mb={4}>
           <Text color="gray.600" fontStyle="italic">
             You need to be logged in to write a comment.
@@ -88,8 +96,6 @@ function CommentsContent({
         ) : (
           comments.map((comment) => (
             <CommentItem
-              currentUserId={currentUserId}
-              currentUserRole={currentUserRole}
               key={comment.id}
               comment={comment}
               onDelete={() => {
@@ -104,7 +110,7 @@ function CommentsContent({
         onOpenChange={() => {
           setCommentIdToDelete(null);
         }}
-        open={commentIdToDelete !== null}
+        open={commentIdToDelete !== null && canDeleteSelected}
         role="alertdialog"
       >
         <Portal>
@@ -145,13 +151,9 @@ function CommentsContent({
 
 function CommentItem({
   comment,
-  currentUserId,
-  currentUserRole,
   onDelete,
 }: {
   comment: CommentRow;
-  currentUserId: CommentsProps["currentUserId"];
-  currentUserRole: CommentsProps["currentUserRole"];
   onDelete: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -165,11 +167,17 @@ function CommentItem({
   );
 
   const updateCommentMutation = useUpdateComment(comment.postId);
-  const isOwn = currentUserId === comment.userId;
-  const canModerate = roleHasPermission(
-    roleOf({ id: currentUserId, role: currentUserRole }),
-    "comments:delete-any",
-  );
+  const { canOnOwned } = useCapabilities();
+  const canEdit = canOnOwned({
+    ownerId: comment.userId,
+    own: "comments:edit-own",
+    any: "comments:edit-any",
+  });
+  const canDelete = canOnOwned({
+    ownerId: comment.userId,
+    own: "comments:delete-own",
+    any: "comments:delete-any",
+  });
 
   const handleSave = () => {
     const trimmed = editContent.trim();
@@ -219,33 +227,37 @@ function CommentItem({
               {formatDateUtc(comment.createdAt)}
             </Text>
           </HStack>
-          {(isOwn || canModerate) && (
+          {(canEdit || canDelete) && (
             <HStack gap={1}>
-              <IconButton
-                aria-label="Edit comment"
-                flexShrink={0}
-                onClick={() => {
-                  setIsEditing(true);
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                <LuPencil />
-              </IconButton>
-              <IconButton
-                aria-label="Delete comment"
-                colorScheme="red"
-                flexShrink={0}
-                onClick={onDelete}
-                size="sm"
-                variant="ghost"
-              >
-                <LuTrash2 />
-              </IconButton>
+              {canEdit && (
+                <IconButton
+                  aria-label="Edit comment"
+                  flexShrink={0}
+                  onClick={() => {
+                    setIsEditing(true);
+                  }}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <LuPencil />
+                </IconButton>
+              )}
+              {canDelete && (
+                <IconButton
+                  aria-label="Delete comment"
+                  colorScheme="red"
+                  flexShrink={0}
+                  onClick={onDelete}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <LuTrash2 />
+                </IconButton>
+              )}
             </HStack>
           )}
         </HStack>
-        {isEditing ? (
+        {isEditing && canEdit ? (
           <Box mt={2}>
             <Textarea
               aria-label="Edit comment"
@@ -325,11 +337,7 @@ function CommentComposer({
   );
 }
 
-export function Comments({
-  postId,
-  currentUserId,
-  currentUserRole,
-}: CommentsProps) {
+export function Comments({ postId }: CommentsProps) {
   return (
     <Suspense
       fallback={
@@ -339,11 +347,7 @@ export function Comments({
         </Stack>
       }
     >
-      <CommentsContent
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        postId={postId}
-      />
+      <CommentsContent postId={postId} />
     </Suspense>
   );
 }

@@ -14,10 +14,16 @@ import {
   UnauthorizedError,
 } from "../errors";
 import {
+  EMPTY_USER_CAPABILITIES,
+  type Permission,
+  type UserCapabilities,
+} from "./capabilities";
+import {
   AuthProviderError,
   AuthService,
   RequestHeadersService,
 } from "./context";
+import { permissionsForRole } from "./policy";
 import { RoleSchema, type Role } from "./roles";
 import type { AuthSession, AuthenticatedUser } from "./types";
 export type { AuthSession, AuthenticatedUser } from "./types";
@@ -96,6 +102,12 @@ export class SessionService extends Context.Service<
      * mandatory.
      */
     readonly getUser: () => Effect.Effect<SessionUser, SessionFetchError>;
+
+    /** User and policy-derived capabilities from the same session read. */
+    readonly getClientSession: () => Effect.Effect<
+      { readonly user: SessionUser; readonly capabilities: UserCapabilities },
+      SessionFetchError
+    >;
 
     /**
      * Current user of a signed-in request; fails with `UnauthorizedError`
@@ -266,6 +278,36 @@ export class SessionService extends Context.Service<
         signedInAt: session.session.createdAt,
       }));
 
+    const getClientSession = Effect.fn("SessionService.getClientSession")(
+      function* () {
+        const session = yield* getSession();
+        if (session === null) {
+          return { capabilities: EMPTY_USER_CAPABILITIES, user: null };
+        }
+
+        const suspended =
+          session.user.suspendedAt !== null &&
+          session.user.suspendedAt !== undefined;
+        const actor = actorFromSession(session);
+        const permissions: ReadonlyArray<Permission> = Option.match(actor, {
+          onNone: () => [],
+          onSome: (authorizedActor) =>
+            suspended ? [] : permissionsForRole(authorizedActor.role),
+        });
+
+        return {
+          capabilities: {
+            actorId: session.user.id,
+            hasMutationActor: Option.isSome(actor) && !suspended,
+            permissions,
+            suspended,
+            suspensionReason: suspended ? session.user.suspendedReason : null,
+          },
+          user: session.user,
+        };
+      },
+    );
+
     const toActor = Effect.fn("SessionService.toActor")(function* (input: {
       readonly session: AuthSession;
     }) {
@@ -314,6 +356,7 @@ export class SessionService extends Context.Service<
 
     return {
       getActor,
+      getClientSession,
       getSession,
       getUser,
       requireActor,

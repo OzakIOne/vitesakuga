@@ -16,6 +16,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type * as React from "react";
 import { LuCheck, LuMenu } from "react-icons/lu";
+import { SuspendedAccountNotice } from "src/components/auth/SuspendedAccountNotice";
 import { DefaultCatchBoundary } from "src/components/DefaultCatchBoundary";
 import { GlobalShortcuts } from "src/components/GlobalShortcuts";
 import { NotFound } from "src/components/NotFound";
@@ -31,11 +32,12 @@ import { Menu } from "src/components/ui/overlay";
 import { Provider } from "src/components/ui/provider";
 import { Toaster } from "src/components/ui/toaster";
 import { useSignOut } from "src/lib/auth/auth.hooks";
-import { getUserSession } from "src/lib/auth/auth.middleware";
+import { getUserSessionContext } from "src/lib/auth/auth.middleware";
+import { hasPermission } from "src/lib/auth/capabilities";
+import type { UserCapabilities } from "src/lib/auth/capabilities";
+import { CapabilitiesProvider } from "src/lib/auth/capabilities.context";
 import authClient from "src/lib/auth/client";
 import { AuthClientContext } from "src/lib/auth/client-context";
-import { roleHasPermission } from "src/lib/auth/policy";
-import { roleOf } from "src/lib/auth/roles";
 import { CommentsFnsContext } from "src/lib/comments/comments.fn-context";
 import { defaultCommentsFns } from "src/lib/comments/comments.fns";
 import { ModerationFnsContext } from "src/lib/moderation/moderation.fn-context";
@@ -58,15 +60,16 @@ import appCss from "src/styles/app.css?url";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
-  user: Awaited<ReturnType<typeof getUserSession>>;
+  user: Awaited<ReturnType<typeof getUserSessionContext>>["user"];
+  capabilities: UserCapabilities;
 }>()({
   beforeLoad: async ({ context }) => {
-    const user = await context.queryClient.query({
-      queryFn: async ({ signal }) => getUserSession({ signal }),
+    const session = await context.queryClient.query({
+      queryFn: async ({ signal }) => getUserSessionContext({ signal }),
       queryKey: usersKeys.userInfo,
       staleTime: 60 * 60 * 1000,
     });
-    return { user };
+    return session;
   },
   component: RootComponent,
   errorComponent: (props) => (
@@ -190,8 +193,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const ctx = Route.useRouteContext();
   const signOut = useSignOut();
   const router = useRouter();
-  const isStaff =
-    ctx.user !== null && roleHasPermission(roleOf(ctx.user), "moderation:view");
+  const isStaff = hasPermission({
+    capabilities: ctx.capabilities,
+    permission: "moderation:view",
+  });
+  const showUploadLink =
+    ctx.capabilities.actorId === null ||
+    hasPermission({
+      capabilities: ctx.capabilities,
+      permission: "posts:create",
+    });
 
   const currentPath = router.state.location.pathname;
   const authPaths = ["/login", "/signup"];
@@ -205,291 +216,145 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <Provider>
-          <SkipToContentLink />
-          <header className="border-tone-200 dark:border-tone-800 dark:bg-tone-950/95 sticky top-0 z-10 border-b bg-white/95 backdrop-blur">
-            <nav aria-label="Main">
-              <Center
-                className="min-h-14 flex-wrap px-3 [&>a]:hidden md:[&>a]:inline-flex [&>a:first-child]:inline-flex"
-                gap={1}
-                py={2}
-              >
-                <Link
-                  activeOptions={{ exact: true }}
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/"
+    <CapabilitiesProvider capabilities={ctx.capabilities}>
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <HeadContent />
+        </head>
+        <body>
+          <Provider>
+            <SkipToContentLink />
+            <header className="border-tone-200 dark:border-tone-800 dark:bg-tone-950/95 sticky top-0 z-10 border-b bg-white/95 backdrop-blur">
+              <nav aria-label="Main">
+                <Center
+                  className="min-h-14 flex-wrap px-3 [&>a]:hidden md:[&>a]:inline-flex [&>a:first-child]:inline-flex"
+                  gap={1}
+                  py={2}
                 >
-                  Home
-                </Link>{" "}
-                <Link
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/posts"
-                >
-                  Posts
-                </Link>{" "}
-                <Link
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/random"
-                >
-                  Random post
-                </Link>{" "}
-                <Link
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/users"
-                >
-                  Users
-                </Link>{" "}
-                <Link
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/playlists"
-                >
-                  Playlists
-                </Link>{" "}
-                {ctx.user && (
+                  <Link
+                    activeOptions={{ exact: true }}
+                    activeProps={{
+                      className: ACTIVE_NAV_LINK_CLASS,
+                    }}
+                    className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    to="/"
+                  >
+                    Home
+                  </Link>{" "}
                   <Link
                     activeProps={{
                       className: ACTIVE_NAV_LINK_CLASS,
                     }}
-                    to="/account/playlists"
                     className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    to="/posts"
                   >
-                    My Playlists
-                  </Link>
-                )}{" "}
-                {ctx.user && <NotificationsLink />}{" "}
-                {ctx.user && isStaff && (
+                    Posts
+                  </Link>{" "}
                   <Link
                     activeProps={{
                       className: ACTIVE_NAV_LINK_CLASS,
                     }}
-                    to="/admin"
                     className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    to="/random"
                   >
-                    Admin
-                  </Link>
-                )}{" "}
-                <Link
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/upload"
-                >
-                  Upload
-                </Link>{" "}
-                <Link
-                  activeProps={{
-                    className: ACTIVE_NAV_LINK_CLASS,
-                  }}
-                  className={`${NAV_LINK_CLASS} whitespace-nowrap`}
-                  to="/convert"
-                >
-                  Convert video
-                </Link>{" "}
-                <Link
-                  activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
-                  className={`${NAV_LINK_CLASS} hidden whitespace-nowrap md:inline`}
-                  to="/news"
-                >
-                  News
-                </Link>{" "}
-                <Link
-                  activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
-                  className={`${NAV_LINK_CLASS} hidden whitespace-nowrap md:inline`}
-                  to="/wiki"
-                >
-                  Wiki
-                </Link>{" "}
-                <Link
-                  activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
-                  className={`${NAV_LINK_CLASS} hidden whitespace-nowrap md:inline`}
-                  to="/help"
-                >
-                  Help
-                </Link>{" "}
-                {import.meta.env.DEV && (
-                  <Box display={{ base: "none", md: "block" }}>
-                    <Menu.Root>
-                      <Menu.Trigger asChild>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          className="whitespace-nowrap"
-                        >
-                          Dev Tools
-                        </Button>
-                      </Menu.Trigger>
-                      <Menu.Positioner>
-                        <Menu.Content>
-                          <Menu.Item asChild value="otelite">
-                            <a
-                              href="http://localhost:4000"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              Otelite
-                            </a>
-                          </Menu.Item>
-                          <Menu.Item asChild value="opencode">
-                            <a
-                              href="http://localhost:4096"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              Opencode
-                            </a>
-                          </Menu.Item>
-                          <Menu.Item asChild value="signoz">
-                            <a
-                              href="http://localhost:8080"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              SigNoz
-                            </a>
-                          </Menu.Item>
-                        </Menu.Content>
-                      </Menu.Positioner>
-                    </Menu.Root>
-                  </Box>
-                )}{" "}
-                <Box
-                  alignItems="center"
-                  display={{ base: "none", md: "flex" }}
-                  gap={2}
-                >
-                  {ctx.user ? (
-                    <>
-                      <Link
-                        activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
-                        className={NAV_LINK_CLASS}
-                        to="/account"
-                      >
-                        Account
-                      </Link>{" "}
-                      <Button onClick={handleSignOut} size="xs">
-                        Sign Out
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        className={NAV_LINK_CLASS}
-                        search={redirectSearch}
-                        to="/login"
-                      >
-                        Login
-                      </Link>{" "}
-                      <Link
-                        className={NAV_LINK_CLASS}
-                        search={redirectSearch}
-                        to="/signup"
-                      >
-                        Sign Up
-                      </Link>
-                    </>
-                  )}
-                  <ColorModeButton />
-                </Box>
-                <Box display={{ base: "flex", md: "none" }}>
-                  <Menu.Root>
-                    <Menu.Trigger asChild>
-                      <IconButton aria-label="Menu" size="sm" variant="ghost">
-                        <LuMenu />
-                      </IconButton>
-                    </Menu.Trigger>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        <Menu.Item asChild value="home">
-                          <Link to="/">Home</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="posts">
-                          <Link to="/posts">Posts</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="random">
-                          <Link to="/random">Random post</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="users">
-                          <Link to="/users">Users</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="playlists">
-                          <Link to="/playlists">Playlists</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="upload">
-                          <Link to="/upload">Upload</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="convert">
-                          <Link to="/convert">Convert video</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="news">
-                          <Link to="/news">News</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="wiki">
-                          <Link to="/wiki">Wiki</Link>
-                        </Menu.Item>
-                        <Menu.Item asChild value="help">
-                          <Link to="/help">Help</Link>
-                        </Menu.Item>
-                        <Menu.Separator />
-                        {ctx.user ? (
-                          <>
-                            <Menu.Item asChild value="account">
-                              <Link to="/account">Account</Link>
-                            </Menu.Item>
-                            <Menu.Item asChild value="my-playlists">
-                              <Link to="/account/playlists">My Playlists</Link>
-                            </Menu.Item>
-                            <Menu.Item asChild value="notifications">
-                              <Link to="/notifications">Inbox</Link>
-                            </Menu.Item>
-                            {isStaff && (
-                              <Menu.Item asChild value="admin">
-                                <Link to="/admin">Admin</Link>
-                              </Menu.Item>
-                            )}
-                            <Menu.Item onClick={handleSignOut} value="signout">
-                              Sign Out
-                            </Menu.Item>
-                          </>
-                        ) : (
-                          <>
-                            <Menu.Item asChild value="login">
-                              <Link search={redirectSearch} to="/login">
-                                Login
-                              </Link>
-                            </Menu.Item>
-                            <Menu.Item asChild value="signup">
-                              <Link search={redirectSearch} to="/signup">
-                                Sign Up
-                              </Link>
-                            </Menu.Item>
-                          </>
-                        )}
-                        <Menu.Separator />
-                        <ThemeMenuItems />
-                        {import.meta.env.DEV && (
-                          <>
-                            <Menu.Separator />
+                    Random post
+                  </Link>{" "}
+                  <Link
+                    activeProps={{
+                      className: ACTIVE_NAV_LINK_CLASS,
+                    }}
+                    className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    to="/users"
+                  >
+                    Users
+                  </Link>{" "}
+                  <Link
+                    activeProps={{
+                      className: ACTIVE_NAV_LINK_CLASS,
+                    }}
+                    className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    to="/playlists"
+                  >
+                    Playlists
+                  </Link>{" "}
+                  {ctx.user && (
+                    <Link
+                      activeProps={{
+                        className: ACTIVE_NAV_LINK_CLASS,
+                      }}
+                      to="/account/playlists"
+                      className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    >
+                      My Playlists
+                    </Link>
+                  )}{" "}
+                  {ctx.user && <NotificationsLink />}{" "}
+                  {ctx.user && isStaff && (
+                    <Link
+                      activeProps={{
+                        className: ACTIVE_NAV_LINK_CLASS,
+                      }}
+                      to="/admin"
+                      className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    >
+                      Admin
+                    </Link>
+                  )}{" "}
+                  {showUploadLink && (
+                    <Link
+                      activeProps={{
+                        className: ACTIVE_NAV_LINK_CLASS,
+                      }}
+                      className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                      to="/upload"
+                    >
+                      Upload
+                    </Link>
+                  )}{" "}
+                  <Link
+                    activeProps={{
+                      className: ACTIVE_NAV_LINK_CLASS,
+                    }}
+                    className={`${NAV_LINK_CLASS} whitespace-nowrap`}
+                    to="/convert"
+                  >
+                    Convert video
+                  </Link>{" "}
+                  <Link
+                    activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
+                    className={`${NAV_LINK_CLASS} hidden whitespace-nowrap md:inline`}
+                    to="/news"
+                  >
+                    News
+                  </Link>{" "}
+                  <Link
+                    activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
+                    className={`${NAV_LINK_CLASS} hidden whitespace-nowrap md:inline`}
+                    to="/wiki"
+                  >
+                    Wiki
+                  </Link>{" "}
+                  <Link
+                    activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
+                    className={`${NAV_LINK_CLASS} hidden whitespace-nowrap md:inline`}
+                    to="/help"
+                  >
+                    Help
+                  </Link>{" "}
+                  {import.meta.env.DEV && (
+                    <Box display={{ base: "none", md: "block" }}>
+                      <Menu.Root>
+                        <Menu.Trigger asChild>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="whitespace-nowrap"
+                          >
+                            Dev Tools
+                          </Button>
+                        </Menu.Trigger>
+                        <Menu.Positioner>
+                          <Menu.Content>
                             <Menu.Item asChild value="otelite">
                               <a
                                 href="http://localhost:4000"
@@ -517,57 +382,217 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                                 SigNoz
                               </a>
                             </Menu.Item>
-                          </>
-                        )}
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Menu.Root>
-                </Box>
-              </Center>
-            </nav>
-          </header>
-          <main
-            className="min-h-[calc(100dvh-4rem)]"
-            id="main-content"
-            tabIndex={-1}
-          >
-            {children}
-          </main>
-          <div
-            aria-atomic="true"
-            aria-live="polite"
-            className="sr-only"
-            id="route-announcer"
-          />
-          <ClientOnly fallback={null}>
-            <Toaster />
-            {import.meta.env.DEV && (
-              <TanStackDevtools
-                plugins={[
-                  {
-                    name: "TanStack Query",
-                    render: <ReactQueryDevtoolsPanel />,
-                  },
-                  {
-                    name: "TanStack Router",
-                    render: <TanStackRouterDevtoolsPanel />,
-                  },
-                  {
-                    name: "TanStack Form",
-                    render: <FormDevtoolsPanel />,
-                  },
-                  {
-                    name: "TanStack Pacer",
-                    render: <PacerDevtoolsPanel />,
-                  },
-                ]}
-              />
-            )}
-          </ClientOnly>
-          <Scripts />
-        </Provider>
-      </body>
-    </html>
+                          </Menu.Content>
+                        </Menu.Positioner>
+                      </Menu.Root>
+                    </Box>
+                  )}{" "}
+                  <Box
+                    alignItems="center"
+                    display={{ base: "none", md: "flex" }}
+                    gap={2}
+                  >
+                    {ctx.user ? (
+                      <>
+                        <Link
+                          activeProps={{ className: ACTIVE_NAV_LINK_CLASS }}
+                          className={NAV_LINK_CLASS}
+                          to="/account"
+                        >
+                          Account
+                        </Link>{" "}
+                        <Button onClick={handleSignOut} size="xs">
+                          Sign Out
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          className={NAV_LINK_CLASS}
+                          search={redirectSearch}
+                          to="/login"
+                        >
+                          Login
+                        </Link>{" "}
+                        <Link
+                          className={NAV_LINK_CLASS}
+                          search={redirectSearch}
+                          to="/signup"
+                        >
+                          Sign Up
+                        </Link>
+                      </>
+                    )}
+                    <ColorModeButton />
+                  </Box>
+                  <Box display={{ base: "flex", md: "none" }}>
+                    <Menu.Root>
+                      <Menu.Trigger asChild>
+                        <IconButton aria-label="Menu" size="sm" variant="ghost">
+                          <LuMenu />
+                        </IconButton>
+                      </Menu.Trigger>
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item asChild value="home">
+                            <Link to="/">Home</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="posts">
+                            <Link to="/posts">Posts</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="random">
+                            <Link to="/random">Random post</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="users">
+                            <Link to="/users">Users</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="playlists">
+                            <Link to="/playlists">Playlists</Link>
+                          </Menu.Item>
+                          {showUploadLink && (
+                            <Menu.Item asChild value="upload">
+                              <Link to="/upload">Upload</Link>
+                            </Menu.Item>
+                          )}
+                          <Menu.Item asChild value="convert">
+                            <Link to="/convert">Convert video</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="news">
+                            <Link to="/news">News</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="wiki">
+                            <Link to="/wiki">Wiki</Link>
+                          </Menu.Item>
+                          <Menu.Item asChild value="help">
+                            <Link to="/help">Help</Link>
+                          </Menu.Item>
+                          <Menu.Separator />
+                          {ctx.user ? (
+                            <>
+                              <Menu.Item asChild value="account">
+                                <Link to="/account">Account</Link>
+                              </Menu.Item>
+                              <Menu.Item asChild value="my-playlists">
+                                <Link to="/account/playlists">
+                                  My Playlists
+                                </Link>
+                              </Menu.Item>
+                              <Menu.Item asChild value="notifications">
+                                <Link to="/notifications">Inbox</Link>
+                              </Menu.Item>
+                              {isStaff && (
+                                <Menu.Item asChild value="admin">
+                                  <Link to="/admin">Admin</Link>
+                                </Menu.Item>
+                              )}
+                              <Menu.Item
+                                onClick={handleSignOut}
+                                value="signout"
+                              >
+                                Sign Out
+                              </Menu.Item>
+                            </>
+                          ) : (
+                            <>
+                              <Menu.Item asChild value="login">
+                                <Link search={redirectSearch} to="/login">
+                                  Login
+                                </Link>
+                              </Menu.Item>
+                              <Menu.Item asChild value="signup">
+                                <Link search={redirectSearch} to="/signup">
+                                  Sign Up
+                                </Link>
+                              </Menu.Item>
+                            </>
+                          )}
+                          <Menu.Separator />
+                          <ThemeMenuItems />
+                          {import.meta.env.DEV && (
+                            <>
+                              <Menu.Separator />
+                              <Menu.Item asChild value="otelite">
+                                <a
+                                  href="http://localhost:4000"
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  Otelite
+                                </a>
+                              </Menu.Item>
+                              <Menu.Item asChild value="opencode">
+                                <a
+                                  href="http://localhost:4096"
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  Opencode
+                                </a>
+                              </Menu.Item>
+                              <Menu.Item asChild value="signoz">
+                                <a
+                                  href="http://localhost:8080"
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  SigNoz
+                                </a>
+                              </Menu.Item>
+                            </>
+                          )}
+                        </Menu.Content>
+                      </Menu.Positioner>
+                    </Menu.Root>
+                  </Box>
+                </Center>
+              </nav>
+            </header>
+            <main
+              className="min-h-[calc(100dvh-4rem)]"
+              id="main-content"
+              tabIndex={-1}
+            >
+              <div className="mx-auto max-w-7xl px-3 pt-3">
+                <SuspendedAccountNotice />
+              </div>
+              {children}
+            </main>
+            <div
+              aria-atomic="true"
+              aria-live="polite"
+              className="sr-only"
+              id="route-announcer"
+            />
+            <ClientOnly fallback={null}>
+              <Toaster />
+              {import.meta.env.DEV && (
+                <TanStackDevtools
+                  plugins={[
+                    {
+                      name: "TanStack Query",
+                      render: <ReactQueryDevtoolsPanel />,
+                    },
+                    {
+                      name: "TanStack Router",
+                      render: <TanStackRouterDevtoolsPanel />,
+                    },
+                    {
+                      name: "TanStack Form",
+                      render: <FormDevtoolsPanel />,
+                    },
+                    {
+                      name: "TanStack Pacer",
+                      render: <PacerDevtoolsPanel />,
+                    },
+                  ]}
+                />
+              )}
+            </ClientOnly>
+            <Scripts />
+          </Provider>
+        </body>
+      </html>
+    </CapabilitiesProvider>
   );
 }
 

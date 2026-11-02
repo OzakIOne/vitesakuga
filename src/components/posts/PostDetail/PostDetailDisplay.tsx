@@ -19,8 +19,7 @@ import { Button } from "src/components/ui/button";
 import { Field, Input, Textarea } from "src/components/ui/field";
 import { Box, HStack, VStack } from "src/components/ui/layout";
 import { TagInput } from "src/components/ui/tag-input";
-import { roleHasPermission } from "src/lib/auth/policy";
-import { roleOf } from "src/lib/auth/roles";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import { useUpdatePost } from "src/lib/posts/posts.hooks";
 import type { Tag } from "src/lib/posts/posts.schema";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
@@ -35,8 +34,6 @@ type PostDetailDisplayProps = {
   seriesNavigation: SeriesNavigation | null;
   seriesPosts: Awaited<ReturnType<typeof fetchSeriesHub>>["posts"] | undefined;
   images?: string[] | undefined;
-  currentUserId?: string | undefined;
-  currentUserRole?: string | undefined;
 };
 
 type EditState = {
@@ -103,9 +100,8 @@ export function PostDetailDisplay({
   seriesNavigation,
   seriesPosts,
   images,
-  currentUserId,
-  currentUserRole,
 }: PostDetailDisplayProps) {
+  const { actorId, can, canOnOwned, hasMutationActor } = useCapabilities();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showSuggestionDialog, setShowSuggestionDialog] = useState(false);
@@ -126,14 +122,14 @@ export function PostDetailDisplay({
     tagsDraft,
   } = editState;
 
-  const isOwner = currentUserId === user.id;
+  const isOwner = actorId === user.id;
+  const canEditPost = canOnOwned({
+    ownerId: user.id,
+    own: "posts:edit-own",
+    any: "posts:edit-any",
+  });
   const canSuggestEdit =
-    currentUserId !== undefined &&
-    !isOwner &&
-    roleHasPermission(
-      roleOf({ id: currentUserId, role: currentUserRole }),
-      "posts:suggest-edit",
-    );
+    actorId !== null && !isOwner && can("posts:suggest-edit");
 
   const updatePostMutation = useUpdatePost(post);
 
@@ -169,7 +165,7 @@ export function PostDetailDisplay({
   return (
     <VStack align="stretch" gap={4}>
       <Box border="1px" borderRadius="md" p={4} shadow="md">
-        {isEditing && isOwner ? (
+        {isEditing && canEditPost ? (
           <div className="space-y-4">
             <Input
               aria-label="Post title"
@@ -249,14 +245,15 @@ export function PostDetailDisplay({
           </div>
         ) : (
           <Post
-            currentUserId={currentUserId}
             images={images}
             onAddToPlaylist={
-              currentUserId ? () => setShowPlaylistModal(true) : undefined
+              can("playlists:edit-own")
+                ? () => setShowPlaylistModal(true)
+                : undefined
             }
-            onEditClick={isOwner ? startEditing : undefined}
+            onEditClick={canEditPost ? startEditing : undefined}
             onReportClick={
-              currentUserId && !isOwner
+              hasMutationActor && actorId !== user.id
                 ? () => {
                     setShowReportDialog(true);
                   }
@@ -273,31 +270,29 @@ export function PostDetailDisplay({
         )}
       </Box>
 
-      <PostEditHistory
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        isPostOwner={isOwner}
-        postId={post.id}
-      />
+      <PostEditHistory postOwnerId={user.id} postId={post.id} />
 
-      {showPlaylistModal && currentUserId && (
+      {showPlaylistModal && actorId !== null && can("playlists:edit-own") && (
         <PlaylistAddModal
           onCancel={() => {
             setShowPlaylistModal(false);
           }}
           postId={post.id}
-          userId={currentUserId}
+          userId={actorId}
         />
       )}
 
-      {showReportDialog && currentUserId && (
-        <ReportDialog
-          onCancel={() => {
-            setShowReportDialog(false);
-          }}
-          postId={post.id}
-        />
-      )}
+      {showReportDialog &&
+        hasMutationActor &&
+        actorId !== user.id &&
+        actorId !== null && (
+          <ReportDialog
+            onCancel={() => {
+              setShowReportDialog(false);
+            }}
+            postId={post.id}
+          />
+        )}
 
       <SeriesNavigationPanel navigation={seriesNavigation} />
       <MoreFromSeriesPanel
@@ -306,18 +301,14 @@ export function PostDetailDisplay({
         title={post.animeTitle}
       />
 
-      {showSuggestionDialog && (
+      {showSuggestionDialog && canSuggestEdit && (
         <PostEditSuggestionDialog
           onCancel={() => setShowSuggestionDialog(false)}
           post={post}
         />
       )}
 
-      <Comments
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        postId={post.id}
-      />
+      <Comments postId={post.id} />
     </VStack>
   );
 }

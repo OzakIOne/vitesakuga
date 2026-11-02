@@ -6,8 +6,7 @@ import { Button } from "src/components/ui/button";
 import { Badge } from "src/components/ui/feedback";
 import { Box, HStack, Stack } from "src/components/ui/layout";
 import { Heading, Text } from "src/components/ui/typography";
-import { roleHasPermission } from "src/lib/auth/policy";
-import { roleOf } from "src/lib/auth/roles";
+import { useCapabilities } from "src/lib/auth/capabilities.context";
 import { POST_EDIT_REQUIRED_VOTES } from "src/lib/post-edits/post-edits.config";
 import {
   useApprovePostEdit,
@@ -20,9 +19,7 @@ import { formatDateUtc } from "src/utils/date-format";
 import { FIELD_KEYS, FIELD_LABELS } from "./PostEditSuggestionDialog";
 
 type PostEditHistoryProps = {
-  currentUserId?: string | undefined;
-  currentUserRole?: string | undefined;
-  isPostOwner: boolean;
+  postOwnerId: string;
   postId: number;
 };
 
@@ -88,31 +85,32 @@ function EditFields({ entry }: { entry: PostEditHistoryEntry }) {
 }
 
 function HistoryEntry({
-  currentUserId,
   entry,
-  isPostOwner,
-  currentUserRole,
+  postOwnerId,
   postId,
 }: {
-  currentUserId: string | undefined;
-  currentUserRole: string | undefined;
   entry: PostEditHistoryEntry;
-  isPostOwner: boolean;
+  postOwnerId: string;
   postId: number;
 }) {
   const approve = useApprovePostEdit(postId);
   const reject = useRejectPostEdit(postId);
   const [rejectOpen, setRejectOpen] = useState(false);
-  const role = roleOf({ id: currentUserId, role: currentUserRole });
-  const isStaff = roleHasPermission(role, "edits:approve");
+  const { actorId, can, canOnOwned } = useCapabilities();
+  const isStaff = can("edits:approve");
+  const canEditPost = canOnOwned({
+    ownerId: postOwnerId,
+    own: "posts:edit-own",
+    any: "posts:edit-any",
+  });
   const isEligibleContributor =
-    isStaff || isPostOwner || roleHasPermission(role, "posts:suggest-edit");
+    isStaff || canEditPost || can("posts:suggest-edit");
   const canDecide =
     entry.status === "pending" &&
-    currentUserId !== undefined &&
-    currentUserId !== entry.suggestedBy &&
+    actorId !== null &&
+    actorId !== entry.suggestedBy &&
     isEligibleContributor;
-  const canReject = canDecide && (isStaff || isPostOwner);
+  const canReject = canDecide && (isStaff || canEditPost);
   const busy = approve.isPending || reject.isPending;
 
   return (
@@ -188,12 +186,7 @@ function HistoryEntry({
   );
 }
 
-export function PostEditHistory({
-  currentUserId,
-  currentUserRole,
-  isPostOwner,
-  postId,
-}: PostEditHistoryProps) {
+export function PostEditHistory({ postOwnerId, postId }: PostEditHistoryProps) {
   const history = useQuery(postEditsQuery(postId));
   return (
     <Box border="1px" borderRadius="md" p={4} shadow="md">
@@ -213,10 +206,8 @@ export function PostEditHistory({
         <Stack align="stretch" gap={3}>
           {history.data.map((entry) => (
             <HistoryEntry
-              currentUserId={currentUserId}
-              currentUserRole={currentUserRole}
               entry={entry}
-              isPostOwner={isPostOwner}
+              postOwnerId={postOwnerId}
               key={entry.id}
               postId={postId}
             />
