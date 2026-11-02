@@ -4,6 +4,7 @@ import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { useModerationFns } from "./moderation.fn-context";
 
 export const moderationKeys = {
+  accountModerationEvents: ["moderation", "account-moderation-events"] as const,
   gcPreview: ["moderation", "gc-preview"] as const,
   overview: ["moderation", "overview"] as const,
   promotionQueue: ["moderation", "promotion-queue"] as const,
@@ -18,6 +19,17 @@ export function useModerationOverview() {
   return useQuery({
     queryFn: async ({ signal }) => fetchModerationOverview({ signal }),
     queryKey: moderationKeys.overview,
+    staleTime: QUEUE_STALE_MS,
+  });
+}
+
+/** Admin audit history for role changes and account suspensions. */
+export function useAccountModerationEvents() {
+  const { fetchAccountModerationEvents } = useModerationFns();
+  return useQuery({
+    queryFn: async ({ signal }) =>
+      fetchAccountModerationEvents({ data: {}, signal }),
+    queryKey: moderationKeys.accountModerationEvents,
     staleTime: QUEUE_STALE_MS,
   });
 }
@@ -67,9 +79,14 @@ export function useApprovePromotion() {
     errorTitle: "Promotion approval failed",
     mutationFn: async (userId: string) => approvePromotion({ data: userId }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: moderationKeys.promotionQueue,
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.accountModerationEvents,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.promotionQueue,
+        }),
+      ]);
     },
     successDescription: "The user is now an uploader.",
     successTitle: "Promotion approved",
@@ -143,6 +160,9 @@ export function useSuspendUser() {
       suspendUser({ data: input }),
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.accountModerationEvents,
+        }),
         queryClient.invalidateQueries({ queryKey: moderationKeys.overview }),
         queryClient.invalidateQueries({
           queryKey: moderationKeys.promotionQueue,
@@ -164,6 +184,9 @@ export function useUnsuspendUser() {
     mutationFn: async (userId: string) => unsuspendUser({ data: { userId } }),
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.accountModerationEvents,
+        }),
         queryClient.invalidateQueries({ queryKey: moderationKeys.overview }),
         queryClient.invalidateQueries({
           queryKey: moderationKeys.promotionQueue,
@@ -181,12 +204,20 @@ export function useSetUserRole() {
   return useMutationWithFeedback({
     errorFallback: "Could not assign this role.",
     errorTitle: "Role assignment failed",
-    mutationFn: async (input: { role: string; userId: string }) =>
-      assignUserRole({ data: input }),
+    mutationFn: async (input: {
+      reason?: string;
+      role: string;
+      userId: string;
+    }) => assignUserRole({ data: input }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: moderationKeys.promotionQueue,
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.accountModerationEvents,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.promotionQueue,
+        }),
+      ]);
     },
     successTitle: "Role assigned",
   });

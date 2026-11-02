@@ -144,6 +144,7 @@ describe("PromotionsService.approve", () => {
     const ctx = await makeServiceTestLayer(PromotionsServiceLive);
     closeCtx = ctx.close;
     const { db } = ctx;
+    await insertUser(db, { id: "mod-1", role: "moderator" });
     await insertUser(db, { createdAtDaysAgo: 9, id: "future-uploader" });
     await earn(db, "future-uploader", PROMOTION_RULES.minPoints);
     ctx.mockGetSession.mockResolvedValue(
@@ -163,6 +164,20 @@ describe("PromotionsService.approve", () => {
       .where("id", "=", "future-uploader")
       .executeTakeFirstOrThrow();
     expect(promoted.role).toBe("uploader");
+    const events = await db
+      .selectFrom("account_moderation_events")
+      .selectAll()
+      .where("targetUserId", "=", "future-uploader")
+      .execute();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorUserId: "mod-1",
+      kind: "role-changed",
+      newRole: "uploader",
+      previousRole: "novice",
+      reason: "promotion",
+      targetUserId: "future-uploader",
+    });
 
     const reviews = await db
       .selectFrom("promotion_reviews")
@@ -190,6 +205,7 @@ describe("PromotionsService.approve", () => {
     const ctx = await makeServiceTestLayer(PromotionsServiceLive);
     closeCtx = ctx.close;
     const { db } = ctx;
+    await insertUser(db, { id: "mod-1", role: "moderator" });
     await insertUser(db, { createdAtDaysAgo: 9, id: "once-only" });
     await earn(db, "once-only", PROMOTION_RULES.minPoints);
     ctx.mockGetSession.mockResolvedValue(
@@ -218,6 +234,7 @@ describe("PromotionsService.approve", () => {
     const ctx = await makeServiceTestLayer(PromotionsServiceLive);
     closeCtx = ctx.close;
     const { db } = ctx;
+    await insertUser(db, { id: "mod-1", role: "moderator" });
     await insertUser(db, { createdAtDaysAgo: 9, id: "race-candidate" });
     await earn(db, "race-candidate", PROMOTION_RULES.minPoints);
     ctx.mockGetSession.mockResolvedValue(
@@ -374,6 +391,7 @@ describe("PromotionsService.approve", () => {
     const ctx = await makeServiceTestLayer(PromotionsServiceLive);
     closeCtx = ctx.close;
     const { db } = ctx;
+    await insertUser(db, { id: "mod-1", role: "moderator" });
     await insertUser(db, { createdAtDaysAgo: 9, id: "contested" });
     await earn(db, "contested", PROMOTION_RULES.minPoints);
     ctx.mockGetSession.mockResolvedValue(

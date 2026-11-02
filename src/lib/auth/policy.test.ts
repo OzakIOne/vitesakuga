@@ -14,6 +14,7 @@ import type { Role } from "./roles";
 import type { AuthorizedActor } from "./session.effect";
 
 const EVERY_PERMISSION: ReadonlyArray<Permission> = [
+  "audit:view",
   "comments:delete-any",
   "comments:delete-own",
   "comments:edit-any",
@@ -90,6 +91,7 @@ const GRANTS_BY_ROLE: ReadonlyArray<{
   {
     role: "admin",
     granted: [
+      "audit:view",
       "comments:delete-any",
       "comments:delete-own",
       "comments:edit-any",

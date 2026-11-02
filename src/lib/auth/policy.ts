@@ -26,6 +26,7 @@ export type PolicyError =
  * at compile time, so a typo is a type error, not an authorization hole.
  */
 const PERMISSION_CONFIG = {
+  audit: ["view"],
   comments: ["delete-any", "delete-own", "edit-any", "edit-own"],
   edits: ["approve"],
   moderation: ["view"],
@@ -83,6 +84,7 @@ const MODERATOR_PERMISSIONS: ReadonlyArray<Permission> = [
 
 const ADMIN_PERMISSIONS: ReadonlyArray<Permission> = [
   ...MODERATOR_PERMISSIONS,
+  "audit:view",
   "roles:assign",
   "storage:maintain",
   "users:suspend-staff",

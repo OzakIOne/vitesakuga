@@ -20,6 +20,7 @@ import { KyselyDB } from "../db/context";
 import type { EffectTransaction } from "../db/effect-kysely";
 import { SqlError } from "../db/effect-kysely";
 import type { DB } from "../db/kysely";
+import type { ModerationEventKind } from "../db/schema/sakuga.schema";
 import { toIsoTimestamp } from "../db/schema/timestamp";
 import { parseStrict } from "../effect/schema.utils";
 import {
@@ -62,6 +63,19 @@ export type ModerationOverview = {
   readonly reports: ReadonlyArray<ModerationReportRow>;
 };
 
+export type AccountModerationEvent = {
+  readonly actorName: string | null;
+  readonly actorUserId: string | null;
+  readonly createdAt: string;
+  readonly id: number;
+  readonly kind: ModerationEventKind;
+  readonly newRole: Role | null;
+  readonly previousRole: Role | null;
+  readonly reason: string | null;
+  readonly targetName: string | null;
+  readonly targetUserId: string | null;
+};
+
 type ModerationFailure =
   | AccountSuspendedError
   | ForbiddenError
@@ -89,9 +103,19 @@ export class ModerationService extends Context.Service<
 
     /** Admin-only direct rank assignment (demotions included). */
     readonly setUserRole: (input: {
+      reason?: string | undefined;
       role: string;
       userId: string;
     }) => Effect.Effect<{ userId: string }, ModerationFailure, SessionService>;
+
+    /** Admin-only recent history of role changes and account suspensions. */
+    readonly listRecentAccountModerationEvents: (input: {
+      targetUserId?: string | undefined;
+    }) => Effect.Effect<
+      ReadonlyArray<AccountModerationEvent>,
+      ModerationFailure,
+      SessionService
+    >;
 
     /** Moderator or admin suspension with a reason; idempotent on an already-suspended account. */
     readonly suspendUser: (input: {
@@ -184,8 +208,76 @@ export class ModerationService extends Context.Service<
       };
     });
 
+    const listRecentAccountModerationEvents = Effect.fn(
+      "ModerationService.listRecentAccountModerationEvents",
+    )(function* (input: { targetUserId?: string | undefined }) {
+      const sessions = yield* SessionService;
+      const actor = yield* sessions.requireReadActor("You must be logged in.");
+      yield* authorize({
+        actor,
+        permission: "audit:view",
+        forbiddenMessage: "Only admins can view account moderation history.",
+      });
+
+      const query = db
+        .selectFrom("account_moderation_events")
+        .leftJoin(
+          "user as actor",
+          "actor.id",
+          "account_moderation_events.actorUserId",
+        )
+        .leftJoin(
+          "user as target",
+          "target.id",
+          "account_moderation_events.targetUserId",
+        )
+        .select([
+          "actor.name as actorName",
+          "account_moderation_events.actorUserId",
+          "account_moderation_events.createdAt",
+          "account_moderation_events.id",
+          "account_moderation_events.kind",
+          "account_moderation_events.newRole",
+          "account_moderation_events.previousRole",
+          "account_moderation_events.reason",
+          "target.name as targetName",
+          "account_moderation_events.targetUserId",
+        ]);
+      const filteredQuery =
+        input.targetUserId === undefined
+          ? query
+          : query.where(
+              "account_moderation_events.targetUserId",
+              "=",
+              input.targetUserId,
+            );
+      const rows = yield* db.execute(
+        filteredQuery
+          .orderBy("account_moderation_events.createdAt", "desc")
+          .orderBy("account_moderation_events.id", "desc")
+          .limit(MOD_QUEUE_LIMIT),
+      );
+
+      return rows.map((row) => ({
+        actorName: row.actorName,
+        actorUserId: row.actorUserId,
+        createdAt: toIsoTimestamp(row.createdAt),
+        id: row.id,
+        kind: row.kind,
+        newRole: row.newRole,
+        previousRole: row.previousRole,
+        reason: row.reason,
+        targetName: row.targetName,
+        targetUserId: row.targetUserId,
+      }));
+    });
+
     const setUserRole = Effect.fn("ModerationService.setUserRole")(
-      function* (input: { role: string; userId: string }) {
+      function* (input: {
+        reason?: string | undefined;
+        role: string;
+        userId: string;
+      }) {
         const sessions = yield* SessionService;
         const actor = yield* sessions.requireActor("You must be logged in.");
         yield* authorize({
@@ -237,6 +329,16 @@ export class ModerationService extends Context.Service<
                 .set({ role: targetRole })
                 .where("id", "=", input.userId),
             );
+            yield* trx.execute(
+              trx.insertInto("account_moderation_events").values({
+                actorUserId: actor.id,
+                kind: "role-changed",
+                newRole: targetRole,
+                previousRole: target.value.role,
+                reason: input.reason?.trim() || null,
+                targetUserId: input.userId,
+              }),
+            );
             return Option.some(target.value.role);
           }),
         );
@@ -263,7 +365,7 @@ export class ModerationService extends Context.Service<
       const target = yield* trx.executeTakeFirstOption(
         trx
           .selectFrom("user")
-          .select(["id", "role", "suspendedAt"])
+          .select(["id", "role", "suspendedAt", "suspendedReason"])
           .where("id", "=", userId)
           .forUpdate(),
       );
@@ -339,6 +441,16 @@ export class ModerationService extends Context.Service<
                 })
                 .where("id", "=", input.userId),
             );
+            yield* trx.execute(
+              trx.insertInto("account_moderation_events").values({
+                actorUserId: actor.id,
+                kind: "suspended",
+                newRole: null,
+                previousRole: null,
+                reason,
+                targetUserId: input.userId,
+              }),
+            );
           }),
         );
 
@@ -375,6 +487,16 @@ export class ModerationService extends Context.Service<
                 .set({ suspendedAt: null, suspendedReason: null })
                 .where("id", "=", input.userId),
             );
+            yield* trx.execute(
+              trx.insertInto("account_moderation_events").values({
+                actorUserId: actor.id,
+                kind: "unsuspended",
+                newRole: null,
+                previousRole: null,
+                reason: target.suspendedReason,
+                targetUserId: input.userId,
+              }),
+            );
           }),
         );
 
@@ -388,7 +510,13 @@ export class ModerationService extends Context.Service<
       },
     );
 
-    return { overview, setUserRole, suspendUser, unsuspendUser };
+    return {
+      listRecentAccountModerationEvents,
+      overview,
+      setUserRole,
+      suspendUser,
+      unsuspendUser,
+    };
   }),
 }) {}
 
@@ -405,6 +533,21 @@ export const fetchModerationOverview = createServerFn().handler(
     base: baseLayerFactories.auth,
   }),
 );
+
+export const fetchAccountModerationEvents = createServerFn()
+  .validator(
+    parseStrict(
+      Schema.Struct({ targetUserId: Schema.optional(Schema.String) }),
+    ),
+  )
+  .handler(
+    createEndpointHandler({
+      service: ModerationService,
+      operation: "listRecentAccountModerationEvents",
+      layer: ModerationServiceLive,
+      base: baseLayerFactories.auth,
+    }),
+  );
 
 export const suspendUser = createServerFn({ method: "POST" })
   .validator(
@@ -440,7 +583,15 @@ export const unsuspendUser = createServerFn({ method: "POST" })
 
 export const assignUserRole = createServerFn({ method: "POST" })
   .validator(
-    parseStrict(Schema.Struct({ role: Schema.String, userId: Schema.String })),
+    parseStrict(
+      Schema.Struct({
+        reason: Schema.optional(
+          Schema.String.pipe(Schema.check(Schema.isMaxLength(500))),
+        ),
+        role: Schema.String,
+        userId: Schema.String,
+      }),
+    ),
   )
   .handler(
     createEndpointHandler({

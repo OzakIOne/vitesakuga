@@ -319,6 +319,90 @@ describe("ModerationService.overview", () => {
   });
 });
 
+describe("ModerationService.listRecentAccountModerationEvents", () => {
+  it("refuses moderators", async () => {
+    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+    closeCtx = ctx.close;
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "mod-1", role: "moderator" }),
+    );
+
+    const error = await ctx.runEffect(
+      Effect.flip(
+        Effect.flatMap(ModerationService, (service) =>
+          service.listRecentAccountModerationEvents({}),
+        ),
+      ),
+    );
+
+    expect(error._tag).toBe("ForbiddenError");
+  });
+
+  it("returns the target's events newest-first to admins", async () => {
+    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-1", role: "admin" });
+    await insertUser(db, { id: "target-1", role: "novice" });
+    await insertUser(db, { id: "target-2", role: "novice" });
+    await db
+      .insertInto("account_moderation_events")
+      .values([
+        {
+          actorUserId: "admin-1",
+          createdAt: new Date("2026-01-01T10:00:00.000Z"),
+          kind: "role-changed",
+          newRole: "uploader",
+          previousRole: "novice",
+          reason: "old reason",
+          targetUserId: "target-1",
+        },
+        {
+          actorUserId: "admin-1",
+          createdAt: new Date("2026-01-03T10:00:00.000Z"),
+          kind: "role-changed",
+          newRole: "admin",
+          previousRole: "uploader",
+          reason: "other account",
+          targetUserId: "target-2",
+        },
+        {
+          actorUserId: "admin-1",
+          createdAt: new Date("2026-01-02T10:00:00.000Z"),
+          kind: "role-changed",
+          newRole: "moderator",
+          previousRole: "uploader",
+          reason: "new reason",
+          targetUserId: "target-1",
+        },
+      ])
+      .execute();
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-1", role: "admin" }),
+    );
+
+    const events = await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) =>
+        service.listRecentAccountModerationEvents({ targetUserId: "target-1" }),
+      ),
+    );
+
+    expect(events).toHaveLength(2);
+    expect(events.map((event) => event.reason)).toEqual([
+      "new reason",
+      "old reason",
+    ]);
+    expect(events.map((event) => event.targetUserId)).toEqual([
+      "target-1",
+      "target-1",
+    ]);
+    expect(events[0]).toMatchObject({
+      actorName: "admin-1",
+      targetName: "target-1",
+    });
+  });
+});
+
 describe("ModerationService.setUserRole", () => {
   it("refuses role assignment from an old session and leaves the role unchanged", async () => {
     const ctx = await makeServiceTestLayer(
@@ -498,6 +582,12 @@ describe("ModerationService.setUserRole", () => {
       .where("id", "=", "mod-1")
       .executeTakeFirstOrThrow();
     expect(row.role).toBe("moderator");
+    const events = await db
+      .selectFrom("account_moderation_events")
+      .selectAll()
+      .where("targetUserId", "=", "mod-1")
+      .execute();
+    expect(events).toHaveLength(0);
   });
 
   it("persists the role change for a valid target", async () => {
@@ -512,7 +602,11 @@ describe("ModerationService.setUserRole", () => {
     );
     const result = await ctx.runEffect(
       Effect.flatMap(ModerationService, (service) =>
-        service.setUserRole({ role: "moderator", userId: "target-1" }),
+        service.setUserRole({
+          reason: "corrected onboarding",
+          role: "moderator",
+          userId: "target-1",
+        }),
       ),
     );
 
@@ -523,6 +617,57 @@ describe("ModerationService.setUserRole", () => {
       .where("id", "=", "target-1")
       .executeTakeFirstOrThrow();
     expect(row.role).toBe("moderator");
+    const events = await db
+      .selectFrom("account_moderation_events")
+      .selectAll()
+      .where("targetUserId", "=", "target-1")
+      .execute();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorUserId: "admin-1",
+      kind: "role-changed",
+      newRole: "moderator",
+      previousRole: "novice",
+      reason: "corrected onboarding",
+      targetUserId: "target-1",
+    });
+  });
+
+  it("keeps the audit event if its target account is hard deleted", async () => {
+    const ctx = await makeServiceTestLayer(ModerationServiceLive);
+    closeCtx = ctx.close;
+    const { db } = ctx;
+    await insertUser(db, { id: "admin-1", role: "admin" });
+    await insertUser(db, { id: "target-1", role: "novice" });
+
+    ctx.mockGetSession.mockResolvedValue(
+      makeAuthSession({ id: "admin-1", role: "admin" }),
+    );
+    await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) =>
+        service.setUserRole({
+          reason: "audit target deletion",
+          role: "moderator",
+          userId: "target-1",
+        }),
+      ),
+    );
+    await db.deleteFrom("user").where("id", "=", "target-1").execute();
+
+    const events = await ctx.runEffect(
+      Effect.flatMap(ModerationService, (service) =>
+        service.listRecentAccountModerationEvents({}),
+      ),
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorUserId: "admin-1",
+      kind: "role-changed",
+      reason: "audit target deletion",
+      targetName: null,
+      targetUserId: null,
+    });
   });
 
   it("refuses to demote the last active admin and leaves the role unchanged", async () => {
@@ -552,6 +697,12 @@ describe("ModerationService.setUserRole", () => {
       .where("id", "=", "only-admin")
       .executeTakeFirstOrThrow();
     expect(row.role).toBe("admin");
+    const events = await db
+      .selectFrom("account_moderation_events")
+      .selectAll()
+      .where("targetUserId", "=", "only-admin")
+      .execute();
+    expect(events).toHaveLength(0);
   });
 
   it("demotes one of two admins", async () => {
@@ -576,6 +727,20 @@ describe("ModerationService.setUserRole", () => {
       .where("id", "=", "admin-2")
       .executeTakeFirstOrThrow();
     expect(row.role).toBe("moderator");
+    const events = await db
+      .selectFrom("account_moderation_events")
+      .selectAll()
+      .where("targetUserId", "=", "admin-2")
+      .execute();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorUserId: "admin-1",
+      kind: "role-changed",
+      newRole: "moderator",
+      previousRole: "admin",
+      reason: null,
+      targetUserId: "admin-2",
+    });
   });
 
   it("keeps one admin when two admins demote each other at the same time", async () => {

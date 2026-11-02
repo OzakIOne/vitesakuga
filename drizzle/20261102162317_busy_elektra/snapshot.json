@@ -1,0 +1,360 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "01af6b2a-3b8d-4ea1-ac10-00d608e2f412",
+  "prevIds": [
+    "7d46f7ab-1e35-4112-a230-349f5131dd13"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_moderation_events"
+      ],
+      "writes": [
+        "s|tbl|public.account_moderation_events",
+        "n|tbl|public.account_moderation_events",
+        "e|tbl|public.account_moderation_events",
+        "n|rel|public.account_moderation_events",
+        "n|type|public.account_moderation_events",
+        "n|rel|public.account_moderation_events_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "account_moderation_events",
+        "account_moderation_events_target_created_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.account_moderation_events_target_created_at_idx",
+        "n|idx|public.account_moderation_events_target_created_at_idx",
+        "e|idx|public.account_moderation_events_target_created_at_idx",
+        "n|rel|public.account_moderation_events_target_created_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.account_moderation_events",
+        "n|sch|public",
+        "n|col|public.account_moderation_events.targetUserId",
+        "n|col|public.account_moderation_events.createdAt"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_moderation_events"
+      ],
+      "writes": [
+        "s|fk|public.account_moderation_events.account_moderation_events_actorUserId_user_id_fkey",
+        "n|fk|public.account_moderation_events.account_moderation_events_actorUserId_user_id_fkey",
+        "e|fk|public.account_moderation_events.account_moderation_events_actorUserId_user_id_fkey",
+        "n|con|public.account_moderation_events.account_moderation_events_actorUserId_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_moderation_events",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.account_moderation_events.actorUserId",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_moderation_events"
+      ],
+      "writes": [
+        "s|fk|public.account_moderation_events.account_moderation_events_targetUserId_user_id_fkey",
+        "n|fk|public.account_moderation_events.account_moderation_events_targetUserId_user_id_fkey",
+        "e|fk|public.account_moderation_events.account_moderation_events_targetUserId_user_id_fkey",
+        "n|con|public.account_moderation_events.account_moderation_events_targetUserId_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_moderation_events",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.account_moderation_events.targetUserId",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "account_moderation_events",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "actorUserId",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "createdAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "kind",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "newRole",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "previousRole",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "reason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "targetUserId",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_target_created_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "targetUserId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "createdAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_actorUserId_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "actorUserId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_targetUserId_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "targetUserId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_kind_check",
+        "value": "\"kind\" IN ('role-changed', 'suspended', 'unsuspended')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_previous_role_check",
+        "value": "\"previousRole\" IS NULL OR \"previousRole\" IN ('novice', 'uploader', 'moderator', 'admin')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_new_role_check",
+        "value": "\"newRole\" IS NULL OR \"newRole\" IN ('novice', 'uploader', 'moderator', 'admin')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_moderation_events",
+        "name": "account_moderation_events_role_shape_check",
+        "value": "(\"kind\" = 'role-changed' AND \"previousRole\" IS NOT NULL AND \"newRole\" IS NOT NULL) OR (\"kind\" <> 'role-changed' AND \"previousRole\" IS NULL AND \"newRole\" IS NULL)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

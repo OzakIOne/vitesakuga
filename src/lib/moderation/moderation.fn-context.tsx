@@ -9,6 +9,7 @@ import type {
 import type { previewGc, runGc } from "../videos/videos.service";
 import type {
   assignUserRole,
+  fetchAccountModerationEvents,
   fetchModerationOverview,
   suspendUser,
   unsuspendUser,
@@ -18,6 +19,7 @@ export type ModerationFns = {
   approveEdit: typeof approveEdit;
   approvePromotion: typeof approvePromotion;
   assignUserRole: typeof assignUserRole;
+  fetchAccountModerationEvents: typeof fetchAccountModerationEvents;
   fetchModerationOverview: typeof fetchModerationOverview;
   fetchPromotionQueue: typeof fetchPromotionQueue;
   previewGc: typeof previewGc;

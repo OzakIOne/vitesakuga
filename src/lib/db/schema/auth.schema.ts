@@ -10,10 +10,22 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { Array, DateTime, Schema, String } from "effect";
+import { DateTime, Schema } from "effect";
 
 import { type Role, RoleSchema } from "../../auth/roles";
 import { TimestampSchema } from "./timestamp";
+
+export const sqlLiteralList = (literals: readonly [string, ...string[]]) => {
+  const fragments: ReturnType<typeof sql.raw>[] = [];
+  for (const literal of literals) {
+    let escaped = "";
+    for (const character of literal) {
+      escaped += character === "'" ? "''" : character;
+    }
+    fragments.push(sql.raw(`'${escaped}'`));
+  }
+  return sql.join(fragments, sql`, `);
+};
 
 export const user = pgTable(
   "user",
@@ -46,12 +58,7 @@ export const user = pgTable(
   () => [
     check(
       "user_role_check",
-      sql`"role" IN (${sql.join(
-        Array.map(RoleSchema.literals, (role) =>
-          sql.raw(`'${String.replaceAll("'", "''")(role)}'`),
-        ),
-        sql`, `,
-      )})`,
+      sql`"role" IN (${sqlLiteralList(RoleSchema.literals)})`,
     ),
   ],
 );

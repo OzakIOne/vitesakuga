@@ -8,6 +8,7 @@ import { previewGc, runGc } from "../videos/videos.service";
 import type { ModerationFns } from "./moderation.fn-context";
 import {
   assignUserRole,
+  fetchAccountModerationEvents,
   fetchModerationOverview,
   suspendUser,
   unsuspendUser,
@@ -17,6 +18,7 @@ export const defaultModerationFns: ModerationFns = {
   approveEdit,
   approvePromotion,
   assignUserRole,
+  fetchAccountModerationEvents,
   fetchModerationOverview,
   fetchPromotionQueue,
   previewGc,

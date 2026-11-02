@@ -1,21 +1,55 @@
+import {
+  Array as EffectArray,
+  Option,
+  Schema,
+  String as EffectString,
+} from "effect";
 import { useState } from "react";
 import { ListSkeleton } from "src/components/LoadingSkeletons";
 import { Button } from "src/components/ui/button";
 import { Alert } from "src/components/ui/feedback";
 import { Input } from "src/components/ui/field";
 import { HStack, Stack } from "src/components/ui/layout";
-import { Text } from "src/components/ui/typography";
-import { Heading } from "src/components/ui/typography";
+import { Heading, Text } from "src/components/ui/typography";
+import { RoleSchema } from "src/lib/auth/roles";
 import {
+  useAccountModerationEvents,
   useModerationOverview,
   useSetUserRole,
 } from "src/lib/moderation/moderation.hooks";
+import type { AccountModerationEvent } from "src/lib/moderation/moderation.service";
 
 const ASSIGNABLE_ROLES = ["novice", "uploader", "moderator", "admin"] as const;
 
 type Feedback = {
   message: string;
   status: "error" | "success";
+};
+
+const accountLabel = (
+  name: string | null,
+  userId: string | null,
+  missingLabel: string,
+): string => {
+  if (name !== null) {
+    return `${name} (${userId})`;
+  }
+  return userId ?? missingLabel;
+};
+
+const eventDescription = (event: AccountModerationEvent): string => {
+  const target = accountLabel(
+    event.targetName,
+    event.targetUserId,
+    "Unknown account",
+  );
+  if (event.kind === "role-changed") {
+    return `changed ${target}'s role from ${event.previousRole} to ${event.newRole}`;
+  }
+  if (event.kind === "suspended") {
+    return `suspended ${target}`;
+  }
+  return `restored ${target}`;
 };
 
 /**
@@ -25,6 +59,7 @@ type Feedback = {
  */
 export function RolesPanel() {
   const overview = useModerationOverview();
+  const accountModerationEvents = useAccountModerationEvents();
   const setUserRole = useSetUserRole();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
@@ -44,23 +79,21 @@ export function RolesPanel() {
     );
   }
 
-  const handleAssign = (userId: string, role: string) => {
+  const handleAssign = (userId: string, role: string, reason: string) => {
     setFeedback(null);
-    setUserRole.mutate(
-      { role, userId },
-      {
-        onError: () =>
-          setFeedback({
-            message: `Could not assign "${role}" to ${userId}.`,
-            status: "error",
-          }),
-        onSuccess: () =>
-          setFeedback({
-            message: `${userId} is now a ${role}.`,
-            status: "success",
-          }),
-      },
-    );
+    const input = reason === "" ? { role, userId } : { reason, role, userId };
+    setUserRole.mutate(input, {
+      onError: () =>
+        setFeedback({
+          message: `Could not assign "${role}" to ${userId}.`,
+          status: "error",
+        }),
+      onSuccess: () =>
+        setFeedback({
+          message: `${userId} is now a ${role}.`,
+          status: "success",
+        }),
+    });
   };
 
   return (
@@ -76,16 +109,30 @@ export function RolesPanel() {
         onSubmit={(event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
-          // SAFETY: the form renders the <input name="userId">; FormData.get
-          // returns its string value, and the non-empty check below guards
-          // empty input.
-          const userId = ((form.get("userId") ?? "") as string).trim();
-          // SAFETY: the form renders the <select name="role">; FormData.get
-          // returns its string value.
-          const role = (form.get("role") ?? "") as string;
-          if (userId !== "" && role !== "") {
-            handleAssign(userId, role);
-          }
+          const parsed = Schema.decodeUnknownOption(
+            Schema.Struct({
+              reason: Schema.String,
+              role: RoleSchema,
+              userId: Schema.String,
+            }),
+          )({
+            reason: form.get("reason"),
+            role: form.get("role"),
+            userId: form.get("userId"),
+          });
+          Option.match(parsed, {
+            onNone: () => undefined,
+            onSome: (value) => {
+              const userId = EffectString.trim(value.userId);
+              if (userId !== "") {
+                handleAssign(
+                  userId,
+                  value.role,
+                  EffectString.trim(value.reason),
+                );
+              }
+            },
+          });
         }}
       >
         <HStack gap={2}>
@@ -95,13 +142,19 @@ export function RolesPanel() {
             placeholder="user id"
             size="sm"
           />
+          <Input
+            aria-label="Reason (optional)"
+            name="reason"
+            placeholder="Reason (optional)"
+            size="sm"
+          />
           <select
             className="border-tone-300 dark:border-tone-600 dark:bg-tone-800 h-8 rounded-md border bg-white px-2 text-sm"
             aria-label="Role"
             defaultValue="uploader"
             name="role"
           >
-            {ASSIGNABLE_ROLES.map((role) => (
+            {EffectArray.map(ASSIGNABLE_ROLES, (role) => (
               <option key={role} value={role}>
                 {role}
               </option>
@@ -120,6 +173,43 @@ export function RolesPanel() {
           </Alert.Content>
         </Alert.Root>
       )}
+      <section aria-labelledby="moderation-history-heading">
+        <Heading as="h3" id="moderation-history-heading" size="md">
+          Recent moderation history
+        </Heading>
+        {accountModerationEvents.isPending && <ListSkeleton count={2} />}
+        {accountModerationEvents.isError && (
+          <Text>Could not load moderation history.</Text>
+        )}
+        {accountModerationEvents.isSuccess &&
+          accountModerationEvents.data.length === 0 && (
+            <Text>No moderation events yet.</Text>
+          )}
+        {accountModerationEvents.isSuccess &&
+          accountModerationEvents.data.length > 0 && (
+            <ul className="mt-2 space-y-2">
+              {EffectArray.map(accountModerationEvents.data, (event) => (
+                <li
+                  className="border-tone-200 dark:border-tone-700 border-t py-2"
+                  key={event.id}
+                >
+                  <p className="text-sm">
+                    {accountLabel(
+                      event.actorName,
+                      event.actorUserId,
+                      "Deleted actor",
+                    )}{" "}
+                    {eventDescription(event)}
+                  </p>
+                  <p className="text-tone-600 dark:text-tone-300 text-xs">
+                    <time dateTime={event.createdAt}>{event.createdAt}</time>
+                    {event.reason !== null && ` · ${event.reason}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+      </section>
     </Stack>
   );
 }

@@ -262,6 +262,53 @@ describe("suspendUser rules", () => {
     }
   });
 
+  it("writes one suspension and restoration event with the original reason", async () => {
+    const ctx = await makeServiceTestLayer(SERVICES_LIVE);
+    try {
+      await insertUser(ctx.db, { id: "mod", role: "moderator" });
+      await insertUser(ctx.db, { id: "nov", role: "novice" });
+      ctx.mockGetSession.mockResolvedValue(
+        makeAuthSession({ id: "mod", role: "moderator", username: "mod" }),
+      );
+
+      await ctx.runEffect(suspend({ reason: "Spam", userId: "nov" }));
+      const suspensionEvents = await ctx.db
+        .selectFrom("account_moderation_events")
+        .selectAll()
+        .where("targetUserId", "=", "nov")
+        .execute();
+      expect(suspensionEvents).toHaveLength(1);
+      expect(suspensionEvents[0]).toMatchObject({
+        actorUserId: "mod",
+        kind: "suspended",
+        newRole: null,
+        previousRole: null,
+        reason: "Spam",
+        targetUserId: "nov",
+      });
+
+      await ctx.runEffect(restore({ userId: "nov" }));
+      await ctx.runEffect(restore({ userId: "nov" }));
+      const events = await ctx.db
+        .selectFrom("account_moderation_events")
+        .selectAll()
+        .where("targetUserId", "=", "nov")
+        .orderBy("id", "asc")
+        .execute();
+      expect(events).toHaveLength(2);
+      expect(events[1]).toMatchObject({
+        actorUserId: "mod",
+        kind: "unsuspended",
+        newRole: null,
+        previousRole: null,
+        reason: "Spam",
+        targetUserId: "nov",
+      });
+    } finally {
+      await ctx.close();
+    }
+  });
+
   it("restores an account and clears its reason", async () => {
     const ctx = await makeServiceTestLayer(SERVICES_LIVE);
     try {
@@ -325,6 +372,12 @@ describe("suspendUser rules", () => {
         .where("id", "=", "nov")
         .executeTakeFirstOrThrow();
       expect(target.suspendedReason).toBe("Spam");
+      const events = await ctx.db
+        .selectFrom("account_moderation_events")
+        .selectAll()
+        .where("targetUserId", "=", "nov")
+        .execute();
+      expect(events).toHaveLength(0);
     } finally {
       await ctx.close();
     }

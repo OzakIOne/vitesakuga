@@ -358,7 +358,16 @@ export class PromotionsService extends Context.Service<
               .where("id", "=", targetUserId)
               .where("role", "=", "novice"),
           );
-
+          yield* trx.execute(
+            trx.insertInto("account_moderation_events").values({
+              actorUserId: reviewer.id,
+              kind: "role-changed",
+              newRole: "uploader",
+              previousRole: target.role,
+              reason: "promotion",
+              targetUserId,
+            }),
+          );
           yield* trx.execute(
             trx.insertInto("promotion_reviews").values({
               pointsAtReview: totalPoints,

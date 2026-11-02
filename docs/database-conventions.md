@@ -30,7 +30,8 @@ This document outlines the conventions and best practices for database interacti
 - Barrel re-export from `src/lib/db/schema/index.ts`
 - Effect Schema insert/select schemas defined in `sakuga.utils.ts` and `auth.schema.ts`
 - Used for Kysely type inference (not for query building — domain services use raw Kysely)
-- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `tagFollows`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `notifications`, `postEdits`, `postEditApprovals`, `videoRevisions`, `mediaOperations`, and `mediaObjects`
+- Domain tables include `tags`, `posts`, `postImages`, `postTags`, `tagFollows`, `postVotes`, `postReports`, `playlists`, `playlistPosts`, `comments`, `commentMentions`, `pointsLedger`, `promotionReviews`, `accountModerationEvents`, `notifications`, `postEdits`, `postEditApprovals`, `videoRevisions`, `mediaOperations`, and `mediaObjects`
+- `account_moderation_events` is an append-only transaction companion to role and suspension updates. Its actor and target FKs are nullable with `ON DELETE SET NULL`; account deletion anonymizes the user row, preserving the links, while a physical row deletion clears only the reference and never removes the history event.
 
 ## Adding a Table or Column
 

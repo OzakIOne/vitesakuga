@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { Schema, SchemaGetter } from "effect";
 
+import { type Role, RoleSchema } from "../../auth/roles";
 import { PostId } from "../../ids";
 import type { MediaOperationResult } from "../../lifecycle/operation-results";
 import type { PointAction } from "../../points/points.config";
@@ -28,7 +29,7 @@ import type {
   SavedSearchDateRange,
   SavedSearchSortBy,
 } from "../../saved-searches/saved-searches.schema";
-import { user } from "./auth.schema";
+import { sqlLiteralList, user } from "./auth.schema";
 import type { PostReportReason, PostSource, PostVote } from "./sakuga.utils";
 
 export const tags = pgTable("tags", {
@@ -328,6 +329,57 @@ export const promotionReviews = pgTable(
   },
   (t) => [
     index("promotion_reviews_user_created_at_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+const ROLE_CHANGED_KIND = "role-changed" as const;
+const ROLE_CHANGED_SQL = sqlLiteralList([ROLE_CHANGED_KIND]);
+
+const MODERATION_EVENT_KINDS = [
+  ROLE_CHANGED_KIND,
+  "suspended",
+  "unsuspended",
+] as const;
+
+export const ModerationEventKindSchema = Schema.Literals(
+  MODERATION_EVENT_KINDS,
+);
+
+export type ModerationEventKind = typeof ModerationEventKindSchema.Type;
+
+export const accountModerationEvents = pgTable(
+  "account_moderation_events",
+  {
+    actorUserId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    id: serial().primaryKey(),
+    kind: text().$type<typeof ModerationEventKindSchema.Type>().notNull(),
+    newRole: text().$type<Role>(),
+    previousRole: text().$type<Role>(),
+    reason: text(),
+    targetUserId: text().references(() => user.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    check(
+      "account_moderation_events_kind_check",
+      sql`"kind" IN (${sqlLiteralList(ModerationEventKindSchema.literals)})`,
+    ),
+    check(
+      "account_moderation_events_previous_role_check",
+      sql`"previousRole" IS NULL OR "previousRole" IN (${sqlLiteralList(RoleSchema.literals)})`,
+    ),
+    check(
+      "account_moderation_events_new_role_check",
+      sql`"newRole" IS NULL OR "newRole" IN (${sqlLiteralList(RoleSchema.literals)})`,
+    ),
+    check(
+      "account_moderation_events_role_shape_check",
+      sql`("kind" = ${ROLE_CHANGED_SQL} AND "previousRole" IS NOT NULL AND "newRole" IS NOT NULL) OR ("kind" <> ${ROLE_CHANGED_SQL} AND "previousRole" IS NULL AND "newRole" IS NULL)`,
+    ),
+    index("account_moderation_events_target_created_at_idx").on(
+      table.targetUserId,
+      table.createdAt,
+    ),
   ],
 );
 
