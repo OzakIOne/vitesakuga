@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { auth } from "src/lib/auth";
+import { auth } from "src/lib/auth/instance";
 import { redirectTwoFactorOAuthCallback } from "src/lib/auth/two-factor-callback-response";
 
 const handleAuthRequest = async (request: Request) =>

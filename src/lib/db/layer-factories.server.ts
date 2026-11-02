@@ -40,7 +40,7 @@ const makeSessionLayer = (
 // the regular local Postgres path via pool.ts).
 const isPglite = envInfra.databaseDriver === "pglite";
 
-type AuthInstance = typeof import("../auth").auth;
+type AuthInstance = typeof import("../auth/instance").auth;
 
 export const makeDBLayer = async () => {
   const dbModule = isPglite
@@ -66,7 +66,7 @@ export const makeDBLayer = async () => {
 
 export const makeAuthLayer = async () => {
   const [{ auth }, { getRequestHeaders }, dbLayer] = await Promise.all([
-    import("../auth"),
+    import("../auth/instance"),
     import("@tanstack/react-start/server"),
     makeDBLayer(),
   ]);
@@ -75,7 +75,7 @@ export const makeAuthLayer = async () => {
 
 export const makeMiddlewareLayer = async () => {
   const [{ auth }, { getRequestHeaders }] = await Promise.all([
-    import("../auth"),
+    import("../auth/instance"),
     import("@tanstack/react-start/server"),
   ]);
   return Layer.mergeAll(

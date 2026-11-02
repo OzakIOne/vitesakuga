@@ -1,5 +1,5 @@
 import { getAuthenticatorName, passkey } from "@better-auth/passkey";
-import { betterAuth, getCurrentAdapter } from "better-auth";
+import { betterAuth, getCurrentAdapter, type Logger } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { captcha, emailOTP, twoFactor, username } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
@@ -7,7 +7,7 @@ import { Option, Redacted, Schema } from "effect";
 import type { Kysely } from "kysely";
 import { envServer } from "src/lib/env/server";
 
-import { type DB, authKysely } from "../db/kysely";
+import type { DB } from "../db/kysely";
 import { USERNAME_MAX_LENGTH } from "../mentions/mentions";
 import { sendVerificationOTP } from "./email-delivery";
 import {
@@ -88,6 +88,7 @@ const twoFactorPluginWithAllSignInMethods = {
 type MakeAuthInput = {
   readonly db: Kysely<DB>;
   readonly sendVerificationOTP: typeof sendVerificationOTP;
+  readonly logger?: Logger;
 };
 
 // `type` is explicit because Better Auth cannot infer the dialect from the
@@ -95,6 +96,7 @@ type MakeAuthInput = {
 export const makeAuth = (input: MakeAuthInput) =>
   betterAuth({
     baseURL: envServer.VITE_BASE_URL,
+    logger: input.logger,
     secret: Redacted.value(envServer.BETTER_AUTH_SECRET),
     database: {
       db: input.db,
@@ -359,8 +361,3 @@ export const makeAuth = (input: MakeAuthInput) =>
       // },
     },
   });
-
-export const auth = makeAuth({
-  db: authKysely,
-  sendVerificationOTP,
-});

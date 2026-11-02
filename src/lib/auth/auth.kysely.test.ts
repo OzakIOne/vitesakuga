@@ -1,10 +1,34 @@
+import { resolve } from "node:path";
+
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import { Kysely } from "kysely";
 import { expect, it } from "vitest";
 
 import { createE2EKysely } from "../db/e2e-db";
+import type { DB } from "../db/kysely";
+import { PGliteDialect } from "../db/pglite-driver";
 import { envServer } from "../env/server";
 import { makeAuth } from "./index";
 
 const SIGN_UP_EMAIL = "kysely.signup@gmail.com";
+
+const createSchemaCheckDatabase = async () => {
+  const pg = await PGlite.create("memory://");
+  try {
+    await migrate(drizzle({ client: pg }), {
+      migrationsFolder: resolve(process.cwd(), "drizzle"),
+    });
+  } catch (error) {
+    await pg.close();
+    throw error;
+  }
+  return {
+    db: new Kysely<DB>({ dialect: new PGliteDialect(pg) }),
+    close: () => pg.close(),
+  };
+};
 
 it("blocks suspended profile changes but allows password changes and active updates", async () => {
   const db = await createE2EKysely();
@@ -143,4 +167,53 @@ it("writes the sign-up user row through the Kysely adapter with the custom role 
     role: "novice",
     username: "kysely_signup",
   });
+});
+
+it("validates the Kysely schema during auth initialization and reports missing tables", async () => {
+  const { db, close } = await createSchemaCheckDatabase();
+  try {
+    const cleanLogs: { level: string; message: string }[] = [];
+    const auth = makeAuth({
+      db,
+      logger: {
+        log: (level, message) => {
+          cleanLogs.push({ level, message });
+        },
+      },
+      sendVerificationOTP: () => Promise.resolve(),
+    });
+    const context = await auth.$context;
+    const checkSchema = context.checkSchema;
+    expect(checkSchema).toBeDefined();
+    if (!checkSchema) throw new Error("Schema check is unavailable");
+    await checkSchema();
+    expect(cleanLogs.filter(({ level }) => level === "error")).toEqual([]);
+
+    await db.schema.dropTable("verification").execute();
+    const missingTableLogs: { level: string; message: string }[] = [];
+    const authWithMissingTable = makeAuth({
+      db,
+      logger: {
+        log: (level, message) => {
+          missingTableLogs.push({ level, message });
+        },
+      },
+      sendVerificationOTP: () => Promise.resolve(),
+    });
+    const missingTableContext = await authWithMissingTable.$context;
+    const checkMissingTableSchema = missingTableContext.checkSchema;
+    expect(checkMissingTableSchema).toBeDefined();
+    if (!checkMissingTableSchema) {
+      throw new Error("Schema check is unavailable");
+    }
+    await expect(checkMissingTableSchema()).rejects.toThrow("verification");
+    expect(
+      missingTableLogs.some(
+        ({ level, message }) =>
+          level === "error" && message.includes("verification"),
+      ),
+    ).toBe(true);
+  } finally {
+    await close();
+  }
 });

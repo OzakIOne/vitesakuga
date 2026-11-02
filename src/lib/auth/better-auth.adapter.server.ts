@@ -3,7 +3,7 @@ import type { UserWithTwoFactor } from "better-auth/plugins";
 
 import type { AuthSessionProvider } from "./context";
 
-type BetterAuthInstance = typeof import("./index").auth;
+type BetterAuthInstance = typeof import("./instance").auth;
 
 /** The only server-side translation point from Better Auth to app auth types. */
 export const makeBetterAuthSessionProvider = (

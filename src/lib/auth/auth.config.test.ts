@@ -1,7 +1,18 @@
 import { Redacted } from "effect";
-import { auth } from "src/lib/auth";
-import { envServer } from "src/lib/env/server";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+
+import { createE2EKysely } from "../db/e2e-db";
+import { envServer } from "../env/server";
+import { makeAuth } from "./index";
+
+let auth: ReturnType<typeof makeAuth>;
+
+beforeAll(async () => {
+  auth = makeAuth({
+    db: await createE2EKysely(),
+    sendVerificationOTP: () => Promise.resolve(),
+  });
+});
 
 describe("auth server config", () => {
   it("decodes the GitHub client secret as a recoverable Redacted", () => {
