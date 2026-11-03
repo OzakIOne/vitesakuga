@@ -42,6 +42,7 @@ export default defineConfig({
       ".agents/**",
       ".commandcode/**",
       ".opencode/**",
+      ".references/**",
       "src/**/*.browser.test.tsx",
     ],
     globals: false, // We are using explicit imports
