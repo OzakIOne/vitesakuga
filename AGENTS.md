@@ -36,7 +36,7 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - format: oxfmt --write .
 - format:check: oxfmt --check .
 - lint: `oxlint . --fix --ignore-pattern '.commandcode/**'`
-- lint:check: `effect-tsgo --tsrs-lint oxlint . --type-check --type-aware --ignore-pattern '.commandcode/**'`
+- lint:check: `effect-tsgo --tsrs-lint=0.21.0-ts7.1.0-beta oxlint . --type-check --type-aware --ignore-pattern '.commandcode/**'`
 - typecheck: `nub run typecheck` (authoritative TypeScript diagnostics, then the `tsrs` fast pass)
 - typecheck:fast: `nub run typecheck:fast` (Rust `tsrs` port of the Effect-patched compiler)
 - server: preview the existing Vite build output with `vite preview`
@@ -46,9 +46,9 @@ Vitesakuga has not launched and has no production users or production data. Revi
 
 ### Type checking
 
-`nub run typecheck` runs the `@effect/tsgo`-patched `tsc` first, then `nub run typecheck:fast`. `typecheck:fast` runs `effect-tsgo tsrs --noEmit`: the Effect build of [`tsrs`](https://github.com/oxc-project/tsrs) that `@effect/tsgo` 0.67.1 ships (tsrs 0.21.0 pinned to TypeScript 7.1 beta). It runs no Effect diagnostics of its own because `diagnostics` stays `false` in `tsconfig.json`; Oxlint owns those rules. The patched `tsc` on TypeScript 7.0.2 remains authoritative for ordinary TypeScript errors. Effect quick fixes, refactors, and completions remain in the `@effect/tsgo` language service.
+`nub run typecheck` runs the `@effect/tsgo`-patched `tsc` first, then `nub run typecheck:fast`. `typecheck:fast` runs `effect-tsgo tsrs@0.21.0-ts7.1.0-beta --noEmit`: the Effect build of [`tsrs`](https://github.com/oxc-project/tsrs) that `@effect/tsgo` 0.67.1 ships. The version is pinned so an `@effect/tsgo` upgrade cannot silently move the fast pass to another tsrs build. It runs no Effect diagnostics of its own because `diagnostics` stays `false` in `tsconfig.json`; Oxlint owns those rules. The patched `tsc` on TypeScript 7.0.2 remains authoritative for ordinary TypeScript errors. Effect quick fixes, refactors, and completions remain in the `@effect/tsgo` language service.
 
-`lint:check` routes Oxlint's type-aware rules, including the `effecttsgo` rules, through `effect-tsgo --tsrs-lint`, so type-aware linting runs on the `tsrs` port of `tsgolint` instead of `tsgolint`. `oxlint-tsgolint` stays installed for editors and for plain `oxlint` runs; `--tsrs-lint` does not use it, and the tsgolint profiling variables (`OXLINT_TSGOLINT_TRACE`, `_CPU`, `_HEAP`, `_ALLOCS`) do not apply in that mode. Run `nub run lint:check` rather than plain `oxlint` when validating, so the Effect rules actually execute.
+`lint:check` routes Oxlint's type-aware rules, including the `effecttsgo` rules, through `effect-tsgo --tsrs-lint=0.21.0-ts7.1.0-beta`, so type-aware linting runs on tsrs's port of `tsgolint` (`tsrs --lint`) instead of `tsgolint`. The `tsrs` version is pinned for the same reason. `oxlint-tsgolint` stays installed for editors and plain `oxlint` runs; `--tsrs-lint` does not use it, and the tsgolint profiling variables (`OXLINT_TSGOLINT_TRACE`, `_CPU`, `_HEAP`, `_ALLOCS`) do not apply in that mode. Run `nub run lint:check` rather than plain `oxlint` when validating, so the Effect rules actually execute.
 
 ### Testing
 
