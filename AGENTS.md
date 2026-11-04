@@ -36,9 +36,9 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - format: oxfmt --write .
 - format:check: oxfmt --check .
 - lint: `oxlint . --fix --ignore-pattern '.commandcode/**'`
-- lint:check: `oxlint . --type-check --type-aware --ignore-pattern '.commandcode/**'`
-- typecheck: `nub run typecheck` (authoritative TypeScript and Effect diagnostics)
-- typecheck:fast: `nub run typecheck:fast` (strict Effect diagnostics from the Rust port)
+- lint:check: `effect-tsgo --tsrs-lint oxlint . --type-check --type-aware --ignore-pattern '.commandcode/**'`
+- typecheck: `nub run typecheck` (authoritative TypeScript diagnostics, then the `tsrs` fast pass)
+- typecheck:fast: `nub run typecheck:fast` (Rust `tsrs` port of the Effect-patched compiler)
 - server: preview the existing Vite build output with `vite preview`
 - start: nub .output/server/index.mjs
 - test: vitest -w
@@ -46,9 +46,9 @@ Vitesakuga has not launched and has no production users or production data. Revi
 
 ### Type checking
 
-`nub run typecheck` runs the `@effect/tsgo`-patched `tsc` first, then `nub run typecheck:fast`. The latter runs [`@yielded/effect-tsrs`](https://github.com/yielded-dev/effect-tsrs) with `--rules all --strict`, enforcing all Effect diagnostics from the Rust [`tsrs`](https://github.com/oxc-project/tsrs) port. `--rules all` intentionally overrides `diagnostics: false` in `tsconfig.json`. It does not use `--type-check`; the `@effect/tsgo`-patched TypeScript 7 compiler remains authoritative for ordinary TypeScript errors. The Rust port bundles TypeScript 7.1 beta, and its published 0.2.3 rules derive from `@effect/tsgo` 0.56.1 while this project uses 0.63.0, so treat it as supplemental Effect diagnostics rather than a version-for-version replacement. Effect quick fixes, refactors, and completions remain in the `@effect/tsgo` language service.
+`nub run typecheck` runs the `@effect/tsgo`-patched `tsc` first, then `nub run typecheck:fast`. `typecheck:fast` runs `effect-tsgo tsrs --noEmit`: the Effect build of [`tsrs`](https://github.com/oxc-project/tsrs) that `@effect/tsgo` 0.67.1 ships (tsrs 0.21.0 pinned to TypeScript 7.1 beta). It runs no Effect diagnostics of its own because `diagnostics` stays `false` in `tsconfig.json`; Oxlint owns those rules. The patched `tsc` on TypeScript 7.0.2 remains authoritative for ordinary TypeScript errors. Effect quick fixes, refactors, and completions remain in the `@effect/tsgo` language service.
 
-The `effect-tsrs` Oxlint adapter is not wired: installed version 0.2.3 supports Oxlint 1.87–1.89, while this project uses 1.90.0. Keep the existing `@effect/tsgo` Oxlint patch until upstream supports 1.90; do not downgrade Oxlint.
+`lint:check` routes Oxlint's type-aware rules, including the `effecttsgo` rules, through `effect-tsgo --tsrs-lint`, so type-aware linting runs on the `tsrs` port of `tsgolint` instead of `tsgolint`. `oxlint-tsgolint` stays installed for editors and for plain `oxlint` runs; `--tsrs-lint` does not use it, and the tsgolint profiling variables (`OXLINT_TSGOLINT_TRACE`, `_CPU`, `_HEAP`, `_ALLOCS`) do not apply in that mode. Run `nub run lint:check` rather than plain `oxlint` when validating, so the Effect rules actually execute.
 
 ### Testing
 
