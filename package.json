@@ -41,6 +41,7 @@
     "test:deployment": "nub exec vitest run scripts/cloudflare-release.test.mjs",
     "test:ee": "playwright test --config=e2e/playwright.config.ts",
     "test:ee:lightpanda": "CDP_HTTP=http://127.0.0.1:9223 E2E_CONFIG=e2e/playwright.lightpanda.config.ts nub e2e/setup-cdp.mjs",
+    "bench:tooling": "bash scripts/bench-tooling.sh",
     "test:ee:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "oc": "opencode web --hostname 0.0.0.0 --mdns",
     "look": "bun scripts/lookup-opencode-session.ts",

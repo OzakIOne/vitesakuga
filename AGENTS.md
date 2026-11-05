@@ -41,7 +41,7 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - typecheck:fast: `nub run typecheck:fast` (Rust `tsrs` port of the Effect-patched compiler)
 - server: preview the existing Vite build output with `vite preview`
 - start: nub .output/server/index.mjs
-- test: vitest -w
+- bench:tooling: `bash scripts/bench-tooling.sh [runs]` (median wall time, CPU and peak RSS for tsgolint vs tsrs lint and tsc vs tsrs typecheck)
 - test:ee: playwright test --config=e2e/playwright.config.ts
 
 ### Type checking
