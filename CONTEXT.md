@@ -103,14 +103,14 @@ for both Alchemy and Vite. Client `VITE_*` vars are baked into the bundle at
 build time, so each stage still needs its own build script. The public Turnstile
 sitekey is the runtime exception: Alchemy binds it to the Worker and
 `/api/turnstile` serves it to the auth forms. Build scripts set
-`APP_ENV` (which env file nub loads: `development`→`.env`, `test`→`.env.test`,
+`APP_ENV` (which env file Varlock loads: `development`→`.env`, `test`→`.env.test`,
 `production`→`.env.production`) and `NODE_ENV` (React runtime) independently —
-nub keys its env-file mode off `APP_ENV`, not `NODE_ENV`.
+Varlock keys its env-file mode off `APP_ENV`, not `NODE_ENV`.
 
 **Build scripts:**
 
-- **Dev** (`sakuga-dev.ozaki.one`): `nub run infra:deploy` — builds automatically via `nub run build:dev` (`APP_ENV=development NODE_ENV=production vite build --mode development` → nub loads `.env` while React runs in production), then deploys.
-- **Prod** (`sakuga.ozaki.one`): `nub run infra:deploy:prod` — builds automatically via `nub run build` (`APP_ENV=production NODE_ENV=production vite build --mode production` → `.env.production`), then deploys.
+- **Dev** (`sakuga-dev.ozaki.one`): `pnpm run infra:deploy` — builds automatically via `pnpm run build:dev` (`APP_ENV=development NODE_ENV=production vite build --mode development` → Varlock loads `.env` while React runs in production), then deploys.
+- **Prod** (`sakuga.ozaki.one`): `pnpm run infra:deploy:prod` — builds automatically via `pnpm run build` (`APP_ENV=production NODE_ENV=production vite build --mode production` → `.env.production`), then deploys.
 
 The deploy scripts (`infra:deploy`, `infra:deploy:prod`) build the correct stage first, then run `scripts/check-prod-build.mjs`, which refuses to upload a bundle whose SSR chunks were compiled with the React dev JSX runtime — that only happens with `NODE_ENV=development vite build`, which 500s every page on Cloudflare (`TypeError: jsxDEV is not a function`, surfaced as `{"status":500,"unhandled":true,"message":"HTTPError"}`). The build scripts make that poisoning impossible; the guard is belt-and-braces for direct `alchemy deploy` invocations.
 

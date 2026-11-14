@@ -2,15 +2,15 @@
 
 ## Commands
 
-Use `nub` for all project commands:
+Use `pnpm` for all project commands:
 
 ```sh
-nub exec vitest run                 # all unit/integration tests
-nub exec vitest run path/to/test.ts # one test file
-nub run test:deployment             # deployment monitor/rollback decisions
-nub run test                        # Vitest watch mode
-nub run test:browser                # Browser Mode component tests
-nub run test:ee                     # Playwright e2e suite
+pnpm exec vitest run                 # all unit/integration tests
+pnpm exec vitest run path/to/test.ts # one test file
+pnpm run test:deployment             # deployment monitor/rollback decisions
+pnpm run test                        # Vitest watch mode
+pnpm run test:browser                # Browser Mode component tests
+pnpm run test:ee                     # Playwright e2e suite
 ```
 
 Vitest is configured with a maximum of four workers in `vitest.config.ts`. The
@@ -50,7 +50,7 @@ Cloudflare or Wrangler credentials.
 
 Component tests that exercise the real browser DOM use Vitest Browser Mode with
 Chromium and `vitest-browser-react`. They use the `*.browser.test.tsx` suffix
-and run separately with `nub run test:browser`; the regular Vitest command
+and run separately with `pnpm run test:browser`; the regular Vitest command
 continues to cover Node, service, and hook tests.
 
 Browser Mode is intended for component behavior and browser APIs, not as a
@@ -60,7 +60,7 @@ hook state or server behavior should remain in the Node project.
 The recorded e2e coverage includes authentication, comments, conversion,
 account deletion, accessibility regressions, hydration, mentions, passkeys,
 playlists, shortcuts, toasts, 2FA, uploads, and votes. Use
-`nub exec playwright test --config=e2e/playwright.config.ts --list` to inspect
+`pnpm exec playwright test --config=e2e/playwright.config.ts --list` to inspect
 the current discovered test list without running it.
 
 ## Test conventions

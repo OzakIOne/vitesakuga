@@ -10,18 +10,18 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        nub = import ./nix/nub.nix { inherit pkgs; };
+        pnpm = import ./nix/pnpm.nix { inherit pkgs; };
       in
       {
-        packages.nub = nub;
-        packages.default = nub;
+        packages.pnpm = pnpm;
+        packages.default = pnpm;
 
         devShells.default = pkgs.mkShell {
           name = "vitesakuga";
 
           packages = [
-            nub
-            pkgs.nodejs_26
+            pnpm
+            pkgs.nodejs_latest
             pkgs.pkg-config
             pkgs.python3
             pkgs.vips
@@ -41,7 +41,7 @@
               echo "→ Copy .env.example to .env and configure"
             fi
 
-            echo "→ nub install && nub run dcu && nub run db migrate && nub run dev"
+            echo "→ pnpm install && pnpm run dcu && pnpm run db migrate && pnpm run dev"
           '';
         };
       }

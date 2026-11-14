@@ -40,8 +40,8 @@ This document outlines the conventions and best practices for database interacti
 - Declare the real database default in Drizzle (`.defaultNow()`, `.default(...)`), so the type reflects it. A `$defaultFn` also makes the column optional on insert, but it sets no database default.
 - Narrow text and JSON columns with `.$type<T>()` (for example `.$type<Role>()`, `.$type<PostEditPayload>()`), so the type never widens to `string`. For JSON columns, use the parsed JSON value shape and pass objects to database writers; stringify only for textual transports such as multipart `FormData`, then parse and validate received JSON with its domain schema.
 - Declare database invariants in the Drizzle table's extra config with `check(...)`; `user.role` is checked against `RoleSchema.literals` and keeps its `'novice'` default.
-- A migration that sets a default by hand must also be recorded in the latest `drizzle/*/snapshot.json`. Otherwise `nub run db generate` emits a migration that is already applied.
-- `nub run db generate` must print `No schema changes` after a type-only or `$defaultFn` change. Add type-level expectations to `src/lib/db/kysely-schema.type-test.ts` when a precise type matters.
+- A migration that sets a default by hand must also be recorded in the latest `drizzle/*/snapshot.json`. Otherwise `pnpm run db generate` emits a migration that is already applied.
+- `pnpm run db generate` must print `No schema changes` after a type-only or `$defaultFn` change. Add type-level expectations to `src/lib/db/kysely-schema.type-test.ts` when a precise type matters.
 
 ## Effect Layer Pattern
 
@@ -61,7 +61,7 @@ This document outlines the conventions and best practices for database interacti
 
 ## Migrations
 
-- Follow Drizzle Kit migration workflow via `nub run db generate`, `nub run db push`, `nub run db migrate` (stage-aware: `STAGE=local|dev|prod nub run db <command>`)
+- Follow Drizzle Kit migration workflow via `pnpm run db generate`, `pnpm run db push`, `pnpm run db migrate` (stage-aware: `STAGE=local|dev|prod pnpm run db <command>`)
 
 ## TanStack DB Collections
 

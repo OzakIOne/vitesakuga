@@ -23,7 +23,7 @@ Controls **build-time behavior of Vite itself**.
 | **`import.meta.env.MODE`**  | Baked string literal available in code — `import.meta.env.DEV` / `import.meta.env.PROD` derived from it |
 | **Conditional code blocks** | `if (import.meta.env.MODE !== "production")` — strip or keep based on mode                              |
 
-In this repository, `APP_ENV` is the stage selector used by Nub and Nitro before Vite runs. It maps `development`/`dev` to `.env`, `test`/`local` to `.env.test`, and `production`/`prod` to `.env.production`. `--mode` still controls Vite's own mode and `import.meta.env.MODE`; it is not a replacement for `APP_ENV`.
+In this repository, `APP_ENV` is the stage selector used by Varlock and Nitro before Vite runs. It maps `development`/`dev` to `.env`, `test`/`local` to `.env.test`, and `production`/`prod` to `.env.production`. `--mode` still controls Vite's own mode and `import.meta.env.MODE`; it is not a replacement for `APP_ENV`.
 
 It does **not** change `NODE_ENV`. They are independent.
 
@@ -42,9 +42,9 @@ vite build --mode development
 
 ### Implications for our build scripts
 
-Nub loads `.env` files itself (`.env`, `.env.[mode]`, `.env.local`, …) before the
-script runs, using an `[mode]` slot selected by `APP_ENV` (falling back to a
-clamped `NODE_ENV`). That makes `APP_ENV` the **stage selector** (which env
+`varlock run --` loads `.env` files (`.env`, `.env.[mode]`, `.env.local`, …) before the
+script runs, using an `[mode]` slot selected by `APP_ENV` (defaulting to
+`development` in `.env.schema`). That makes `APP_ENV` the **stage selector** (which env
 file loads), fully decoupled from `NODE_ENV` (the React runtime). Each script
 pins both explicitly:
 
@@ -53,7 +53,7 @@ pins both explicitly:
 "build:dev": "APP_ENV=development NODE_ENV=production  vite build --mode development",
 ```
 
-- `APP_ENV` tells nub which stage's env file to read: `development` → `.env`
+- `APP_ENV` tells Varlock which stage's env file to read: `development` → `.env`
   (dev vars), `test` → `.env.test`, `production` → `.env.production`.
 - `NODE_ENV=production` is pinned on every deployable build line, so React's
   production runtime is always used — even if `.env` sneaks in
@@ -89,7 +89,7 @@ client-facing `VITE_E2E_MODE` flag.
 ## Cloudflare dev runner compatibility
 
 The project pins `nitro@3.0.260610-beta` while using Vite 8.3.x. Updating to
-`nitro@3.0.260903-beta` still makes `nub run dev` fail with
+`nitro@3.0.260903-beta` still makes `pnpm run dev` fail with
 `ReferenceError: module is not defined` when the Workerd module evaluator loads
 React's CommonJS entry. Keep the pinned Nitro version until an upgrade passes
 the dev-server smoke check as well as the deployable build.

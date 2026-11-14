@@ -19,14 +19,14 @@ Vitesakuga has not launched and has no production users or production data. Revi
 
 ## Package Manager
 
-**Never use npm or pnpm. Always use `nub`** (`nub install`, `nub add`, `nub run <script>`, `nub exec <bin>`). npm and pnpm are forbidden in this project. `nub` respects the existing `pnpm-lock.yaml` and resolves the Node.js 26 runtime declared by the project; do not install Node globally for this repository.
+**Always use pnpm 12** (`pnpm install`, `pnpm add`, `pnpm run <script>`, `pnpm exec <bin>`); npm, yarn and bun are not used in this project. `packageManager` in `package.json` pins the pnpm version, and the flake dev shell (`nix develop`) provides pnpm and Node.js 26; do not install Node or pnpm globally for this repository. Env-dependent scripts (`dev*`, `build*`, `start`, `server`, `infra:*`, `test:ee*`) run through `varlock run --`, which loads and validates the stage env file selected by `APP_ENV`.
 
 ## Build, Lint, and Test Commands
 
 ### General Commands
 
 - build: `APP_ENV=production NODE_ENV=production vite build --mode production` (prod stage)
-- build:dev: `APP_ENV=development NODE_ENV=production vite build --mode development` (dev stage; `APP_ENV` picks `.env` for nub, `NODE_ENV` keeps React's production runtime)
+- build:dev: `APP_ENV=development NODE_ENV=production vite build --mode development` (dev stage; `APP_ENV` picks `.env` for Varlock, `NODE_ENV` keeps React's production runtime)
 - db: drizzle-kit
 - db:dev / db:local / db:prod: drizzle-kit pinned to the stage (`STAGE=dev|local|prod`)
 - dev: `APP_ENV=development NODE_ENV=development vite dev --mode development --host` (dev stage)
@@ -37,34 +37,34 @@ Vitesakuga has not launched and has no production users or production data. Revi
 - format:check: oxfmt --check .
 - lint: `oxlint . --fix --ignore-pattern '.commandcode/**'`
 - lint:check: `effect-tsgo --tsrs-lint=0.25.0-ts7.1.0-beta oxlint . --type-check --type-aware --ignore-pattern '.commandcode/**'`
-- typecheck: `nub run typecheck` (authoritative TypeScript diagnostics, then the `tsrs` fast pass)
-- typecheck:fast: `nub run typecheck:fast` (Rust `tsrs` port of the Effect-patched compiler)
+- typecheck: `pnpm run typecheck` (authoritative TypeScript diagnostics, then the `tsrs` fast pass)
+- typecheck:fast: `pnpm run typecheck:fast` (Rust `tsrs` port of the Effect-patched compiler)
 - server: preview the existing Vite build output with `vite preview`
-- start: nub .output/server/index.mjs
+- start: varlock run -- node .output/server/index.mjs
 - test: vitest -w
 - test:ee: playwright test --config=e2e/playwright.config.ts
 
 ### Type checking
 
-`nub run typecheck` runs the `@effect/tsgo`-patched `tsc` first, then `nub run typecheck:fast`. `typecheck:fast` runs `effect-tsgo tsrs@0.25.0-ts7.1.0-beta --noEmit`: the Effect build of [`tsrs`](https://github.com/oxc-project/tsrs) that `@effect/tsgo` 0.69.0 ships. The version is pinned so an `@effect/tsgo` upgrade cannot silently move the fast pass to another tsrs build. It runs no Effect diagnostics of its own because `diagnostics` stays `false` in `tsconfig.json`; Oxlint owns those rules. The patched `tsc` on TypeScript 7.0.2 remains authoritative for ordinary TypeScript errors. Effect quick fixes, refactors, and completions remain in the `@effect/tsgo` language service.
+`pnpm run typecheck` runs the `@effect/tsgo`-patched `tsc` first, then `pnpm run typecheck:fast`. `typecheck:fast` runs `effect-tsgo tsrs@0.25.0-ts7.1.0-beta --noEmit`: the Effect build of [`tsrs`](https://github.com/oxc-project/tsrs) that `@effect/tsgo` 0.69.0 ships. The version is pinned so an `@effect/tsgo` upgrade cannot silently move the fast pass to another tsrs build. It runs no Effect diagnostics of its own because `diagnostics` stays `false` in `tsconfig.json`; Oxlint owns those rules. The patched `tsc` on TypeScript 7.0.2 remains authoritative for ordinary TypeScript errors. Effect quick fixes, refactors, and completions remain in the `@effect/tsgo` language service.
 
-`lint:check` routes Oxlint's type-aware rules, including the `effecttsgo` rules, through `effect-tsgo --tsrs-lint=0.25.0-ts7.1.0-beta`, so type-aware linting runs on tsrs's port of `tsgolint` (`tsrs --lint`) instead of `tsgolint`. The `tsrs` version is pinned for the same reason. `oxlint-tsgolint` stays installed for editors and plain `oxlint` runs; `--tsrs-lint` does not use it, and the tsgolint profiling variables (`OXLINT_TSGOLINT_TRACE`, `_CPU`, `_HEAP`, `_ALLOCS`) do not apply in that mode. Run `nub run lint:check` rather than plain `oxlint` when validating, so the Effect rules actually execute.
+`lint:check` routes Oxlint's type-aware rules, including the `effecttsgo` rules, through `effect-tsgo --tsrs-lint=0.25.0-ts7.1.0-beta`, so type-aware linting runs on tsrs's port of `tsgolint` (`tsrs --lint`) instead of `tsgolint`. The `tsrs` version is pinned for the same reason. `oxlint-tsgolint` stays installed for editors and plain `oxlint` runs; `--tsrs-lint` does not use it, and the tsgolint profiling variables (`OXLINT_TSGOLINT_TRACE`, `_CPU`, `_HEAP`, `_ALLOCS`) do not apply in that mode. Run `pnpm run lint:check` rather than plain `oxlint` when validating, so the Effect rules actually execute.
 
 ### Testing
 
 The project uses `vitest` for testing.
 
-- **Run Tests (watch mode)**: `nub run test` (runs `vitest -w`)
-- **Run All Tests (single pass)**: `nub exec vitest run`
-- **Run a Single Test File**: `nub exec vitest run <path/to/test-file.test.ts>`
-- **Run a Specific Test by Name**: `nub exec vitest run -t "Test suite name" -t "specific test name"`
+- **Run Tests (watch mode)**: `pnpm run test` (runs `vitest -w`)
+- **Run All Tests (single pass)**: `pnpm exec vitest run`
+- **Run a Single Test File**: `pnpm exec vitest run <path/to/test-file.test.ts>`
+- **Run a Specific Test by Name**: `pnpm exec vitest run -t "Test suite name" -t "specific test name"`
 
 ### Database Commands (Drizzle Kit)
 
-- **Generate Migrations**: `nub run db generate` (runs `drizzle-kit generate`)
-- **Push Schema Changes**: `nub run db push` (runs `drizzle-kit push`)
-- **Apply Migrations**: `nub run db migrate` (runs `drizzle-kit migrate`)
-- **Stage-specific**: `STAGE=local|dev|prod nub run db <command>` loads the matching env file (`.env`, `.env.test`, `.env.production`). Shorthand scripts: `nub run db:dev <command>`, `nub run db:local <command>`, `nub run db:prod <command>`
+- **Generate Migrations**: `pnpm run db generate` (runs `drizzle-kit generate`)
+- **Push Schema Changes**: `pnpm run db push` (runs `drizzle-kit push`)
+- **Apply Migrations**: `pnpm run db migrate` (runs `drizzle-kit migrate`)
+- **Stage-specific**: `STAGE=local|dev|prod pnpm run db <command>` loads the matching env file (`.env`, `.env.test`, `.env.production`). Shorthand scripts: `pnpm run db:dev <command>`, `pnpm run db:local <command>`, `pnpm run db:prod <command>`
 - **Upgrade Migration Folder**: `drizzle-kit up` (v0 → v1 structure)
 
 ## General Code Style Principles
@@ -212,7 +212,7 @@ Issues live as GitHub Issues on `ozakione/vitesakuga`. See `docs/agents/issue-tr
 
 To drive the user's browser (Brave) via Playwright, use the `bc` wrapper and follow
 `docs/agents/browser-control.md`. Do not install browser-control into the project or
-nub's global store (both break silently).
+a global package store (both break silently).
 
 ### Commit signing
 

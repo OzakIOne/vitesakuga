@@ -17,10 +17,10 @@ CLOUDFLARE_ACCESS_KEY=rustfsadmin \
 CLOUDFLARE_SECRET_KEY=rustfsadmin \
 VITE_BASE_URL=http://localhost:3100 \
 VITE_CLOUDFLARE_R2_PUBLIC_URL=http://localhost:9000/e2e-test \
-nub exec playwright test --config=e2e/playwright.config.ts e2e/playlists.spec.ts --grep "detail page"
+pnpm exec playwright test --config=e2e/playwright.config.ts e2e/playlists.spec.ts --grep "detail page"
 ```
 
-The Playwright config starts the test app on port 3100. Its setup uses the isolated `postgres-e2e` service on port 15432 and RustFS on port 9000. It reuses a responding RustFS instead of starting a conflicting container. Ensure `nub` and Docker Compose are available on `PATH`. The command supplies test-only placeholders because fresh JJ workspaces lack the ignored `.env.test`; do not replace them with real credentials.
+The Playwright config starts the test app on port 3100. Its setup uses the isolated `postgres-e2e` service on port 15432 and RustFS on port 9000. It reuses a responding RustFS instead of starting a conflicting container. Ensure `pnpm` and Docker Compose are available on `PATH`. The command supplies test-only placeholders because fresh JJ workspaces lack the ignored `.env.test`; do not replace them with real credentials.
 
 ## Extend the coverage
 

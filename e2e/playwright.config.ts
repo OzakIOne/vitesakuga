@@ -31,7 +31,7 @@ export default defineConfig({
   timeout: 60000,
   use: {
     // Dedicated port (3100) so e2e runs never collide with the dev server
-    // (`nub run dev` on 3000): reuseExistingServer would otherwise silently
+    // (`pnpm run dev` on 3000): reuseExistingServer would otherwise silently
     // reuse it — and test against the wrong database.
     baseURL: "http://localhost:3100",
     trace: "on-first-retry",
@@ -42,7 +42,8 @@ export default defineConfig({
       // `.env` in the env-file cascade — nitro/c12 would otherwise override
       // DATABASE_URL with the `.env` Neon connection and the app would run
       // against the remote dev database instead of the local Postgres.
-      command: "nub exec vite dev --mode test --host --port 3100",
+      command:
+        "pnpm exec varlock run -- vite dev --mode test --host --port 3100",
       cwd: "..",
       port: 3100,
       reuseExistingServer: !CI,
@@ -61,7 +62,7 @@ export default defineConfig({
         VITE_TURNSTILE_REQUIRED: "0",
         // "e2e" behaves like the local Postgres driver (see src/lib/db/pool.ts)
         // but is distinct so the e2e auth bypass in session.effect.ts stays
-        // unreachable from `nub run dev:local`.
+        // unreachable from `pnpm run dev:local`.
         DATABASE_DRIVER: "e2e",
         DATABASE_URL: E2E_DATABASE_URL,
         VITESAKUGA_E2E_POSTGRES_PORT: E2E_POSTGRES_PORT,

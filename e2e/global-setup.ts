@@ -128,7 +128,7 @@ const migrateDatabase = Effect.gen(function* () {
   yield* Effect.retry(
     Effect.gen(function* () {
       yield* Effect.sleep(Duration.seconds(1));
-      yield* exec("nub e2e/migrate-local.mjs", {
+      yield* exec("node e2e/migrate-local.mjs", {
         cwd: REPO_ROOT,
         env: {
           ...process.env,

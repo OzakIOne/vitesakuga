@@ -400,7 +400,7 @@ const rollback = async () => {
 };
 
 const printUsage = () => {
-  console.log(`Usage: nub scripts/cloudflare-release.mjs <command> [--state-file path]
+  console.log(`Usage: node scripts/cloudflare-release.mjs <command> [--state-file path]
 
 Commands:
   capture          Save active version before deployment

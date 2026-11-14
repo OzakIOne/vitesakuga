@@ -45,29 +45,35 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Set up Nub and pinned Node
-        uses: nubjs/setup-nub@v0
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
 
       - name: Install dependencies
-        run: nub install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Check formatting
-        run: nub run format:check
+        run: pnpm run format:check
 
       - name: Check lint and type-aware rules
-        run: nub run lint:check
+        run: pnpm run lint:check
 
       - name: Check TypeScript and Effect diagnostics
-        run: nub run typecheck
+        run: pnpm run typecheck
 
       - name: Run unit and integration tests
-        run: nub exec vitest run --maxWorkers=1
+        run: pnpm exec vitest run --maxWorkers=1
 
       - name: Check deployment scripts
-        run: nub run test:deployment
+        run: pnpm run test:deployment
 
       - name: Build production bundle
-        run: nub run build
+        run: pnpm run build
 
       - name: Check production bundle
-        run: nub scripts/check-prod-build.mjs
+        run: node scripts/check-prod-build.mjs

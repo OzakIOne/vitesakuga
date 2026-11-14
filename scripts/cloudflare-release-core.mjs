@@ -67,8 +67,9 @@ export const createRollbackCommand = ({
   workerName,
   deployedVersionId,
 }) => ({
-  command: "nubx",
+  command: "pnpm",
   args: [
+    "exec",
     "wrangler",
     "rollback",
     previousVersionId,

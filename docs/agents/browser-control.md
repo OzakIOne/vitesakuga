@@ -1,4 +1,4 @@
-# Browser Control (with nub) — Agent Reference
+# Browser Control (with pnpm) — Agent Reference
 
 ViteSakuga agents use [Browser Control](https://github.com/anomalyco/browser-control)
 (`@opencode-ai/browser-control`) to drive the user's **existing Chromium-family browser**
@@ -21,9 +21,9 @@ the project lockfile. Query that version and invoke it through the project
 toolchain:
 
 ```bash
-nub exec browser-control --version
-nub exec browser-control status --json
-nub exec browser-control doctor
+pnpm exec browser-control --version
+pnpm exec browser-control status --json
+pnpm exec browser-control doctor
 ```
 
 Do not copy package versions, extension IDs, store paths, or relay details into
@@ -33,10 +33,10 @@ profile. For the full workflow, use `.agents/skills/browser-control/SKILL.md`.
 Typical commands:
 
 ```bash
-nub exec browser-control execute 'return { url: page.url(), title: await page.title() }'
-nub exec browser-control execute --session <id> 'return page.url()'
-nub exec browser-control session adopt --target-url github.com --session github
-nub exec browser-control journal --session <id>
+pnpm exec browser-control execute 'return { url: page.url(), title: await page.title() }'
+pnpm exec browser-control execute --session <id> 'return page.url()'
+pnpm exec browser-control session adopt --target-url github.com --session github
+pnpm exec browser-control journal --session <id>
 ```
 
 A bare `execute` creates a fresh session-owned page and prints a continuation
@@ -57,8 +57,8 @@ stable action, and verify the resulting URL or stable UI element.
 
 ## Troubleshooting
 
-1. Run `nub exec browser-control doctor`.
-2. Run `nub exec browser-control status --json` and inspect the exact session and
+1. Run `pnpm exec browser-control doctor`.
+2. Run `pnpm exec browser-control status --json` and inspect the exact session and
    target ownership.
 3. Reproduce once with the smallest `execute` command before changing setup.
 4. If the extension is disconnected or the relay is stale, follow the recovery
