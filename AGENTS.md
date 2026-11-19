@@ -204,6 +204,20 @@ for ViteSakuga; verify examples against the installed dependencies and nearby
 code before applying them. In particular, `.agents/skills/xstate-v5` is a
 generic v5 guide while this project currently depends on XState 6 alpha.
 
+Modern Web Guidance lives in `.agents/skills/modern-web-guidance`. Because npm
+and pnpm are forbidden here, run its CLI through nub, never `npx`:
+
+```sh
+nub dlx modern-web-guidance@latest search "<query>"
+nub dlx modern-web-guidance@latest retrieve "<guide-id>"
+nub dlx modern-web-guidance@latest legacy-scan src --json
+nub dlx modern-web-guidance@latest update
+```
+
+Browser support is Baseline widely available (the Vite 8 default target), on
+Node 26 and Cloudflare Workers, so ES2023 built-ins such as `toSorted()` and
+`toReversed()` are allowed without fallbacks.
+
 ### Issue tracker
 
 Issues live as GitHub Issues on `ozakione/vitesakuga`. See `docs/agents/issue-tracker.md`.
