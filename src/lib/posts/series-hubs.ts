@@ -131,7 +131,7 @@ function sortGroupPosts(
   posts: readonly PostWithVotes[],
   kind: SeriesPostKind,
 ): readonly PostWithVotes[] {
-  return [...posts].sort(
+  return posts.toSorted(
     kind === "episode"
       ? compareEpisodePosts
       : kind === "chapter"

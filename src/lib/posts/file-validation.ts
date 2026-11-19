@@ -11,8 +11,9 @@ const WEBP_MAGIC_FOURCC = "WEBP";
 const matchesMagicBytes = (head: Uint8Array, magic: readonly number[]) =>
   magic.every((byte, index) => head[index] === byte);
 
-const decodeAscii = (bytes: Uint8Array): string =>
-  String.fromCharCode(...bytes);
+const asciiDecoder = new TextDecoder();
+
+const decodeAscii = (bytes: Uint8Array): string => asciiDecoder.decode(bytes);
 
 // oxlint-disable-next-line effecttsgo/async-function -- reading File bytes is inherently async (no sync File read in Workers/Node); this plain utility is shared by the server validator and unit tests.
 export const hasJpegMagicBytes = async (file: File): Promise<boolean> => {

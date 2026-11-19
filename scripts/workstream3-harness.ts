@@ -137,7 +137,7 @@ export const startWorkstream3Harness = async (): Promise<Harness> => {
         closePromise ??= (async () => {
           await Promise.allSettled([db?.destroy(), pool?.end()]);
           await Promise.all(
-            [...started].reverse().map(async (name) => {
+            started.toReversed().map(async (name) => {
               await exec("docker", ["stop", name]).catch(() => undefined);
             }),
           );
@@ -148,7 +148,7 @@ export const startWorkstream3Harness = async (): Promise<Harness> => {
   } catch (error) {
     await Promise.allSettled([db?.destroy(), pool?.end()]);
     await Promise.all(
-      [...started].reverse().map(async (name) => {
+      started.toReversed().map(async (name) => {
         await exec("docker", ["stop", name]).catch(() => undefined);
       }),
     );

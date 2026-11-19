@@ -19,7 +19,7 @@ export const parseNumberValue = ({
 };
 
 export const selectActiveVersion = (deployments) => {
-  const activeDeployment = [...deployments].sort((left, right) => {
+  const activeDeployment = deployments.toSorted((left, right) => {
     const leftDate = left.created_on ?? left.createdOn ?? "";
     const rightDate = right.created_on ?? right.createdOn ?? "";
     return rightDate.localeCompare(leftDate);
@@ -28,7 +28,7 @@ export const selectActiveVersion = (deployments) => {
     ? activeDeployment.versions
     : [];
 
-  return [...versions].sort(
+  return versions.toSorted(
     (left, right) => (right.percentage ?? 0) - (left.percentage ?? 0),
   )[0];
 };

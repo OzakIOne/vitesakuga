@@ -42,7 +42,9 @@ const parseWith = <A>(
     return Effect.runSync(config.parse(ConfigProvider.fromUnknown(source)));
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Invalid ${label} environment.\n${detail}`);
+    throw new Error(`Invalid ${label} environment.\n${detail}`, {
+      cause: error,
+    });
   }
 };
 
@@ -56,7 +58,9 @@ const decodeWith = <S extends Schema.ConstraintDecoder<unknown>>(
     return Schema.decodeUnknownSync(schema)(value);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Invalid ${label} environment.\n${detail}`);
+    throw new Error(`Invalid ${label} environment.\n${detail}`, {
+      cause: error,
+    });
   }
 };
 

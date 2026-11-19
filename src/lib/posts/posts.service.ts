@@ -1062,7 +1062,7 @@ const resolveAndLinkTags = Effect.fn("resolveAndLinkTags")(function* (
 
   // Upserts retain row locks until commit. Every request must acquire them
   // in the same order, even when users submit the same tags in reverse order.
-  const orderedTags = [...tags].sort((left, right) =>
+  const orderedTags = tags.toSorted((left, right) =>
     left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
   );
   for (const tag of orderedTags) {
