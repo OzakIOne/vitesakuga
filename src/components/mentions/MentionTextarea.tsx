@@ -111,6 +111,9 @@ export function MentionTextarea({
           refreshMention(e.target);
         }}
         onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) {
+            return;
+          }
           if (!isOpen) {
             return;
           }

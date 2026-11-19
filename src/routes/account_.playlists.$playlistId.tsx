@@ -264,6 +264,9 @@ function ManagePlaylistContent() {
                 setAddError(null);
               }}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) {
+                  return;
+                }
                 if (e.key === "Enter") handleAddPosts();
               }}
               placeholder="e.g. 12, 45, 67"

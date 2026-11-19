@@ -153,6 +153,9 @@ export function PlaylistAddModal({
                       name="new-playlist-title"
                       onChange={(e) => setNewTitle(e.target.value)}
                       onKeyDown={(e) => {
+                        if (e.nativeEvent.isComposing) {
+                          return;
+                        }
                         if (e.key === "Enter") void handleCreateAndAdd();
                       }}
                       placeholder="New playlist name..."

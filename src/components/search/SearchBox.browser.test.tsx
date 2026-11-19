@@ -47,11 +47,11 @@ const renderSearchBox = async (props: Parameters<typeof SearchBox>[0] = {}) => {
 
 const getInput = () => page.getByLabelText("Search posts");
 
-const pressEnter = (): void => {
+const pressEnter = (init: KeyboardEventInit = {}): void => {
   getInput()
     .element()
     .dispatchEvent(
-      new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }),
+      new KeyboardEvent("keydown", { bubbles: true, key: "Enter", ...init }),
     );
 };
 
@@ -165,6 +165,15 @@ describe(SearchBox, () => {
       search: { dateRange: "all", q: "ab", sortBy: "newest", tags: [] },
       to: "/posts",
     });
+  });
+
+  it("ignores Enter while an IME composition is being confirmed", async () => {
+    await renderSearchBox({ appliedQuery: "" });
+
+    await getInput().fill("ab");
+    pressEnter({ isComposing: true });
+
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it("B3: auto-applies a pasted query from an empty field", async () => {
