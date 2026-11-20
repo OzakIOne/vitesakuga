@@ -26,7 +26,7 @@ export function PasskeySignInButton({
 
   useEffect(() => {
     // WebAuthn only works same-origin: when the page is served from a
-    // different origin than the auth API (e.g. `nub run dev` at localhost with
+    // different origin than the auth API (e.g. `pnpm run dev` at localhost with
     // a remote VITE_BASE_URL), skip the automatic autofill prompt.
     if (window.location.origin !== new URL(envClient.VITE_BASE_URL).origin) {
       return;

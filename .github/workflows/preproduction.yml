@@ -33,8 +33,14 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Set up Nub and pinned Node
-        uses: nubjs/setup-nub@v0
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
 
       - name: Write pre-production environment
         env:
@@ -49,10 +55,10 @@ jobs:
           printf '%s\n' "$PREPRODUCTION_ENV_FILE" > .env
 
       - name: Install dependencies
-        run: nub install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Apply pre-production database migrations
-        run: nub run db:dev migrate
+        run: pnpm run db:dev migrate
 
   deploy:
     needs: [verify, migrate]
@@ -76,8 +82,14 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Set up Nub and pinned Node
-        uses: nubjs/setup-nub@v0
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
 
       - name: Write pre-production environment
         env:
@@ -92,30 +104,30 @@ jobs:
           printf '%s\n' "$PREPRODUCTION_ENV_FILE" > .env
 
       - name: Install dependencies
-        run: nub install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Capture active Worker version
-        run: nub scripts/cloudflare-release.mjs capture
+        run: node scripts/cloudflare-release.mjs capture
 
       - name: Build development bundle
         run: |
-          nub run build:dev
-          nub scripts/check-prod-build.mjs
+          pnpm run build:dev
+          node scripts/check-prod-build.mjs
 
       - name: Deploy Worker
         id: deploy
-        run: nubx alchemy deploy infra/alchemy.run.ts --stage dev --env-file .env
+        run: pnpm exec alchemy deploy infra/alchemy.run.ts --stage dev --env-file .env
 
       - name: Record deployed Worker version
         id: mark_deployed
         if: steps.deploy.outcome == 'success'
-        run: nub scripts/cloudflare-release.mjs mark-deployed
+        run: node scripts/cloudflare-release.mjs mark-deployed
 
       - name: Monitor pre-production health
         id: monitor
         if: always() && steps.deploy.outcome == 'success' && steps.mark_deployed.outcome == 'success'
         continue-on-error: true
-        run: nub scripts/cloudflare-release.mjs monitor
+        run: node scripts/cloudflare-release.mjs monitor
 
       - name: Roll back unhealthy pre-production release
         if: >-
@@ -123,7 +135,7 @@ jobs:
           (steps.deploy.outcome == 'failure' ||
           steps.mark_deployed.outcome == 'failure' ||
           steps.monitor.outcome == 'failure')
-        run: nub scripts/cloudflare-release.mjs rollback
+        run: node scripts/cloudflare-release.mjs rollback
 
       - name: Fail release after health rollback
         if: >-

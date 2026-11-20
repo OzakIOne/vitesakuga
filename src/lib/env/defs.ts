@@ -193,7 +193,7 @@ const clientEnvConfig = Config.all({
   ),
   // "1" in stages where Better Auth verifies the captcha token server-side
   // (deployed dev/prod: the Alchemy worker binds TURNSTILE_SECRET and runs
-  // with NODE_ENV=production). Local `nub run dev` / `dev:local` scripts
+  // with NODE_ENV=production). Local `pnpm run dev` / `dev:local` scripts
   // override it to "0" so the widget is not mounted and forms submit without
   // waiting on a challenge the server would ignore anyway.
   VITE_TURNSTILE_REQUIRED: Config.String("VITE_TURNSTILE_REQUIRED").pipe(

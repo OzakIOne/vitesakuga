@@ -11,6 +11,6 @@
     "!src/lib/db/test-utils.ts!"
   ],
   "ignoreBinaries": ["opencode"],
-  "ignoreDependencies": ["@opencode-ai/browser-control", "varlock"],
+  "ignoreDependencies": ["@opencode-ai/browser-control"],
   "treatConfigHintsAsErrors": true
 }

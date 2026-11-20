@@ -5,7 +5,7 @@ import { Pool as PgPool } from "pg";
 import { envInfra } from "../env/infra";
 import { envServer } from "../env/server";
 
-// "local" is the developer's Docker Postgres (`nub run dev:local`); "e2e" is
+// "local" is the developer's Docker Postgres (`pnpm run dev:local`); "e2e" is
 // the Playwright webServer pointing at the same local Postgres, kept distinct
 // so the e2e auth bypass in session.effect.ts stays unreachable from dev runs.
 export const isLocal =

@@ -8,11 +8,11 @@
  * Every page then throws `TypeError: jsxDEV is not a function`, which TanStack
  * Start surfaces as a 500 with the generic
  * `{"status":500,"unhandled":true,"message":"HTTPError"}` payload.
- * (Neither the prod `nub run build` nor the dev `nub run build:dev`
+ * (Neither the prod `pnpm run build` nor the dev `pnpm run build:dev`
  * produce such bundles — see docs/build-environment.md.)
  *
  * Wire it in front of the alchemy deploy scripts in package.json:
- *   "infra:deploy": "nub run build:dev && nub scripts/check-prod-build.mjs && alchemy deploy ..."
+ *   "infra:deploy": "pnpm run build:dev && node scripts/check-prod-build.mjs && alchemy deploy ..."
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 
@@ -50,10 +50,10 @@ if (missing.length > 0) {
     `✘ Refusing to deploy: build output is missing (${missing.join(", ")}).`,
   );
   console.error(
-    "  Run `nub run build` (prod) or `nub run build:dev` (dev), or use",
+    "  Run `pnpm run build` (prod) or `pnpm run build:dev` (dev), or use",
   );
   console.error(
-    "  `nub run infra:deploy` / `infra:deploy:prod` (builds first).",
+    "  `pnpm run infra:deploy` / `infra:deploy:prod` (builds first).",
   );
   process.exit(1);
 }
@@ -73,10 +73,10 @@ if (devJsxChunks > 0) {
     "  This bundle 500s with `jsxDEV is not a function` on Cloudflare.",
   );
   console.error(
-    "  Rebuild with `nub run build` (prod) or `nub run build:dev` (dev), or use",
+    "  Rebuild with `pnpm run build` (prod) or `pnpm run build:dev` (dev), or use",
   );
   console.error(
-    "  `nub run infra:deploy` / `infra:deploy:prod` (builds first).",
+    "  `pnpm run infra:deploy` / `infra:deploy:prod` (builds first).",
   );
   console.error("  Do NOT deploy a bundle built with `NODE_ENV=development`.");
   process.exit(1);

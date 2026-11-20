@@ -8,7 +8,7 @@ import { getDeploymentStageConfig } from "../src/lib/env/stage-config";
 
 /**
  * Neon-backed database wiring. The resources are ready below but need
- * Neon credentials first: run `nub exec alchemy login` and pick Neon, then
+ * Neon credentials first: run `pnpm exec alchemy login` and pick Neon, then
  * flip this to `true` and deploy. While `false`, the Worker keeps reading
  * DATABASE_URL from the stage env file.
  */
@@ -133,7 +133,7 @@ export default Alchemy.Stack(
       // survives state-store recovery.
       name: `vitesakuga-infra-sakugaworker-${stage}-5osp6ydh4rodg534`,
       // Nitro `cloudflare_module` build output (see nitro.config.ts). Run
-      // `nub run build` before deploying so `.output/` exists.
+      // `pnpm run build` before deploying so `.output/` exists.
       main: "./.output/server/index.mjs",
       bundle: false,
       assets: "./.output/public",

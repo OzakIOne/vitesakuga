@@ -12,30 +12,30 @@ See [the feature catalogue](docs/features.md) for current behavior and
 ```bash
 jj git clone https://github.com/ozakione/vitesakuga
 cd vitesakuga
-nub install
+pnpm install
 cp .env.example .env
 # setup infra buckets api tokens etc
-nub run infra:deploy
+pnpm run infra:deploy
 ```
 
-Nub loads and validates the environment with Varlock before running scripts or
-Node files. The committed `.env.schema` documents the stages and required
+Env-dependent package scripts run through `varlock run --`, which loads and validates the environment before running
+Vite, Node, Alchemy or Playwright. The committed `.env.schema` documents the stages and required
 variables; keep actual credentials in the ignored stage files (`.env`,
 `.env.test`, or `.env.production`).
 
 ```bash
 # inspect the resolved, redacted environment
-nub exec varlock load --format json
+pnpm exec varlock load --format json
 ```
 
 ```
-nub run dev
+pnpm run dev
 ```
 
 The project pins `nitro@3.0.260610-beta` with Vite 8.3.x. The newer
 `nitro@3.0.260903-beta` development runner sends React's CommonJS entry
 through the local Workerd evaluator without the `module` global, causing
-`nub run dev` to fail with `ReferenceError: module is not defined`. The pinned
+`pnpm run dev` to fail with `ReferenceError: module is not defined`. The pinned
 combination keeps Cloudflare development emulation and the deployable build
 working. Do not update Nitro alone until this upstream incompatibility is
 fixed.
@@ -44,14 +44,14 @@ fixed.
 
 Three stages, each with its own gitignored env file:
 
-| Stage | Env file          | DB / storage             | Command             |
-| ----- | ----------------- | ------------------------ | ------------------- |
-| local | `.env.test`       | Docker Postgres + rustfs | `nub run dev:local` |
-| dev   | `.env`            | Neon dev branch + R2 dev | `nub run dev`       |
-| prod  | `.env.production` | Neon prod + R2 prod      | `nub run dev:prod`  |
+| Stage | Env file          | DB / storage             | Command              |
+| ----- | ----------------- | ------------------------ | -------------------- |
+| local | `.env.test`       | Docker Postgres + rustfs | `pnpm run dev:local` |
+| dev   | `.env`            | Neon dev branch + R2 dev | `pnpm run dev`       |
+| prod  | `.env.production` | Neon prod + R2 prod      | `pnpm run dev:prod`  |
 
-The DB CLI is stage-aware: `STAGE=prod nub run db migrate` loads
-`.env.production` (shortcuts: `nub run db:local <command>`, `nub run db:dev <command>`, `nub run db:prod <command>`).
+The DB CLI is stage-aware: `STAGE=prod pnpm run db migrate` loads
+`.env.production` (shortcuts: `pnpm run db:local <command>`, `pnpm run db:dev <command>`, `pnpm run db:prod <command>`).
 
 ## Commands
 
@@ -82,7 +82,7 @@ Deployment safety logic has a focused check in addition to the full Vitest
 run:
 
 ```bash
-nub run test:deployment
+pnpm run test:deployment
 ```
 
 The optional SigNoz stack is isolated to loopback ports and uses pinned image
@@ -109,7 +109,7 @@ This project uses **Alchemy** to automate the creation of Cloudflare R2 buckets.
 ### 1. Prerequisites
 
 - A [Cloudflare Account](https://dash.cloudflare.com/)
-- [`jj`](https://martinvonz.github.io/jj/) and [Nub](https://github.com/ozakione/nub) installed; Nub resolves the Node.js 26 runtime declared by the project
+- [`jj`](https://martinvonz.github.io/jj/) and Nix installed; `nix develop` provides pnpm 12 and Node.js 26 (or install pnpm 12 and Node.js 26 yourself)
 - Cloudflare **Account ID** (found on your dashboard)
 - Cloudflare **API Token** with `R2 Edit` permissions
 
@@ -119,16 +119,16 @@ Set your Account ID and deploy from the project root:
 
 ```bash
 # Authenticate with Cloudflare
-nub exec alchemy login
+pnpm exec alchemy login
 
 # Set your Cloudflare Account ID
 export CLOUDFLARE_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
 # Deploy the dev resources (bucket, domain, and CORS come from the stage map)
-nub run infra:deploy
+pnpm run infra:deploy
 
 # Deploy the production resources
-nub run infra:deploy:prod
+pnpm run infra:deploy:prod
 ```
 
 ### 3. Sync to Environment

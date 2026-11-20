@@ -99,7 +99,7 @@ par Git. Alchemy lit cette clé pour le secret GitHub ; il n'envoie pas le reste
 du fichier `.env` :
 
 ```bash
-CLOUDFLARE_API_TOKEN="..." nub run github:preproduction --yes
+CLOUDFLARE_API_TOKEN="..." pnpm run github:preproduction --yes
 ```
 
 Le stack crée ou met à jour `CLOUDFLARE_API_TOKEN` comme secret d'environnement,
@@ -113,7 +113,7 @@ Pour effectuer le bootstrap GitHub puis le déploiement Cloudflare en une seule
 commande :
 
 ```bash
-nub run infra:preproduction
+pnpm run infra:preproduction
 ```
 
 Le déploiement Cloudflare ne démarre que si la configuration GitHub réussit.
@@ -122,7 +122,7 @@ Pour préparer l'environnement GitHub de production, ajoute uniquement
 `CLOUDFLARE_API_TOKEN` dans `.env.production`, puis lance :
 
 ```bash
-nub run github:production
+pnpm run github:production
 ```
 
 Cette commande configure l'environnement `production`, mais ne déploie pas le

@@ -163,9 +163,7 @@ export default defineConfig({
   },
   // Override Nitro's `npx wrangler` preview default: `npx` may fetch/download
   // wrangler instead of using the local one. The local wrangler bin runs under
-  // the project's Node 26 via the node PATH shim. (Since nub 0.8.3, version-gated
-  // Node flags ride argv instead of NODE_OPTIONS, so Node version mismatches from
-  // the old npx path no longer crash the preview.)
+  // the project's Node 26.
   commands: {
     preview: "node_modules/.bin/wrangler --cwd ./ dev",
   },

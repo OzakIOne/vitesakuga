@@ -104,8 +104,9 @@ describe("Cloudflare release safety decisions", () => {
         deployedVersionId: "deployed-version",
       }),
     ).toEqual({
-      command: "nubx",
+      command: "pnpm",
       args: [
+        "exec",
         "wrangler",
         "rollback",
         "previous-version",
