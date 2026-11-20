@@ -18,12 +18,12 @@ jobs:
 
   migrate:
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     environment: production
     timeout-minutes: 15
     steps:
       - name: Check out release source
-        uses: actions/checkout@v4
+        uses: useblacksmith/checkout@v1
         with:
           ref: ${{ github.event.release.tag_name }}
 
@@ -50,7 +50,7 @@ jobs:
 
   deploy:
     needs: [verify, migrate]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     environment: production
     timeout-minutes: 45
     env:
@@ -66,7 +66,7 @@ jobs:
       MONITOR_INTERVAL_SECONDS: ${{ vars.MONITOR_INTERVAL_SECONDS || '60' }}
     steps:
       - name: Check out release source
-        uses: actions/checkout@v4
+        uses: useblacksmith/checkout@v1
         with:
           ref: ${{ github.event.release.tag_name }}
 
