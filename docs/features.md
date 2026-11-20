@@ -179,7 +179,7 @@ La suite couvre notamment :
 ## Infrastructure & configuration
 
 - **Stockage** : `StorageModule` + `storage.adapter.ts`, S3-compatible : Cloudflare R2 en déploiement, RustFS en local/tests ; vidéos présignées et staging `videos/_pending/` → clé finale.
-- **Base de données** : Postgres (Neon en déploiement, Postgres local pour e2e/dev local) ; PGlite pour les tests de services — `src/lib/db/kysely.ts`, `src/lib/db/pool.ts`, `src/lib/db/e2e-db.ts`.
+- **Base de données** : Postgres (Neon en déploiement, Postgres local pour e2e/dev local) ; PGlite pour les tests de services — `src/lib/db/kysely.ts`, `src/lib/db/e2e-db.ts`.
 - **Migrations** : Drizzle Kit et chaîne unique dans `drizzle/` à la racine.
 - **Environnements** : stages dev/local/prod (`.env`, `.env.test`, `.env.production`) et validation Effect dans `src/lib/env/defs.ts` ; secrets redacted.
 - **Observabilité** : OpenTelemetry (`src/lib/effect/tracing.ts`) et observabilité Cloudflare en déploiement.

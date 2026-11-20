@@ -236,8 +236,19 @@ export const loadClientEnv = (source: ClientEnvSource) => {
 
 // ---- Infrastructure environment ----
 
+export const databaseDriverSchema = Schema.Literals([
+  "neon",
+  "local",
+  "e2e",
+  "pglite",
+]);
+
+export type DatabaseDriver = Schema.Schema.Type<typeof databaseDriverSchema>;
+
 const infraEnvSchema = Schema.Struct({
-  DATABASE_DRIVER: Schema.optionalKey(Schema.String),
+  DATABASE_DRIVER: Schema.optionalKey(
+    Schema.Union([databaseDriverSchema, Schema.Literal("")]),
+  ),
   OTEL_EXPORTER_OTLP_ENDPOINT: Schema.optionalKey(Schema.String),
   SEED_DB: Schema.optionalKey(Schema.String),
 });
@@ -245,11 +256,11 @@ const infraEnvSchema = Schema.Struct({
 export type InfraEnv = {
   /**
    * Which database backend the process talks to: `"local"` (developer Docker
-   * Postgres), `"e2e"` (Playwright webServer pointing at the same Postgres,
-   * plus the auth bypass in session.effect.ts), `"pglite"` (in-memory
-   * instance for service tests), or `undefined` (deployed Neon serverless).
+   * Postgres), `"e2e"` (Playwright webServer pointing at the same Postgres),
+   * `"pglite"` (in-memory instance for service tests), or `"neon"` (deployed
+   * Neon serverless, the default when unset).
    */
-  readonly databaseDriver: string | undefined;
+  readonly databaseDriver: DatabaseDriver;
   /**
    * OTLP collector endpoint for traces and logs; `undefined` disables the
    * OpenTelemetry layers entirely (a Worker has no reachable default).
@@ -265,17 +276,20 @@ const optionalString = (value: string | undefined): string | undefined =>
 /**
  * Boot-time infrastructure flags. Unlike the app envs above, these are read
  * before any Effect runtime exists (module-scope driver selection, tracing
- * setup, the drizzle-kit seed CLI), so they are loaded synchronously and
- * interpreted with exact-match comparisons rather than validated further.
- * Kept here so this file remains the single inventory of every environment
- * variable the app reads.
+ * setup, the drizzle-kit seed CLI), so they are loaded synchronously. Kept
+ * here so this file remains the single inventory of every environment variable
+ * the app reads.
  */
 export const loadInfraEnv = (
   source: Readonly<Record<string, string | undefined>> = process.env,
 ): InfraEnv => {
   const raw = decodeWith("infra", infraEnvSchema, source);
+  const databaseDriver: DatabaseDriver =
+    raw.DATABASE_DRIVER === undefined || raw.DATABASE_DRIVER === ""
+      ? "neon"
+      : raw.DATABASE_DRIVER;
   return {
-    databaseDriver: optionalString(raw.DATABASE_DRIVER),
+    databaseDriver,
     otlpEndpoint: optionalString(raw.OTEL_EXPORTER_OTLP_ENDPOINT),
     seedDatabase: raw.SEED_DB === "true",
   };

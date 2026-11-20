@@ -8,11 +8,11 @@ This document outlines the conventions and best practices for database interacti
 
 - Drizzle ORM table schemas: `src/lib/db/schema/` (auth tables in `auth.schema.ts`, domain tables in `sakuga.schema.ts`)
 - Drizzle Kit migration files: `drizzle/` at the repo root (timestamped folders with auto-generated SQL, snapshots, and journal)
-- Database configuration: `src/lib/db/pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`), `src/lib/db/kysely.ts` (Kysely setup)
+- Database configuration: `src/lib/db/kysely.ts` (Kysely setup — `NeonTransactionDialect` by default, or local `pg` pool when `DATABASE_DRIVER` is `"local"` or `"e2e"`)
 
 ## Kysely Client
 
-- Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over the pool from `pool.ts` (local `pg` when `DATABASE_DRIVER=local`) or `NeonTransactionDialect` (Neon serverless)
+- Raw Kysely instance in `src/lib/db/kysely.ts` using Kysely `PostgresDialect` over a local `pg` pool (when `DATABASE_DRIVER` is `"local"` or `"e2e"`) or `NeonTransactionDialect` (Neon serverless)
 - Better Auth runs on `authKysely`, a second raw Kysely over the same dialect. `makeFromKysely` replaces `transaction()` on the shared `kysely` instance with the Effect API, which Better Auth's adapter cannot use. Never hand the shared `kysely` to Better Auth or any other library that calls Kysely's own `transaction()`
 - The side-effect-free `makeAuth` factory lives in `src/lib/auth/index.ts`; `src/lib/auth/instance.ts` constructs the process-wide instance. Tests that inspect auth configuration should use the factory with their own database rather than importing the singleton. Better Auth 1.7.14 starts Kysely schema validation asynchronously as its auth context initializes. Its Postgres check reads the effective search path, then Kysely introspection; failed connectivity is logged as a generic validation warning.
 - Username generation for sign-ups checks availability through Better Auth's current transaction adapter (`getCurrentAdapter`), so a sign-up never waits on a connection its own transaction holds

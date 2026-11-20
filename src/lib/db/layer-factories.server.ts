@@ -35,24 +35,25 @@ const makeSessionLayer = (
     ),
   );
 
-// In-memory PGlite instance instead of a real Postgres connection. Note this
-// is distinct from DATABASE_DRIVER=e2e (the Playwright webServer, which uses
-// the regular local Postgres path via pool.ts).
-const isPglite = envInfra.databaseDriver === "pglite";
-
 type AuthInstance = typeof import("../auth/instance").auth;
 
-export const makeDBLayer = async () => {
-  const dbModule = isPglite
-    ? await import("./e2e-db")
-    : await import("./kysely");
+const loadKyselyInstance = async () => {
+  switch (envInfra.databaseDriver) {
+    case "pglite": {
+      const { createE2EKysely } = await import("./e2e-db");
+      return createE2EKysely();
+    }
+    case "local":
+    case "e2e":
+    case "neon": {
+      const { kysely } = await import("./kysely");
+      return kysely;
+    }
+  }
+};
 
-  // SAFETY: dbModule is the static import of "./e2e-db" in the isPglite branch
-  // and of "./kysely" otherwise, so each cast matches the module actually
-  // loaded above.
-  const kyselyInstance = isPglite
-    ? await (dbModule as typeof import("./e2e-db")).createE2EKysely()
-    : (dbModule as typeof import("./kysely")).kysely;
+export const makeDBLayer = async () => {
+  const kyselyInstance = await loadKyselyInstance();
 
   const { StorageLive } = await import("../storage/storage.adapter");
 

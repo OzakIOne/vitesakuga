@@ -98,10 +98,9 @@ src/
 ## Database
 
 - Drizzle ORM schemas in `src/lib/db/schema/` (auth tables plus sakuga domain tables: posts, tags, comments, post votes, playlists, playlist posts)
-- Kysely typed client in `src/lib/db/kysely.ts`
+- Kysely typed client and driver dialect selection in `src/lib/db/kysely.ts` (Neon serverless by default, or local `pg` pool when `DATABASE_DRIVER` is `"local"` or `"e2e"`)
 - KyselyDB Effect context tag in `src/lib/db/context.ts`
 - Layer factories in `src/lib/db/layer-factories.server.ts` (DB, auth, middleware layers)
-- Connection pool in `src/lib/db/pool.ts` (Neon serverless, or local `pg` when `DATABASE_DRIVER=local`)
 - Test utilities in `src/lib/db/test-utils.ts` and `e2e-db.ts` (PGlite in-memory, migrated from root `drizzle/`)
 - TanStack DB collections in `src/lib/db/collections.ts`
 

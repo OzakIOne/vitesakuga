@@ -59,7 +59,7 @@ export default defineConfig({
         // The test server does not enable the production Turnstile plugin, so
         // the client must not block local auth flows waiting for a token.
         VITE_TURNSTILE_REQUIRED: "0",
-        // "e2e" behaves like the local Postgres driver (see src/lib/db/pool.ts)
+        // "e2e" behaves like the local Postgres driver (see src/lib/db/kysely.ts)
         // but is distinct so the e2e auth bypass in session.effect.ts stays
         // unreachable from `nub run dev:local`.
         DATABASE_DRIVER: "e2e",

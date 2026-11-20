@@ -62,13 +62,13 @@ describe(loadInfraEnv, () => {
     });
   });
 
-  it("normalizes empty strings to undefined", () => {
+  it("normalizes empty strings to defaults", () => {
     // tracing.ts previously relied on truthiness: "" meant disabled.
     const env = loadInfraEnv({
       DATABASE_DRIVER: "",
       OTEL_EXPORTER_OTLP_ENDPOINT: "",
     });
-    expect(env.databaseDriver).toBeUndefined();
+    expect(env.databaseDriver).toBe("neon");
     expect(env.otlpEndpoint).toBeUndefined();
   });
 
@@ -82,16 +82,20 @@ describe(loadInfraEnv, () => {
 
   it("tolerates unrelated keys in the source", () => {
     const env = loadInfraEnv({ UNRELATED: "value", PATH: "/usr/bin" });
-    expect(env.databaseDriver).toBeUndefined();
+    expect(env.databaseDriver).toBe("neon");
     expect(env.seedDatabase).toBe(false);
   });
 
   it("exposes every driver value the app distinguishes", () => {
-    for (const driver of ["local", "e2e", "pglite"]) {
+    for (const driver of ["neon", "local", "e2e", "pglite"]) {
       expect(loadInfraEnv({ DATABASE_DRIVER: driver }).databaseDriver).toBe(
         driver,
       );
     }
+  });
+
+  it("rejects unknown DATABASE_DRIVER values", () => {
+    expect(() => loadInfraEnv({ DATABASE_DRIVER: "sqlite" })).toThrow();
   });
 });
 

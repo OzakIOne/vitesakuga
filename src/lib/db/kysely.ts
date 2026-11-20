@@ -1,26 +1,40 @@
 import { neon } from "@neondatabase/serverless";
-import { Kysely, PostgresDialect } from "kysely";
+import { Effect } from "effect";
+import { Kysely, PostgresDialect, type Dialect } from "kysely";
 import { Pool as PgPool } from "pg";
 
+import { envInfra } from "../env/infra";
 import { envServer } from "../env/server";
 import type { KyselyTable, SchemaTable } from "./kysely-schema";
 import { NeonTransactionDialect } from "./neon-transaction-dialect";
-import { getKyselyPool, isLocal } from "./pool";
 
 export type DB = {
   [Table in SchemaTable as Table["_"]["name"]]: KyselyTable<Table>;
 };
 
-const kyselyDialect = isLocal
-  ? new PostgresDialect({
-      // SAFETY: getKyselyPool() creates a PgPool exactly when DATABASE_DRIVER=local
-      // (isLocal), so this pool is always the PgPool PostgresDialect requires.
-      pool: getKyselyPool() as PgPool,
-    })
-  : new NeonTransactionDialect({
-      neon: neon(envServer.DATABASE_URL),
-      connectionString: envServer.DATABASE_URL,
-    });
+const createLocalPool = () => {
+  const pool = new PgPool({ connectionString: envServer.DATABASE_URL });
+  pool.on("error", (err: Error) => {
+    Effect.runSync(Effect.logError("Unexpected error on database client", err));
+  });
+  return pool;
+};
+
+const createKyselyDialect = (): Dialect => {
+  switch (envInfra.databaseDriver) {
+    case "local":
+    case "e2e":
+      return new PostgresDialect({ pool: createLocalPool() });
+    case "neon":
+    case "pglite":
+      return new NeonTransactionDialect({
+        neon: neon(envServer.DATABASE_URL),
+        connectionString: envServer.DATABASE_URL,
+      });
+  }
+};
+
+const kyselyDialect = createKyselyDialect();
 
 export const kysely = new Kysely<DB>({ dialect: kyselyDialect });
 
