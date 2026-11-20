@@ -24,12 +24,12 @@ jobs:
 
   migrate:
     needs: verify
-    runs-on: blacksmith-4vcpu-ubuntu-2604
+    runs-on: ubuntu-latest
     environment: preproduction
     timeout-minutes: 15
     steps:
       - name: Check out selected ref
-        uses: useblacksmith/checkout@v1
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
 
@@ -56,7 +56,7 @@ jobs:
 
   deploy:
     needs: [verify, migrate]
-    runs-on: blacksmith-4vcpu-ubuntu-2604
+    runs-on: ubuntu-latest
     environment: preproduction
     timeout-minutes: 45
     env:
@@ -72,7 +72,7 @@ jobs:
       MONITOR_INTERVAL_SECONDS: ${{ vars.MONITOR_INTERVAL_SECONDS || '60' }}
     steps:
       - name: Check out selected ref
-        uses: useblacksmith/checkout@v1
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
 

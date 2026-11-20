@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   rollback:
-    runs-on: blacksmith-4vcpu-ubuntu-2604
+    runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 15
     env:
@@ -26,7 +26,7 @@ jobs:
       CLOUDFLARE_WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
     steps:
       - name: Check out source
-        uses: useblacksmith/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Set up Nub and pinned Node
         uses: nubjs/setup-nub@v0
