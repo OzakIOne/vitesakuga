@@ -212,7 +212,11 @@ const UPLOAD_INPUT = {
   relatedPostId: undefined,
   source: undefined,
   tags: [],
-  thumbnail: new File(["thumb"], "thumb.jpg", { type: "image/jpeg" }),
+  thumbnail: new File(
+    [new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), "thumb"],
+    "thumb.jpg",
+    { type: "image/jpeg" },
+  ),
   title: "Uploaded Post",
   videoKey: "videos/user-1/a.mp4",
   videoMetadata: undefined,

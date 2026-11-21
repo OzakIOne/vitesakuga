@@ -18,10 +18,24 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   type VideoMetadata,
 } from "./posts.schema";
+import { PostsReadService, PostsReadServiceLive } from "./posts-read.service";
 import { PostsService, PostsServiceLive } from "./posts.service";
 
+const JPEG_HEADER = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+const PNG_HEADER = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const WEBP_HEADER = new Uint8Array([
+  0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+]);
+
+const makeImageFile = (
+  header: Uint8Array<ArrayBuffer>,
+  label: string,
+  name: string,
+  type: string,
+) => new File([header, label], name, { type });
+
 let db: Kysely<DB>;
-let runEffect: ServiceTestContext<PostsService>["runEffect"];
+let runEffect: ServiceTestContext<PostsService | PostsReadService>["runEffect"];
 let mockGetSession: ReturnType<typeof vi.fn>;
 let closeCtx: () => Promise<void>;
 
@@ -34,7 +48,9 @@ const testUser = {
 };
 
 beforeEach(async () => {
-  const ctx = await makeServiceTestLayer(PostsServiceLive);
+  const ctx = await makeServiceTestLayer(
+    Layer.mergeAll(PostsServiceLive, PostsReadServiceLive),
+  );
   db = ctx.db;
   runEffect = ctx.runEffect;
   mockGetSession = ctx.mockGetSession;
@@ -149,13 +165,13 @@ const linkImageWidth = async (postId: number, width: number) => {
 };
 
 type SearchPostsParams = Parameters<
-  PostsService["Service"]["search"]
+  PostsReadService["Service"]["search"]
 >[0]["params"];
 type SearchPostsInput = Omit<SearchPostsParams, "randomSeed" | "view"> &
   Partial<Pick<SearchPostsParams, "randomSeed" | "view">>;
 
 const searchPosts = (params: SearchPostsInput) =>
-  Effect.flatMap(PostsService, (service) =>
+  Effect.flatMap(PostsReadService, (service) =>
     service.search({
       includePopularTags: true,
       params: {
@@ -673,7 +689,7 @@ describe("PostsService.search", () => {
     });
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.fetchRandomPost({ randomSeed: 42 }),
       ),
     );
@@ -907,7 +923,7 @@ describe("PostsService.search", () => {
       .execute();
 
     const chronologicalNotRequested = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.search({
           includePopularTags: false,
           params: {
@@ -997,7 +1013,7 @@ describe("PostsService.fetchDetail", () => {
     });
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) => service.fetchDetail(postId)),
+      Effect.flatMap(PostsReadService, (service) => service.fetchDetail(postId)),
     );
 
     expect(result.post.title).toBe("Detail Post");
@@ -1016,7 +1032,7 @@ describe("PostsService.fetchDetail", () => {
     await linkTags(postId, [tagId]);
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) => service.fetchDetail(postId)),
+      Effect.flatMap(PostsReadService, (service) => service.fetchDetail(postId)),
     );
 
     expect(result.tags).toHaveLength(1);
@@ -1026,7 +1042,7 @@ describe("PostsService.fetchDetail", () => {
   it("fails with PostNotFoundError when post is not found", async () => {
     const error = await runEffect(
       Effect.flip(
-        Effect.flatMap(PostsService, (service) =>
+        Effect.flatMap(PostsReadService, (service) =>
           service.fetchDetail(asPostId(999)),
         ),
       ),
@@ -1068,7 +1084,7 @@ describe("PostsService.fetchSeriesHub", () => {
     await insertPost({ animeTitle: "Other series", title: "Ignored" });
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.fetchSeriesHub({ seriesTitle: "MOB PSYCHO 100" }),
       ),
     );
@@ -1096,7 +1112,7 @@ describe("PostsService.getByTag", () => {
     await linkTags(postId1, [tagId]);
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.getByTag({ tag: "anime", page: 0 }),
       ),
     );
@@ -1111,7 +1127,7 @@ describe("PostsService.getByTag", () => {
     await insertPost({ title: "Some Post" });
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.getByTag({ tag: "empty-tag", page: 0 }),
       ),
     );
@@ -1136,12 +1152,12 @@ describe("PostsService.getByTag", () => {
     ];
 
     const firstPage = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.getByTag({ tag: "anime", page: 0 }),
       ),
     );
     const secondPage = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.getByTag({ tag: "anime", page: 1 }),
       ),
     );
@@ -1177,7 +1193,7 @@ describe("PostsService.getByTag", () => {
     await linkTags(otherPost, [otherTag, actionTag]);
 
     const result = await runEffect(
-      Effect.flatMap(PostsService, (service) =>
+      Effect.flatMap(PostsReadService, (service) =>
         service.getByTag({ tag: "anime", page: 0 }),
       ),
     );
@@ -1221,7 +1237,7 @@ describe("PostsService.upload", () => {
     relatedPostId: undefined,
     source: undefined,
     tags: [],
-    thumbnail: new File(["thumb"], "thumb.jpg", { type: "image/jpeg" }),
+    thumbnail: makeImageFile(JPEG_HEADER, "thumb", "thumb.jpg", "image/jpeg"),
     title: "Uploaded Post",
     videoKey,
     videoMetadata: undefined,
@@ -1283,7 +1299,7 @@ describe("PostsService.upload", () => {
       .where("id", "=", post.id)
       .executeTakeFirstOrThrow();
     const detail = await runEffect(
-      Effect.flatMap(PostsService, (service) => service.fetchDetail(post.id)),
+      Effect.flatMap(PostsReadService, (service) => service.fetchDetail(post.id)),
     );
 
     expect(stored.metadataType).toBe("object");
@@ -1768,9 +1784,9 @@ describe("PostsService.upload (image posts)", () => {
       Effect.flatMap(PostsService, (service) =>
         service.upload(
           makeImageUploadInput([
-            new File(["first"], "first.png", { type: "image/png" }),
-            new File(["second"], "second.jpg", { type: "image/jpeg" }),
-            new File(["third"], "third.webp", { type: "image/webp" }),
+            makeImageFile(PNG_HEADER, "first", "first.png", "image/png"),
+            makeImageFile(JPEG_HEADER, "second", "second.jpg", "image/jpeg"),
+            makeImageFile(WEBP_HEADER, "third", "third.webp", "image/webp"),
           ]),
         ),
       ),
@@ -1809,8 +1825,8 @@ describe("PostsService.upload (image posts)", () => {
       Effect.flatMap(PostsService, (service) =>
         service.upload(
           makeImageUploadInput([
-            new File(["first"], "first.jpg", { type: "image/jpeg" }),
-            new File(["second"], "second.jpg", { type: "image/jpeg" }),
+            makeImageFile(JPEG_HEADER, "first", "first.jpg", "image/jpeg"),
+            makeImageFile(JPEG_HEADER, "second", "second.jpg", "image/jpeg"),
           ]),
         ),
       ),
@@ -1846,6 +1862,27 @@ describe("PostsService.upload (image posts)", () => {
 
     expect(error._tag).toBe("ValidationError");
     expect(error.message).toBe("Thumbnail is required");
+  });
+
+  it("rejects images with spoofed magic bytes directly through PostsService.upload", async () => {
+    mockGetSession.mockResolvedValueOnce(makeAuthSession({ id: "user-1" }));
+
+    const error = await runEffect(
+      Effect.flip(
+        Effect.flatMap(PostsService, (service) =>
+          service.upload(
+            makeImageUploadInput([
+              new File(["<script>alert(1)</script>"], "evil.png", {
+                type: "image/png",
+              }),
+            ]),
+          ),
+        ),
+      ),
+    );
+
+    expect(error._tag).toBe("ValidationError");
+    expect(error.message).toBe("Image must be a valid JPEG, PNG or WebP file");
   });
 
   it("rejects images with unsupported extensions before the service runs", () => {
@@ -1933,8 +1970,8 @@ describe("PostsService.upload (image posts)", () => {
           Effect.flatMap(PostsService, (service) =>
             service.upload(
               makeImageUploadInput([
-                new File(["first"], "first.png", { type: "image/png" }),
-                new File(["second"], "second.png", { type: "image/png" }),
+                makeImageFile(PNG_HEADER, "first", "first.png", "image/png"),
+                makeImageFile(PNG_HEADER, "second", "second.png", "image/png"),
               ]),
             ),
           ),

@@ -30,8 +30,8 @@ import { asPostId } from "../ids";
 import {
   LifecycleService,
   LifecycleServiceLive,
-  updatePostWithVersionInTransaction,
 } from "../lifecycle/lifecycle.service";
+import { applyPostPatchInTransaction } from "../posts/post-patch";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
 import { POST_EDIT_REQUIRED_VOTES } from "./post-edits.config";
@@ -440,7 +440,7 @@ export class PostEditsService extends Context.Service<
                 }
                 const now = yield* DateTime.now;
                 const resolvedAt = DateTime.toDate(now);
-                yield* updatePostWithVersionInTransaction(trx, {
+                yield* applyPostPatchInTransaction(trx, {
                   changes: patch,
                   expectedVersion: context.edit.basePostVersion,
                   postId: context.edit.postId,
