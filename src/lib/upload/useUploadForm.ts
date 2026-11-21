@@ -22,7 +22,7 @@ import {
   getImageFileValidationError,
 } from "../posts/posts.schema";
 import type { Tag, VideoMetadata } from "../posts/posts.schema";
-import { createVideoUploadUrl, uploadPost } from "../posts/posts.service";
+import { usePostsFns } from "../server-fns.context";
 import { buildFormData, getImageDimensions } from "./upload.processor";
 import { useUploadMedia } from "./use-upload-media";
 import { useUploadDraft } from "./useUploadDraft";
@@ -105,11 +105,37 @@ type UseUploadFormResult = {
   >;
   isSubmitting: boolean;
   submit: () => Promise<void>;
-  draft: ReturnType<typeof useUploadDraft>;
+  previousVideoName: string | undefined;
   media: ReturnType<typeof useUploadMedia>;
 };
 
-export function useUploadForm(): UseUploadFormResult {
+export type UseUploadFormOptions = {
+  readonly putVideo?: (args: {
+    readonly body: File;
+    readonly headers: Readonly<Record<string, string>>;
+    readonly signal: AbortSignal;
+    readonly url: string;
+  }) => Promise<Pick<Response, "ok" | "status">>;
+};
+
+const defaultPutVideo: NonNullable<UseUploadFormOptions["putVideo"]> = ({
+  body,
+  headers,
+  signal,
+  url,
+}) =>
+  fetch(url, {
+    body,
+    headers,
+    method: "PUT",
+    signal,
+  });
+
+export function useUploadForm(
+  options: UseUploadFormOptions = {},
+): UseUploadFormResult {
+  const { createVideoUploadUrl, uploadPost } = usePostsFns();
+  const putVideo = options.putVideo ?? defaultPutVideo;
   const draft = useUploadDraft();
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isPreparingImages, setIsPreparingImages] = useState(false);
@@ -367,11 +393,11 @@ export function useUploadForm(): UseUploadFormResult {
         },
       });
       if (!isCurrent()) return false;
-      const response = await fetch(url, {
+      const response = await putVideo({
         body: videoFile,
         headers: requiredHeaders,
-        method: "PUT",
         signal: controller.signal,
+        url,
       });
       if (!response.ok) {
         throw new Error(`Storage upload failed with status ${response.status}`);
@@ -404,12 +430,31 @@ export function useUploadForm(): UseUploadFormResult {
     await form.handleSubmit();
   };
 
+  const currentVideoName = video.videoFile?.name ?? draft.draft?.videoName ?? "";
+  const persistDraft = draft.persist;
+
+  useEffect(() => {
+    const sync = (values: UploadFormValues) => {
+      if (!values.title && !values.description) {
+        return;
+      }
+      persistDraft({ ...values, videoName: currentVideoName });
+    };
+    sync(form.store.state.values);
+    const subscription = form.store.subscribe((state) => {
+      sync(state.values);
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentVideoName, form.store, persistDraft]);
+
   return {
     form,
     isSubmitting:
       uploadPostMutation.isPending || isUploadingVideo || isPreparingImages,
     submit,
-    draft,
+    previousVideoName: draft.draft?.videoName || undefined,
     media,
   };
 }

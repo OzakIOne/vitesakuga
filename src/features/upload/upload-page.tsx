@@ -7,7 +7,7 @@ import {
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   LuCamera,
   LuChevronDown,
@@ -38,8 +38,7 @@ import {
   MAX_IMAGES_PER_POST,
   MIN_TEXT_LENGTH,
 } from "src/lib/posts/posts.schema";
-import { searchPosts } from "src/lib/posts/posts.service";
-import type { UploadDraftData } from "src/lib/upload/useUploadDraft";
+import { usePostsFns } from "src/lib/server-fns.context";
 import { useUploadForm } from "src/lib/upload/useUploadForm";
 
 type MetaNumberFieldProps = {
@@ -79,32 +78,10 @@ function MetaNumberField({ field, label, inputLabel }: MetaNumberFieldProps) {
   );
 }
 
-type UploadDraftFormValues = Omit<UploadDraftData, "videoName">;
-
-type UploadDraftPersistenceProps = {
-  persist: (values: UploadDraftData) => void;
-  values: UploadDraftFormValues;
-  videoName: string;
-};
-
-const UploadDraftPersistence = ({
-  persist,
-  values,
-  videoName,
-}: UploadDraftPersistenceProps) => {
-  useEffect(() => {
-    if (!values.title && !values.description) {
-      return;
-    }
-    persist({ ...values, videoName });
-  }, [persist, values, videoName]);
-
-  return null;
-};
-
 export const UploadPage = () => {
+  const { searchPosts } = usePostsFns();
   const form = useUploadForm();
-  const { media, draft } = form;
+  const { media } = form;
   const {
     imageFiles,
     imageKeyFor,
@@ -580,9 +557,9 @@ export const UploadPage = () => {
                               <Box color="fg.muted">.mp4, .mov, .mkv</Box>
                             </FileUpload.DropzoneContent>
                           </FileUpload.Dropzone>
-                          {draft.draft?.videoName && (
+                          {form.previousVideoName && (
                             <Text color="gray.500" fontSize="sm" mt={1}>
-                              Previously selected: {draft.draft.videoName}
+                              Previously selected: {form.previousVideoName}
                             </Text>
                           )}
                         </>
@@ -818,16 +795,6 @@ export const UploadPage = () => {
             </form.form.Field>
           </Box>
         )}
-
-        <form.form.Subscribe selector={(state) => state.values}>
-          {(values) => (
-            <UploadDraftPersistence
-              persist={draft.persist}
-              values={values}
-              videoName={video.videoFile?.name ?? draft.draft?.videoName ?? ""}
-            />
-          )}
-        </form.form.Subscribe>
 
         <form.form.Subscribe
           selector={(state) => [

@@ -27,7 +27,9 @@ const isGuarded = (file: string): boolean => {
   return (
     SERVER_FNS_CONTEXT_FILE.test(name) ||
     QUERIES_FILE.test(name) ||
-    name.startsWith("components/")
+    name.startsWith("components/") ||
+    name.startsWith("features/") ||
+    name.startsWith("lib/upload/")
   );
 };
 
