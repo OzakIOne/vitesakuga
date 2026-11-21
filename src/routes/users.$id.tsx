@@ -64,21 +64,7 @@ function UserContent() {
     view: "chronological" as const,
   };
 
-  const {
-    allPosts,
-    anchorPostIndex,
-    anchorScrollKey,
-    fetchNextPage,
-    fetchPreviousPage,
-    hasNextPage,
-    hasPreviousPage,
-    isFetchingNextPage,
-    isFetchingPreviousPage,
-    pageParams,
-    pageSize,
-    popularTags,
-    syncPageToUrl,
-  } = usePostsInfiniteScroll(
+  const posts = usePostsInfiniteScroll(
     "/users/$id",
     userPostsInfiniteQueryOptions({
       page: searchParams.page,
@@ -94,26 +80,15 @@ function UserContent() {
         dateRange={dateRange}
         discoveryView="chronological"
         fromRoute="/users/$id"
-        popularTags={popularTags}
+        popularTags={posts.popularTags}
         searchQuery={q}
         selectedTags={tags}
         showDiscoveryViews={false}
         sortBy={sortBy}
       >
         <VirtualPostsGrid
-          allPosts={allPosts}
-          anchorPostIndex={anchorPostIndex}
-          anchorScrollKey={anchorScrollKey}
-          fetchNextPage={fetchNextPage}
-          fetchPreviousPage={fetchPreviousPage}
-          hasNextPage={hasNextPage}
-          hasPreviousPage={hasPreviousPage}
-          isFetchingNextPage={isFetchingNextPage}
-          isFetchingPreviousPage={isFetchingPreviousPage}
-          pageParams={pageParams}
-          pageSize={pageSize}
+          feed={posts.feed}
           searchParams={chronologicalSearchParams}
-          syncPageToUrl={syncPageToUrl}
         />
       </PostsPageLayout>
     </Box>

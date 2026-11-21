@@ -28,25 +28,7 @@ function RouteComponent() {
   const { dateRange, sortBy, view } = searchParams;
   const navigate = Route.useNavigate();
 
-  const {
-    allPosts,
-    anchorPostIndex,
-    anchorScrollKey,
-    fetchNextPage,
-    fetchPreviousPage,
-    hasNextPage,
-    hasPreviousPage,
-    isFetchingNextPage,
-    isFetchingPreviousPage,
-    pageParams,
-    pageSize,
-    popularTags,
-    retry,
-    syncPageToUrl,
-    error,
-    firstPage,
-    isPending,
-  } = usePostsInfiniteScroll(
+  const posts = usePostsInfiniteScroll(
     "/posts/tags/$tag",
     postsInfiniteQueryOptions({ ...searchParams, tags: [tag] }),
   );
@@ -56,7 +38,7 @@ function RouteComponent() {
       dateRange={dateRange}
       discoveryView={view}
       fromRoute="/posts/tags/$tag"
-      popularTags={popularTags}
+      popularTags={posts.popularTags}
       searchQuery={undefined}
       selectedTags={[tag]}
       sortBy={sortBy}
@@ -69,32 +51,21 @@ function RouteComponent() {
 
         <PostsResultsState
           activeFilters={[`Tag: ${tag}`]}
-          error={error}
-          hasLoadedPosts={allPosts.length > 0}
-          isPending={isPending}
+          error={posts.error}
+          hasLoadedPosts={posts.hasLoadedPosts}
+          isPending={posts.isPending}
           onClearFilters={() => {
             void navigate({
               search: { ...searchParams, page: 0, tags: [] },
               to: "/posts",
             });
           }}
-          onRetry={retry}
-          resultCount={firstPage?.meta.pagination.total ?? 0}
+          onRetry={posts.retry}
+          resultCount={posts.resultCount}
         >
           <VirtualPostsGrid
-            allPosts={allPosts}
-            anchorPostIndex={anchorPostIndex}
-            anchorScrollKey={anchorScrollKey}
-            fetchNextPage={fetchNextPage}
-            fetchPreviousPage={fetchPreviousPage}
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            isFetchingNextPage={isFetchingNextPage}
-            isFetchingPreviousPage={isFetchingPreviousPage}
-            pageParams={pageParams}
-            pageSize={pageSize}
+            feed={posts.feed}
             searchParams={{ ...searchParams, tags: [tag] }}
-            syncPageToUrl={syncPageToUrl}
           />
         </PostsResultsState>
       </Box>

@@ -76,27 +76,33 @@ export function useInvalidateAllPosts() {
   };
 }
 
+export type VirtualPostsFeedHandle = {
+  readonly allPosts: readonly PostWithVotes[];
+  readonly anchorPostIndex: number | null;
+  readonly anchorScrollKey: number;
+  readonly fetchNextPage: () => void;
+  readonly fetchPreviousPage: () => void;
+  readonly hasNextPage: boolean;
+  readonly hasPreviousPage: boolean;
+  readonly isFetchingNextPage: boolean;
+  readonly isFetchingPreviousPage: boolean;
+  readonly pageParams: readonly number[];
+  readonly pageSize: number;
+  readonly syncPageToUrl: (page: number) => void;
+};
+
 export type PostsInfiniteState<
   TData extends InfinitePostsPage = InfinitePostsPage,
 > = {
-  allPosts: readonly PostWithVotes[];
-  anchorPostIndex: number | null;
-  error: Error | null;
-  anchorScrollKey: number;
-  fetchNextPage: () => void;
-  fetchPreviousPage: () => void;
-  firstPage: TData | undefined;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-  isFetching: boolean;
-  isFetchingNextPage: boolean;
-  isFetchingPreviousPage: boolean;
-  isPending: boolean;
-  pageParams: readonly number[];
-  pageSize: number;
-  popularTags: PopularTag[];
-  retry: () => void;
-  syncPageToUrl: (page: number) => void;
+  readonly error: Error | null;
+  readonly feed: VirtualPostsFeedHandle;
+  readonly firstPage: TData | undefined;
+  readonly hasLoadedPosts: boolean;
+  readonly isFetching: boolean;
+  readonly isPending: boolean;
+  readonly popularTags: PopularTag[];
+  readonly resultCount: number;
+  readonly retry: () => void;
 };
 
 export function usePostsInfiniteScroll<
@@ -253,24 +259,30 @@ export function usePostsInfiniteScroll<
     void refetch();
   }, [refetch]);
 
+  const firstPage = data?.pages[0];
+
   return {
-    allPosts,
-    anchorPostIndex,
-    anchorScrollKey,
     error: error ?? null,
-    fetchNextPage,
-    fetchPreviousPage,
-    firstPage: data?.pages[0],
-    hasNextPage,
-    hasPreviousPage,
+    feed: {
+      allPosts,
+      anchorPostIndex,
+      anchorScrollKey,
+      fetchNextPage,
+      fetchPreviousPage,
+      hasNextPage,
+      hasPreviousPage,
+      isFetchingNextPage,
+      isFetchingPreviousPage,
+      pageParams,
+      pageSize: pageSize ?? 30,
+      syncPageToUrl,
+    },
+    firstPage,
+    hasLoadedPosts: allPosts.length > 0,
     isFetching,
-    isFetchingNextPage,
-    isFetchingPreviousPage,
     isPending,
-    pageParams,
-    pageSize: pageSize ?? 30,
     popularTags,
+    resultCount: firstPage?.meta.pagination.total ?? 0,
     retry,
-    syncPageToUrl,
   };
 }

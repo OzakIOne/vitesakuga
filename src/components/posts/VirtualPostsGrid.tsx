@@ -14,6 +14,7 @@ import { Spinner } from "src/components/ui/feedback";
 import { Box, SimpleGrid, Stack } from "src/components/ui/layout";
 import type { PostWithVotes } from "src/lib/db/schema";
 import { envClient } from "src/lib/env/client";
+import type { VirtualPostsFeedHandle } from "src/lib/posts/posts.hooks";
 import type { PostsSearchParams } from "src/lib/posts/posts.schema";
 import { useResponsiveColumns } from "src/lib/posts/useResponsiveColumns";
 
@@ -26,36 +27,28 @@ type CSSVariableProperties = CSSProperties & {
 };
 
 type VirtualPostsGridProps = {
-  anchorPostIndex: number | null;
-  anchorScrollKey: number;
-  allPosts: readonly PostWithVotes[];
-  fetchNextPage: () => void;
-  fetchPreviousPage: () => void;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-  isFetchingNextPage: boolean;
-  isFetchingPreviousPage: boolean;
-  pageParams: readonly number[];
-  pageSize: number;
-  searchParams: PostsSearchParams;
-  syncPageToUrl: (page: number) => void;
+  readonly feed: VirtualPostsFeedHandle;
+  readonly searchParams: PostsSearchParams;
 };
 
 export function VirtualPostsGrid({
-  anchorPostIndex,
-  anchorScrollKey,
-  allPosts,
-  fetchNextPage,
-  fetchPreviousPage,
-  hasNextPage,
-  hasPreviousPage,
-  isFetchingNextPage,
-  isFetchingPreviousPage,
-  pageParams,
-  pageSize,
+  feed,
   searchParams,
-  syncPageToUrl,
 }: VirtualPostsGridProps) {
+  const {
+    allPosts,
+    anchorPostIndex,
+    anchorScrollKey,
+    fetchNextPage,
+    fetchPreviousPage,
+    hasNextPage,
+    hasPreviousPage,
+    isFetchingNextPage,
+    isFetchingPreviousPage,
+    pageParams,
+    pageSize,
+    syncPageToUrl,
+  } = feed;
   const columns = useResponsiveColumns();
   const parentRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
