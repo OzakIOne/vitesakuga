@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { postsKeys } from "../posts/posts.queries";
-import { usePostEditsFns } from "./post-edits.fn-context";
+import { usePostEditsFns } from "../server-fns.context";
 import { postEditsKeys } from "./post-edits.queries";
 import type { PostEditPayload } from "./post-edits.schema";
 

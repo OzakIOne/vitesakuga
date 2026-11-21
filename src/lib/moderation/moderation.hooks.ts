@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { useModerationFns } from "./moderation.fn-context";
+import { useModerationFns } from "../server-fns.context";
 
 export const moderationKeys = {
   accountModerationEvents: ["moderation", "account-moderation-events"] as const,

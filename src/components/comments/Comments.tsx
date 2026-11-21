@@ -14,7 +14,7 @@ import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
 import { useCapabilities } from "src/lib/auth/capabilities.context";
-import { useCommentsFns } from "src/lib/comments/comments.fn-context";
+import { useCommentsFns } from "src/lib/server-fns.context";
 import {
   useAddComment,
   useDeleteComment,

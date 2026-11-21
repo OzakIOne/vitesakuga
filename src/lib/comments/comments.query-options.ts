@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { CommentsFns } from "./comments.fn-context";
+import type { CommentsFns } from "../server-fns.context";
 import { commentsKeys } from "./comments.queries";
 
 export const commentsQueryOptions = (

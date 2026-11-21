@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { PlaylistsFnsContext, type PlaylistsFns } from "./playlists.fn-context";
+import { ServerFnsProvider, type PlaylistsFns } from "../server-fns.context";
 import {
   useBulkAddPostsToPlaylist,
   useBulkRemovePostsFromPlaylist,
@@ -151,13 +151,12 @@ const createFixture = (queryClient: QueryClient) => {
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <PlaylistsFnsContext.Provider
+      <ServerFnsProvider
         // SAFETY: the hooks under test only call the fakes above; the other
         // playlist server functions are never invoked.
-        value={fns as unknown as PlaylistsFns}
-      >
+        value={{ playlists: fns as unknown as PlaylistsFns }}>
         {children}
-      </PlaylistsFnsContext.Provider>
+      </ServerFnsProvider>
     </QueryClientProvider>
   );
 

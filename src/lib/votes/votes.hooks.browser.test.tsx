@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { VotesFnsContext, type VotesFns } from "./votes.fn-context";
+import { ServerFnsProvider, type VotesFns } from "../server-fns.context";
 import { usePostVotes, useSetVote } from "./votes.hooks";
 
 vi.mock("src/components/ui/toaster", () => ({
@@ -27,13 +27,12 @@ const createWrapper = (
   };
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <VotesFnsContext.Provider
+      <ServerFnsProvider
         // SAFETY: the hooks under test only call the fakes above; the
         // remaining vote server functions are never invoked.
-        value={fakes as unknown as VotesFns}
-      >
+        value={{ votes: fakes as unknown as VotesFns }}>
         {children}
-      </VotesFnsContext.Provider>
+      </ServerFnsProvider>
     </QueryClientProvider>
   );
 };

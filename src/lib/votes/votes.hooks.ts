@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { PostVote } from "../db/schema";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { useVotesFns } from "./votes.fn-context";
+import { useVotesFns } from "../server-fns.context";
 import { votesKeys } from "./votes.queries";
 import { votesQueryOptions } from "./votes.query-options";
 

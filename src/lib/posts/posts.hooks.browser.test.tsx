@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { PostsFnsContext, type PostsFns } from "./posts.fn-context";
+import { ServerFnsProvider, type PostsFns } from "../server-fns.context";
 import { useUpdatePost } from "./posts.hooks";
 import { postsKeys } from "./posts.queries";
 
@@ -43,13 +43,12 @@ describe(useUpdatePost, () => {
     const fns = { updatePost };
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
-        <PostsFnsContext.Provider
+        <ServerFnsProvider
           // SAFETY: useUpdatePost only calls updatePost; the other posts
           // server functions are never invoked.
-          value={fns as unknown as PostsFns}
-        >
+          value={{ posts: fns as unknown as PostsFns }}>
           {children}
-        </PostsFnsContext.Provider>
+        </ServerFnsProvider>
       </QueryClientProvider>
     );
     const { result } = await renderHook(

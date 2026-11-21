@@ -7,13 +7,13 @@ const REPOSITORY_ROOT = join(import.meta.dirname, "..", "..");
 const SOURCE_ROOT = join(REPOSITORY_ROOT, "src");
 
 const SOURCE_FILE = /\.tsx?$/;
-const FN_CONTEXT_FILE = /\.fn-context\.tsx?$/;
+const SERVER_FNS_CONTEXT_FILE = /^lib\/server-fns\.context\.tsx$/;
 const QUERIES_FILE = /\.queries\.tsx?$/;
 const IMPORT_STATEMENT =
   /import\s+(type\s+)?([^;]*?)\s+from\s+["']([^"']+\.service)["']/g;
 
 const FIX =
-  "keep this file type-only: move the runtime defaults to the domain's *.fns.ts, and keep queries in *.query-options.ts (query keys stay in *.queries.ts)";
+  "keep this file type-only: move the runtime defaults to src/lib/server-fns.defaults.ts, and keep queries in *.query-options.ts (query keys stay in *.queries.ts)";
 
 const collectSourceFiles = (directory: string): string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -25,7 +25,7 @@ const collectSourceFiles = (directory: string): string[] =>
 const isGuarded = (file: string): boolean => {
   const name = relative(SOURCE_ROOT, file);
   return (
-    FN_CONTEXT_FILE.test(name) ||
+    SERVER_FNS_CONTEXT_FILE.test(name) ||
     QUERIES_FILE.test(name) ||
     name.startsWith("components/")
   );

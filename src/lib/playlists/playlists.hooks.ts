@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { usePlaylistsFns } from "./playlists.fn-context";
+import { usePlaylistsFns } from "../server-fns.context";
 import { playlistsKeys } from "./playlists.queries";
 import type { PlaylistDetailPage, PlaylistsForPost } from "./playlists.queries";
 

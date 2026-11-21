@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
-import { useCommentsFns } from "./comments.fn-context";
+import { useCommentsFns } from "../server-fns.context";
 import { commentsKeys } from "./comments.queries";
 
 export function useAddComment(postId: number, userId: string) {

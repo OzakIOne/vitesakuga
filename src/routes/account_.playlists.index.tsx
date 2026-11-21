@@ -11,7 +11,7 @@ import { assetUrl } from "src/lib/assets/url";
 import { useCapabilities } from "src/lib/auth/capabilities.context";
 import { useUpdatePlaylist } from "src/lib/playlists/playlists.hooks";
 import { playlistsQueryUserPlaylists } from "src/lib/playlists/playlists.query-options";
-import { useVotesFns } from "src/lib/votes/votes.fn-context";
+import { useVotesFns } from "src/lib/server-fns.context";
 import { votesQueryLikedPosts } from "src/lib/votes/votes.query-options";
 import { seo } from "src/utils/seo";
 

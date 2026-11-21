@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
-  ModerationFnsContext,
+  ServerFnsProvider,
   type ModerationFns,
-} from "src/lib/moderation/moderation.fn-context";
+} from "src/lib/server-fns.context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
@@ -67,12 +67,11 @@ describe(RolesPanel, () => {
     };
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
-        <ModerationFnsContext.Provider
+        <ServerFnsProvider
           // SAFETY: RolesPanel only calls the three functions supplied here.
-          value={fns as unknown as ModerationFns}
-        >
+          value={{ moderation: fns as unknown as ModerationFns }}>
           {children}
-        </ModerationFnsContext.Provider>
+        </ServerFnsProvider>
       </QueryClientProvider>
     );
     render(<RolesPanel />, { wrapper });

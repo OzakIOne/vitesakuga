@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import { Toaster } from "src/components/ui/toaster";
 import { ReauthenticationRequiredError } from "src/lib/errors";
 import {
-  ModerationFnsContext,
+  ServerFnsProvider,
   type ModerationFns,
-} from "src/lib/moderation/moderation.fn-context";
+} from "src/lib/server-fns.context";
 import { useModerationOverview } from "src/lib/moderation/moderation.hooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -32,13 +32,12 @@ describe(AccountSuspensionPanel, () => {
   const renderPanel = (fns: Record<string, unknown>, withToaster = false) => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
-        <ModerationFnsContext.Provider
+        <ServerFnsProvider
           // SAFETY: the panel and probe only read the fetchers and mutations
           // supplied here; every other server function is never called.
-          value={fns as unknown as ModerationFns}
-        >
+          value={{ moderation: fns as unknown as ModerationFns }}>
           {children}
-        </ModerationFnsContext.Provider>
+        </ServerFnsProvider>
       </QueryClientProvider>
     );
     return render(

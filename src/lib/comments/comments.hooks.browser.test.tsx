@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import { CommentsFnsContext, type CommentsFns } from "./comments.fn-context";
+import { ServerFnsProvider, type CommentsFns } from "../server-fns.context";
 import { useAddComment, useDeleteComment } from "./comments.hooks";
 
 vi.mock("src/components/ui/toaster", () => ({
@@ -25,13 +25,12 @@ const createWrapper = (
   };
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <CommentsFnsContext.Provider
+      <ServerFnsProvider
         // SAFETY: the hooks under test only call the fakes above; the
         // remaining comment server functions are never invoked.
-        value={fakes as unknown as CommentsFns}
-      >
+        value={{ comments: fakes as unknown as CommentsFns }}>
         {children}
-      </CommentsFnsContext.Provider>
+      </ServerFnsProvider>
     </QueryClientProvider>
   );
 };

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PostWithVotes } from "../db/schema";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import type { PaginationMeta } from "../pagination/pagination";
-import { usePostsFns } from "./posts.fn-context";
+import { usePostsFns } from "../server-fns.context";
 import { computeAnchorPostIndex, postsKeys } from "./posts.queries";
 import type { updatePost as updatePostFn } from "./posts.service";
 

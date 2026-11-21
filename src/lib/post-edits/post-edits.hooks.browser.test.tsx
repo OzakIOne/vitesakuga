@@ -9,9 +9,9 @@ import { renderHook } from "vitest-browser-react";
 
 import { postsKeys } from "../posts/posts.queries";
 import {
-  PostEditsFnsContext,
+  ServerFnsProvider,
   type PostEditsFns,
-} from "./post-edits.fn-context";
+} from "../server-fns.context";
 import { useApprovePostEdit } from "./post-edits.hooks";
 import { postEditsKeys } from "./post-edits.queries";
 
@@ -32,13 +32,12 @@ describe(useApprovePostEdit, () => {
     const fns = { approveEdit };
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
-        <PostEditsFnsContext.Provider
+        <ServerFnsProvider
           // SAFETY: useApprovePostEdit only calls approveEdit; the other
           // post-edit server functions are never invoked.
-          value={fns as unknown as PostEditsFns}
-        >
+          value={{ postEdits: fns as unknown as PostEditsFns }}>
           {children}
-        </PostEditsFnsContext.Provider>
+        </ServerFnsProvider>
       </QueryClientProvider>
     );
     const { result } = await renderHook(

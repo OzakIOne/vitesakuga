@@ -11,7 +11,7 @@ import { SuspendedAccountNotice } from "src/components/auth/SuspendedAccountNoti
 import { PostVoteButtons } from "src/components/votes/PostVoteButtons";
 import type { UserCapabilities } from "src/lib/auth/capabilities";
 import { CapabilitiesProvider } from "src/lib/auth/capabilities.context";
-import { VotesFnsContext, type VotesFns } from "src/lib/votes/votes.fn-context";
+import { ServerFnsProvider, type VotesFns } from "src/lib/server-fns.context";
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
@@ -55,13 +55,12 @@ describe("suspended account actions", () => {
       path: "/suspended",
       component: () => (
         <QueryClientProvider client={queryClient}>
-          <VotesFnsContext.Provider
+          <ServerFnsProvider
             // SAFETY: the vote query returns test data; mutation fakes throw if called.
-            value={votesFns as unknown as VotesFns}
-          >
+            value={{ votes: votesFns as unknown as VotesFns }}>
             <SuspendedAccountNotice />
             <PostVoteButtons postId={42} />
-          </VotesFnsContext.Provider>
+          </ServerFnsProvider>
         </QueryClientProvider>
       ),
     });

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { VotesFns } from "./votes.fn-context";
+import type { VotesFns } from "../server-fns.context";
 import { votesKeys } from "./votes.queries";
 import type { FetchLikedPostsInput } from "./votes.schema";
 

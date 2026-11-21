@@ -14,7 +14,7 @@ import { Image } from "src/components/ui/media";
 import { Heading, Text } from "src/components/ui/typography";
 import { assetUrl } from "src/lib/assets/url";
 import { PageNumberWithDefaultSchema } from "src/lib/pagination/pagination.schema";
-import { useVotesFns } from "src/lib/votes/votes.fn-context";
+import { useVotesFns } from "src/lib/server-fns.context";
 import { votesQueryLikedPosts } from "src/lib/votes/votes.query-options";
 import { formatDateUtc } from "src/utils/date-format";
 import { seo } from "src/utils/seo";

@@ -38,22 +38,10 @@ import type { UserCapabilities } from "src/lib/auth/capabilities";
 import { CapabilitiesProvider } from "src/lib/auth/capabilities.context";
 import authClient from "src/lib/auth/client";
 import { AuthClientContext } from "src/lib/auth/client-context";
-import { CommentsFnsContext } from "src/lib/comments/comments.fn-context";
-import { defaultCommentsFns } from "src/lib/comments/comments.fns";
-import { ModerationFnsContext } from "src/lib/moderation/moderation.fn-context";
-import { defaultModerationFns } from "src/lib/moderation/moderation.fns";
 import { useUnreadNotificationCount } from "src/lib/notifications/notifications.hooks";
-import { PlaylistsFnsContext } from "src/lib/playlists/playlists.fn-context";
-import { defaultPlaylistsFns } from "src/lib/playlists/playlists.fns";
-import { PostEditsFnsContext } from "src/lib/post-edits/post-edits.fn-context";
-import { defaultPostEditsFns } from "src/lib/post-edits/post-edits.fns";
-import { PostsFnsContext } from "src/lib/posts/posts.fn-context";
-import { defaultPostsFns } from "src/lib/posts/posts.fns";
-import { ReportsFnsContext } from "src/lib/reports/reports.fn-context";
-import { defaultReportsFns } from "src/lib/reports/reports.fns";
+import { ServerFnsProvider } from "src/lib/server-fns.context";
+import { defaultServerFns } from "src/lib/server-fns.defaults";
 import { usersKeys } from "src/lib/users/users.queries";
-import { VotesFnsContext } from "src/lib/votes/votes.fn-context";
-import { defaultVotesFns } from "src/lib/votes/votes.fns";
 import { seo } from "src/utils/seo";
 
 import appCss from "src/styles/app.css?url";
@@ -601,23 +589,11 @@ function RootComponent() {
     <HotkeysProvider>
       <GlobalShortcuts />
       <AuthClientContext.Provider value={authClient}>
-        <ModerationFnsContext.Provider value={defaultModerationFns}>
-          <CommentsFnsContext.Provider value={defaultCommentsFns}>
-            <PlaylistsFnsContext.Provider value={defaultPlaylistsFns}>
-              <PostEditsFnsContext.Provider value={defaultPostEditsFns}>
-                <PostsFnsContext.Provider value={defaultPostsFns}>
-                  <ReportsFnsContext.Provider value={defaultReportsFns}>
-                    <VotesFnsContext.Provider value={defaultVotesFns}>
-                      <RootDocument>
-                        <Outlet />
-                      </RootDocument>
-                    </VotesFnsContext.Provider>
-                  </ReportsFnsContext.Provider>
-                </PostsFnsContext.Provider>
-              </PostEditsFnsContext.Provider>
-            </PlaylistsFnsContext.Provider>
-          </CommentsFnsContext.Provider>
-        </ModerationFnsContext.Provider>
+        <ServerFnsProvider value={defaultServerFns}>
+          <RootDocument>
+            <Outlet />
+          </RootDocument>
+        </ServerFnsProvider>
       </AuthClientContext.Provider>
     </HotkeysProvider>
   );
