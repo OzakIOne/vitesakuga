@@ -12,7 +12,14 @@ import {
   postEditPayloadSchema,
   type PostEditPayload,
 } from "src/lib/post-edits/post-edits.schema";
+import { MIN_TEXT_LENGTH } from "src/lib/posts/posts.schema";
 import type { fetchPostDetail } from "src/lib/posts/posts.service";
+
+import {
+  PostSeriesMetadataFields,
+  toSeriesDraft,
+  type SeriesDraft,
+} from "./post-series-metadata-fields";
 
 type Post = Awaited<ReturnType<typeof fetchPostDetail>>["post"];
 
@@ -41,17 +48,19 @@ export const FIELD_KEYS = [
   "volumeNumber",
 ] as const satisfies ReadonlyArray<FieldKey>;
 
-const toDraft = (post: Post) =>
-  ({
-    animeTitle: post.animeTitle ?? "",
-    chapterNumber: post.chapterNumber?.toString() ?? "",
+const toDraft = (post: Post) => {
+  const series = toSeriesDraft(post);
+  return {
+    animeTitle: series.animeTitle,
+    chapterNumber: series.chapterNumber,
     description: post.description,
-    episodeNumber: post.episodeNumber?.toString() ?? "",
-    seasonNumber: post.seasonNumber?.toString() ?? "",
+    episodeNumber: series.episodeNumber,
+    seasonNumber: series.seasonNumber,
     source: post.source ?? "",
     title: post.title,
-    volumeNumber: post.volumeNumber?.toString() ?? "",
-  }) satisfies Draft;
+    volumeNumber: series.volumeNumber,
+  } satisfies Draft;
+};
 
 const displayValue = (value: string): string => value.trim() || "Empty";
 
@@ -82,8 +91,10 @@ export function PostEditSuggestionDialog({
     for (const key of changedFields) {
       const value = draft[key].trim();
       if (key === "title" || key === "description") {
-        if (value.length < 3) {
-          setError(`${FIELD_LABELS[key]} must be at least 3 characters.`);
+        if (value.length < MIN_TEXT_LENGTH) {
+          setError(
+            `${FIELD_LABELS[key]} must be at least ${MIN_TEXT_LENGTH} characters.`,
+          );
           return null;
         }
         payload[key] = value;
@@ -191,31 +202,24 @@ export function PostEditSuggestionDialog({
                       value={draft.source}
                     />
                   </Field.Root>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(
-                      [
-                        ["animeTitle", "Anime title", "text"],
-                        ["seasonNumber", "Season", "number"],
-                        ["episodeNumber", "Episode", "number"],
-                        ["chapterNumber", "Chapter", "number"],
-                        ["volumeNumber", "Volume", "number"],
-                      ] as const
-                    ).map(([key, label, type]) => (
-                      <Field.Root key={key}>
-                        <Field.Label htmlFor={`suggest-edit-${key}`}>
-                          {label}
-                        </Field.Label>
-                        <Input
-                          id={`suggest-edit-${key}`}
-                          onChange={(event) =>
-                            setField(key, event.target.value)
-                          }
-                          type={type}
-                          value={draft[key]}
-                        />
-                      </Field.Root>
-                    ))}
-                  </div>
+                  <PostSeriesMetadataFields
+                    disabled={submitSuggestion.isPending}
+                    draft={{
+                      animeTitle: draft.animeTitle,
+                      chapterNumber: draft.chapterNumber,
+                      episodeNumber: draft.episodeNumber,
+                      seasonNumber: draft.seasonNumber,
+                      sourceType: "",
+                      volumeNumber: draft.volumeNumber,
+                    }}
+                    hideSourceType
+                    idPrefix="suggest-edit"
+                    onChange={(field: keyof SeriesDraft, value: string) => {
+                      if (field !== "sourceType") {
+                        setField(field, value);
+                      }
+                    }}
+                  />
                 </Stack>
 
                 <Stack align="stretch" gap={2}>

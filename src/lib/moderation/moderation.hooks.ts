@@ -112,43 +112,6 @@ export function useRejectPromotion() {
   });
 }
 
-/** Applies an edit suggestion immediately (staff/owner). */
-export function useApproveEdit() {
-  const queryClient = useQueryClient();
-  const { approveEdit } = useModerationFns();
-  return useMutationWithFeedback({
-    errorFallback: "Could not apply this suggestion.",
-    errorTitle: "Suggestion approval failed",
-    mutationFn: async (editId: number) => approveEdit({ data: { editId } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: moderationKeys.overview,
-      });
-    },
-    successDescription: "Changes were applied to the post.",
-    successTitle: "Suggestion applied",
-  });
-}
-
-/** Rejects a pending edit suggestion. */
-export function useRejectEdit() {
-  const queryClient = useQueryClient();
-  const { rejectEdit } = useModerationFns();
-  return useMutationWithFeedback({
-    errorFallback: "Could not reject this suggestion.",
-    errorTitle: "Suggestion rejection failed",
-    mutationFn: async (editId: number) => rejectEdit({ data: { editId } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: moderationKeys.overview,
-      });
-    },
-    successDescription: "The suggestion was discarded.",
-    successTitle: "Suggestion rejected",
-  });
-}
-
-/** Admin-only direct rank assignment. */
 /** Suspends an account (moderator or admin). Its queued work stays visible to staff. */
 export function useSuspendUser() {
   const queryClient = useQueryClient();

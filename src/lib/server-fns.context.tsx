@@ -55,14 +55,12 @@ export type CommentsFns = {
 };
 
 export type ModerationFns = {
-  approveEdit: typeof approveEdit;
   approvePromotion: typeof approvePromotion;
   assignUserRole: typeof assignUserRole;
   fetchAccountModerationEvents: typeof fetchAccountModerationEvents;
   fetchModerationOverview: typeof fetchModerationOverview;
   fetchPromotionQueue: typeof fetchPromotionQueue;
   previewGc: typeof previewGc;
-  rejectEdit: typeof rejectEdit;
   rejectPromotion: typeof rejectPromotion;
   runGc: typeof runGc;
   suspendUser: typeof suspendUser;

@@ -86,47 +86,57 @@ const SeriesNumberField = ({
 type PostSeriesMetadataFieldsProps = {
   disabled: boolean;
   draft: SeriesDraft;
+  hideSourceType?: boolean;
+  idPrefix?: string;
   onChange: (field: keyof SeriesDraft, value: string) => void;
 };
 
 export const PostSeriesMetadataFields = ({
   disabled,
   draft,
+  hideSourceType = false,
+  idPrefix = "post",
   onChange,
 }: PostSeriesMetadataFieldsProps) => (
   <>
     <Field.Root>
-      <Field.Label htmlFor="post-anime-title-edit">Anime title</Field.Label>
+      <Field.Label htmlFor={`${idPrefix}-anime-title-edit`}>
+        Anime title
+      </Field.Label>
       <Input
         disabled={disabled}
-        id="post-anime-title-edit"
+        id={`${idPrefix}-anime-title-edit`}
         onChange={(event) => {
           onChange("animeTitle", event.target.value);
         }}
         value={draft.animeTitle}
       />
     </Field.Root>
-    <Field.Root>
-      <Field.Label htmlFor="post-source-type-edit">Source type</Field.Label>
-      <select
-        className="border-tone-300 dark:border-tone-600 dark:bg-tone-800 w-full rounded-md border bg-white px-3 py-2 text-sm"
-        disabled={disabled}
-        id="post-source-type-edit"
-        onChange={(event) => {
-          onChange("sourceType", event.target.value);
-        }}
-        value={draft.sourceType}
-      >
-        <option value="">Not set</option>
-        <option value="movie">Movie</option>
-        <option value="tv_series">TV series</option>
-      </select>
-    </Field.Root>
+    {!hideSourceType && (
+      <Field.Root>
+        <Field.Label htmlFor={`${idPrefix}-source-type-edit`}>
+          Source type
+        </Field.Label>
+        <select
+          className="border-tone-300 dark:border-tone-600 dark:bg-tone-800 w-full rounded-md border bg-white px-3 py-2 text-sm"
+          disabled={disabled}
+          id={`${idPrefix}-source-type-edit`}
+          onChange={(event) => {
+            onChange("sourceType", event.target.value);
+          }}
+          value={draft.sourceType}
+        >
+          <option value="">Not set</option>
+          <option value="movie">Movie</option>
+          <option value="tv_series">TV series</option>
+        </select>
+      </Field.Root>
+    )}
     {/* Literal class needed: Tailwind can't see dynamic grid-cols values. */}
     <div className="grid grid-cols-2 gap-4">
       <SeriesNumberField
         disabled={disabled}
-        id="post-season-edit"
+        id={`${idPrefix}-season-edit`}
         label="Season"
         onChange={(value) => {
           onChange("seasonNumber", value);
@@ -135,7 +145,7 @@ export const PostSeriesMetadataFields = ({
       />
       <SeriesNumberField
         disabled={disabled}
-        id="post-episode-edit"
+        id={`${idPrefix}-episode-edit`}
         label="Episode"
         onChange={(value) => {
           onChange("episodeNumber", value);
@@ -144,7 +154,7 @@ export const PostSeriesMetadataFields = ({
       />
       <SeriesNumberField
         disabled={disabled}
-        id="post-volume-edit"
+        id={`${idPrefix}-volume-edit`}
         label="Volume"
         onChange={(value) => {
           onChange("volumeNumber", value);
@@ -153,7 +163,7 @@ export const PostSeriesMetadataFields = ({
       />
       <SeriesNumberField
         disabled={disabled}
-        id="post-chapter-edit"
+        id={`${idPrefix}-chapter-edit`}
         label="Chapter"
         onChange={(value) => {
           onChange("chapterNumber", value);

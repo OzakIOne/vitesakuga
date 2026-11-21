@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 
+import { moderationKeys } from "../moderation/moderation.hooks";
 import { useMutationWithFeedback } from "../mutations/mutation-feedback";
 import { postsKeys } from "../posts/posts.queries";
 import { usePostEditsFns } from "../server-fns.context";
@@ -42,6 +43,9 @@ export function useApprovePostEdit(postId: number) {
         queryClient.invalidateQueries({
           queryKey: postsKeys.detail(postId),
         }),
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.overview,
+        }),
       ]);
     },
     successDescription: "Your approval has been recorded.",
@@ -57,9 +61,14 @@ export function useRejectPostEdit(postId: number) {
     errorTitle: "Suggestion rejection failed",
     mutationFn: async (editId: number) => rejectEdit({ data: { editId } }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: postEditsKeys.post(postId),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: postEditsKeys.post(postId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: moderationKeys.overview,
+        }),
+      ]);
     },
     successDescription: "The suggestion was rejected.",
     successTitle: "Suggestion rejected",

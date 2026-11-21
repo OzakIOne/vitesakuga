@@ -8,13 +8,13 @@ import { Alert } from "src/components/ui/feedback";
 import { HStack, Stack } from "src/components/ui/layout";
 import { Text } from "src/components/ui/typography";
 import { Heading } from "src/components/ui/typography";
-import {
-  useApproveEdit,
-  useModerationOverview,
-  useRejectEdit,
-} from "src/lib/moderation/moderation.hooks";
+import { useModerationOverview } from "src/lib/moderation/moderation.hooks";
 import type { ModerationPendingEditRow } from "src/lib/moderation/moderation.service";
 import { POST_EDIT_REQUIRED_VOTES } from "src/lib/post-edits/post-edits.config";
+import {
+  useApprovePostEdit,
+  useRejectPostEdit,
+} from "src/lib/post-edits/post-edits.hooks";
 
 /**
  * Wiki-style edit suggestions awaiting peer votes or a staff decision.
@@ -65,8 +65,8 @@ function SuggestionRow({
 }: {
   readonly suggestion: ModerationPendingEditRow;
 }) {
-  const approve = useApproveEdit();
-  const reject = useRejectEdit();
+  const approve = useApprovePostEdit(suggestion.postId);
+  const reject = useRejectPostEdit(suggestion.postId);
   const [discardOpen, setDiscardOpen] = useState(false);
   const busy = approve.isPending || reject.isPending;
   return (
@@ -88,7 +88,12 @@ function SuggestionRow({
         <Button
           disabled={busy}
           loading={approve.isPending}
-          onClick={() => approve.mutate(suggestion.editId)}
+          onClick={() =>
+            approve.mutate({
+              editId: suggestion.editId,
+              operationKey: crypto.randomUUID(),
+            })
+          }
           size="xs"
         >
           Apply
