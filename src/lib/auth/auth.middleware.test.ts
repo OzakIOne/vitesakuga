@@ -2,34 +2,42 @@ import { Effect, Layer } from "effect";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
+  AuthProviderError,
   AuthService,
-  makeAuthService,
   RequestHeadersService,
+  type AuthSessionLookupFn,
 } from "../auth/context";
-import type { AuthSessionProvider } from "../auth/context";
+import { makeE2EAuthService } from "./better-auth.adapter.server";
 import { PERMISSION_CATALOG } from "./capabilities";
 import { authorize } from "./policy";
 import { SessionService, SessionServiceLive } from "./session.effect";
 import type { AuthorizedActor } from "./session.effect";
 import { makeAuthSession, makeSessionUser } from "./session.fixture";
 
-type GetSessionFn = AuthSessionProvider["api"]["getSession"];
-
-let mockGetSession: Mock<GetSessionFn>;
+let mockGetSession: Mock<AuthSessionLookupFn>;
 let mockGetHeaders: Mock<() => Headers>;
 
 let testLayer: Layer.Layer<SessionService>;
 
 beforeEach(() => {
-  mockGetSession = vi.fn<GetSessionFn>();
+  mockGetSession = vi.fn<AuthSessionLookupFn>();
   mockGetHeaders = vi.fn(() => new Headers());
 
   testLayer = SessionServiceLive.pipe(
     Layer.provide(
       Layer.mergeAll(
-        Layer.succeed(AuthService)(
-          makeAuthService({ api: { getSession: mockGetSession } }),
-        ),
+        Layer.succeed(AuthService)({
+          getSession: (args) =>
+            Effect.tryPromise({
+              try: () => mockGetSession(args),
+              catch: (cause) =>
+                new AuthProviderError({
+                  cause,
+                  message:
+                    "Authentication provider failed to retrieve the session",
+                }),
+            }),
+        }),
         Layer.succeed(RequestHeadersService)(mockGetHeaders),
       ),
     ),
@@ -176,7 +184,7 @@ describe("SessionService.getUser", () => {
     // covers the well-typed happy path this defensive test probes around.
     mockGetSession.mockResolvedValueOnce({
       user: null,
-    } as unknown as Awaited<ReturnType<GetSessionFn>>);
+    } as unknown as Awaited<ReturnType<AuthSessionLookupFn>>);
     const result = await Effect.runPromise(
       Effect.provide(getUserProgram, testLayer),
     );
@@ -243,7 +251,7 @@ describe("SessionService.requireUser", () => {
       // SAFETY: deliberately malformed provider payloads (see the
       // "session has no user" test above).
       mockGetSession.mockResolvedValueOnce(
-        session as unknown as Awaited<ReturnType<GetSessionFn>>,
+        session as unknown as Awaited<ReturnType<AuthSessionLookupFn>>,
       );
 
       const error = await Effect.runPromise(
@@ -253,4 +261,38 @@ describe("SessionService.requireUser", () => {
       expect(error.message).toBe("You must be logged in to vote");
     },
   );
+});
+
+describe("makeE2EAuthService", () => {
+  it("synthesizes the E2E bypass session without calling the fallback adapter", async () => {
+    const fallback = vi.fn(() => Effect.succeed(null));
+    const adapter = makeE2EAuthService({ getSession: fallback });
+
+    const session = await Effect.runPromise(
+      adapter.getSession({
+        headers: new Headers({ cookie: "e2e-test-auth=bypass" }),
+        query: { disableCookieCache: true },
+      }),
+    );
+
+    expect(session?.user.id).toBe("e2e-test-user");
+    expect(session?.user.role).toBe("admin");
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the wrapped adapter when no bypass cookie is present", async () => {
+    const expected = makeAuthSession({ id: "real-user" });
+    const fallback = vi.fn(() => Effect.succeed(expected));
+    const adapter = makeE2EAuthService({ getSession: fallback });
+
+    const session = await Effect.runPromise(
+      adapter.getSession({
+        headers: new Headers(),
+        query: { disableCookieCache: true },
+      }),
+    );
+
+    expect(session).toEqual(expected);
+    expect(fallback).toHaveBeenCalledTimes(1);
+  });
 });

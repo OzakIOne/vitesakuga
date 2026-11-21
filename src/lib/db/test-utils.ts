@@ -8,9 +8,12 @@ import { Effect, Layer } from "effect";
 import { Kysely } from "kysely";
 import { vi, type Mock } from "vitest";
 
-import { AuthService, makeAuthService } from "../auth/context";
-import type { AuthSessionProvider } from "../auth/context";
-import { RequestHeadersService } from "../auth/context";
+import {
+  AuthProviderError,
+  AuthService,
+  RequestHeadersService,
+  type AuthSessionLookupFn,
+} from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
@@ -99,19 +102,26 @@ const resetTables = async (pg: PGlite, db: Kysely<DB>) => {
 
 const makeTestLayer = (
   db: Kysely<DB>,
-  auth: AuthSessionProvider | null,
+  getSession: AuthSessionLookupFn | null,
   headers: () => Headers,
   storageLayer: Layer.Layer<StorageModule, StorageError>,
 ) => {
-  // SessionService is the single auth dependency services require; it sits
-  // on top of the mocked Better Auth provider so mockGetSession keeps
-  // driving every session-related test.
+  const lookup: AuthSessionLookupFn = getSession ?? (async () => null);
   const sessionLayer = SessionServiceLive.pipe(
     Layer.provide(
       Layer.mergeAll(
-        Layer.succeed(AuthService)(
-          makeAuthService(auth ?? { api: { getSession: async () => null } }),
-        ),
+        Layer.succeed(AuthService)({
+          getSession: (args) =>
+            Effect.tryPromise({
+              try: () => lookup(args),
+              catch: (cause) =>
+                new AuthProviderError({
+                  cause,
+                  message:
+                    "Authentication provider failed to retrieve the session",
+                }),
+            }),
+        }),
         Layer.succeed(RequestHeadersService)(headers),
       ),
     ),
@@ -335,7 +345,7 @@ export type ServiceTestContext<Services = never> = {
   runFailure: <A, E>(
     effect: Effect.Effect<A, E, Services | TestBaseServices>,
   ) => Promise<E>;
-  mockGetSession: Mock<AuthSessionProvider["api"]["getSession"]>;
+  mockGetSession: Mock<AuthSessionLookupFn>;
   storageTracker: StorageKeyTracker;
   seedObject: StorageKeyTrackerBundle["seedObject"];
   close: () => Promise<void>;
@@ -375,10 +385,10 @@ export const makeServiceTestLayer = async <ROut, E>(
         }).pipe(Effect.provide(journaledStorageLayer)),
       )
     : journaledStorageLayer;
-  const mockGetSession = vi.fn<AuthSessionProvider["api"]["getSession"]>();
+  const mockGetSession = vi.fn<AuthSessionLookupFn>();
   const baseLayer = makeTestLayer(
     db,
-    { api: { getSession: mockGetSession } },
+    mockGetSession,
     () => new Headers(),
     storageLayer,
   );

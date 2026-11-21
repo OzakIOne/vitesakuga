@@ -48,15 +48,16 @@ type OperationFailure<
 export const createEndpointHandler = <
   Identifier,
   Methods extends object,
-  Operation extends OperationKey<Methods, Identifier | BaseOut>,
-  ServiceError,
+  Operation extends OperationKey<Methods, ServiceOut | BaseOut>,
   BaseOut,
-  BaseError,
-  ServiceIn extends BaseOut,
+  ServiceOut = never,
+  ServiceError = never,
+  BaseError = never,
+  ServiceIn extends BaseOut = never,
 >(config: {
   readonly service: Context.Key<Identifier, Methods>;
   readonly operation: Operation;
-  readonly layer: Layer.Layer<Identifier, ServiceError, ServiceIn>;
+  readonly layer?: Layer.Layer<ServiceOut, ServiceError, ServiceIn>;
   readonly base: () => Promise<Layer.Layer<BaseOut, BaseError, never>>;
 }) => {
   const runOperation = Effect.fn(`${config.service.key}.${config.operation}`)(
@@ -69,10 +70,27 @@ export const createEndpointHandler = <
       ) => Effect.Effect<
         OperationSuccess<Methods, Operation>,
         OperationFailure<Methods, Operation>,
-        Identifier | BaseOut
+        ServiceOut | BaseOut
       >;
       return yield* call(data);
     },
   );
-  return createHandler(config.layer, config.base)(runOperation);
+  // SAFETY: when `layer` is omitted `ServiceOut` is `never`, so `Layer.empty`
+  // matches the caller's type parameter; `Identifier` is then supplied by `base`.
+  const layer = (config.layer ?? Layer.empty) as Layer.Layer<
+    ServiceOut,
+    ServiceError,
+    ServiceIn
+  >;
+  return createHandler(layer, config.base)(
+    // SAFETY: `Identifier` is provided by either `layer` (`ServiceOut`) or `base`
+    // (`BaseOut`); the caller cannot construct a valid `config` otherwise.
+    runOperation as (
+      data: OperationInput<Methods, Operation>,
+    ) => Effect.Effect<
+      OperationSuccess<Methods, Operation>,
+      OperationFailure<Methods, Operation>,
+      ServiceOut | BaseOut
+    >,
+  );
 };

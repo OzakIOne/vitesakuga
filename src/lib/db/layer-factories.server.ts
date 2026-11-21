@@ -1,12 +1,11 @@
 // oxlint-disable effecttsgo/async-function -- the exported layer factories return Promises because `baseLayerFactories`/`resolveMiddlewareLayer` in server-fn.handler.ts consume them through the server-function boundary; keeping dynamic imports and layer construction in native async functions avoids changing that contract
 import { Layer } from "effect";
 
-import { makeBetterAuthSessionProvider } from "../auth/better-auth.adapter.server";
 import {
-  AuthService,
-  RequestHeadersService,
-  makeAuthService,
-} from "../auth/context";
+  makeBetterAuthService,
+  makeE2EAuthService,
+} from "../auth/better-auth.adapter.server";
+import { AuthService, RequestHeadersService } from "../auth/context";
 import { SessionServiceLive } from "../auth/session.effect";
 import { withMinimumLogLevel } from "../effect/logger";
 import { TracingLive } from "../effect/tracing";
@@ -16,6 +15,9 @@ import { makeFromKysely } from "./effect-kysely";
 
 const LOG_LAYER = withMinimumLogLevel("Debug");
 
+const isE2EAuthAdapterEnabled =
+  envInfra.databaseDriver === "e2e" && process.env.NODE_ENV !== "production";
+
 /**
  * `SessionServiceLive` fed by the raw Better Auth instance and the request
  * headers factory — the only consumers of those low-level services.
@@ -23,17 +25,20 @@ const LOG_LAYER = withMinimumLogLevel("Debug");
 const makeSessionLayer = (
   auth: AuthInstance,
   getRequestHeaders: () => Headers,
-) =>
-  SessionServiceLive.pipe(
+) => {
+  const betterAuthService = makeBetterAuthService(auth);
+  const authService = isE2EAuthAdapterEnabled
+    ? makeE2EAuthService(betterAuthService)
+    : betterAuthService;
+  return SessionServiceLive.pipe(
     Layer.provide(
       Layer.mergeAll(
-        Layer.succeed(AuthService)(
-          makeAuthService(makeBetterAuthSessionProvider(auth)),
-        ),
+        Layer.succeed(AuthService)(authService),
         Layer.succeed(RequestHeadersService)(getRequestHeaders),
       ),
     ),
   );
+};
 
 type AuthInstance = typeof import("../auth/instance").auth;
 

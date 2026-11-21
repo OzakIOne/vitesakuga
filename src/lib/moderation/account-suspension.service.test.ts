@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import type { Kysely } from "kysely";
 import { describe, expect, it, type Mock } from "vitest";
 
-import type { AuthSessionProvider } from "../auth/context";
+import type { AuthSessionLookupFn } from "../auth/context";
 import { makeAuthSession } from "../auth/session.fixture";
 import {
   CommentsService,
@@ -58,7 +58,7 @@ const insertPost = (db: Kysely<DB>, ownerId: string) =>
 /** Each request reads the account row, as Better Auth does with the cookie cache disabled. */
 const signInAsFreshAccount = (
   db: Kysely<DB>,
-  mockGetSession: Mock<AuthSessionProvider["api"]["getSession"]>,
+  mockGetSession: Mock<AuthSessionLookupFn>,
   accountId: string,
 ) =>
   mockGetSession.mockImplementation(async () => {
