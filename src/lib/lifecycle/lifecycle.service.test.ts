@@ -1,1009 +1,374 @@
-import { Effect, Layer } from "effect";
-import { TestClock } from "effect/testing";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Effect } from "effect";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { KyselyDB } from "../db/context";
 import { makeServiceTestLayer } from "../db/test-utils";
-import { imageObjectKey, videoObjectKey } from "../storage/keys";
+import { imageObjectKey, thumbnailObjectKey } from "../storage/keys";
 import { StorageModule } from "../storage/storage.module";
 import {
   LifecycleService,
   LifecycleServiceLive,
-  OperationConflictError,
-  OperationFenceError,
-  ObjectConflictError,
-  ObjectNotAdoptableError,
   PostVersionConflictError,
-  type ClaimOperationInput,
+  updatePostWithVersionInTransaction,
 } from "./lifecycle.service";
 
 const fingerprint = "sha256:" + "a".repeat(64);
 const secondFingerprint = "sha256:" + "b".repeat(64);
 
-const claimInput: ClaimOperationInput = {
-  kind: "post-create",
-  operationKey: "post-operation-1",
-  requestFingerprint: fingerprint,
-  userId: "lifecycle-user",
-};
+let closeContext: (() => Promise<void>) | undefined;
 
-let context: Awaited<
-  ReturnType<typeof makeServiceTestLayer<LifecycleService, never>>
->;
+afterEach(async () => {
+  await closeContext?.();
+  closeContext = undefined;
+});
 
-beforeEach(async () => {
-  context = await makeServiceTestLayer(LifecycleServiceLive);
+const openContext = async () => {
+  const context = await makeServiceTestLayer(LifecycleServiceLive);
+  closeContext = context.close;
   await context.db
     .insertInto("user")
     .values({
       email: "lifecycle@test.invalid",
-      id: claimInput.userId,
-      name: "Lifecycle Test",
-      username: "lifecycle_test",
+      id: "user-1",
+      name: "Lifecycle",
+      username: "lifecycle_user",
     })
     .execute();
-  await context.db
-    .insertInto("user")
-    .values({
-      email: "other.lifecycle@test.invalid",
-      id: "other-lifecycle-user",
-      name: "Other Lifecycle Test",
-      username: "other_lifecycle_test",
-    })
-    .execute();
-});
+  return context;
+};
 
-afterEach(async () => {
-  await context.close();
-});
+const makeFile = (name: string, type: string, content = "test-bytes") =>
+  new File([content], name, { type });
 
-describe("LifecycleService operation claims", () => {
-  it("keeps one durable owner fence for competing claims", async () => {
-    const [first, second] = await Promise.all([
+const digestFile = async (file: File) => {
+  const bytes = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return `sha256:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("")}`;
+};
+
+describe("LifecycleService (narrowed Managed Media Protocol interface)", () => {
+  it("commits image media atomically and replays on duplicate operationKey", async () => {
+    const context = await openContext();
+    let commitCalls = 0;
+    const file = makeFile("a.png", "image/png");
+    const fileFingerprint = await digestFile(file);
+
+    const runUpload = () =>
       context.runEffect(
         Effect.gen(function* () {
           const lifecycle = yield* LifecycleService;
-          return yield* lifecycle.claimOperation(claimInput);
+          return yield* lifecycle.runOperation({
+            kind: "post-create",
+            operationKey: "upload-1",
+            replay: (result) => Effect.succeed(result.postId),
+            request: { payload: { title: "First" } },
+            userId: "user-1",
+            run: (operation) =>
+              lifecycle.commitPostMedia({
+                images: [{ file, fingerprint: fileFingerprint }],
+                operation,
+                userId: "user-1",
+                commit: (trx, media) =>
+                  Effect.gen(function* () {
+                    commitCalls += 1;
+                    const row = yield* trx.executeTakeFirstOrError(
+                      trx
+                        .insertInto("posts")
+                        .values({
+                          description: "desc",
+                          thumbnailKey: media.thumbnailKey,
+                          title: "First",
+                          userId: "user-1",
+                          videoKey: media.videoKey,
+                          videoMetadata: {},
+                        })
+                        .returningAll(),
+                    );
+                    yield* operation.finish(trx, {
+                      imageKeys: [...media.imageKeys],
+                      postId: row.id,
+                      thumbnailKey: media.thumbnailKey,
+                    });
+                    return row.id;
+                  }),
+              }),
+          });
         }),
-      ),
-      context.runEffect(
-        Effect.gen(function* () {
-          const lifecycle = yield* LifecycleService;
-          return yield* lifecycle.claimOperation(claimInput);
-        }),
-      ),
-    ]);
+      );
 
-    expect(first.outcome).toBe("claimed");
-    expect(second.outcome).toBe("claimed");
-    if (first.outcome !== "claimed" || second.outcome !== "claimed") {
-      throw new Error("claim was replayed");
-    }
-    expect(second.fence).toBeGreaterThan(first.fence);
+    const firstId = await runUpload();
+    const replayedId = await runUpload();
 
-    const row = await context.db
-      .selectFrom("media_operations")
-      .select(["id", "fence", "status"])
-      .where("userId", "=", claimInput.userId)
-      .where("operationKey", "=", claimInput.operationKey)
-      .executeTakeFirstOrThrow();
+    expect(replayedId).toBe(firstId);
+    expect(commitCalls).toBe(1);
 
-    expect(row.id).toBe(first.operationId);
-    expect(row.fence).toBe(second.fence);
-    expect(row.status).toBe("in-progress");
-  });
-
-  it("retries a lost response after markReady by reusing the ready object", async () => {
-    const first = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "lost-mark-ready-response",
-        });
-      }),
-    );
-    if (first.outcome !== "claimed") throw new Error("claim was replayed");
-    const object = {
-      contentLength: 12,
-      contentType: "video/mp4",
-      fence: first.fence,
-      fingerprint: 'etag:"ready-retry"',
-      key: videoObjectKey(first.operationId, "mp4"),
-      kind: "video" as const,
-      operationId: first.operationId,
-      userId: claimInput.userId,
-    };
-    await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        yield* lifecycle.reserveObject(object);
-        yield* lifecycle.markPreparing(object);
-        yield* lifecycle.markReady(object);
-      }),
-    );
-
-    const retry = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "lost-mark-ready-response",
-        });
-      }),
-    );
-    if (retry.outcome !== "claimed") throw new Error("operation was replayed");
-    expect(retry.fence).toBe(first.fence + 1);
-
-    const reused = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject({
-          ...object,
-          fence: retry.fence,
-        });
-      }),
-    );
-    expect(reused.outcome).toBe("reused");
-    expect(reused.object.state).toBe("ready");
-    expect(reused.object.fence).toBe(retry.fence);
-
-    const completed = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.finishOperation({
-          fence: retry.fence,
-          operationId: retry.operationId,
-          result: {
-            imageKeys: [],
-            postId: 1,
-            thumbnailKey: object.key,
-            videoKey: object.key,
-          },
-        });
-      }),
-    );
-    expect(completed.outcome).toBe("completed");
-  });
-
-  it("uses the Effect clock for lifecycle timestamps", async () => {
-    const fixedMillis = Date.parse("2025-01-02T04:04:05.678Z");
-    const claim = await Effect.runPromise(
-      Effect.gen(function* () {
-        yield* TestClock.setTime(fixedMillis);
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "fixed-clock-operation",
-        });
-      }).pipe(
-        Effect.provide(Layer.merge(TestClock.layer(), context.testLayer)),
-      ),
-    );
-    expect(claim.operation.createdAt).toEqual(new Date(fixedMillis));
-    expect(claim.operation.updatedAt).toEqual(new Date(fixedMillis));
-  });
-
-  it("reserves a deterministic object and reuses its row on retry", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-
-    const reserveInput = {
-      contentLength: 12,
-      contentType: "video/mp4",
-      fingerprint: 'etag:"source-etag"',
-      fence: claim.fence,
-      key: videoObjectKey(claim.operationId, "mp4"),
-      kind: "video" as const,
-      operationId: claim.operationId,
-      userId: claimInput.userId,
-    };
-    const first = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject(reserveInput);
-      }),
-    );
-    const second = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject(reserveInput);
-      }),
-    );
-
-    expect(first.outcome).toBe("reserved");
-    expect(second.outcome).toBe("reused");
-    expect(second.object.key).toBe(reserveInput.key);
-
-    const rows = await context.db
+    const objects = await context.db
       .selectFrom("media_objects")
-      .selectAll()
-      .where("key", "=", reserveInput.key)
+      .select(["key", "state"])
       .execute();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.state).toBe("reserved");
+    expect(objects).toHaveLength(1);
+    expect(objects[0]?.state).toBe("ready");
   });
 
-  it("rejects a changed request without changing the original row", async () => {
-    await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
+  it("rolls back uploaded media when the post commit transaction fails", async () => {
+    const context = await openContext();
+    const file = makeFile("a.png", "image/png");
+    const fileFingerprint = await digestFile(file);
 
     const failure = await context.runFailure(
       Effect.gen(function* () {
         const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          requestFingerprint: secondFingerprint,
-        });
-      }),
-    );
-
-    expect(failure).toBeInstanceOf(OperationConflictError);
-    const row = await context.db
-      .selectFrom("media_operations")
-      .select(["requestFingerprint", "status", "fence"])
-      .where("userId", "=", claimInput.userId)
-      .where("operationKey", "=", claimInput.operationKey)
-      .executeTakeFirstOrThrow();
-    expect(row.requestFingerprint).toBe(fingerprint);
-    expect(row.status).toBe("in-progress");
-    expect(row.fence).toBe(1);
-  });
-
-  it("scopes an operation key to its owner", async () => {
-    const first = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
-    const other = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          userId: "other-lifecycle-user",
-        });
-      }),
-    );
-    if (first.outcome !== "claimed" || other.outcome !== "claimed") {
-      throw new Error("claim was not created");
-    }
-    expect(other.operationId).not.toBe(first.operationId);
-    expect(
-      await context.db.selectFrom("media_operations").select("id").execute(),
-    ).toHaveLength(2);
-  });
-
-  it("replays a completed operation before taking a new fence", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-
-    const reserveInput = {
-      contentLength: 12,
-      contentType: "video/mp4",
-      fingerprint: 'etag:"source-etag"',
-      fence: claim.fence,
-      key: videoObjectKey(claim.operationId, "mp4"),
-      kind: "video" as const,
-      operationId: claim.operationId,
-      userId: claimInput.userId,
-    };
-    await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        yield* lifecycle.reserveObject(reserveInput);
-        yield* lifecycle.markPreparing(reserveInput);
-        yield* lifecycle.markReady(reserveInput);
-        return yield* lifecycle.finishOperation({
-          fence: claim.fence,
-          operationId: claim.operationId,
-          result: {
-            imageKeys: [],
-            postId: 42,
-            thumbnailKey: reserveInput.key,
-            videoKey: reserveInput.key,
-          },
-        });
-      }),
-    );
-
-    const replay = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
-    expect(replay.outcome).toBe("replayed");
-    if (replay.outcome !== "replayed")
-      throw new Error("operation was reclaimed");
-    expect(replay.result).toEqual({
-      imageKeys: [],
-      postId: 42,
-      thumbnailKey: reserveInput.key,
-      videoKey: reserveInput.key,
-    });
-    expect(replay.operation.fence).toBe(claim.fence);
-  });
-
-  it("persists a terminal conflict so its result is replayable", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "conflict-operation",
-        });
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-    const failed = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.failOperation({
-          failureCode: "post-version-conflict",
-          fence: claim.fence,
-          operationId: claim.operationId,
-          status: "conflict",
-        });
-      }),
-    );
-    expect(failed.outcome).toBe("failed");
-    const replay = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "conflict-operation",
-        });
-      }),
-    );
-    expect(replay.outcome).toBe("replayed");
-    if (replay.outcome !== "replayed")
-      throw new Error("conflict was reclaimed");
-    expect(replay.operation.status).toBe("conflict");
-    expect(replay.result).toBeNull();
-  });
-
-  it("fences the old worker after a retry claims the same request", async () => {
-    const first = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
-    if (first.outcome !== "claimed") throw new Error("claim was replayed");
-    const second = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation(claimInput);
-      }),
-    );
-    if (second.outcome !== "claimed") throw new Error("claim was replayed");
-
-    const failure = await context.runFailure(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject({
-          contentLength: 1,
-          contentType: "video/mp4",
-          fence: first.fence,
-          fingerprint: 'etag:"old"',
-          key: videoObjectKey(first.operationId, "mp4"),
-          kind: "video",
-          operationId: first.operationId,
-          userId: claimInput.userId,
-        });
-      }),
-    );
-    expect(failure).toBeInstanceOf(OperationFenceError);
-  });
-
-  it("exposes a short transaction contract for refs plus completion", async () => {
-    await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        const db = yield* KyselyDB;
         return yield* lifecycle.runOperation({
           kind: "post-create",
-          operationKey: "atomic-finalization-operation",
-          replay: () => Effect.void,
-          request: { payload: { title: "atomic post" } },
+          operationKey: "upload-fail",
+          replay: () => Effect.succeed("replayed"),
+          request: { payload: { title: "Broken" } },
+          userId: "user-1",
           run: (operation) =>
-            Effect.gen(function* () {
-              const object = {
-                contentLength: 12,
-                contentType: "video/mp4",
-                fence: operation.fence,
-                fingerprint: 'etag:"atomic-video"',
-                key: videoObjectKey(operation.operationId, "mp4"),
-                kind: "video" as const,
-                operationId: operation.operationId,
-                userId: claimInput.userId,
-              };
-              yield* lifecycle.reserveObject(object);
-              yield* lifecycle.markPreparing(object);
-              yield* lifecycle.markReady(object);
-              yield* db.transaction((trx) =>
+            lifecycle.commitPostMedia({
+              images: [{ file, fingerprint: fileFingerprint }],
+              operation,
+              userId: "user-1",
+              commit: () => Effect.fail("db-boom" as const),
+            }),
+        });
+      }),
+    );
+
+    expect(failure).toBe("db-boom");
+
+    const objects = await context.db
+      .selectFrom("media_objects")
+      .select(["key", "state"])
+      .execute();
+    expect(objects).toHaveLength(1);
+    expect(objects[0]?.state).toBe("deleted");
+  });
+
+  it("protects live-referenced keys in deleteManagedKeys and deletes unreferenced ones", async () => {
+    const context = await openContext();
+    const thumbFile = makeFile("thumb.jpg", "image/jpeg");
+    const thumbFingerprint = await digestFile(thumbFile);
+
+    const { liveKey, orphanKey } = await context.runEffect(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        const live = yield* lifecycle.runOperation({
+          kind: "post-create",
+          operationKey: "op-live",
+          replay: (result) => Effect.succeed(result.thumbnailKey),
+          request: { payload: { kind: "live" } },
+          userId: "user-1",
+          run: (operation) =>
+            lifecycle.commitPostMedia({
+              operation,
+              thumbnail: {
+                file: thumbFile,
+                fingerprint: thumbFingerprint,
+              },
+              userId: "user-1",
+              commit: (trx, media) =>
                 Effect.gen(function* () {
                   const post = yield* trx.executeTakeFirstOrError(
                     trx
                       .insertInto("posts")
                       .values({
-                        description: "atomic post",
-                        thumbnailKey: "legacy-thumbnail",
-                        title: "atomic post",
-                        userId: claimInput.userId,
-                        videoKey: object.key,
+                        description: "live",
+                        thumbnailKey: media.thumbnailKey,
+                        title: "Live",
+                        userId: "user-1",
+                        videoKey: null,
                         videoMetadata: {},
                       })
-                      .returning("id"),
+                      .returningAll(),
                   );
                   yield* operation.finish(trx, {
                     imageKeys: [],
                     postId: post.id,
-                    thumbnailKey: "legacy-thumbnail",
-                    videoKey: object.key,
+                    thumbnailKey: media.thumbnailKey,
                   });
+                  return media.thumbnailKey;
                 }),
-              );
             }),
-          userId: claimInput.userId,
         });
-      }),
-    );
-    const operation = await context.db
-      .selectFrom("media_operations")
-      .select(["id", "status"])
-      .where("operationKey", "=", "atomic-finalization-operation")
-      .executeTakeFirstOrThrow();
-    expect(operation.status).toBe("completed");
-    const rows = await context.db
-      .selectFrom("media_operations")
-      .innerJoin(
-        "media_objects",
-        "media_objects.operationId",
-        "media_operations.id",
-      )
-      .innerJoin("posts", "posts.videoKey", "media_objects.key")
-      .select([
-        "media_operations.status",
-        "media_objects.state",
-        "posts.videoKey",
-      ])
-      .where("media_operations.id", "=", operation.id)
-      .execute();
-    expect(rows).toEqual([
-      {
-        state: "ready",
-        status: "completed",
-        videoKey: videoObjectKey(operation.id, "mp4"),
-      },
-    ]);
-  });
 
-  it("updates a post only when the client version still matches", async () => {
-    const post = await context.db
-      .insertInto("posts")
-      .values({
-        description: "before",
-        thumbnailKey: "legacy-thumbnail",
-        title: "before",
-        userId: claimInput.userId,
-        videoMetadata: {},
-      })
-      .returning(["id", "version"])
-      .executeTakeFirstOrThrow();
-
-    const updated = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.updatePostWithVersion({
-          changes: { description: "after", title: "after" },
-          expectedVersion: post.version,
-          ownerUserId: claimInput.userId,
-          postId: post.id,
-        });
-      }),
-    );
-    expect(updated.version).toBe(post.version + 1);
-
-    const failure = await context.runFailure(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.updatePostWithVersion({
-          changes: { title: "stale write" },
-          expectedVersion: post.version,
-          ownerUserId: claimInput.userId,
-          postId: post.id,
-        });
-      }),
-    );
-    expect(failure).toBeInstanceOf(PostVersionConflictError);
-
-    const row = await context.db
-      .selectFrom("posts")
-      .select(["title", "description", "version"])
-      .where("id", "=", post.id)
-      .executeTakeFirstOrThrow();
-    expect(row).toEqual({
-      description: "after",
-      title: "after",
-      version: post.version + 1,
-    });
-  });
-
-  it("commits deleting before remote removal and preserves a tombstone", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "delete-operation",
-        });
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-    const content = "image bytes";
-    const key = imageObjectKey(claim.operationId, 0, "png");
-    const stored = await context.runEffect(
-      Effect.gen(function* () {
+        // Create an orphan ready object by inserting a media_operation + ready media_object
+        const orphanOpId = "op-orphan-id";
+        const orphan = thumbnailObjectKey(orphanOpId);
         const storage = yield* StorageModule;
-        return yield* storage.putImage(
-          key,
-          new File([content], "image.png", { type: "image/png" }),
+        const stored = yield* storage.putThumbnail(
+          orphan,
+          makeFile("orphan.jpg", "image/jpeg", "orphan-bytes"),
         );
-      }),
-    );
-    const object = {
-      contentLength: content.length,
-      contentType: "image/png",
-      fence: claim.fence,
-      fingerprint: stored.fingerprint,
-      key,
-      kind: "image" as const,
-      operationId: claim.operationId,
-      userId: claimInput.userId,
-    };
-    await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        yield* lifecycle.reserveObject(object);
-        yield* lifecycle.markPreparing(object);
-        yield* lifecycle.markReady({
-          ...object,
-          observed: {
-            contentLength: object.contentLength,
-            contentType: object.contentType,
-            fingerprint: object.fingerprint,
-          },
-        });
-      }),
-    );
-
-    const protectedPost = await context.db
-      .insertInto("posts")
-      .values({
-        description: "protected reference",
-        thumbnailKey: object.key,
-        title: "protected reference",
-        userId: claimInput.userId,
-        videoMetadata: {},
-      })
-      .returning("id")
-      .executeTakeFirstOrThrow();
-    const protectedResult = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.beginDelete(object);
-      }),
-    );
-    expect(protectedResult.outcome).toBe("protected");
-    await context.db
-      .deleteFrom("posts")
-      .where("id", "=", protectedPost.id)
-      .execute();
-
-    const deleting = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.beginDelete(object);
-      }),
-    );
-    expect(deleting.outcome).toBe("deleting");
-    expect(deleting.fence).toBe(object.fence + 1);
-    const deletingRow = await context.db
-      .selectFrom("media_objects")
-      .select(["state", "deletingCommittedAt", "fence"])
-      .where("key", "=", object.key)
-      .executeTakeFirstOrThrow();
-    expect(deletingRow.state).toBe("deleting");
-    expect(deletingRow.deletingCommittedAt).not.toBeNull();
-    expect(deletingRow.fence).toBe(deleting.fence);
-
-    const retryBegin = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.beginDelete(object);
-      }),
-    );
-    expect(retryBegin).toEqual({
-      fence: deleting.fence,
-      key: object.key,
-      outcome: "already-deleting",
-    });
-
-    const reconciled = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reconcileNonTerminal({
-          operationId: object.operationId,
-        });
-      }),
-    );
-    expect(reconciled.completedDeleteKeys).toEqual([object.key]);
-
-    const deleted = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.completeDelete({
-          fence: deleting.fence,
-          key: object.key,
-          operationId: object.operationId,
-        });
-      }),
-    );
-    expect(deleted.outcome).toBe("already-deleted");
-    const retryDeleted = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.completeDelete({
-          fence: deleting.fence,
-          key: object.key,
-          operationId: object.operationId,
-        });
-      }),
-    );
-    expect(retryDeleted.outcome).toBe("already-deleted");
-    await context.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.putImage(
-          object.key,
-          new File([content], "image.png", { type: "image/png" }),
+        yield* Effect.promise(() =>
+          context.db
+            .insertInto("media_operations")
+            .values({
+              fence: 1,
+              id: orphanOpId,
+              kind: "post-create",
+              operationKey: "orphan-op",
+              requestFingerprint: secondFingerprint,
+              status: "completed",
+              userId: "user-1",
+            })
+            .execute(),
         );
-      }),
-    );
-    const lateCopy = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reconcileNonTerminal({
-          operationId: object.operationId,
-        });
-      }),
-    );
-    expect(lateCopy.inspected).toBe(0);
-    expect(lateCopy.adoptedKeys).toEqual([]);
-    const row = await context.db
-      .selectFrom("media_objects")
-      .select("state")
-      .where("key", "=", object.key)
-      .executeTakeFirstOrThrow();
-    expect(row.state).toBe("deleted");
-  });
-
-  it("reconciles a response-lost image upload by matching HEAD metadata", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "reconcile-image-operation",
-        });
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-    const key = imageObjectKey(claim.operationId, 0, "png");
-    const stored = await context.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.putImage(
-          key,
-          new File(["reconcile image"], "image.png", { type: "image/png" }),
+        yield* Effect.promise(() =>
+          context.db
+            .insertInto("media_objects")
+            .values({
+              contentLength: 12,
+              contentType: "image/jpeg",
+              fence: 1,
+              fingerprint: stored.fingerprint,
+              key: orphan,
+              kind: "thumbnail",
+              operationId: orphanOpId,
+              state: "ready",
+              userId: "user-1",
+            })
+            .execute(),
         );
+        return { liveKey: live, orphanKey: orphan };
       }),
     );
-    const reserved = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject({
-          contentLength: "reconcile image".length,
-          contentType: "image/png",
-          fence: claim.fence,
-          fingerprint: stored.fingerprint,
-          key,
-          kind: "image",
-          operationId: claim.operationId,
-          userId: claimInput.userId,
-        });
-      }),
-    );
-    expect(reserved.outcome).toBe("reserved");
 
     const result = await context.runEffect(
       Effect.gen(function* () {
         const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reconcileNonTerminal({
-          operationId: claim.operationId,
-        });
+        return yield* lifecycle.deleteManagedKeys([liveKey, orphanKey]);
       }),
     );
-    expect(result.adoptedKeys).toEqual([key]);
-    expect(result.quarantinedKeys).toEqual([]);
-    const row = await context.db
+
+    expect(result.protectedKeys.has(liveKey)).toBe(true);
+    expect(result.deletedKeys.has(orphanKey)).toBe(true);
+
+    const rows = await context.db
       .selectFrom("media_objects")
-      .select(["state", "fingerprint"])
-      .where("key", "=", key)
-      .executeTakeFirstOrThrow();
-    expect(row).toEqual({ fingerprint: stored.fingerprint, state: "ready" });
+      .select(["key", "state"])
+      .where("key", "in", [liveKey, orphanKey])
+      .execute();
+    const byKey = new Map(rows.map((row) => [row.key, row.state]));
+    expect(byKey.get(liveKey)).toBe("ready");
+    expect(byKey.get(orphanKey)).toBe("deleted");
   });
 
-  it("quarantines an unknown storage read, then adopts only after a later verified HEAD", async () => {
-    const claim = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "reconcile-quarantine-operation",
-        });
-      }),
-    );
-    if (claim.outcome !== "claimed") throw new Error("claim was replayed");
-    const key = imageObjectKey(claim.operationId, 0, "png");
-    const content = "verified image!";
-    const stored = await context.runEffect(
+  it("reconciles non-terminal preparing and deleting objects", async () => {
+    const context = await openContext();
+    const opId = "op-reconcile";
+    const presentKey = imageObjectKey(opId, 0, "png");
+    const missingKey = imageObjectKey(opId, 1, "png");
+    const deletingKey = imageObjectKey(opId, 2, "png");
+
+    const storedPresent = await context.runEffect(
       Effect.gen(function* () {
         const storage = yield* StorageModule;
-        return yield* storage.putImage(
-          key,
-          new File([content], "image.png", { type: "image/png" }),
+        const a = yield* storage.putImage(
+          presentKey,
+          makeFile("present.png", "image/png", "present-bytes"),
         );
-      }),
-    );
-    await context.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.deleteFile(key);
-      }),
-    );
-    const object = {
-      contentLength: content.length,
-      contentType: "image/png",
-      fence: claim.fence,
-      fingerprint: stored.fingerprint,
-      key,
-      kind: "image" as const,
-      operationId: claim.operationId,
-      userId: claimInput.userId,
-    };
-    await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reserveObject(object);
-      }),
-    );
-    const first = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reconcileNonTerminal({
-          operationId: claim.operationId,
-        });
-      }),
-    );
-    expect(first.quarantinedKeys).toEqual([key]);
-    expect(
-      await context.db
-        .selectFrom("media_objects")
-        .select("state")
-        .where("key", "=", key)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ state: "unknown" });
-
-    const mismatch = await context.runFailure(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.adoptObject({
-          fence: object.fence,
-          key,
-          operationId: object.operationId,
-          observed: {
-            contentLength: object.contentLength,
-            contentType: object.contentType,
-            fingerprint: secondFingerprint,
-          },
-        });
-      }),
-    );
-    expect(mismatch).toBeInstanceOf(ObjectConflictError);
-
-    const restored = await context.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.putImage(
-          key,
-          new File([content], "image.png", { type: "image/png" }),
+        yield* storage.putImage(
+          deletingKey,
+          makeFile("deleting.png", "image/png", "deleting-bytes"),
         );
-      }),
-    );
-    expect(restored.fingerprint).toBe(stored.fingerprint);
-    const second = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reconcileNonTerminal({
-          operationId: claim.operationId,
-        });
-      }),
-    );
-    expect(second.adoptedKeys).toEqual([key]);
-    expect(
-      await context.db
-        .selectFrom("media_objects")
-        .select("state")
-        .where("key", "=", key)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ state: "ready" });
-  });
-});
-
-describe("LifecycleService managed media protocols", () => {
-  it("stores managed media and reuses a ready object on retry", async () => {
-    const operation = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "managed-image-write",
-        });
-      }),
-    );
-    if (operation.outcome !== "claimed") {
-      throw new Error("Expected a new media operation claim");
-    }
-
-    const file = new File(["managed image"], "managed.png", {
-      type: "image/png",
-    });
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    const fingerprint = `sha256:${Array.from(new Uint8Array(digest), (value) =>
-      value.toString(16).padStart(2, "0"),
-    ).join("")}`;
-    const input = {
-      contentLength: file.size,
-      contentType: file.type,
-      fence: operation.fence,
-      file,
-      fingerprint,
-      key: imageObjectKey(operation.operationId, 0, "png"),
-      kind: "image" as const,
-      operationId: operation.operationId,
-      userId: claimInput.userId,
-    };
-
-    const first = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.storeObject(input);
-      }),
-    );
-    const retry = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.storeObject(input);
-      }),
-    );
-    const stored = await context.runEffect(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.headFile(input.key);
+        return a;
       }),
     );
 
-    expect(first.outcome).toBe("stored");
-    expect(first.object.state).toBe("ready");
-    expect(retry).toEqual({ object: first.object, outcome: "reused" });
-    expect(stored.contentLength).toBe(file.size);
-    expect(
-      await context.db
-        .selectFrom("media_objects")
-        .select(["fingerprint", "state"])
-        .where("key", "=", input.key)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ fingerprint, state: "ready" });
-  });
+    await context.db
+      .insertInto("media_operations")
+      .values({
+        fence: 1,
+        id: opId,
+        kind: "post-create",
+        operationKey: "reconcile-key",
+        requestFingerprint: fingerprint,
+        status: "in-progress",
+        userId: "user-1",
+      })
+      .execute();
 
-  it("deletes an unreferenced ready object through a permanent tombstone", async () => {
-    const operation = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.claimOperation({
-          ...claimInput,
-          operationKey: "managed-image-delete",
-        });
-      }),
-    );
-    if (operation.outcome !== "claimed") {
-      throw new Error("Expected a new media operation claim");
-    }
-
-    const file = new File(["delete me"], "delete.png", {
-      type: "image/png",
-    });
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    const fingerprint = `sha256:${Array.from(new Uint8Array(digest), (value) =>
-      value.toString(16).padStart(2, "0"),
-    ).join("")}`;
-    const stored = await context.runEffect(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.storeObject({
-          contentLength: file.size,
-          contentType: file.type,
-          fence: operation.fence,
-          file,
-          fingerprint,
-          key: imageObjectKey(operation.operationId, 0, "png"),
+    await context.db
+      .insertInto("media_objects")
+      .values([
+        {
+          contentLength: 13,
+          contentType: "image/png",
+          fence: 1,
+          fingerprint: storedPresent.fingerprint,
+          key: presentKey,
           kind: "image",
-          operationId: operation.operationId,
-          userId: claimInput.userId,
-        });
-      }),
-    );
-    const deleted = await context.runEffect(
+          operationId: opId,
+          state: "preparing",
+          userId: "user-1",
+        },
+        {
+          contentLength: 10,
+          contentType: "image/png",
+          fence: 1,
+          fingerprint,
+          key: missingKey,
+          kind: "image",
+          operationId: opId,
+          state: "reserved",
+          userId: "user-1",
+        },
+        {
+          contentLength: 14,
+          contentType: "image/png",
+          fence: 1,
+          fingerprint: secondFingerprint,
+          key: deletingKey,
+          kind: "image",
+          operationId: opId,
+          state: "deleting",
+          userId: "user-1",
+        },
+      ])
+      .execute();
+
+    const reconciled = await context.runEffect(
       Effect.gen(function* () {
         const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.deleteObject({
-          fence: stored.object.fence,
-          key: stored.object.key,
-          operationId: stored.object.operationId,
-        });
+        return yield* lifecycle.reconcileNonTerminal({ operationId: opId });
       }),
     );
 
-    expect(deleted).toEqual({ key: stored.object.key, outcome: "deleted" });
-    expect(
-      await context.db
-        .selectFrom("media_objects")
-        .select("state")
-        .where("key", "=", stored.object.key)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ state: "deleted" });
-    await expect(
-      context.runFailure(
-        Effect.gen(function* () {
-          const lifecycle = yield* LifecycleService;
-          return yield* lifecycle.deleteObject({
-            fence: stored.object.fence,
-            key: stored.object.key,
-            operationId: stored.object.operationId,
-          });
-        }),
-      ),
-    ).resolves.toBeInstanceOf(ObjectNotAdoptableError);
+    expect(reconciled.adoptedKeys).toEqual([presentKey]);
+    expect(reconciled.quarantinedKeys).toEqual([missingKey]);
+    expect(reconciled.completedDeleteKeys).toEqual([deletingKey]);
+  });
+
+  it("enforces optimistic concurrency via updatePostWithVersionInTransaction", async () => {
+    const context = await openContext();
+    const post = await context.db
+      .insertInto("posts")
+      .values({
+        description: "v1",
+        thumbnailKey: "thumb.jpg",
+        title: "Versioned",
+        userId: "user-1",
+        videoKey: null,
+        videoMetadata: {},
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const conflict = await context.runFailure(
+      Effect.gen(function* () {
+        const db = yield* (yield* Effect.promise(() =>
+          import("../db/context"),
+        )).KyselyDB;
+        return yield* db.transaction((trx) =>
+          updatePostWithVersionInTransaction(trx, {
+            changes: { title: "Stale" },
+            expectedVersion: post.version + 99,
+            postId: post.id,
+          }),
+        );
+      }),
+    );
+
+    expect(conflict).toBeInstanceOf(PostVersionConflictError);
   });
 });

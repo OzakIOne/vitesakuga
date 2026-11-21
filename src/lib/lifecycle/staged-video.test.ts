@@ -16,6 +16,10 @@ import {
   LifecycleServiceLive,
   type VerifyStagedVideoInput,
 } from "./lifecycle.service";
+import {
+  discardStagedVideo as discardStagedVideoObject,
+  verifyStagedVideo as verifyStagedVideoObject,
+} from "./staged-video";
 
 type LifecycleContext = Awaited<
   ReturnType<typeof makeServiceTestLayer<LifecycleService, never>>
@@ -36,14 +40,14 @@ const openContext = async (options?: MakeServiceTestLayerOptions) => {
 
 const verifyStaged = (input: VerifyStagedVideoInput) =>
   Effect.gen(function* () {
-    const lifecycle = yield* LifecycleService;
-    return yield* lifecycle.verifyStagedVideo(input);
+    const storage = yield* StorageModule;
+    return yield* verifyStagedVideoObject({ ...input, storage });
   });
 
 const discardStaged = (sourceKey: string) =>
   Effect.gen(function* () {
-    const lifecycle = yield* LifecycleService;
-    return yield* lifecycle.discardStagedVideo(sourceKey);
+    const storage = yield* StorageModule;
+    return yield* discardStagedVideoObject({ sourceKey, storage });
   });
 
 const headObject = (key: string) =>

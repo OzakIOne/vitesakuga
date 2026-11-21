@@ -27,8 +27,11 @@ import type {
 } from "../db/schema/sakuga.schema";
 import { ValidationError } from "../errors";
 import type { VideoMetadata } from "../posts/posts.schema";
+import { imageContentType } from "../storage/content-type";
 import {
+  imageObjectKey,
   isDeterministicMediaKey,
+  thumbnailObjectKey,
   type DeterministicMediaKind,
 } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
@@ -156,16 +159,55 @@ export type RunOperationInput<Kind extends MediaOperationKind, A, E, R> = {
   readonly userId: string;
 };
 
-export type ReplaceVideoInput = Omit<
-  CopyVideoInput,
-  "fence" | "operationId"
-> & {
+export type UploadedMediaFile = {
+  readonly file: File;
+  readonly fingerprint: string;
+};
+
+export type CommittedPostMedia = {
+  readonly imageKeys: ReadonlyArray<string>;
+  readonly thumbnailKey: string;
+  readonly videoKey: string | null;
+};
+
+export type CommitPostMediaInput<A, E, R> = {
+  readonly commit: (
+    trx: LifecycleTransaction,
+    media: CommittedPostMedia,
+  ) => Effect.Effect<A, E, R>;
+  readonly images?: ReadonlyArray<UploadedMediaFile> | undefined;
+  readonly operation: OperationHandle<OperationResultOf<"post-create">>;
+  readonly pendingVideoKey?: string | undefined;
+  readonly thumbnail?: UploadedMediaFile | undefined;
+  readonly userId: string;
+};
+
+export type ReplaceVideoInput = {
   readonly expectedVersion: number;
   readonly oldVideoKey: string;
   readonly operation: OperationHandle<OperationResultOf<"video-replace">>;
+  readonly pendingVideoKey: string;
   readonly postId: number;
   readonly replacedBy: string;
+  readonly userId: string;
   readonly videoMetadata: VideoMetadata;
+};
+
+export type RestoreVideoInput = {
+  readonly expectedVersion: number;
+  readonly operation: OperationHandle<OperationResultOf<"video-restore">>;
+  readonly postId: number;
+  readonly previousVideo: {
+    readonly videoKey: string;
+    readonly videoMetadata: VideoMetadata;
+  } | null;
+  readonly replacedBy: string;
+  readonly revisionKey: string;
+};
+
+export type DeleteManagedKeysResult = {
+  readonly deletedKeys: ReadonlySet<string>;
+  readonly protectedKeys: ReadonlySet<string>;
 };
 
 export type VerifyStagedVideoInput = {
@@ -528,23 +570,6 @@ const assertObjectInput = (
     return Effect.fail(
       new LifecycleInputError({
         message: "Media content type and fingerprint must not be empty",
-      }),
-    );
-  }
-  return Effect.void;
-};
-
-const validateFailureInput = (
-  input: FailOperationInput,
-): Effect.Effect<void, LifecycleInputError> => {
-  if (
-    input.failureCode.length === 0 ||
-    input.failureCode.length > 120 ||
-    !/^[a-z0-9._-]+$/.test(input.failureCode)
-  ) {
-    return Effect.fail(
-      new LifecycleInputError({
-        message: "Lifecycle failure codes must be short stable identifiers",
       }),
     );
   }
@@ -1001,63 +1026,6 @@ const finishInTransaction = (
     } as const;
   });
 
-const failInTransaction = (
-  trx: LifecycleTransaction,
-  input: FailOperationInput,
-  now: Date,
-): Effect.Effect<FailOperationResult, LifecycleError> =>
-  Effect.gen(function* () {
-    const option = yield* trx.executeTakeFirstOption(
-      trx
-        .selectFrom("media_operations")
-        .selectAll()
-        .where("id", "=", input.operationId)
-        .forUpdate(),
-    );
-    if (Option.isNone(option)) {
-      return yield* new OperationFenceError({
-        message: "Lifecycle operation was not found",
-        operationId: input.operationId,
-      });
-    }
-    const current = toOperationSnapshot(option.value);
-    if (isTerminalStatus(current.status)) {
-      return {
-        operation: current,
-        outcome: "replayed",
-        result: current.result,
-      } as const;
-    }
-    if (current.fence !== input.fence) {
-      return yield* new OperationFenceError({
-        message: "Lifecycle operation fence is no longer current",
-        operationId: input.operationId,
-      });
-    }
-    const terminal = input.status !== "unknown";
-    const updated = yield* trx.executeTakeFirstOrError(
-      trx
-        .updateTable("media_operations")
-        .set({
-          completedAt: terminal ? now : null,
-          failureCode: input.failureCode,
-          result: input.result ?? null,
-          status: input.status,
-          updatedAt: now,
-        })
-        .where("id", "=", input.operationId)
-        .where("fence", "=", input.fence)
-        .where("status", "in", ["in-progress", "unknown"])
-        .returningAll(),
-    );
-    const operation = toOperationSnapshot(updated);
-    return {
-      operation,
-      outcome: terminal ? "failed" : "marked-unknown",
-      result: operation.result,
-    } as const;
-  });
-
 const beginDeleteInTransaction = (
   trx: LifecycleTransaction,
   input: BeginDeleteInput,
@@ -1277,12 +1245,6 @@ const postVersionUpdateInTransaction = (
     });
   });
 
-const compareAndIncrementPostVersionInTransaction = (
-  trx: LifecycleTransaction,
-  input: CompareAndIncrementPostVersionInput,
-): Effect.Effect<PostVersionResult, LifecycleError> =>
-  postVersionUpdateInTransaction(trx, { ...input, changes: {} });
-
 export type SwapPostVideoInput = {
   readonly expectedVersion: number;
   readonly finish: (
@@ -1346,61 +1308,24 @@ const swapPostVideoInTransaction = (
 export class LifecycleService extends Context.Service<
   LifecycleService,
   {
-    readonly adoptObject: (
-      input: AdoptObjectInput,
-    ) => Effect.Effect<ObjectTransitionResult, LifecycleError>;
-    readonly beginDelete: (
-      input: BeginDeleteInput,
-    ) => Effect.Effect<BeginDeleteResult, LifecycleError>;
-    readonly claimOperation: (
-      input: ClaimOperationInput,
-    ) => Effect.Effect<ClaimOperationResult, LifecycleError>;
-    readonly compareAndIncrementPostVersion: (
-      input: CompareAndIncrementPostVersionInput,
-    ) => Effect.Effect<PostVersionResult, LifecycleError>;
-    readonly completeDelete: (
-      input: ObjectFenceInput,
-    ) => Effect.Effect<CompleteDeleteResult, LifecycleError>;
-    readonly copyVideoForPost: (
-      input: CopyVideoInput,
-    ) => Effect.Effect<StoreObjectResult, LifecycleError>;
-    readonly deleteObject: (
-      input: ObjectFenceInput,
-    ) => Effect.Effect<DeleteObjectResult, LifecycleError>;
-    readonly discardStagedVideo: (sourceKey: string) => Effect.Effect<void>;
-    readonly failOperation: (
-      input: FailOperationInput,
-    ) => Effect.Effect<FailOperationResult, LifecycleError>;
-    readonly finishOperation: (
-      input: FinishOperationInput,
-    ) => Effect.Effect<FinishOperationResult, LifecycleError>;
-    readonly markPreparing: (
-      input: ObjectFenceInput,
-    ) => Effect.Effect<ObjectTransitionResult, LifecycleError>;
-    readonly markReady: (
-      input: MarkReadyInput,
-    ) => Effect.Effect<ObjectTransitionResult, LifecycleError>;
+    readonly commitPostMedia: <A, E, R>(
+      input: CommitPostMediaInput<A, E, R>,
+    ) => Effect.Effect<A, E | LifecycleError | ValidationError, R>;
+    readonly deleteManagedKeys: (
+      keys: ReadonlyArray<string>,
+    ) => Effect.Effect<DeleteManagedKeysResult, LifecycleError>;
     readonly reconcileNonTerminal: (
       input?: ReconcileInput,
     ) => Effect.Effect<ReconcileResult, LifecycleError>;
-    readonly reserveObject: (
-      input: ReserveObjectInput,
-    ) => Effect.Effect<ReserveObjectResult, LifecycleError>;
     readonly replaceVideo: (
       input: ReplaceVideoInput,
-    ) => Effect.Effect<{ readonly videoKey: string }, LifecycleError>;
+    ) => Effect.Effect<{ readonly videoKey: string }, LifecycleError | ValidationError>;
+    readonly restoreVideo: (
+      input: RestoreVideoInput,
+    ) => Effect.Effect<void, LifecycleError | ValidationError>;
     readonly runOperation: <Kind extends MediaOperationKind, A, E, R>(
       input: RunOperationInput<Kind, A, E, R>,
     ) => Effect.Effect<A, E | LifecycleError | FingerprintInputError, R>;
-    readonly storeObject: (
-      input: StoreObjectInput,
-    ) => Effect.Effect<StoreObjectResult, LifecycleError>;
-    readonly updatePostWithVersion: (
-      input: UpdatePostWithVersionInput,
-    ) => Effect.Effect<PostVersionResult, LifecycleError>;
-    readonly verifyStagedVideo: (
-      input: VerifyStagedVideoInput,
-    ) => Effect.Effect<StagedVideo, ValidationError>;
   }
 >()("LifecycleService", {
   make: Effect.gen(function* () {
@@ -1452,26 +1377,6 @@ export class LifecycleService extends Context.Service<
         adoptInTransaction(trx, input, now),
       );
     });
-
-    const finishOperation = Effect.fn("LifecycleService.finishOperation")(
-      function* (input: FinishOperationInput) {
-        const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db.transaction((trx) =>
-          finishInTransaction(trx, input, now),
-        );
-      },
-    );
-
-    const failOperation = Effect.fn("LifecycleService.failOperation")(
-      function* (input: FailOperationInput) {
-        yield* validateFailureInput(input);
-
-        const now = new Date(yield* Clock.currentTimeMillis);
-        return yield* db.transaction((trx) =>
-          failInTransaction(trx, input, now),
-        );
-      },
-    );
 
     const beginDelete = Effect.fn("LifecycleService.beginDelete")(function* (
       input: BeginDeleteInput,
@@ -1561,16 +1466,27 @@ export class LifecycleService extends Context.Service<
       input: ReplaceVideoInput,
     ) {
       const { operation } = input;
-      const prepared = yield* prepareObject({
-        ...input,
-        fence: operation.fence,
+      const staged = yield* verifyStagedVideoObject({
         operationId: operation.operationId,
+        pendingKey: input.pendingVideoKey,
+        storage,
+        userId: input.userId,
+      });
+      const prepared = yield* prepareObject({
+        contentLength: staged.contentLength,
+        contentType: staged.contentType,
+        fence: operation.fence,
+        fingerprint: staged.fingerprint,
+        key: staged.finalKey,
+        kind: "video",
+        operationId: operation.operationId,
+        userId: input.userId,
       });
       if (prepared.shouldWrite) {
         yield* storage.copyVideoIfMatch(
-          input.sourceKey,
-          input.sourceEtag,
-          input.key,
+          staged.sourceKey,
+          staged.etag,
+          staged.finalKey,
         );
       }
       const now = yield* DateTime.nowAsDate;
@@ -1580,11 +1496,11 @@ export class LifecycleService extends Context.Service<
             trx,
             {
               fence: prepared.object.fence,
-              key: input.key,
+              key: staged.finalKey,
               observed: {
-                contentLength: input.contentLength,
-                contentType: input.contentType,
-                fingerprint: input.fingerprint,
+                contentLength: staged.contentLength,
+                contentType: staged.contentType,
+                fingerprint: staged.fingerprint,
               },
               operationId: operation.operationId,
             },
@@ -1595,9 +1511,9 @@ export class LifecycleService extends Context.Service<
             finish: (transaction) =>
               operation.finish(transaction, {
                 postId: input.postId,
-                videoKey: input.key,
+                videoKey: staged.finalKey,
               }),
-            nextVideoKey: input.key,
+            nextVideoKey: staged.finalKey,
             postId: input.postId,
             previousVideo: {
               videoKey: input.oldVideoKey,
@@ -1607,7 +1523,54 @@ export class LifecycleService extends Context.Service<
           });
         }),
       );
-      return { videoKey: input.key } as const;
+      yield* discardStagedVideoObject({
+        sourceKey: staged.sourceKey,
+        storage,
+      });
+      return { videoKey: staged.finalKey } as const;
+    });
+
+    const restoreVideo = Effect.fn("LifecycleService.restoreVideo")(function* (
+      input: RestoreVideoInput,
+    ) {
+      const { operation, revisionKey } = input;
+      if (!isDeterministicMediaKey(revisionKey)) {
+        return yield* new ValidationError({
+          message:
+            "This legacy video is quarantined and cannot be restored automatically",
+        });
+      }
+      const registered = yield* db.executeTakeFirstOption(
+        db
+          .selectFrom("media_objects")
+          .select(["state", "kind"])
+          .where("key", "=", revisionKey),
+      );
+      if (
+        Option.isNone(registered) ||
+        registered.value.kind !== "video" ||
+        registered.value.state !== "ready"
+      ) {
+        return yield* new ValidationError({
+          message:
+            "This video is not registered as ready and cannot be restored",
+        });
+      }
+      yield* storage.headFile(revisionKey);
+      yield* db.transaction((trx) =>
+        swapPostVideoInTransaction(trx, {
+          expectedVersion: input.expectedVersion,
+          finish: (transaction) =>
+            operation.finish(transaction, {
+              postId: input.postId,
+              videoKey: revisionKey,
+            }),
+          nextVideoKey: revisionKey,
+          postId: input.postId,
+          previousVideo: input.previousVideo,
+          replacedBy: input.replacedBy,
+        }),
+      );
     });
 
     const deleteObject = Effect.fn("LifecycleService.deleteObject")(function* (
@@ -1630,21 +1593,158 @@ export class LifecycleService extends Context.Service<
       } as const;
     });
 
-    const updatePostWithVersion = Effect.fn(
-      "LifecycleService.updatePostWithVersion",
-    )(function* (input: UpdatePostWithVersionInput) {
-      return yield* db.transaction((trx) =>
-        postVersionUpdateInTransaction(trx, input),
-      );
-    });
+    const deleteManagedKeys = Effect.fn("LifecycleService.deleteManagedKeys")(
+      function* (keys: ReadonlyArray<string>) {
+        const deletedKeys = new Set<string>();
+        const protectedKeys = new Set<string>();
+        if (keys.length === 0) {
+          return { deletedKeys, protectedKeys } satisfies DeleteManagedKeysResult;
+        }
+        const managedObjects = yield* db.execute(
+          db
+            .selectFrom("media_objects")
+            .select(["fence", "key", "operationId", "state"])
+            .where("key", "in", [...keys]),
+        );
+        const managedByKey = new Map(
+          managedObjects.map((object) => [object.key, object]),
+        );
+        for (const key of keys) {
+          const managed = managedByKey.get(key);
+          if (managed === undefined || managed.state !== "ready") continue;
 
-    const compareAndIncrementPostVersion = Effect.fn(
-      "LifecycleService.compareAndIncrementPostVersion",
-    )(function* (input: CompareAndIncrementPostVersionInput) {
-      return yield* db.transaction((trx) =>
-        compareAndIncrementPostVersionInTransaction(trx, input),
-      );
-    });
+          const removed = yield* deleteObject({
+            fence: managed.fence,
+            key: managed.key,
+            operationId: managed.operationId,
+          }).pipe(Effect.exit);
+          if (Exit.isFailure(removed)) continue;
+
+          if (removed.value.outcome === "protected") {
+            protectedKeys.add(key);
+            continue;
+          }
+          deletedKeys.add(key);
+        }
+        return { deletedKeys, protectedKeys } satisfies DeleteManagedKeysResult;
+      },
+    );
+
+    const commitPostMedia = Effect.fn("LifecycleService.commitPostMedia")(
+      function* <A, E, R>(input: CommitPostMediaInput<A, E, R>) {
+        const { operation, userId } = input;
+        const stagedVideo: StagedVideo | null =
+          input.pendingVideoKey === undefined
+            ? null
+            : yield* verifyStagedVideoObject({
+                operationId: operation.operationId,
+                pendingKey: input.pendingVideoKey,
+                storage,
+                userId,
+              });
+        const uploadedObjects: ObjectFenceInput[] = [];
+
+        const outcome = yield* Effect.gen(function* () {
+          let thumbnailKey: string;
+          const imageKeys: string[] = [];
+
+          if (stagedVideo !== null) {
+            const copied = yield* copyVideoForPost({
+              contentLength: stagedVideo.contentLength,
+              contentType: stagedVideo.contentType,
+              fence: operation.fence,
+              fingerprint: stagedVideo.fingerprint,
+              key: stagedVideo.finalKey,
+              kind: "video",
+              operationId: operation.operationId,
+              sourceEtag: stagedVideo.etag,
+              sourceKey: stagedVideo.sourceKey,
+              userId,
+            });
+            uploadedObjects.push({
+              fence: copied.object.fence,
+              key: copied.object.key,
+              operationId: copied.object.operationId,
+            });
+          }
+
+          if (input.images !== undefined && input.images.length > 0) {
+            for (const [index, image] of input.images.entries()) {
+              const extension = image.file.name.split(".").pop() ?? "png";
+              const key = imageObjectKey(
+                operation.operationId,
+                index,
+                extension,
+              );
+              const stored = yield* storeObject({
+                contentLength: image.file.size,
+                contentType: imageContentType(extension),
+                fence: operation.fence,
+                file: image.file,
+                fingerprint: image.fingerprint,
+                key,
+                kind: "image",
+                operationId: operation.operationId,
+                userId,
+              });
+              uploadedObjects.push({
+                fence: stored.object.fence,
+                key: stored.object.key,
+                operationId: stored.object.operationId,
+              });
+              imageKeys.push(stored.object.key);
+            }
+            thumbnailKey = imageKeys[0] ?? "";
+          } else {
+            if (input.thumbnail === undefined) {
+              return yield* new ValidationError({
+                message: "Thumbnail is required",
+              });
+            }
+            const stored = yield* storeObject({
+              contentLength: input.thumbnail.file.size,
+              contentType: "image/jpeg",
+              fence: operation.fence,
+              file: input.thumbnail.file,
+              fingerprint: input.thumbnail.fingerprint,
+              key: thumbnailObjectKey(operation.operationId),
+              kind: "thumbnail",
+              operationId: operation.operationId,
+              userId,
+            });
+            thumbnailKey = stored.object.key;
+            uploadedObjects.push({
+              fence: stored.object.fence,
+              key: stored.object.key,
+              operationId: stored.object.operationId,
+            });
+          }
+
+          const media: CommittedPostMedia = {
+            imageKeys,
+            thumbnailKey,
+            videoKey: stagedVideo?.finalKey ?? null,
+          };
+          return yield* db.transaction((trx) => input.commit(trx, media));
+        }).pipe(Effect.exit);
+
+        if (Exit.isFailure(outcome)) {
+          yield* Effect.forEach(uploadedObjects, (object) =>
+            deleteObject(object).pipe(Effect.ignore),
+          ).pipe(Effect.ignore);
+          return yield* Effect.failCause(outcome.cause);
+        }
+
+        if (stagedVideo !== null) {
+          yield* discardStagedVideoObject({
+            sourceKey: stagedVideo.sourceKey,
+            storage,
+          });
+        }
+
+        return outcome.value;
+      },
+    );
 
     const reconcileNonTerminal = Effect.fn(
       "LifecycleService.reconcileNonTerminal",
@@ -1807,38 +1907,13 @@ export class LifecycleService extends Context.Service<
       return yield* input.run(operation);
     });
 
-    const verifyStagedVideo = Effect.fn("LifecycleService.verifyStagedVideo")(
-      function* (input: VerifyStagedVideoInput) {
-        return yield* verifyStagedVideoObject({ ...input, storage });
-      },
-    );
-
-    const discardStagedVideo = Effect.fn("LifecycleService.discardStagedVideo")(
-      function* (sourceKey: string) {
-        yield* discardStagedVideoObject({ sourceKey, storage });
-      },
-    );
-
     return {
-      adoptObject,
-      beginDelete,
-      claimOperation,
-      compareAndIncrementPostVersion,
-      completeDelete,
-      copyVideoForPost,
-      deleteObject,
-      discardStagedVideo,
-      failOperation,
-      finishOperation,
-      markPreparing,
-      markReady,
+      commitPostMedia,
+      deleteManagedKeys,
       reconcileNonTerminal,
-      reserveObject,
       replaceVideo,
+      restoreVideo,
       runOperation,
-      storeObject,
-      updatePostWithVersion,
-      verifyStagedVideo,
     };
   }),
 }) {}
@@ -1849,13 +1924,9 @@ export const LifecycleServiceLive = Layer.effect(
 );
 
 /**
- * Integration helpers: use these inside the caller's one short transaction,
- * alongside the caller's own post writes. No storage call belongs in that
- * transaction.
+ * Integration helper: use inside the caller's one short transaction alongside
+ * post writes. No storage call belongs in that transaction.
  */
-export {
-  postVersionUpdateInTransaction as updatePostWithVersionInTransaction,
-  swapPostVideoInTransaction,
-};
+export { postVersionUpdateInTransaction as updatePostWithVersionInTransaction };
 
 export type { DeterministicMediaKind, StagedVideo };

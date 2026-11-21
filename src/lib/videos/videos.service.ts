@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Clock, Context, Effect, Exit, Layer, Option } from "effect";
+import { Clock, Context, Effect, Layer, Option } from "effect";
 
 import { authorize, requireRecentSignIn } from "../auth/policy";
 import { SessionService } from "../auth/session.effect";
@@ -21,7 +21,6 @@ import {
   LifecycleService,
   LifecycleServiceLive,
   type LifecycleError,
-  swapPostVideoInTransaction,
 } from "../lifecycle/lifecycle.service";
 import { VideoMetadataSchema } from "../posts/posts.schema";
 import { createEndpointHandler } from "../server-endpoint";
@@ -305,40 +304,28 @@ export class VideosService extends Context.Service<
                 forbiddenMessage: STAFF_ONLY_MESSAGE,
               });
             }
-            const staged = yield* lifecycle.verifyStagedVideo({
-              operationId: operation.operationId,
-              pendingKey: input.pendingVideoKey,
-              userId: user.id,
-            });
-            yield* lifecycle.replaceVideo({
-              contentLength: staged.contentLength,
-              contentType: staged.contentType,
+            const { videoKey } = yield* lifecycle.replaceVideo({
               expectedVersion: input.expectedVersion,
-              fingerprint: staged.fingerprint,
-              key: staged.finalKey,
-              kind: "video",
               oldVideoKey,
               operation,
+              pendingVideoKey: input.pendingVideoKey,
               postId: post.id,
               replacedBy: user.id,
-              sourceEtag: staged.etag,
-              sourceKey: staged.sourceKey,
               userId: user.id,
               videoMetadata: post.videoMetadata,
             });
-            yield* lifecycle.discardStagedVideo(staged.sourceKey);
 
             // Likes, comments and the post id stay untouched: this only swaps the
             // media backing the same content entry.
             yield* Effect.logInfo("Video replaced").pipe(
               Effect.annotateLogs({
-                newPath: staged.finalKey,
+                newPath: videoKey,
                 oldPath: post.videoKey,
                 postId: String(post.id),
                 replacedBy: user.id,
               }),
             );
-            return { videoKey: staged.finalKey };
+            return { videoKey };
           }),
       });
     });
@@ -418,49 +405,20 @@ export class VideosService extends Context.Service<
             // the key is in the managed deterministic namespace.
             const post = postOption.value;
             const revisionKey = revisionOption.value.videoKey;
-            if (!isDeterministicMediaKey(revisionKey)) {
-              return yield* new ValidationError({
-                message:
-                  "This legacy video is quarantined and cannot be restored automatically",
-              });
-            }
-            const registered = yield* db.executeTakeFirstOption(
-              db
-                .selectFrom("media_objects")
-                .select(["state", "kind"])
-                .where("key", "=", revisionKey),
-            );
-            if (
-              Option.isNone(registered) ||
-              registered.value.kind !== "video" ||
-              registered.value.state !== "ready"
-            ) {
-              return yield* new ValidationError({
-                message:
-                  "This video is not registered as ready and cannot be restored",
-              });
-            }
-            yield* storage.headFile(revisionKey);
-            yield* db.transaction((trx) =>
-              swapPostVideoInTransaction(trx, {
-                expectedVersion: input.expectedVersion,
-                finish: (transaction) =>
-                  operation.finish(transaction, {
-                    postId: post.id,
-                    videoKey: revisionKey,
-                  }),
-                nextVideoKey: revisionKey,
-                postId: post.id,
-                previousVideo:
-                  post.videoKey === null
-                    ? null
-                    : {
-                        videoKey: post.videoKey,
-                        videoMetadata: post.videoMetadata,
-                      },
-                replacedBy: user.id,
-              }),
-            );
+            yield* lifecycle.restoreVideo({
+              expectedVersion: input.expectedVersion,
+              operation,
+              postId: post.id,
+              previousVideo:
+                post.videoKey === null
+                  ? null
+                  : {
+                      videoKey: post.videoKey,
+                      videoMetadata: post.videoMetadata,
+                    },
+              replacedBy: user.id,
+              revisionKey,
+            });
 
             yield* Effect.logInfo("Video restored from revision").pipe(
               Effect.annotateLogs({
@@ -487,6 +445,10 @@ export class VideosService extends Context.Service<
         forbiddenMessage: ADMIN_ONLY_MESSAGE,
       });
       yield* requireRecentSignIn({ actor: user });
+
+      // Reconcile any stalled non-terminal operations/objects before scanning
+      // for orphans so uncertain deletes finish and ready objects are settled.
+      yield* lifecycle.reconcileNonTerminal().pipe(Effect.ignore);
 
       const { orphanKeys, purgeableRevisions } = yield* analyzeGc();
 
@@ -529,54 +491,13 @@ export class VideosService extends Context.Service<
         }
       }
 
-      let deletedKeys = 0;
-      const successfullyDeletedKeys = new Set<string>();
-      const protectedAfterRecheck = new Set<string>();
-
-      // Deterministic objects have a durable owner/fence in media_objects. The
-      // lifecycle transition is the delete lease: it rechecks every reference
-      // while locking the registry row, so a concurrent restore or replacement
-      // cannot turn an orphan decision into data loss. Legacy `videos/` keys
-      // deliberately remain quarantine-only because they have no fence.
-      const managedObjects =
-        keysToDelete.size === 0
-          ? []
-          : yield* db.execute(
-              db
-                .selectFrom("media_objects")
-                .select(["fence", "key", "operationId", "state"])
-                .where("key", "in", [...keysToDelete]),
-            );
-      const managedByKey = new Map(
-        managedObjects.map((object) => [object.key, object]),
-      );
-      for (const key of keysToDelete) {
-        const managed = managedByKey.get(key);
-        if (managed === undefined || managed.state !== "ready") continue;
-
-        // beginDelete performs the authoritative reference recheck under the
-        // lifecycle row lock. A revision reference is therefore retained for
-        // this pass and purged only after the object is protected; the next GC
-        // pass can then acquire the delete lease safely.
-        const removed = yield* lifecycle
-          .deleteObject({
-            fence: managed.fence,
-            key: managed.key,
-            operationId: managed.operationId,
-          })
-          .pipe(Effect.exit);
-        if (Exit.isFailure(removed)) continue;
-
-        if (removed.value.outcome === "protected") {
-          protectedAfterRecheck.add(key);
-          continue;
-        }
-        // A failed or uncertain delete intentionally leaves the row in
-        // `deleting`; no revision row is purged and a later reconciler can
-        // safely retry it. Only completeDelete creates the permanent tombstone.
-        deletedKeys += 1;
-        successfullyDeletedKeys.add(key);
-      }
+      // Deterministic objects have a durable owner/fence in media_objects.
+      // Legacy `videos/` keys deliberately remain quarantine-only.
+      const {
+        deletedKeys: successfullyDeletedKeys,
+        protectedKeys: protectedAfterRecheck,
+      } = yield* lifecycle.deleteManagedKeys([...keysToDelete]);
+      const deletedKeys = successfullyDeletedKeys.size;
 
       // Rows go last: purge only revisions whose object was actually confirmed
       // deleted, or whose key was protected by the reference recheck. A key

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Clock, Context, Effect, Exit, Layer, Option, Schema } from "effect";
+import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 import { sql, type Selectable } from "kysely";
 import { postsSelectSchema } from "src/lib/db/schema";
 
@@ -34,18 +34,12 @@ import {
   updatePostWithVersionInTransaction,
   LifecycleServiceLive,
   type LifecycleError,
-  type ObjectFenceInput,
-  type StagedVideo,
 } from "../lifecycle/lifecycle.service";
 import type { PaginationMeta } from "../pagination/pagination";
 import { createEndpointHandler } from "../server-endpoint";
 import { baseLayerFactories } from "../server-fn.handler";
-import { imageContentType, videoContentType } from "../storage/content-type";
-import {
-  imageObjectKey,
-  pendingVideoObjectKey,
-  thumbnailObjectKey,
-} from "../storage/keys";
+import { videoContentType } from "../storage/content-type";
+import { pendingVideoObjectKey } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
 import type { mapPopularTags } from "../tags/tags.utils";
 import { mergeVoteCounts } from "../votes/votes.utils";
@@ -558,19 +552,33 @@ export class PostsService extends Context.Service<
 
       const userId = user.id;
       const operationKey = data.operationKey ?? crypto.randomUUID();
-      const fileDigests = [
-        ...(data.images === undefined
-          ? []
-          : yield* Effect.forEach(data.images, (file, index) =>
+      const imagesWithDigest =
+        data.images === undefined
+          ? undefined
+          : yield* Effect.forEach(data.images, (file) =>
               fileDigest(file).pipe(
-                Effect.map((digest) => ({ digest, slot: `image:${index}` })),
+                Effect.map((fingerprint) => ({ file, fingerprint })),
               ),
-            )),
-        ...(data.thumbnail === undefined
+            );
+      const thumbnailWithDigest =
+        data.thumbnail === undefined
+          ? undefined
+          : {
+              file: data.thumbnail,
+              fingerprint: yield* fileDigest(data.thumbnail),
+            };
+      const fileDigests = [
+        ...(imagesWithDigest === undefined
+          ? []
+          : imagesWithDigest.map((image, index) => ({
+              digest: image.fingerprint,
+              slot: `image:${index}`,
+            }))),
+        ...(thumbnailWithDigest === undefined
           ? []
           : [
               {
-                digest: yield* fileDigest(data.thumbnail),
+                digest: thumbnailWithDigest.fingerprint,
                 slot: "thumbnail",
               },
             ]),
@@ -596,8 +604,6 @@ export class PostsService extends Context.Service<
         },
         run: (operation) =>
           Effect.gen(function* () {
-            const claimFence = operation.fence;
-
             const {
               title,
               description,
@@ -618,101 +624,15 @@ export class PostsService extends Context.Service<
               }),
             );
 
-            let stagedVideo: StagedVideo | null = null;
-            if (videoKey !== undefined) {
-              stagedVideo = yield* lifecycle.verifyStagedVideo({
-                operationId: operation.operationId,
-                pendingKey: videoKey,
-                userId,
-              });
-            }
-            const finalVideoKey = stagedVideo?.finalKey ?? null;
-
-            const uploadedObjects: ObjectFenceInput[] = [];
-
-            const outcome = yield* Effect.gen(function* () {
-              let thumbnailKey: string;
-              const imageKeys: string[] = [];
-
-              if (stagedVideo !== null) {
-                const copied = yield* lifecycle.copyVideoForPost({
-                  contentLength: stagedVideo.contentLength,
-                  contentType: stagedVideo.contentType,
-                  fence: claimFence,
-                  fingerprint: stagedVideo.fingerprint,
-                  key: stagedVideo.finalKey,
-                  kind: "video",
-                  operationId: operation.operationId,
-                  sourceEtag: stagedVideo.etag,
-                  sourceKey: stagedVideo.sourceKey,
-                  userId,
-                });
-                uploadedObjects.push({
-                  fence: copied.object.fence,
-                  key: copied.object.key,
-                  operationId: copied.object.operationId,
-                });
-              }
-
-              if (data.images !== undefined && data.images.length > 0) {
-                for (const [index, image] of data.images.entries()) {
-                  const key = imageObjectKey(
-                    operation.operationId,
-                    index,
-                    image.name.split(".").pop() ?? "png",
-                  );
-                  const extension = image.name.split(".").pop() ?? "png";
-                  const contentType = imageContentType(extension);
-                  const fingerprint = yield* fileDigest(image);
-                  const stored = yield* lifecycle.storeObject({
-                    contentLength: image.size,
-                    contentType,
-                    fence: claimFence,
-                    file: image,
-                    fingerprint,
-                    key,
-                    kind: "image",
-                    operationId: operation.operationId,
-                    userId,
-                  });
-                  uploadedObjects.push({
-                    fence: stored.object.fence,
-                    key: stored.object.key,
-                    operationId: stored.object.operationId,
-                  });
-                  imageKeys.push(stored.object.key);
-                }
-                thumbnailKey = imageKeys[0] ?? "";
-              } else {
-                if (data.thumbnail === undefined) {
-                  return yield* Effect.fail(
-                    new ValidationError({ message: "Thumbnail is required" }),
-                  );
-                }
-                const key = thumbnailObjectKey(operation.operationId);
-                const fingerprint = yield* fileDigest(data.thumbnail);
-                const stored = yield* lifecycle.storeObject({
-                  contentLength: data.thumbnail.size,
-                  contentType: "image/jpeg",
-                  fence: claimFence,
-                  file: data.thumbnail,
-                  fingerprint,
-                  key,
-                  kind: "thumbnail",
-                  operationId: operation.operationId,
-                  userId,
-                });
-                thumbnailKey = stored.object.key;
-                uploadedObjects.push({
-                  fence: stored.object.fence,
-                  key: stored.object.key,
-                  operationId: stored.object.operationId,
-                });
-              }
-
-              const newPost = yield* db.transaction((trx) =>
+            const newPost = yield* lifecycle.commitPostMedia({
+              images: imagesWithDigest,
+              operation,
+              pendingVideoKey: videoKey,
+              thumbnail: thumbnailWithDigest,
+              userId,
+              commit: (trx, media) =>
                 Effect.gen(function* () {
-                  const newPost = yield* trx.executeTakeFirstOrError(
+                  const inserted = yield* trx.executeTakeFirstOrError(
                     trx
                       .insertInto("posts")
                       .values({
@@ -724,22 +644,22 @@ export class PostsService extends Context.Service<
                         seasonNumber: data.seasonNumber ?? null,
                         source,
                         sourceType: data.sourceType ?? null,
-                        thumbnailKey,
+                        thumbnailKey: media.thumbnailKey,
                         title,
                         userId,
-                        videoKey: finalVideoKey,
+                        videoKey: media.videoKey,
                         videoMetadata: videoMetadata ?? {},
                         volumeNumber: data.volumeNumber ?? null,
                       })
                       .returningAll(),
                   );
 
-                  const postId = asPostId(newPost.id);
+                  const postId = asPostId(inserted.id);
 
-                  if (imageKeys.length > 0) {
+                  if (media.imageKeys.length > 0) {
                     yield* trx.execute(
                       trx.insertInto("post_images").values(
-                        imageKeys.map((storageKey, index) => {
+                        media.imageKeys.map((storageKey, index) => {
                           const dimensions = data.imageDimensions?.[index];
                           return {
                             height: dimensions?.height ?? null,
@@ -753,22 +673,22 @@ export class PostsService extends Context.Service<
                     );
                   }
 
-                  // Strip reserved tag names from user input, then append the correct
-                  // one so every post always carries its implicit media-kind tag.
                   const reservedNames: ReadonlySet<string> = new Set(
                     RESERVED_TAG_NAMES,
                   );
                   const effectiveTags = [
                     ...tags.filter((tag) => !reservedNames.has(tag.name)),
-                    { name: finalVideoKey === null ? "image" : "video" },
+                    { name: media.videoKey === null ? "image" : "video" },
                   ];
                   yield* resolveAndLinkTags(trx, postId, effectiveTags);
 
                   yield* operation.finish(trx, {
-                    imageKeys,
+                    imageKeys: [...media.imageKeys],
                     postId,
-                    thumbnailKey,
-                    ...(finalVideoKey !== null && { videoKey: finalVideoKey }),
+                    thumbnailKey: media.thumbnailKey,
+                    ...(media.videoKey !== null && {
+                      videoKey: media.videoKey,
+                    }),
                   });
 
                   yield* Effect.logInfo("Tags linked to post").pipe(
@@ -778,31 +698,16 @@ export class PostsService extends Context.Service<
                     }),
                   );
 
-                  return newPost;
+                  return inserted;
                 }),
-              );
+            });
 
-              yield* Effect.logInfo("Upload completed").pipe(
-                Effect.annotateLogs("postId", String(newPost.id)),
-              );
-
-              return newPost;
-            }).pipe(Effect.exit);
-
-            if (Exit.isFailure(outcome)) {
-              yield* Effect.forEach(uploadedObjects, (object) =>
-                lifecycle.deleteObject(object).pipe(Effect.ignore),
-              ).pipe(Effect.ignore);
-
-              return yield* Effect.failCause(outcome.cause);
-            }
-
-            if (stagedVideo !== null) {
-              yield* lifecycle.discardStagedVideo(stagedVideo.sourceKey);
-            }
+            yield* Effect.logInfo("Upload completed").pipe(
+              Effect.annotateLogs("postId", String(newPost.id)),
+            );
 
             const parsed = yield* parsePostRow(
-              outcome.value,
+              newPost,
               "There was an error processing the upload result",
             );
             yield* community.record({

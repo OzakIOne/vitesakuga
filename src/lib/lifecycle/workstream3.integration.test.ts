@@ -10,8 +10,7 @@ import { StorageModule } from "../storage/storage.module";
 import {
   LifecycleService,
   LifecycleServiceLive,
-  OperationFenceError,
-  ObjectNotAdoptableError,
+  OperationConflictError,
 } from "./lifecycle.service";
 
 const fingerprint = "sha256:" + "a".repeat(64);
@@ -50,189 +49,171 @@ afterAll(async () => {
   await harness?.close();
 });
 
-const claim = (operationKey: string) =>
-  run(
-    Effect.gen(function* () {
-      const lifecycle = yield* LifecycleService;
-      return yield* lifecycle.claimOperation({
-        kind: "post-create",
-        operationKey,
-        requestFingerprint: fingerprint,
-        userId: "ws3-user",
-      });
-    }),
-  );
-
 describe("workstream 3 isolated PostgreSQL + RustFS recovery", () => {
-  it("elects one operation row across independent PostgreSQL connections", async () => {
-    const [a, b] = await Promise.all([claim("race"), claim("race")]);
-    expect(a.operationId).toBe(b.operationId);
-    expect(new Set([a.outcome, b.outcome])).toEqual(new Set(["claimed"]));
+  it("elects one operation row across concurrent runOperation calls", async () => {
+    const runOp = () =>
+      run(
+        Effect.gen(function* () {
+          const lifecycle = yield* LifecycleService;
+          return yield* lifecycle.runOperation({
+            kind: "post-create",
+            operationKey: "race",
+            replay: (result) => Effect.succeed(String(result.postId)),
+            request: { payload: { title: "Race" } },
+            userId: "ws3-user",
+            run: (operation) => Effect.succeed(operation.operationId),
+          });
+        }),
+      );
+
+    const [a, b] = await Promise.all([runOp(), runOp()]);
+    expect(a).toBe(b);
     const rows = await harness.db
       .selectFrom("media_operations")
       .selectAll()
+      .where("operationKey", "=", "race")
       .execute();
     expect(rows).toHaveLength(1);
   });
 
-  it("fences stale workers after a retry claims the same operation", async () => {
-    const first = await claim("fence");
-    const second = await claim("fence");
-    if (first.outcome !== "claimed" || second.outcome !== "claimed")
-      throw new Error("expected claims");
+  it("rejects conflicting payloads reusing an operationKey", async () => {
+    await run(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.runOperation({
+          kind: "post-create",
+          operationKey: "conflict-key",
+          replay: () => Effect.succeed("replayed"),
+          request: { payload: { title: "One" } },
+          userId: "ws3-user",
+          run: () => Effect.succeed("claimed"),
+        });
+      }),
+    );
+
     const error = await run(
       Effect.flip(
         Effect.gen(function* () {
           const lifecycle = yield* LifecycleService;
-          return yield* lifecycle.reserveObject({
-            contentLength: 1,
-            contentType: "image/png",
-            fence: first.fence,
-            fingerprint,
-            key: imageObjectKey(first.operationId, 0, "png"),
-            kind: "image",
-            operationId: first.operationId,
+          return yield* lifecycle.runOperation({
+            kind: "post-create",
+            operationKey: "conflict-key",
+            replay: () => Effect.succeed("replayed"),
+            request: { payload: { title: "Two" } },
             userId: "ws3-user",
+            run: () => Effect.succeed("claimed"),
           });
         }),
       ),
     );
-    expect(error).toBeInstanceOf(OperationFenceError);
-  });
-
-  it("keeps storage ordering: reserve, upload, ready, then durable finish", async () => {
-    const operation = await claim("ordering");
-    if (operation.outcome !== "claimed") throw new Error("expected claim");
-    const key = imageObjectKey(operation.operationId, 0, "png");
-    const stored = await run(
-      Effect.gen(function* () {
-        const storage = yield* StorageModule;
-        return yield* storage.putImage(
-          key,
-          new File(["ordered"], "image.png", { type: "image/png" }),
-        );
-      }),
-    );
-    const object = {
-      contentLength: 7,
-      contentType: "image/png",
-      fence: operation.fence,
-      fingerprint: stored.fingerprint,
-      key,
-      kind: "image" as const,
-      operationId: operation.operationId,
-      userId: "ws3-user",
-    };
-    await run(
-      Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        yield* lifecycle.reserveObject(object);
-        yield* lifecycle.markPreparing(object);
-        yield* lifecycle.markReady({
-          ...object,
-          observed: {
-            contentLength: 7,
-            contentType: "image/png",
-            fingerprint: stored.fingerprint,
-          },
-        });
-        return yield* lifecycle.finishOperation({
-          fence: operation.fence,
-          operationId: operation.operationId,
-          result: { imageKeys: [key], postId: 1, thumbnailKey: key },
-        });
-      }),
-    );
-    expect(
-      (
-        await harness.db
-          .selectFrom("media_objects")
-          .select("state")
-          .where("key", "=", key)
-          .executeTakeFirstOrThrow()
-      ).state,
-    ).toBe("ready");
+    expect(error).toBeInstanceOf(OperationConflictError);
   });
 
   it("reconciles a response-lost write from RustFS HEAD metadata", async () => {
-    const operation = await claim("response-loss");
-    if (operation.outcome !== "claimed") throw new Error("expected claim");
-    const key = imageObjectKey(operation.operationId, 0, "png");
+    const opId = "ws3-reconcile-op";
+    const key = imageObjectKey(opId, 0, "png");
     const stored = await run(
       Effect.gen(function* () {
         const storage = yield* StorageModule;
         return yield* storage.putImage(
           key,
-          new File(["lost"], "image.png", { type: "image/png" }),
+          new File(["ws3-bytes"], "ws3.png", { type: "image/png" }),
         );
       }),
     );
+
     await harness.db
-      .insertInto("media_objects")
+      .insertInto("media_operations")
       .values({
-        contentLength: 4,
-        contentType: "image/png",
-        fence: operation.fence,
-        fingerprint: stored.fingerprint,
-        key,
-        kind: "image",
-        operationId: operation.operationId,
-        state: "reserved",
+        fence: 1,
+        id: opId,
+        kind: "post-create",
+        operationKey: "ws3-reconcile",
+        requestFingerprint: fingerprint,
+        status: "in-progress",
         userId: "ws3-user",
       })
       .execute();
+
+    await harness.db
+      .insertInto("media_objects")
+      .values({
+        contentLength: 9,
+        contentType: "image/png",
+        fence: 1,
+        fingerprint: stored.fingerprint,
+        key,
+        kind: "image",
+        operationId: opId,
+        state: "preparing",
+        userId: "ws3-user",
+      })
+      .execute();
+
     const result = await run(
       Effect.gen(function* () {
         const lifecycle = yield* LifecycleService;
-        return yield* lifecycle.reconcileNonTerminal({
-          operationId: operation.operationId,
-        });
+        return yield* lifecycle.reconcileNonTerminal({ operationId: opId });
       }),
     );
+
     expect(result.adoptedKeys).toEqual([key]);
   });
 
-  it("preserves tombstones and rejects late reuse", async () => {
-    const operation = await claim("tombstone");
-    if (operation.outcome !== "claimed") throw new Error("expected claim");
-    const key = imageObjectKey(operation.operationId, 0, "png");
-    const object = {
-      contentLength: 4,
-      contentType: "image/png",
-      fence: operation.fence,
-      fingerprint,
-      key,
-      kind: "image" as const,
-      operationId: operation.operationId,
-      userId: "ws3-user",
-    };
-    await run(
+  it("deletes unreferenced ready objects and preserves deletion tombstones", async () => {
+    const opId = "ws3-tombstone-op";
+    const key = imageObjectKey(opId, 0, "png");
+    const stored = await run(
       Effect.gen(function* () {
-        const lifecycle = yield* LifecycleService;
-        yield* lifecycle.reserveObject(object);
-        yield* lifecycle.markPreparing(object);
-        yield* lifecycle.markReady(object);
-        const deleting = yield* lifecycle.beginDelete(object);
-        yield* lifecycle.completeDelete({ ...object, fence: deleting.fence });
+        const storage = yield* StorageModule;
+        return yield* storage.putImage(
+          key,
+          new File(["gone-bytes"], "gone.png", { type: "image/png" }),
+        );
       }),
     );
-    const error = await run(
-      Effect.flip(
-        Effect.gen(function* () {
-          const lifecycle = yield* LifecycleService;
-          return yield* lifecycle.reserveObject(object);
-        }),
-      ),
+
+    await harness.db
+      .insertInto("media_operations")
+      .values({
+        fence: 1,
+        id: opId,
+        kind: "post-create",
+        operationKey: "ws3-tombstone",
+        requestFingerprint: fingerprint,
+        status: "completed",
+        userId: "ws3-user",
+      })
+      .execute();
+
+    await harness.db
+      .insertInto("media_objects")
+      .values({
+        contentLength: 10,
+        contentType: "image/png",
+        fence: 1,
+        fingerprint: stored.fingerprint,
+        key,
+        kind: "image",
+        operationId: opId,
+        state: "ready",
+        userId: "ws3-user",
+      })
+      .execute();
+
+    const deleted = await run(
+      Effect.gen(function* () {
+        const lifecycle = yield* LifecycleService;
+        return yield* lifecycle.deleteManagedKeys([key]);
+      }),
     );
-    expect(error).toBeInstanceOf(ObjectNotAdoptableError);
-    expect(
-      (
-        await harness.db
-          .selectFrom("media_objects")
-          .select("state")
-          .where("key", "=", key)
-          .executeTakeFirstOrThrow()
-      ).state,
-    ).toBe("deleted");
+
+    expect(deleted.deletedKeys.has(key)).toBe(true);
+    const row = await harness.db
+      .selectFrom("media_objects")
+      .select("state")
+      .where("key", "=", key)
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("deleted");
   });
 });
