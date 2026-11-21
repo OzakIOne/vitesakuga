@@ -46,7 +46,8 @@ describe(useUpdatePost, () => {
         <ServerFnsProvider
           // SAFETY: useUpdatePost only calls updatePost; the other posts
           // server functions are never invoked.
-          value={{ posts: fns as unknown as PostsFns }}>
+          value={{ posts: fns as unknown as PostsFns }}
+        >
           {children}
         </ServerFnsProvider>
       </QueryClientProvider>

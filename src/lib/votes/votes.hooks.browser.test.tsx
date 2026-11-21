@@ -30,7 +30,8 @@ const createWrapper = (
       <ServerFnsProvider
         // SAFETY: the hooks under test only call the fakes above; the
         // remaining vote server functions are never invoked.
-        value={{ votes: fakes as unknown as VotesFns }}>
+        value={{ votes: fakes as unknown as VotesFns }}
+      >
         {children}
       </ServerFnsProvider>
     </QueryClientProvider>

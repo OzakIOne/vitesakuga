@@ -3,10 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
-import {
-  ServerFnsProvider,
-  type ModerationFns,
-} from "../server-fns.context";
+import { ServerFnsProvider, type ModerationFns } from "../server-fns.context";
 import { useApprovePromotion, usePromotionQueue } from "./moderation.hooks";
 
 const candidate = {
@@ -38,7 +35,8 @@ describe(useApprovePromotion, () => {
         <ServerFnsProvider
           // SAFETY: the hooks under test only read approvePromotion and
           // fetchPromotionQueue; the other server fetchers are never called.
-          value={{ moderation: fns as unknown as ModerationFns }}>
+          value={{ moderation: fns as unknown as ModerationFns }}
+        >
           {children}
         </ServerFnsProvider>
       </QueryClientProvider>

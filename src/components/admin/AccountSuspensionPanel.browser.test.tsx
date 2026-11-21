@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Toaster } from "src/components/ui/toaster";
 import { ReauthenticationRequiredError } from "src/lib/errors";
+import { useModerationOverview } from "src/lib/moderation/moderation.hooks";
 import {
   ServerFnsProvider,
   type ModerationFns,
 } from "src/lib/server-fns.context";
-import { useModerationOverview } from "src/lib/moderation/moderation.hooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
@@ -35,7 +35,8 @@ describe(AccountSuspensionPanel, () => {
         <ServerFnsProvider
           // SAFETY: the panel and probe only read the fetchers and mutations
           // supplied here; every other server function is never called.
-          value={{ moderation: fns as unknown as ModerationFns }}>
+          value={{ moderation: fns as unknown as ModerationFns }}
+        >
           {children}
         </ServerFnsProvider>
       </QueryClientProvider>

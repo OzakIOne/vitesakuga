@@ -57,7 +57,8 @@ describe("suspended account actions", () => {
         <QueryClientProvider client={queryClient}>
           <ServerFnsProvider
             // SAFETY: the vote query returns test data; mutation fakes throw if called.
-            value={{ votes: votesFns as unknown as VotesFns }}>
+            value={{ votes: votesFns as unknown as VotesFns }}
+          >
             <SuspendedAccountNotice />
             <PostVoteButtons postId={42} />
           </ServerFnsProvider>

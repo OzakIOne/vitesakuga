@@ -14,7 +14,6 @@ import { Avatar, Card } from "src/components/ui/media";
 import { Dialog } from "src/components/ui/overlay";
 import { Heading, Text } from "src/components/ui/typography";
 import { useCapabilities } from "src/lib/auth/capabilities.context";
-import { useCommentsFns } from "src/lib/server-fns.context";
 import {
   useAddComment,
   useDeleteComment,
@@ -24,6 +23,7 @@ import { commentsQueryOptions } from "src/lib/comments/comments.query-options";
 import type { fetchComments } from "src/lib/comments/comments.service";
 import { useCommentDraft } from "src/lib/comments/useCommentDraft";
 import { deTokenizeForEditing } from "src/lib/mentions/mentions";
+import { useCommentsFns } from "src/lib/server-fns.context";
 import { formatDateUtc } from "src/utils/date-format";
 
 type CommentsProps = {

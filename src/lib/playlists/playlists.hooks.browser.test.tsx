@@ -154,7 +154,8 @@ const createFixture = (queryClient: QueryClient) => {
       <ServerFnsProvider
         // SAFETY: the hooks under test only call the fakes above; the other
         // playlist server functions are never invoked.
-        value={{ playlists: fns as unknown as PlaylistsFns }}>
+        value={{ playlists: fns as unknown as PlaylistsFns }}
+      >
         {children}
       </ServerFnsProvider>
     </QueryClientProvider>

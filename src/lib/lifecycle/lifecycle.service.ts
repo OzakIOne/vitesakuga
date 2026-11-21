@@ -1319,7 +1319,10 @@ export class LifecycleService extends Context.Service<
     ) => Effect.Effect<ReconcileResult, LifecycleError>;
     readonly replaceVideo: (
       input: ReplaceVideoInput,
-    ) => Effect.Effect<{ readonly videoKey: string }, LifecycleError | ValidationError>;
+    ) => Effect.Effect<
+      { readonly videoKey: string },
+      LifecycleError | ValidationError
+    >;
     readonly restoreVideo: (
       input: RestoreVideoInput,
     ) => Effect.Effect<void, LifecycleError | ValidationError>;
@@ -1598,7 +1601,10 @@ export class LifecycleService extends Context.Service<
         const deletedKeys = new Set<string>();
         const protectedKeys = new Set<string>();
         if (keys.length === 0) {
-          return { deletedKeys, protectedKeys } satisfies DeleteManagedKeysResult;
+          return {
+            deletedKeys,
+            protectedKeys,
+          } satisfies DeleteManagedKeysResult;
         }
         const managedObjects = yield* db.execute(
           db

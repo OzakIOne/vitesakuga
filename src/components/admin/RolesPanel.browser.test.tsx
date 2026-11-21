@@ -69,7 +69,8 @@ describe(RolesPanel, () => {
       <QueryClientProvider client={queryClient}>
         <ServerFnsProvider
           // SAFETY: RolesPanel only calls the three functions supplied here.
-          value={{ moderation: fns as unknown as ModerationFns }}>
+          value={{ moderation: fns as unknown as ModerationFns }}
+        >
           {children}
         </ServerFnsProvider>
       </QueryClientProvider>

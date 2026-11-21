@@ -8,10 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
 import { postsKeys } from "../posts/posts.queries";
-import {
-  ServerFnsProvider,
-  type PostEditsFns,
-} from "../server-fns.context";
+import { ServerFnsProvider, type PostEditsFns } from "../server-fns.context";
 import { useApprovePostEdit } from "./post-edits.hooks";
 import { postEditsKeys } from "./post-edits.queries";
 
@@ -35,7 +32,8 @@ describe(useApprovePostEdit, () => {
         <ServerFnsProvider
           // SAFETY: useApprovePostEdit only calls approveEdit; the other
           // post-edit server functions are never invoked.
-          value={{ postEdits: fns as unknown as PostEditsFns }}>
+          value={{ postEdits: fns as unknown as PostEditsFns }}
+        >
           {children}
         </ServerFnsProvider>
       </QueryClientProvider>

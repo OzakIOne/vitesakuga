@@ -430,7 +430,8 @@ export function useUploadForm(
     await form.handleSubmit();
   };
 
-  const currentVideoName = video.videoFile?.name ?? draft.draft?.videoName ?? "";
+  const currentVideoName =
+    video.videoFile?.name ?? draft.draft?.videoName ?? "";
   const persistDraft = draft.persist;
 
   useEffect(() => {

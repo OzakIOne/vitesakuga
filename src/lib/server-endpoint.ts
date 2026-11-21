@@ -82,7 +82,10 @@ export const createEndpointHandler = <
     ServiceError,
     ServiceIn
   >;
-  return createHandler(layer, config.base)(
+  return createHandler(
+    layer,
+    config.base,
+  )(
     // SAFETY: `Identifier` is provided by either `layer` (`ServiceOut`) or `base`
     // (`BaseOut`); the caller cannot construct a valid `config` otherwise.
     runOperation as (

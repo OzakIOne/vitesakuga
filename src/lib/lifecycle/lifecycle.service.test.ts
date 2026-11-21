@@ -356,9 +356,8 @@ describe("LifecycleService (narrowed Managed Media Protocol interface)", () => {
 
     const conflict = await context.runFailure(
       Effect.gen(function* () {
-        const db = yield* (yield* Effect.promise(() =>
-          import("../db/context"),
-        )).KyselyDB;
+        const db = yield* (yield* Effect.promise(() => import("../db/context")))
+          .KyselyDB;
         return yield* db.transaction((trx) =>
           updatePostWithVersionInTransaction(trx, {
             changes: { title: "Stale" },

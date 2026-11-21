@@ -28,7 +28,8 @@ const createWrapper = (
       <ServerFnsProvider
         // SAFETY: the hooks under test only call the fakes above; the
         // remaining comment server functions are never invoked.
-        value={{ comments: fakes as unknown as CommentsFns }}>
+        value={{ comments: fakes as unknown as CommentsFns }}
+      >
         {children}
       </ServerFnsProvider>
     </QueryClientProvider>

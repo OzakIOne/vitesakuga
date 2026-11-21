@@ -13,16 +13,18 @@ import { asPostId } from "../ids";
 import { POINTS_RULES } from "../points/points.config";
 import { pendingVideoObjectKey } from "../storage/keys";
 import { StorageError, StorageModule } from "../storage/storage.module";
+import { PostsReadService, PostsReadServiceLive } from "./posts-read.service";
 import {
   FormFileUploadSchema,
   MAX_IMAGE_SIZE_BYTES,
   type VideoMetadata,
 } from "./posts.schema";
-import { PostsReadService, PostsReadServiceLive } from "./posts-read.service";
 import { PostsService, PostsServiceLive } from "./posts.service";
 
 const JPEG_HEADER = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
-const PNG_HEADER = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_HEADER = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 const WEBP_HEADER = new Uint8Array([
   0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
 ]);
@@ -1013,7 +1015,9 @@ describe("PostsService.fetchDetail", () => {
     });
 
     const result = await runEffect(
-      Effect.flatMap(PostsReadService, (service) => service.fetchDetail(postId)),
+      Effect.flatMap(PostsReadService, (service) =>
+        service.fetchDetail(postId),
+      ),
     );
 
     expect(result.post.title).toBe("Detail Post");
@@ -1032,7 +1036,9 @@ describe("PostsService.fetchDetail", () => {
     await linkTags(postId, [tagId]);
 
     const result = await runEffect(
-      Effect.flatMap(PostsReadService, (service) => service.fetchDetail(postId)),
+      Effect.flatMap(PostsReadService, (service) =>
+        service.fetchDetail(postId),
+      ),
     );
 
     expect(result.tags).toHaveLength(1);
@@ -1299,7 +1305,9 @@ describe("PostsService.upload", () => {
       .where("id", "=", post.id)
       .executeTakeFirstOrThrow();
     const detail = await runEffect(
-      Effect.flatMap(PostsReadService, (service) => service.fetchDetail(post.id)),
+      Effect.flatMap(PostsReadService, (service) =>
+        service.fetchDetail(post.id),
+      ),
     );
 
     expect(stored.metadataType).toBe("object");
