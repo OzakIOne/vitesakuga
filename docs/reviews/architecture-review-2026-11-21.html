@@ -1,0 +1,1519 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review for ViteSakuga</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "neutral",
+        securityLevel: "loose",
+        flowchart: { htmlLabels: true, curve: "basis" },
+      });
+    </script>
+    <style>
+      .seam-box {
+        border: 2px dashed #64748b;
+      }
+      .seam-line {
+        border-top: 2px dashed #64748b;
+      }
+      .deep-module {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      }
+      .mermaid {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 250px;
+      }
+    </style>
+  </head>
+  <body class="bg-stone-50 font-sans text-slate-900 antialiased">
+    <main class="mx-auto max-w-5xl space-y-12 px-6 py-12">
+      <!-- Header & Legend -->
+      <header class="space-y-4 border-b border-stone-200 pb-6">
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
+          <h1
+            class="font-serif text-3xl font-semibold tracking-tight text-slate-900"
+          >
+            Architecture Review — ViteSakuga
+          </h1>
+          <span class="font-mono text-xs text-slate-500"
+            >2026-11-21 · Live codebase (post-dd2b3536)</span
+          >
+        </div>
+
+        <div
+          class="flex flex-wrap items-center gap-6 pt-1 text-xs text-slate-600"
+        >
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-block h-3.5 w-5 rounded-sm border border-slate-400 bg-white"
+            ></span>
+            <span>Module</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-block w-6 border-t-2 border-dashed border-slate-500"
+            ></span>
+            <span>Seam</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="relative inline-block w-6 border-t-2 border-red-600">
+              <span
+                class="absolute -top-1 -right-0.5 text-[9px] leading-none text-red-600"
+                >▸</span
+              >
+            </span>
+            <span>Leakage</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span
+              class="deep-module inline-block h-3.5 w-5 rounded-sm border border-slate-900"
+            ></span>
+            <span>Deep module</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Candidates -->
+      <section id="candidates" class="space-y-10">
+        <!-- CANDIDATE 1: Mass Diagram -->
+        <article
+          id="candidate-1"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              1. Move Post optimistic-version patching out of Managed Media
+              Protocol
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              >
+                Strong
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                local-substitutable
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/lib/posts/post-patch.ts</span>
+            <span>src/lib/lifecycle/lifecycle.service.ts</span>
+            <span>src/lib/posts/posts.service.ts</span>
+            <span>src/lib/post-edits/post-edits.service.ts</span>
+          </div>
+
+          <!-- Before / After: Mass Diagram -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — 1-line pass-through + 15-error media leak
+              </div>
+              <div class="my-auto space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                  <div
+                    class="rounded border border-slate-300 bg-white p-2 text-center"
+                  >
+                    <div
+                      class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Post update
+                    </div>
+                  </div>
+                  <div
+                    class="rounded border border-slate-300 bg-white p-2 text-center"
+                  >
+                    <div
+                      class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Post-Edit approve
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="rounded border border-amber-300 bg-amber-50/70 px-3 py-1.5 text-center"
+                >
+                  <span
+                    class="text-[11px] font-semibold tracking-wider text-amber-900 uppercase"
+                    >post-patch.ts</span
+                  >
+                  <span class="ml-2 font-mono text-[10px] text-amber-800"
+                    >1-line pass-through</span
+                  >
+                </div>
+                <div
+                  class="text-center font-mono text-[10px] font-medium text-red-600"
+                >
+                  ↓ leaks 15-member LifecycleError (StorageError,
+                  ObjectProtectedError…)
+                </div>
+                <div
+                  class="overflow-hidden rounded border-2 border-red-300 bg-white"
+                >
+                  <div class="border-b border-red-200 bg-red-50 px-3 py-2.5">
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="text-[11px] font-semibold tracking-wider text-red-900 uppercase"
+                      >
+                        Managed Media interface
+                      </span>
+                      <span class="font-mono text-[10px] text-red-700"
+                        >+23 unused exported types</span
+                      >
+                    </div>
+                    <div class="mt-1 font-mono text-[10px] text-red-800">
+                      postVersionUpdateInTransaction · PostVersionConflictError
+                    </div>
+                  </div>
+                  <div class="px-3 py-2 text-[11px] text-slate-500">
+                    1,938-line media protocol owns Post metadata CAS
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Deep Post Patch module + clean Managed Media seam
+              </div>
+              <div class="my-auto space-y-3">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="rounded border border-slate-300 bg-white p-2">
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Post update
+                    </div>
+                  </div>
+                  <div class="rounded border border-slate-300 bg-white p-2">
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Edit approve
+                    </div>
+                  </div>
+                  <div class="rounded border border-slate-300 bg-white p-2">
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Video swap
+                    </div>
+                  </div>
+                </div>
+                <div class="seam-line relative my-1">
+                  <span
+                    class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-stone-50 px-2 text-[10px] tracking-wider text-slate-500 uppercase"
+                  >
+                    Post-only error seam
+                  </span>
+                </div>
+                <div
+                  class="deep-module space-y-1.5 rounded-lg p-3.5 text-slate-100"
+                >
+                  <div class="flex items-center justify-between">
+                    <span
+                      class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                      >Post Patch module</span
+                    >
+                    <span class="font-mono text-[10px] text-slate-300"
+                      >NotFound | Conflict | Sql</span
+                    >
+                  </div>
+                  <div class="text-[11px] text-slate-300">
+                    Owns optimistic version CAS, types, and Post-version errors
+                    in <code class="font-mono">src/lib/posts/</code>.
+                  </div>
+                </div>
+                <div
+                  class="flex items-center justify-between rounded border border-slate-300 bg-white px-3 py-2"
+                >
+                  <span
+                    class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >Managed Media module</span
+                  >
+                  <span class="font-mono text-[10px] text-emerald-700"
+                    >6 methods · 23 dead types unexported</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                <code class="font-mono text-xs">post-patch.ts</code> is a 1-line
+                pass-through into
+                <code class="font-mono text-xs">lifecycle.service.ts</code>,
+                leaking a 15-member media error union into Post writes while 23
+                dead internal lifecycle types remain exported.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Move Post optimistic-version CAS and its errors into
+                <code class="font-mono text-xs">post-patch.ts</code>, call it
+                from video swap, and unexport all 23 internal Managed Media
+                types.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>
+                  Locality: Post CAS lives in
+                  <code class="font-mono text-xs">posts/</code>
+                </li>
+                <li>Leverage: media errors leave Post callers</li>
+                <li>Interface shrinks by 23 dead exports</li>
+                <li>Tests hit Post Patch via PGLite only</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 2: Mermaid Flowchart -->
+        <article
+          id="candidate-2"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              2. Deepen Account Governance transitions and unify self-service
+              Account modules
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              >
+                Strong
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                local-substitutable
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/lib/auth/admin-continuity.ts</span>
+            <span>src/lib/auth/account-security.ts</span>
+            <span>src/lib/auth/delete-account.ts</span>
+            <span>src/lib/moderation/moderation.service.ts</span>
+            <span>src/lib/promotions/promotions.service.ts</span>
+          </div>
+
+          <!-- Before / After: Mermaid Flowchart -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[320px] flex-col rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — Ordering lock &amp; audit writes leaked across 5
+                modules
+              </div>
+              <div
+                class="flex flex-1 items-center justify-center rounded border border-slate-200 bg-white p-2"
+              >
+                <pre class="mermaid">
+flowchart TD
+  MOD["Moderation"] --> L1["1. lockActiveAdminIds"]
+  DEL["delete-account.ts (unguarded)"] --> L1
+  L1 --> L2["2. ensureAdminRemains"]
+  L2 --> ROW["user + account_moderation_events"]
+  PRO["Promotions approve"] -. "leak: raw role + audit" .-> ROW
+  SEC["account-security.ts (unguarded)"] -. "dup password query" .-> DEL
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2,color:#991b1b;
+  class PRO,DEL,SEC leak
+                </pre>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[320px] flex-col rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-2 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Atomic Account Governance + single Self-Service module
+              </div>
+              <div
+                class="flex flex-1 items-center justify-center rounded border border-slate-200 bg-white p-2"
+              >
+                <pre class="mermaid">
+flowchart TD
+  MOD["Moderation"] --> GOV["Account Governance module"]
+  PRO["Promotions"] --> GOV
+  ACC["Account Self-Service (*.service.ts)"] --> GOV
+  GOV --> TX["Atomic tx: lock → guard → update → audit"]
+  classDef deep fill:#0f172a,color:#f8fafc,stroke:#0f172a,stroke-width:2px;
+  class GOV,ACC deep
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                <code class="font-mono text-xs">admin-continuity.ts</code> leaks
+                a two-step locking order across callers, Promotions duplicates
+                audit-table writes, and
+                <code class="font-mono text-xs">account-security.ts</code>/<code
+                  class="font-mono text-xs"
+                  >delete-account.ts</code
+                >
+                duplicate credential queries outside
+                <code class="font-mono text-xs">*.service.ts</code> seam checks.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Consolidate role, suspension, and anonymization transitions into
+                one transactional Account Governance module and merge
+                self-service password/deletion into one
+                <code class="font-mono text-xs">*.service.ts</code> module with
+                a real crypto error.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Locality: impossible to check without lock</li>
+                <li>Every role change writes an audit row</li>
+                <li>
+                  Deletes bogus
+                  <code class="font-mono text-xs">SqlError</code> on crypto fail
+                </li>
+                <li>Static seam tests now guard self-service</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 3: Split-Brain Convergence -->
+        <article
+          id="candidate-3"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              3. Deepen Playlist read projections and serialize Playlist
+              membership locking
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              >
+                Strong
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                local-substitutable
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/lib/playlists/playlists.service.ts</span>
+            <span>src/lib/users/users.service.ts</span>
+          </div>
+
+          <!-- Before / After: Structural Split & Lock Matrix -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — 1,135L god module · triplicated SQL · unlocked
+                removes/reorder
+              </div>
+              <div class="my-auto space-y-3">
+                <div class="grid grid-cols-3 gap-1.5 text-center">
+                  <div class="rounded border border-red-300 bg-red-50/60 p-2">
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-red-900 uppercase"
+                    >
+                      fetchPlaylistMeta
+                    </div>
+                    <div class="mt-0.5 text-[10px] text-red-700">
+                      count + thumb SQL #1
+                    </div>
+                  </div>
+                  <div class="rounded border border-red-300 bg-red-50/60 p-2">
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-red-900 uppercase"
+                    >
+                      fetchDetail
+                    </div>
+                    <div class="mt-0.5 text-[10px] text-red-700">
+                      count + thumb SQL #2
+                    </div>
+                  </div>
+                  <div class="rounded border border-red-300 bg-red-50/60 p-2">
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-red-900 uppercase"
+                    >
+                      Users module
+                    </div>
+                    <div class="mt-0.5 text-[10px] text-red-700">
+                      raw table SQL #3
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="space-y-1.5 rounded border border-slate-300 bg-white p-3"
+                >
+                  <div
+                    class="text-[11px] font-semibold tracking-wider text-slate-700 uppercase"
+                  >
+                    Membership lock parity
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 font-mono text-[10px]">
+                    <div
+                      class="rounded bg-emerald-50 px-2 py-1 text-emerald-800"
+                    >
+                      addPost / bulkAdd · FOR UPDATE
+                    </div>
+                    <div class="rounded bg-red-50 px-2 py-1 text-red-800">
+                      remove / bulkRemove / reorder · UNLOCKED
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Shared Playlist Read module + locked membership
+                invariant
+              </div>
+              <div class="my-auto space-y-3">
+                <div class="deep-module rounded-lg p-3.5 text-slate-100">
+                  <div
+                    class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                  >
+                    Playlist Read module
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-300">
+                    One summary projection (<code class="font-mono"
+                      >postCount</code
+                    >
+                    + cover <code class="font-mono">thumbnailKey</code>) serving
+                    Playlist views and
+                    <code class="font-mono">UsersService</code>.
+                  </div>
+                </div>
+                <div class="deep-module rounded-lg p-3.5 text-slate-100">
+                  <div
+                    class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                  >
+                    Locked Playlist Membership implementation
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-300">
+                    Every membership mutation (<code class="font-mono">add</code
+                    >, <code class="font-mono">remove</code>,
+                    <code class="font-mono">bulk*</code>,
+                    <code class="font-mono">reorder</code>) enters one
+                    <code class="font-mono">FOR UPDATE</code> transaction
+                    helper.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                Playlist summary SQL is triplicated (including raw table queries
+                inside <code class="font-mono text-xs">users.service.ts</code>),
+                while <code class="font-mono text-xs">removePost</code>,
+                <code class="font-mono text-xs">bulkRemovePosts</code>, and
+                <code class="font-mono text-xs">reorder</code> omit the
+                <code class="font-mono text-xs">FOR UPDATE</code> lock used by
+                add mutations.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Extract a Playlist Read projection module for Playlist and User
+                profile reads, and funnel all 5 membership mutations through one
+                locked transaction implementation.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Locality: fixes remove/reorder race by construction</li>
+                <li>Users module stops querying playlist tables</li>
+                <li>One query owns count + cover thumbnail</li>
+                <li>Concurrent ordering tested at one seam</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 4: Cross-Section / Convergence -->
+        <article
+          id="candidate-4"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              4. Unify client Auth Sign-In Completion and Session refresh
+              coordination
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              >
+                Strong
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                ports &amp; adapters
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/lib/auth/sign-in-completion.hooks.ts</span>
+            <span>src/lib/auth/auth.hooks.ts</span>
+            <span>src/lib/auth/two-factor.hooks.ts</span>
+            <span>src/components/auth/PasskeySignInButton.tsx</span>
+            <span>src/routes/two-factor.tsx</span>
+            <span>src/lib/users/users.hooks.ts</span>
+          </div>
+
+          <!-- Before / After: Mermaid Flow -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[320px] flex-col rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — 3 bypasses + 6 drifting session-refresh paths
+              </div>
+              <div
+                class="flex flex-1 items-center justify-center rounded border border-slate-200 bg-white p-2"
+              >
+                <pre class="mermaid">
+flowchart TD
+  PK["PasskeySignInButton"] -. "raw AuthClientContext" .-> AC["AuthClient"]
+  SL["useSocialLogin"] -. "bypasses completion" .-> SS["sessionStorage + queryClient"]
+  TF["two-factor.tsx"] -. "manual refresh + redirect" .-> SS
+  LG["useLogin"] --> SC["useSignInCompletion"]
+  SC --> QC["invalidate userInfo (no router)"]
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2,color:#991b1b;
+  class PK,SL,TF leak
+                </pre>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[320px] flex-col rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-2 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Deep Client Session Transition module
+              </div>
+              <div
+                class="flex flex-1 items-center justify-center rounded border border-slate-200 bg-white p-2"
+              >
+                <pre class="mermaid">
+flowchart TD
+  UI["Login · Passkey · Social · 2FA"] --> SM["Client Session Transition module"]
+  SM --> SEAM{{"AuthClientContext seam (2 adapters)"}}
+  SEAM --> BA["Better Auth client"]
+  SEAM --> FK["Vitest fake adapter"]
+  classDef deep fill:#0f172a,color:#f8fafc,stroke:#0f172a,stroke-width:2px;
+  classDef seam fill:#f8fafc,stroke:#64748b,stroke-dasharray:4 4,color:#334155;
+  class SM deep
+  class SEAM seam
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                Passkey autofill, social login, and
+                <code class="font-mono text-xs">two-factor.tsx</code> bypass
+                <code class="font-mono text-xs">useSignInCompletion</code>, and
+                session refresh is re-implemented in 6 places with drifting
+                cache/router invalidation.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Absorb sign-in, passkey autofill, 2FA verification, redirect
+                storage, and unified session refresh into one deep client
+                Session module behind
+                <code class="font-mono text-xs">AuthClientContext</code>.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Locality: one 2FA handoff + refresh sequence</li>
+                <li>Deletion test: shallow storage helpers vanish</li>
+                <li>
+                  UI drops raw
+                  <code class="font-mono text-xs">AuthClientContext</code>
+                  access
+                </li>
+                <li>Full login → 2FA flow tested via fake adapter</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 5: Call-Graph / Seam Collapse -->
+        <article
+          id="candidate-5"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              5. Deepen Playlist Management coordination and enforce
+              complete-list reorder
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              >
+                Strong
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                ports &amp; adapters
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/routes/account_.playlists.$playlistId.tsx</span>
+            <span>src/components/playlists/PlaylistPostsTable.tsx</span>
+            <span>src/lib/playlists/playlists.hooks.ts</span>
+          </div>
+
+          <!-- Before / After: Seam Collapse -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — 7-prop seam · Set ↔ Record ping-pong · live reorder bug
+              </div>
+              <div class="my-auto space-y-2.5">
+                <div class="rounded border border-slate-300 bg-white p-2.5">
+                  <div
+                    class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                  >
+                    ManagePlaylistContent (402L)
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-slate-500">
+                    parsePostIds · orphan projection · Set&lt;number&gt; ·
+                    warning banner
+                  </div>
+                </div>
+                <div
+                  class="rounded border border-red-300 bg-red-50/70 p-2 text-center"
+                >
+                  <div class="font-mono text-[10px] text-red-800">
+                    7 coupled props + Set ↔ RowSelectionState cast
+                  </div>
+                  <div class="mt-0.5 text-[10px] font-semibold text-red-700">
+                    ⚠ Drag-and-drop still fires when hasNextPage === true
+                  </div>
+                </div>
+                <div class="rounded border border-slate-300 bg-white p-2.5">
+                  <div
+                    class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                  >
+                    PlaylistPostsTable (529L)
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-slate-500">
+                    submits partial page IDs to reorder mutation
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Deep Playlist Manager handle (opaque seam)
+              </div>
+              <div class="my-auto space-y-3">
+                <div class="grid grid-cols-2 gap-2 text-center">
+                  <div class="rounded border border-slate-300 bg-white p-2">
+                    <div
+                      class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Route shell
+                    </div>
+                  </div>
+                  <div class="rounded border border-slate-300 bg-white p-2">
+                    <div
+                      class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      PlaylistPostsTable
+                    </div>
+                  </div>
+                </div>
+                <div class="seam-line relative my-1">
+                  <span
+                    class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-stone-50 px-2 text-[10px] tracking-wider text-slate-500 uppercase"
+                  >
+                    opaque manager handle
+                  </span>
+                </div>
+                <div
+                  class="deep-module space-y-1.5 rounded-lg p-3.5 text-slate-100"
+                >
+                  <div
+                    class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                  >
+                    Playlist Manager module
+                  </div>
+                  <div class="text-[11px] text-slate-300">
+                    Owns infinite query, orphan rows, single selection
+                    representation, ID parsing, and structural
+                    <code class="font-mono">canReorder = !hasNextPage</code>
+                    guard.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                Playlist management leaks ID parsing, orphan projection, and
+                <code class="font-mono text-xs">Set</code>↔<code
+                  class="font-mono text-xs"
+                  >Record</code
+                >
+                selection conversion across a 7-prop seam, and fails to disable
+                drag-and-drop when more pages remain unloaded.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Move Playlist query, selection, bulk-edit, and complete-list
+                reorder gating into one deep Playlist Manager module behind an
+                opaque handle consumed by the route and table.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Locality: closes live partial-page reorder bug</li>
+                <li>
+                  Eliminates <code class="font-mono text-xs">Set</code> ↔
+                  <code class="font-mono text-xs">RowSelectionState</code> casts
+                </li>
+                <li>7-prop seam collapses to one handle</li>
+                <li>
+                  Tests run via
+                  <code class="font-mono text-xs">ServerFnsProvider</code>
+                  without DnD
+                </li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 6: Cross-Section -->
+        <article
+          id="candidate-6"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              6. Deepen Browser Converter lifecycle and narrow its view seam
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              >
+                Strong
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                local-substitutable
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/features/convert/convert-machine.ts</span>
+            <span>src/features/convert/convert-page.tsx</span>
+          </div>
+
+          <!-- Before / After: Cross-Section -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — Split object-URL ownership + 18 raw selectors
+              </div>
+              <div class="my-auto space-y-2">
+                <div
+                  class="flex h-14 items-center justify-between rounded-r border-l-4 border-red-600 bg-red-50/60 px-3"
+                >
+                  <div>
+                    <div
+                      class="text-xs font-semibold tracking-wider text-slate-900 uppercase"
+                    >
+                      ConvertPage (576L)
+                    </div>
+                    <div class="text-[11px] text-red-700">
+                      owns previewUrl · revokes downloadUrl · 18 useSelectors
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="flex h-12 items-center justify-between rounded-r border-l-4 border-amber-400 bg-white px-3"
+                >
+                  <span
+                    class="text-xs font-semibold tracking-wider text-slate-800 uppercase"
+                    >Derived predicates</span
+                  >
+                  <span class="font-mono text-[10px] text-amber-800"
+                    >recomputed in UI</span
+                  >
+                </div>
+                <div
+                  class="flex h-16 items-center justify-between rounded-r border-l-4 border-red-600 bg-white px-3"
+                >
+                  <div>
+                    <div
+                      class="text-xs font-semibold tracking-wider text-slate-900 uppercase"
+                    >
+                      convert-machine.ts (679L)
+                    </div>
+                    <div class="text-[11px] text-red-700">
+                      creates downloadUrl (never revokes) · 8 handlers ×3 states
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[320px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Self-cleaning Converter module + thin view
+              </div>
+              <div class="my-auto space-y-3">
+                <div
+                  class="rounded border border-slate-300 bg-white px-3.5 py-2.5"
+                >
+                  <div
+                    class="text-xs font-semibold tracking-wider text-slate-800 uppercase"
+                  >
+                    ConvertPage (thin view)
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-slate-500">
+                    renders derived view model + calls domain actions
+                  </div>
+                </div>
+                <div class="seam-line relative">
+                  <span
+                    class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-stone-50 px-2 text-[10px] tracking-wider text-slate-500 uppercase"
+                  >
+                    narrow view-model seam
+                  </span>
+                </div>
+                <div
+                  class="deep-module space-y-1.5 rounded-lg p-3.5 text-slate-100"
+                >
+                  <div
+                    class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                  >
+                    Browser Converter module
+                  </div>
+                  <div class="text-[11px] text-slate-300">
+                    Owns both <code class="font-mono">previewUrl</code> and
+                    <code class="font-mono">downloadUrl</code> lifecycles,
+                    shared parent-state transitions, and all derived predicates.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                Object-URL creation and revocation are split across
+                <code class="font-mono text-xs">convert-machine.ts</code> and
+                <code class="font-mono text-xs">convert-page.tsx</code>, while
+                the view pulls 18 raw selectors and the machine repeats 8
+                handlers across 3 states.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Own both object-URL lifecycles and shared transitions inside the
+                converter module, exposing one derived view model and domain
+                actions to <code class="font-mono text-xs">ConvertPage</code>.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Locality: URL cleanup tied to transitions</li>
+                <li>Interface drops 18 raw context selectors</li>
+                <li>Deletes 3× duplicated machine handlers</li>
+                <li>Cleanup + predicates tested in-process</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 7: Ports & Adapters Seam -->
+        <article
+          id="candidate-7"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              7. Put both RateLimiter adapters behind one seam and delete global
+              test hook
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800"
+              >
+                Worth exploring
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                ports &amp; adapters
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/lib/rate-limit/rate-limit.middleware.ts</span>
+            <span>src/lib/rate-limit/rate-limiter.ts</span>
+            <span>src/lib/rate-limit/rate-limit.middleware.test.ts</span>
+          </div>
+
+          <!-- Before / After: Adapter Diagram -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[300px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — Global mutable singleton + divergent adapter shapes
+              </div>
+              <div class="my-auto space-y-2.5">
+                <div class="rounded border border-red-300 bg-red-50/60 p-2.5">
+                  <div
+                    class="text-[11px] font-semibold tracking-wider text-red-900 uppercase"
+                  >
+                    rate-limit.middleware.ts
+                  </div>
+                  <div class="mt-1 font-mono text-[10px] text-red-700">
+                    module-global let limiter · setRateLimiterForTests()
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div
+                    class="rounded border border-slate-300 bg-white p-2 text-center"
+                  >
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Cloudflare binding
+                    </div>
+                    <div class="mt-0.5 font-mono text-[10px] text-slate-500">
+                      inlined { success }
+                    </div>
+                  </div>
+                  <div
+                    class="rounded border border-slate-300 bg-white p-2 text-center"
+                  >
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      RateLimiterMemory
+                    </div>
+                    <div class="mt-0.5 font-mono text-[10px] text-slate-500">
+                      Effect + shared buckets
+                    </div>
+                  </div>
+                </div>
+                <div class="text-center font-mono text-[10px] text-red-600">
+                  Tests synthesize fake IPs (nextIp()) to avoid state bleed
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[300px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Factory middleware + 2 real adapters at one seam
+              </div>
+              <div class="my-auto space-y-3">
+                <div class="deep-module rounded-lg p-3 text-slate-100">
+                  <div
+                    class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                  >
+                    createRateLimitMiddleware(adapter)
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-300">
+                    One decision/429 flow; default export wires production
+                    runtime for Nitro.
+                  </div>
+                </div>
+                <div class="seam-line relative">
+                  <span
+                    class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-stone-50 px-2 text-[10px] tracking-wider text-slate-500 uppercase"
+                  >
+                    RateLimiter seam (2 adapters)
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                  <div
+                    class="rounded border border-slate-300 bg-white p-2 text-center"
+                  >
+                    <div
+                      class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      Cloudflare edge
+                    </div>
+                    <div class="text-[10px] text-slate-500">
+                      production Worker
+                    </div>
+                  </div>
+                  <div
+                    class="rounded border border-slate-300 bg-white p-2 text-center"
+                  >
+                    <div
+                      class="text-[11px] font-semibold tracking-wider text-slate-800 uppercase"
+                    >
+                      In-memory + TestClock
+                    </div>
+                    <div class="text-[10px] text-slate-500">
+                      dev / isolated tests
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                A module-global
+                <code class="font-mono text-xs">let limiter</code> forces a
+                production test hook (<code class="font-mono text-xs"
+                  >setRateLimiterForTests</code
+                >) and fake-IP isolation in tests, while the Cloudflare binding
+                bypasses the
+                <code class="font-mono text-xs">RateLimiter</code> seam.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Put both Cloudflare and in-memory adapters behind
+                <code class="font-mono text-xs">RateLimiter</code> and construct
+                the middleware via an injectable factory, deleting the global
+                test hook.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Two real adapters justify one seam</li>
+                <li>Deletes production test-only mutation hook</li>
+                <li>
+                  Tests isolate instances with
+                  <code class="font-mono text-xs">TestClock</code>
+                </li>
+                <li>One uniform 429 handling path</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- CANDIDATE 8: State Collapse -->
+        <article
+          id="candidate-8"
+          class="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-xs"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold text-slate-900">
+              8. Deepen Two-Factor account management into a discriminated state
+              machine
+            </h2>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800"
+              >
+                Worth exploring
+              </span>
+              <span
+                class="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-0.5 font-mono text-xs text-slate-600"
+              >
+                ports &amp; adapters
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2.5 font-mono text-xs text-slate-600"
+          >
+            <span>src/components/auth/TwoFactorSection.tsx</span>
+            <span>src/lib/auth/two-factor.hooks.ts</span>
+          </div>
+
+          <!-- Before / After: State Mass Collapse -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              class="flex min-h-[280px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+              >
+                Before — 12 independent useState hooks inside 664L UI module
+              </div>
+              <div class="my-auto space-y-2.5">
+                <div class="rounded border border-red-300 bg-red-50/50 p-3">
+                  <div
+                    class="mb-1.5 text-[11px] font-semibold tracking-wider text-red-900 uppercase"
+                  >
+                    Illegal state combinations representable
+                  </div>
+                  <div
+                    class="flex flex-wrap gap-1 font-mono text-[10px] text-red-800"
+                  >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >enableOpen</span
+                    >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >enableStep</span
+                    >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >totpUri</span
+                    >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >backupCodes</span
+                    >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >disableOpen</span
+                    >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >regenerateOpen</span
+                    >
+                    <span class="rounded bg-red-100 px-1.5 py-0.5"
+                      >+6 more</span
+                    >
+                  </div>
+                </div>
+                <div class="px-1 text-[11px] text-slate-600">
+                  Manual 7-setter reset on close · duplicated
+                  password/passwordless handlers · inline
+                  <code class="font-mono">refreshUser()</code>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex min-h-[280px] flex-col justify-between rounded-lg border border-slate-200 bg-stone-50/70 p-4"
+            >
+              <div
+                class="mb-3 text-xs font-semibold tracking-wider text-emerald-700 uppercase"
+              >
+                After — Deep 2FA Management module + declarative dialogs
+              </div>
+              <div class="my-auto space-y-3">
+                <div
+                  class="rounded border border-slate-300 bg-white px-3.5 py-2.5"
+                >
+                  <div
+                    class="text-xs font-semibold tracking-wider text-slate-800 uppercase"
+                  >
+                    TwoFactorSection (renderer)
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-slate-500">
+                    switches on active discriminated flow state
+                  </div>
+                </div>
+                <div class="deep-module rounded-lg p-3.5 text-slate-100">
+                  <div
+                    class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+                  >
+                    Two-Factor Management module
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-300">
+                    Discriminated wizard/modal state clears secrets on
+                    transition; owns passwordless gating and post-verify refresh
+                    over <code class="font-mono">AuthClientContext</code>.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 pt-1 text-sm md:grid-cols-3">
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Problem
+              </div>
+              <p class="text-slate-700">
+                <code class="font-mono text-xs">TwoFactorSection.tsx</code>
+                scatters enable, disable, and backup-code flows across 12
+                independent
+                <code class="font-mono text-xs">useState</code> hooks with
+                duplicated password/passwordless handlers.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Solution
+              </div>
+              <p class="text-slate-700">
+                Extract a deep discriminated-state 2FA management module in
+                <code class="font-mono text-xs">src/lib/auth/</code> (best
+                paired with Candidate 4's unified Session refresh) so the UI
+                only renders active state.
+              </p>
+            </div>
+            <div>
+              <div
+                class="mb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase"
+              >
+                Wins
+              </div>
+              <ul class="list-inside list-disc space-y-1 text-slate-700">
+                <li>Locality: illegal wizard states unrepresentable</li>
+                <li>Closing flow drops secrets structurally</li>
+                <li>Deletes duplicated passwordless handler pairs</li>
+                <li>Full wizard tested without portaled dialogs</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Top Recommendation -->
+      <section id="top-recommendation" class="pt-4">
+        <div
+          class="deep-module space-y-3 rounded-xl p-7 text-slate-100 shadow-md"
+        >
+          <div
+            class="text-xs font-semibold tracking-wider text-emerald-300 uppercase"
+          >
+            Top Recommendation
+          </div>
+          <h2 class="font-serif text-2xl font-semibold text-white">
+            2. Deepen Account Governance transitions and unify self-service
+            Account modules
+          </h2>
+          <p class="max-w-3xl text-sm text-slate-300">
+            It closes live security and correctness leaks across five hot
+            Auth/Moderation/Promotions files: makes the two-step last-admin lock
+            ordering and audit-event write impossible to bypass, fixes
+            <code class="font-mono text-xs text-slate-200">verifyPassword</code>
+            misreporting as
+            <code class="font-mono text-xs text-slate-200">SqlError</code>, and
+            brings self-service account endpoints under the existing
+            <code class="font-mono text-xs text-slate-200">*.service.ts</code>
+            seam tests. (Candidate 1 is a tight companion win that finishes the
+            Managed Media Protocol split.)
+          </p>
+          <div class="flex flex-wrap gap-4 pt-1">
+            <a
+              href="#candidate-2"
+              class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+            >
+              Jump to Candidate 2 ↑
+            </a>
+            <a
+              href="#candidate-1"
+              class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-300 underline underline-offset-4 hover:text-slate-100"
+            >
+              Jump to Candidate 1 ↑
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
